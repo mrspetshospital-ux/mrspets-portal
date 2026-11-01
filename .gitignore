@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+mrspets_local.db
+mrspets_local.db-wal
+mrspets_local.db-shm

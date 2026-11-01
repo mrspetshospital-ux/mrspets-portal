@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Guía de Render — Mrs Pets</title>
+<style>
+  :root{--v:#7C3AED;--v2:#A78BFA;--ink:#111827;--mut:#6B7280;--bg:#F9FAFB;--ok:#059669;--warn:#D97706;--bad:#DC2626}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.7;font-size:17px}
+  .wrap{max-width:820px;margin:0 auto;padding:0 18px 80px}
+  header{background:linear-gradient(135deg,#7C3AED,#4C1D95);color:#fff;padding:48px 18px 40px;margin-bottom:32px}
+  header .wrap{padding-bottom:0}
+  h1{margin:0 0 10px;font-size:1.85rem;letter-spacing:-.02em;line-height:1.25}
+  .sub{opacity:.92;font-size:1rem;margin:0}
+  .badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+         padding:5px 13px;border-radius:99px;font-size:.78rem;margin-top:14px;letter-spacing:.03em}
+  h2{font-size:1.3rem;margin:46px 0 14px;padding-bottom:8px;border-bottom:2px solid #E5E7EB}
+  .step{background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:20px 20px;margin:16px 0;
+        box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .step .n{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;
+           background:var(--v);color:#fff;border-radius:50%;font-weight:700;font-size:.95rem;margin-right:10px;flex:0 0 32px}
+  .step h3{display:inline;margin:0;color:var(--ink);font-size:1.06rem;line-height:1.4}
+  .step .body{margin-top:14px}
+  .step .body p{margin:0 0 12px}
+  .step .body p:last-child{margin-bottom:0}
+  code{background:#F3F4F6;padding:2px 7px;border-radius:5px;font-size:.86em;
+       font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#4C1D95;word-break:break-all}
+  pre{background:#1F2937;color:#E5E7EB;padding:15px 16px;border-radius:10px;overflow-x:auto;
+      font-size:.8rem;line-height:1.6;margin:12px 0;white-space:pre-wrap;word-break:break-all}
+  pre code{background:none;color:inherit;padding:0}
+  .note{border-left:4px solid var(--v);background:#F5F3FF;padding:14px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+  .warn{border-left:4px solid var(--warn);background:#FFFBEB;padding:14px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+  .bad{border-left:4px solid var(--bad);background:#FEF2F2;padding:14px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+  .ok{border-left:4px solid var(--ok);background:#ECFDF5;padding:14px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem;background:#fff;
+        display:block;overflow-x:auto;white-space:nowrap}
+  th{background:#F3F4F6;text-align:left;padding:11px 13px;font-weight:600;border-bottom:2px solid #E5E7EB}
+  td{padding:10px 13px;border-bottom:1px solid #F3F4F6;vertical-align:top;white-space:normal}
+  tr:last-child td{border-bottom:none}
+  .chk{list-style:none;padding:0;margin:12px 0}
+  .chk li{padding:7px 0 7px 28px;position:relative}
+  .chk li:before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+  .done{background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:18px 20px;margin:20px 0}
+  .done h3{margin:0 0 10px;color:#065F46;font-size:1.05rem}
+  .done ul{margin:0;padding-left:20px}
+  .done li{margin:5px 0;font-size:.95rem}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid #E5E7EB;color:var(--mut);font-size:.85rem}
+  @media(max-width:520px){
+    body{font-size:16px}
+    h1{font-size:1.5rem}
+    .step{padding:16px 15px}
+    .step h3{font-size:1rem}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Desplegar el portal en Render</h1>
+    <p class="sub">La base de datos ya está lista. Solo falta publicar el portal.</p>
+    <span class="badge">Sin tarjeta · Se puede hacer desde el teléfono</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="done">
+  <h3>✓ Lo que ya está hecho — no hay que tocarlo</h3>
+  <ul>
+    <li><strong>La base de datos en Neon está creada y probada.</strong> Conecta correctamente.</li>
+    <li><strong>Las 20 tablas están creadas</strong>, con sus índices, reglas y la vista de saldos.</li>
+    <li><strong>El usuario <code>admin</code> ya existe</strong> con su contraseña temporal.</li>
+    <li><strong>El paquete de instalación está listo</strong> para subir a Render.</li>
+  </ul>
+  <p style="margin:12px 0 0;font-size:.92rem;color:#065F46">
+    <strong>No vuelva a entrar a Neon.</strong> Esa parte terminó. Todo lo que sigue es en Render.
+  </p>
+</div>
+
+<div class="note">
+  <strong>Qué va a lograr:</strong> tener el portal Mrs Pets abierto en internet, protegido con
+  usuario y contraseña, guardando los datos en la base real. Tiempo estimado: <strong>30–45 minutos</strong>.
+  No necesita saber programar.
+</div>
+
+<div class="warn">
+  <strong>Antes de empezar, tenga a mano:</strong> el archivo <code>mrspets-staging_v3.zip</code>
+  (se lo entrego en el chat), un correo al que tenga acceso ahora, y el usuario y contraseña
+  que quiera usar para entrar al portal.
+</div>
+
+<h2>Parte 1 — Crear la cuenta en Render</h2>
+
+<div class="step">
+  <span class="n">1</span><h3>Entrar a render.com</h3>
+  <div class="body">
+    <p>Abra <code>render.com</code> en el navegador del teléfono o de la computadora.</p>
+    <p>Pulse el botón <strong>Get Started</strong> (arriba a la derecha).</p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">2</span><h3>Registrarse</h3>
+  <div class="body">
+    <p>Elija <strong>Sign up with email</strong> y escriba su correo y una contraseña.</p>
+    <p>También puede usar <strong>GitHub</strong> o <strong>Google</strong> si prefiere no crear otra contraseña.</p>
+    <div class="ok">
+      <strong>No pide tarjeta.</strong> El plan gratuito no requiere ningún dato de pago.
+    </div>
+    <p>Revise su correo y pulse el enlace de confirmación que le llega.</p>
+  </div>
+</div>
+
+<h2>Parte 2 — Subir el portal</h2>
+
+<div class="step">
+  <span class="n">3</span><h3>Crear el servicio</h3>
+  <div class="body">
+    <p>Ya dentro de Render, pulse el botón azul <strong>New +</strong> (arriba a la derecha).</p>
+    <p>En el menú que se abre, elija <strong>Web Service</strong>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">4</span><h3>Elegir cómo subir el código</h3>
+  <div class="body">
+    <p>Render le muestra varias opciones. Elija <strong>Deploy from existing code</strong>
+    (o <em>Public Git repository</em> si le pide un enlace).</p>
+    <div class="note">
+      <strong>Si le pide un repositorio de GitHub:</strong> es la vía más cómoda a largo plazo,
+      pero requiere crear una cuenta en <code>github.com</code> y subir la carpeta.
+      Si prefiere evitarlo, use la opción de subir el archivo comprimido directamente.
+    </div>
+    <p>Cuando le pida el archivo, suba <code>mrspets-staging_v3.zip</code>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">5</span><h3>Revisar la configuración</h3>
+  <div class="body">
+    <p>Render lee solo el archivo <code>render.yaml</code> que viene dentro del paquete.
+    Si lo detecta, verá un botón <strong>Apply</strong> — púlselo y salte al paso 6.</p>
+    <p>Si no lo detecta, llene así:</p>
+    <table>
+      <tr><th>Campo</th><th>Qué poner</th></tr>
+      <tr><td>Name</td><td><code>mrspets-staging</code></td></tr>
+      <tr><td>Region</td><td>Oregon (US West)</td></tr>
+      <tr><td>Runtime</td><td><strong>Python 3</strong></td></tr>
+      <tr><td>Build Command</td><td><code>pip install -r requirements.txt</code></td></tr>
+      <tr><td>Start Command</td><td><code>uvicorn server:app --host 0.0.0.0 --port $PORT</code></td></tr>
+      <tr><td>Instance Type</td><td><strong>Free</strong></td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>Parte 3 — Las 5 variables</h2>
+
+<div class="step">
+  <span class="n">6</span><h3>Buscar la sección "Environment"</h3>
+  <div class="body">
+    <p>Baje en la misma pantalla hasta encontrar <strong>Environment Variables</strong>
+    (o pestaña <strong>Environment</strong>).</p>
+    <p>Cada variable se agrega con el botón <strong>Add Environment Variable</strong>:
+    escribe el nombre a la izquierda y el valor a la derecha.</p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">7</span><h3>Cargar las 5 variables</h3>
+  <div class="body">
+    <table>
+      <tr><th>Nombre</th><th>Valor</th></tr>
+      <tr>
+        <td><code>DATABASE_URL</code></td>
+        <td>La cadena de Neon completa. Empieza con <code>postgresql://</code> y termina en
+        <code>?sslmode=require&amp;channel_binding=require</code></td>
+      </tr>
+      <tr>
+        <td><code>PORTAL_USER</code></td>
+        <td>El usuario que usted elija. Ejemplo: <code>mrspets</code></td>
+      </tr>
+      <tr>
+        <td><code>PORTAL_PASSWORD</code></td>
+        <td>La contraseña que usted elija. <strong>Mínimo 10 caracteres.</strong></td>
+      </tr>
+      <tr>
+        <td><code>ADMIN_PASSWORD</code></td>
+        <td>Otra contraseña distinta, para el panel de administración</td>
+      </tr>
+      <tr>
+        <td><code>SECRET_KEY</code></td>
+        <td>Pulse el botón <strong>Generate</strong> al lado del campo. Render la crea sola.
+        No invente una.</td>
+      </tr>
+    </table>
+    <div class="warn">
+      <strong>Anote el usuario y la contraseña del portal en un lugar seguro.</strong>
+      Son los que usará todos los días para entrar. Si los olvida, se cambian en esta misma
+      pantalla, pero hay que hacerlo desde aquí.
+    </div>
+    <div class="note">
+      <strong>Sobre <code>SECRET_KEY</code>:</strong> es la llave con la que el portal firma
+      las sesiones. Si usa <strong>Generate</strong>, Render crea una cadena larga y aleatoria.
+      Si la escribe a mano y es corta, las sesiones quedan débiles.
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">8</span><h3>Publicar</h3>
+  <div class="body">
+    <p>Pulse <strong>Create Web Service</strong> (o <strong>Deploy Web Service</strong>).</p>
+    <p>Se abre una pantalla con texto corriendo — son los <em>logs</em>. Es normal.
+    Espere a ver la línea:</p>
+    <pre><code>Application startup complete</code></pre>
+    <p>Tarda entre 2 y 5 minutos la primera vez.</p>
+    <p>Arriba de esa pantalla aparece su dirección, algo como:</p>
+    <pre><code>https://mrspets-staging.onrender.com</code></pre>
+    <p><strong>Cópiela.</strong> Es la dirección de su portal.</p>
+  </div>
+</div>
+
+<h2>Parte 4 — Verificar que quedó bien</h2>
+
+<div class="step">
+  <span class="n">9</span><h3>Probar la conexión a la base</h3>
+  <div class="body">
+    <p>En el navegador, escriba su dirección seguida de <code>/api/health</code>:</p>
+    <pre><code>https://mrspets-staging.onrender.com/api/health</code></pre>
+    <p>Debe aparecer un texto parecido a este:</p>
+    <pre><code>{"status":"ok","db":{"ok":true,"motor":"postgres"},"portal_protegido":true}</code></pre>
+    <div class="ok">
+      <strong>Si dice <code>"motor":"postgres"</code> y <code>"ok":true</code></strong> —
+      el portal está conectado a la base de datos real. <strong>Eso es lo que buscamos.</strong>
+    </div>
+    <div class="bad">
+      <strong>Si dice <code>"motor":"sqlite"</code></strong> — la cadena de Neon no se guardó.
+      Vuelva al paso 7 y revise <code>DATABASE_URL</code>.
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <span class="n">10</span><h3>Entrar al portal</h3>
+  <div class="body">
+    <p>Abra solo su dirección, sin nada más:</p>
+    <pre><code>https://mrspets-staging.onrender.com</code></pre>
+    <p>El navegador le pedirá usuario y contraseña en una ventanita.
+    Son los de <code>PORTAL_USER</code> y <code>PORTAL_PASSWORD</code> del paso 7.</p>
+    <p>Al entrar verá el portal Mrs Pets tal como lo conoce.</p>
+    <div class="note">
+      <strong>La primera visita del día tarda 30–50 segundos.</strong> El plan gratuito
+      "duerme" el servidor tras 15 minutos sin uso. Es normal, no está roto.
+    </div>
+  </div>
+</div>
+
+<h2>Parte 5 — Desde el teléfono</h2>
+
+<div class="step">
+  <span class="n">11</span><h3>Guardarlo como app</h3>
+  <div class="body">
+    <p>Abra la dirección en Chrome (Android) o Safari (iPhone). Cuando cargue:</p>
+    <ul class="chk">
+      <li><strong>iPhone:</strong> botón Compartir → <em>Añadir a pantalla de inicio</em></li>
+      <li><strong>Android:</strong> menú ⋮ → <em>Añadir a pantalla principal</em></li>
+    </ul>
+    <p>Queda como un ícono más. Al abrirlo le pedirá usuario y contraseña la primera vez;
+    el teléfono las recuerda después.</p>
+  </div>
+</div>
+
+<h2>Si algo falla</h2>
+
+<div class="step">
+  <div class="body">
+    <p><strong>1. La página tarda 40 segundos o más en cargar</strong></p>
+    <p>Es normal. El servidor estaba dormido. Espere. La segunda visita es instantánea.</p>
+
+    <p style="margin-top:18px"><strong>2. Error 502 o "Application failed to start"</strong></p>
+    <p>El servidor no arrancó. Vaya a Render → su servicio → pestaña <strong>Logs</strong>.
+    Busque la línea en rojo. Las causas más comunes:</p>
+    <ul class="chk">
+      <li>Falta una variable de entorno — revise que estén las 5</li>
+      <li><code>DATABASE_URL</code> mal pegada — debe empezar con <code>postgresql://</code></li>
+      <li>La contraseña de Neon cambió y no se actualizó en Render</li>
+    </ul>
+
+    <p style="margin-top:18px"><strong>3. Entro pero los datos no se guardan</strong></p>
+    <p>Abra <code>/api/health</code>. Si dice <code>"motor":"sqlite"</code>, el portal está
+    guardando en un archivo temporal que se borra al reiniciar. Revise que
+    <code>DATABASE_URL</code> termine en <code>?sslmode=require&amp;channel_binding=require</code>.</p>
+
+    <p style="margin-top:18px"><strong>4. No me acepta el usuario y contraseña</strong></p>
+    <p>Revise mayúsculas y minúsculas. Si los cambió en Render, espere 2–3 minutos
+    a que reinicie solo.</p>
+  </div>
+</div>
+
+<h2>Lo que queda protegido</h2>
+
+<div class="step">
+  <div class="body">
+    <ul class="chk">
+      <li><strong>Contraseña de acceso al portal</strong> — nadie entra sin ella</li>
+      <li><strong>Contraseñas de clientes y staff cifradas</strong> — no se guardan legibles</li>
+      <li><strong>Sesiones firmadas</strong> — no se pueden falsificar</li>
+      <li><strong>Google no lo indexa</strong> — no aparece en búsquedas</li>
+      <li><strong>HTTPS automático</strong> — la conexión va cifrada</li>
+      <li><strong>Auditoría</strong> — cada cambio queda registrado con quién y cuándo</li>
+    </ul>
+    <div class="bad">
+      <strong>El <code>noindex</code> no es una contraseña.</strong> Significa que Google no lo
+      muestra en resultados, pero quien tenga la dirección exacta puede intentar entrar.
+      Por eso la contraseña del portal es obligatoria, no opcional.
+    </div>
+  </div>
+</div>
+
+<h2>Pendiente: cambiar la contraseña de la base</h2>
+
+<div class="step">
+  <div class="body">
+    <p>La contraseña de Neon quedó visible en el chat. <strong>No es urgente hoy</strong>
+    (la base está vacía y el portal aún no está publicado), pero debe cambiarse
+    <strong>antes de cargar datos reales de clientes</strong>.</p>
+    <p><strong>Cuándo:</strong> cuando el portal ya funcione y usted confirme que entra bien.
+    No antes — si la cambia a mitad del montaje, se confunde.</p>
+    <p><strong>Cómo:</strong></p>
+    <ol>
+      <li>Entre a <code>console.neon.tech</code> y abra su proyecto</li>
+      <li>Menú lateral → <strong>Settings</strong> → <strong>Reset password</strong></li>
+      <li>Neon le muestra una cadena nueva. Cópiela completa</li>
+      <li>Vaya a Render → su servicio → pestaña <strong>Environment</strong></li>
+      <li>En <code>DATABASE_URL</code> pulse <strong>Edit</strong>, borre el valor viejo y pegue el nuevo</li>
+      <li>Pulse <strong>Save Changes</strong>. Render reinicia solo (2–3 minutos)</li>
+      <li>Abra <code>/api/health</code> y confirme que dice <code>"motor":"postgres"</code></li>
+    </ol>
+    <div class="note">
+      <strong>Qué se pierde al cambiarla:</strong> nada. Los datos viven en la base, no en la
+      cadena. Solo cambia la llave con la que se entra.
+      <br><br>
+      <strong>Qué se rompe si no actualiza Render:</strong> el portal deja de conectar y da
+      error 500 en todo. Los dos pasos van juntos.
+    </div>
+  </div>
+</div>
+
+<h2>Lo que necesito de usted</h2>
+
+<div class="step">
+  <div class="body">
+    <p><strong>El usuario y la contraseña que quiera usar para el portal.</strong></p>
+    <p>Con eso termino de configurar la barrera de acceso y le confirmo que quedó cerrada.
+    No necesito su contraseña de Render ni de Neon.</p>
+    <div class="note">
+      Si prefiere no compartirlos, también puede cargarlos usted misma en el paso 7
+      y no decírmelos. El portal funciona igual.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><strong>Mrs Pets — Guía de despliegue en Render</strong> · Versión 2.0 · Noviembre 2026</p>
+  <p>Este documento no contiene credenciales. Todos los valores se ingresan en el panel de Render.</p>
+</footer>
+
+</div>
+</body>
+</html>

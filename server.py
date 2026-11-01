@@ -1,0 +1,1228 @@
+"""
+Mrs Pets — Servidor de staging
+==============================
+
+Sirve el portal existente (root.html + css + js + assets) y expone una API REST
+para todo lo que hoy vive en localStorage.
+
+Ejecutar local:
+    uvicorn server:app --host 0.0.0.0 --port 8000
+
+Variables de entorno (ver .env.example):
+    DATABASE_URL      cadena de Neon/Postgres. Vacío = SQLite local.
+    PORTAL_USER       usuario de la barrera de acceso al portal
+    PORTAL_PASSWORD   contraseña de la barrera de acceso
+    SECRET_KEY        clave para firmar cookies de sesión
+    ADMIN_USER / ADMIN_PASSWORD   primer usuario staff (se crea al arrancar)
+"""
+import os
+import re
+import logging
+import traceback
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List
+
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, Query, Body
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+import db
+import security as sec
+import facturacion as fac
+
+# ---------------------------------------------------------------------
+# Logging — errores claros y consultables
+# ---------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+)
+log = logging.getLogger("mrspets")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+PORTAL_USER = os.getenv("PORTAL_USER", "").strip()
+PORTAL_PASSWORD = os.getenv("PORTAL_PASSWORD", "").strip()
+ADMIN_USER = os.getenv("ADMIN_USER", "admin").strip()
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
+
+app = FastAPI(title="Mrs Pets API", version="1.0.0-staging", docs_url="/api/docs")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("ALLOWED_ORIGIN", "*")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------
+# Arranque
+# ---------------------------------------------------------------------
+@app.on_event("startup")
+def _startup():
+    log.info("Arrancando Mrs Pets staging | motor=%s",
+             "postgres" if db.IS_POSTGRES else "sqlite")
+    try:
+        db.init_schema()
+    except Exception as e:
+        log.error("No se pudo aplicar el esquema: %s", e)
+        log.error(traceback.format_exc())
+
+    # Primer usuario staff
+    if ADMIN_PASSWORD:
+        try:
+            existe = db.q("SELECT id FROM staff_users WHERE LOWER(username)=LOWER(%s)",
+                          (ADMIN_USER,), one=True)
+            if not existe:
+                db.execute(
+                    """INSERT INTO staff_users (username, nombre, password_hash, rol)
+                       VALUES (%s,%s,%s,'admin')""",
+                    (ADMIN_USER, "Administrador", sec.hash_password(ADMIN_PASSWORD)),
+                )
+                log.info("Usuario staff '%s' creado", ADMIN_USER)
+        except Exception as e:
+            log.error("No se pudo crear el usuario admin: %s", e)
+
+    if not PORTAL_PASSWORD:
+        log.warning("PORTAL_PASSWORD vacío: el portal queda SIN barrera de acceso. "
+                    "Definir en Render antes de compartir la URL.")
+
+
+# ---------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for")
+    return (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else ""))
+
+
+def current_user(request: Request) -> Optional[dict]:
+    raw = request.cookies.get(sec.COOKIE_NAME)
+    token = sec.parse_cookie_value(raw) if raw else None
+    if not token:
+        return None
+    s = sec.get_session(token)
+    if not s:
+        return None
+    if s["tipo"] == "staff":
+        return {"tipo": "staff", "id": s["staff_id"], "nombre": s.get("staff_nombre") or s.get("username"),
+                "rol": s.get("rol"), "token": token}
+    return {"tipo": "cliente", "id": s["tutor_id"], "nombre": s.get("tutor_nombre"),
+            "rol": "cliente", "token": token}
+
+
+def require_user(request: Request) -> dict:
+    u = current_user(request)
+    if not u:
+        raise HTTPException(401, "Sesión requerida. Inicie sesión.")
+    return u
+
+
+def require_staff(request: Request) -> dict:
+    u = require_user(request)
+    if u["tipo"] != "staff":
+        raise HTTPException(403, "Solo personal autorizado.")
+    return u
+
+
+def require_roles(*roles):
+    def _dep(request: Request) -> dict:
+        u = require_staff(request)
+        if u["rol"] not in roles:
+            raise HTTPException(403, f"Requiere rol: {', '.join(roles)}")
+        return u
+    return _dep
+
+
+def norm_rif(v: Optional[str]) -> Optional[str]:
+    if not v:
+        return None
+    return re.sub(r"[^0-9]", "", str(v)) or None
+
+
+def norm_phone(v: Optional[str]) -> Optional[str]:
+    if not v:
+        return None
+    d = re.sub(r"[^0-9]", "", str(v))
+    return d[-10:] if len(d) >= 10 else d
+
+
+def set_session_cookie(response: Response, token: str):
+    response.set_cookie(
+        key=sec.COOKIE_NAME,
+        value=sec.make_cookie_value(token),
+        httponly=True,
+        samesite="lax",
+        secure=os.getenv("COOKIE_SECURE", "0") == "1",
+        max_age=sec.SESSION_DAYS * 86400,
+        path="/",
+    )
+
+
+_CAMPOS_SECRETOS = ("password_hash", "pin_hash", "token_hash")
+
+
+def _limpiar(obj):
+    """Quita hashes de cualquier respuesta. Nunca deben salir del servidor."""
+    if isinstance(obj, dict):
+        return {k: _limpiar(v) for k, v in obj.items() if k not in _CAMPOS_SECRETOS}
+    if isinstance(obj, list):
+        return [_limpiar(v) for v in obj]
+    return obj
+
+
+def ok(**kw):
+    return {"status": "success", **_limpiar(kw)}
+
+
+# ---------------------------------------------------------------------
+# Modelos
+# ---------------------------------------------------------------------
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class ClienteLoginIn(BaseModel):
+    identificador: str          # RIF, teléfono, email o nombre
+    password: str
+
+
+class TutorIn(BaseModel):
+    nombre: str
+    rif: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    direccion: Optional[str] = None
+    sector: Optional[str] = None
+    foto: Optional[str] = None
+    password: Optional[str] = None
+    pin: Optional[str] = None
+
+
+class MascotaIn(BaseModel):
+    nombre: str
+    tutor_id: int
+    codigo: Optional[str] = None
+    especie: Optional[str] = None
+    raza: Optional[str] = None
+    sexo: Optional[str] = None
+    peso_kg: Optional[float] = None
+    foto: Optional[str] = None
+    alergias: Optional[str] = None
+    condiciones: Optional[str] = None
+    notas: Optional[str] = None
+
+
+class CitaIn(BaseModel):
+    mascota_id: int
+    area: str
+    fecha_hora: str
+    servicio_id: Optional[int] = None
+    codigo: Optional[str] = None
+    notas: Optional[str] = None
+    precio_usd: Optional[float] = None
+
+
+class ItemIn(BaseModel):
+    concepto: str
+    cantidad: float = 1
+    precio_unitario: float = 0
+    descuento_linea: float = 0
+    servicio_id: Optional[int] = None
+    producto_id: Optional[int] = None
+
+
+class FacturaIn(BaseModel):
+    tutor_id: Optional[int] = None
+    mascota_id: Optional[int] = None
+    cita_id: Optional[int] = None
+    serie: str = "GEN"
+    items: List[ItemIn] = Field(default_factory=list)
+    descuento: float = 0
+    iva_pct: float = 16
+    igtf_pct: float = 0
+    monto_divisas: float = 0
+    tasa_bcv: Optional[float] = None
+    cliente_nombre: Optional[str] = None
+    cliente_rif: Optional[str] = None
+    cliente_telefono: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_direccion: Optional[str] = None
+    notas: Optional[str] = None
+
+
+class PagoIn(BaseModel):
+    metodo: str
+    monto: float
+    moneda: str = "USD"
+    referencia: Optional[str] = None
+    tasa_aplicada: Optional[float] = None
+    notas: Optional[str] = None
+
+
+class AnularIn(BaseModel):
+    motivo: str
+
+
+class LeiaIn(BaseModel):
+    mensaje: str
+    conversacion_id: Optional[int] = None
+
+
+class ReporteIn(BaseModel):
+    pantalla: Optional[str] = None
+    accion: Optional[str] = None
+    error_mensaje: Optional[str] = None
+    error_stack: Optional[str] = None
+    url: Optional[str] = None
+
+
+# =====================================================================
+# SALUD
+# =====================================================================
+@app.get("/api/health")
+def health():
+    h = db.health()
+    return {"status": "ok" if h["ok"] else "error", "db": h,
+            "version": "1.0.0-staging",
+            "portal_protegido": bool(PORTAL_PASSWORD)}
+
+
+# =====================================================================
+# AUTENTICACIÓN
+# =====================================================================
+@app.post("/api/auth/login")
+def staff_login(data: LoginIn, request: Request, response: Response):
+    row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s) AND activo=TRUE",
+               (data.username.strip(),), one=True)
+    if not row or not sec.verify_password(data.password, row["password_hash"]):
+        sec.audit("staff_users", "LOGIN_FALLIDO", usuario={"tipo": "staff", "nombre": data.username},
+                  ip=client_ip(request))
+        raise HTTPException(401, "Credenciales inválidas.")
+    token = sec.create_session("staff", staff_id=row["id"], ip=client_ip(request),
+                               user_agent=request.headers.get("user-agent"))
+    set_session_cookie(response, token)
+    db.execute("UPDATE staff_users SET ultimo_acceso=%s WHERE id=%s",
+               (datetime.now(timezone.utc).isoformat(), row["id"]))
+    sec.audit("staff_users", "LOGIN", row["id"],
+              usuario={"tipo": "staff", "id": row["id"], "nombre": row["username"]},
+              ip=client_ip(request))
+    return ok(user={"id": row["id"], "username": row["username"],
+                    "nombre": row["nombre"], "role": row["rol"]})
+
+
+@app.post("/api/auth/cliente/login")
+def cliente_login(data: ClienteLoginIn, request: Request, response: Response):
+    """
+    Login real de cliente. Acepta RIF, teléfono, email o nombre.
+    Valida contra password_hash (PBKDF2). Si el tutor no tiene contraseña
+    definida, cae al PIN como respaldo (compatibilidad con el portal actual).
+    """
+    ident = (data.identificador or "").strip()
+    if not ident:
+        raise HTTPException(400, "Indique RIF, teléfono, email o nombre.")
+
+    rif_n = norm_rif(ident)
+    tel_n = norm_phone(ident)
+    row = db.q(
+        """SELECT * FROM tutores
+           WHERE activo=TRUE AND (
+                 LOWER(nombre) = LOWER(%s)
+              OR LOWER(email) = LOWER(%s)
+              OR (%s IS NOT NULL AND rif_norm = %s)
+              OR (%s IS NOT NULL AND telefono_norm = %s)
+           )""",
+        (ident, ident, rif_n, rif_n, tel_n, tel_n), one=True,
+    )
+    if not row:
+        sec.audit("tutores", "LOGIN_FALLIDO", usuario={"tipo": "cliente", "nombre": ident},
+                  ip=client_ip(request))
+        raise HTTPException(401, "Usuario no registrado o inactivo.")
+
+    valido = False
+    if row.get("password_hash"):
+        valido = sec.verify_password(data.password, row["password_hash"])
+    if not valido and row.get("pin_hash"):
+        valido = sec.verify_password(data.password, row["pin_hash"])
+
+    if not valido:
+        sec.audit("tutores", "LOGIN_FALLIDO", row["id"],
+                  usuario={"tipo": "cliente", "id": row["id"], "nombre": row["nombre"]},
+                  ip=client_ip(request))
+        raise HTTPException(401, "Contraseña incorrecta.")
+
+    token = sec.create_session("cliente", tutor_id=row["id"], ip=client_ip(request),
+                               user_agent=request.headers.get("user-agent"))
+    set_session_cookie(response, token)
+    sec.audit("tutores", "LOGIN", row["id"],
+              usuario={"tipo": "cliente", "id": row["id"], "nombre": row["nombre"]},
+              ip=client_ip(request))
+    return ok(tutor={"id": row["id"], "nombre": row["nombre"], "rif": row["rif"],
+                     "telefono": row["telefono"], "email": row["email"]})
+
+
+@app.post("/api/auth/logout")
+def logout(request: Request, response: Response):
+    u = current_user(request)
+    if u:
+        sec.revoke_session(u["token"])
+    response.delete_cookie(sec.COOKIE_NAME, path="/")
+    return ok()
+
+
+@app.get("/api/auth/me")
+def me(request: Request):
+    u = current_user(request)
+    if not u:
+        raise HTTPException(401, "Sin sesión.")
+    return ok(user={k: v for k, v in u.items() if k != "token"})
+
+
+# =====================================================================
+# TUTORES
+# =====================================================================
+@app.get("/api/tutores")
+def listar_tutores(request: Request, q_: Optional[str] = Query(None, alias="q"),
+                   user=Depends(require_staff)):
+    if q_:
+        like = f"%{q_}%"
+        return ok(tutores=db.q(
+            """SELECT * FROM tutores WHERE activo=TRUE AND
+               (nombre ILIKE %s OR email ILIKE %s OR rif ILIKE %s OR telefono ILIKE %s)
+               ORDER BY nombre""", (like, like, like, like)))
+    return ok(tutores=db.q("SELECT * FROM tutores WHERE activo=TRUE ORDER BY nombre"))
+
+
+@app.get("/api/tutores/{tid}")
+def obtener_tutor(tid: int, request: Request):
+    u = require_user(request)
+    if u["tipo"] == "cliente" and u["id"] != tid:
+        raise HTTPException(403, "Solo puede ver su propia ficha.")
+    t = db.q("SELECT * FROM tutores WHERE id=%s", (tid,), one=True)
+    if not t:
+        raise HTTPException(404, "Tutor no encontrado.")
+    t.pop("password_hash", None)
+    t.pop("pin_hash", None)
+    t["mascotas"] = db.q("SELECT * FROM mascotas WHERE tutor_id=%s AND activo=TRUE", (tid,))
+    return ok(tutor=t)
+
+
+@app.post("/api/tutores")
+def crear_tutor(data: TutorIn, request: Request, user=Depends(require_staff)):
+    rid = db.execute(
+        """INSERT INTO tutores (nombre, rif, rif_norm, telefono, telefono_norm, email,
+                                direccion, sector, foto, password_hash, pin_hash)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (data.nombre, data.rif, norm_rif(data.rif), data.telefono, norm_phone(data.telefono),
+         data.email, data.direccion, data.sector, data.foto,
+         sec.hash_password(data.password) if data.password else None,
+         sec.hash_password(data.pin) if data.pin else None),
+        returning=True,
+    )
+    sec.audit("tutores", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid)
+
+
+@app.patch("/api/tutores/{tid}")
+def editar_tutor(tid: int, data: TutorIn, request: Request, user=Depends(require_staff)):
+    t = db.q("SELECT * FROM tutores WHERE id=%s", (tid,), one=True)
+    if not t:
+        raise HTTPException(404, "Tutor no encontrado.")
+    db.execute(
+        """UPDATE tutores SET nombre=%s, rif=%s, rif_norm=%s, telefono=%s,
+           telefono_norm=%s, email=%s, direccion=%s, sector=%s, foto=%s,
+           password_hash=COALESCE(%s, password_hash),
+           pin_hash=COALESCE(%s, pin_hash)
+           WHERE id=%s""",
+        (data.nombre, data.rif, norm_rif(data.rif), data.telefono, norm_phone(data.telefono),
+         data.email, data.direccion, data.sector, data.foto,
+         sec.hash_password(data.password) if data.password else None,
+         sec.hash_password(data.pin) if data.pin else None, tid),
+    )
+    sec.audit("tutores", "UPDATE", tid, usuario=user, ip=client_ip(request))
+    return ok(id=tid)
+
+
+@app.delete("/api/tutores/{tid}")
+def desactivar_tutor(tid: int, request: Request, user=Depends(require_roles("admin", "gerencia"))):
+    db.execute("UPDATE tutores SET activo=FALSE WHERE id=%s", (tid,))
+    sec.audit("tutores", "DESACTIVAR", tid, usuario=user, ip=client_ip(request))
+    return ok(id=tid, activo=False)
+
+
+# =====================================================================
+# MASCOTAS
+# =====================================================================
+@app.get("/api/mascotas")
+def listar_mascotas(request: Request, tutor_id: Optional[int] = None,
+                    user=Depends(require_user)):
+    if user["tipo"] == "cliente":
+        tutor_id = user["id"]
+    if tutor_id:
+        return ok(mascotas=db.q(
+            "SELECT * FROM mascotas WHERE tutor_id=%s AND activo=TRUE ORDER BY nombre",
+            (tutor_id,)))
+    return ok(mascotas=db.q("SELECT * FROM mascotas WHERE activo=TRUE ORDER BY nombre"))
+
+
+@app.post("/api/mascotas")
+def crear_mascota(data: MascotaIn, request: Request, user=Depends(require_staff)):
+    codigo = data.codigo
+    if not codigo:
+        n = db.q("SELECT COUNT(*) AS c FROM mascotas", one=True)["c"] + 101
+        codigo = f"PET-{n}"
+    rid = db.execute(
+        """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo,
+                                 peso_kg, foto, alergias, condiciones, notas)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (codigo, data.tutor_id, data.nombre, data.especie, data.raza, data.sexo,
+         data.peso_kg, data.foto, data.alergias, data.condiciones, data.notas),
+        returning=True,
+    )
+    sec.audit("mascotas", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid, codigo=codigo)
+
+
+@app.patch("/api/mascotas/{mid}")
+def editar_mascota(mid: int, data: MascotaIn, request: Request, user=Depends(require_staff)):
+    db.execute(
+        """UPDATE mascotas SET nombre=%s, especie=%s, raza=%s, sexo=%s, peso_kg=%s,
+           foto=%s, alergias=%s, condiciones=%s, notas=%s WHERE id=%s""",
+        (data.nombre, data.especie, data.raza, data.sexo, data.peso_kg, data.foto,
+         data.alergias, data.condiciones, data.notas, mid),
+    )
+    sec.audit("mascotas", "UPDATE", mid, usuario=user, ip=client_ip(request))
+    return ok(id=mid)
+
+
+# =====================================================================
+# SERVICIOS Y PRODUCTOS
+# =====================================================================
+@app.get("/api/servicios")
+def listar_servicios():
+    return ok(servicios=db.q("SELECT * FROM servicios WHERE activo=TRUE ORDER BY area, nombre"))
+
+
+@app.get("/api/productos")
+def listar_productos():
+    return ok(productos=db.q("SELECT * FROM productos WHERE activo=TRUE ORDER BY nombre"))
+
+
+@app.post("/api/productos/{pid}/movimiento")
+def movimiento_inventario(pid: int, tipo: str = Body(...), cantidad: int = Body(...),
+                          motivo: str = Body(None), request: Request = None,
+                          user=Depends(require_staff)):
+    p = db.q("SELECT * FROM productos WHERE id=%s", (pid,), one=True)
+    if not p:
+        raise HTTPException(404, "Producto no encontrado.")
+    delta = cantidad if tipo == "entrada" else -cantidad
+    nuevo = p["stock"] + delta
+    if nuevo < 0:
+        raise HTTPException(400, f"Stock insuficiente: hay {p['stock']}.")
+    db.execute("UPDATE productos SET stock=%s WHERE id=%s", (nuevo, pid))
+    db.execute(
+        """INSERT INTO movimientos_inventario
+           (producto_id, tipo, cantidad, stock_resultante, motivo, usuario_id)
+           VALUES (%s,%s,%s,%s,%s,%s)""",
+        (pid, tipo, cantidad, nuevo, motivo, user["id"]),
+    )
+    sec.audit("productos", "MOVIMIENTO", pid, campo="stock",
+              antes=p["stock"], despues=nuevo, usuario=user)
+    return ok(producto_id=pid, stock=nuevo)
+
+
+# =====================================================================
+# CITAS
+# =====================================================================
+@app.get("/api/citas")
+def listar_citas(request: Request, desde: Optional[str] = None, hasta: Optional[str] = None,
+                 area: Optional[str] = None, user=Depends(require_user)):
+    sql = """SELECT c.*, m.nombre AS mascota_nombre, m.codigo AS mascota_codigo,
+                    t.nombre AS tutor_nombre, t.telefono AS tutor_telefono
+             FROM citas c
+             JOIN mascotas m ON m.id = c.mascota_id
+             JOIN tutores t ON t.id = m.tutor_id
+             WHERE c.activo=TRUE"""
+    params = []
+    if user["tipo"] == "cliente":
+        sql += " AND m.tutor_id = %s"
+        params.append(user["id"])
+    if desde:
+        sql += " AND c.fecha_hora >= %s"
+        params.append(desde)
+    if hasta:
+        sql += " AND c.fecha_hora <= %s"
+        params.append(hasta)
+    if area:
+        sql += " AND c.area = %s"
+        params.append(area)
+    sql += " ORDER BY c.fecha_hora DESC"
+    return ok(citas=db.q(sql, tuple(params)))
+
+
+@app.post("/api/citas")
+def crear_cita(data: CitaIn, request: Request, user=Depends(require_user)):
+    m = db.q("SELECT * FROM mascotas WHERE id=%s", (data.mascota_id,), one=True)
+    if not m:
+        raise HTTPException(404, "Mascota no encontrada.")
+    if user["tipo"] == "cliente" and m["tutor_id"] != user["id"]:
+        raise HTTPException(403, "Solo puede agendar para sus mascotas.")
+
+    pref = {"grooming": "G", "clinica": "C", "hotel": "H", "tienda": "T"}.get(data.area, "X")
+    codigo = data.codigo
+    if not codigo:
+        n = db.q("SELECT COUNT(*) AS c FROM citas WHERE area=%s", (data.area,), one=True)["c"] + 1
+        codigo = f"{pref}-{n:03d}"
+
+    try:
+        rid = db.execute(
+            """INSERT INTO citas (codigo, mascota_id, servicio_id, area, fecha_hora,
+                                  notas, precio_usd)
+               VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+            (codigo, data.mascota_id, data.servicio_id, data.area, data.fecha_hora,
+             data.notas, data.precio_usd),
+            returning=True,
+        )
+    except Exception as e:
+        if "ux_citas_turno_dia" in str(e) or "UNIQUE" in str(e).upper():
+            raise HTTPException(409, f"El turno {codigo} ya existe para ese día.")
+        raise
+    sec.audit("citas", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid, codigo=codigo)
+
+
+@app.patch("/api/citas/{cid}")
+def actualizar_cita(cid: int, estado: Optional[str] = Body(None),
+                    step_index: Optional[int] = Body(None),
+                    notas: Optional[str] = Body(None),
+                    request: Request = None, user=Depends(require_staff)):
+    c = db.q("SELECT * FROM citas WHERE id=%s", (cid,), one=True)
+    if not c:
+        raise HTTPException(404, "Cita no encontrada.")
+    db.execute(
+        """UPDATE citas SET estado=COALESCE(%s,estado),
+                            step_index=COALESCE(%s,step_index),
+                            notas=COALESCE(%s,notas) WHERE id=%s""",
+        (estado, step_index, notas, cid),
+    )
+    sec.audit("citas", "UPDATE", cid, campo="estado", antes=c["estado"], despues=estado,
+              usuario=user, ip=client_ip(request))
+    return ok(id=cid)
+
+
+# =====================================================================
+# HISTORIAL Y VACUNAS
+# =====================================================================
+@app.get("/api/mascotas/{mid}/historial")
+def historial(mid: int, request: Request, user=Depends(require_user)):
+    m = db.q("SELECT * FROM mascotas WHERE id=%s", (mid,), one=True)
+    if not m:
+        raise HTTPException(404, "Mascota no encontrada.")
+    if user["tipo"] == "cliente" and m["tutor_id"] != user["id"]:
+        raise HTTPException(403, "No autorizado.")
+    return ok(historial=db.q(
+        "SELECT * FROM historial_clinico WHERE mascota_id=%s ORDER BY fecha DESC", (mid,)))
+
+
+@app.post("/api/mascotas/{mid}/historial")
+def agregar_historial(mid: int, motivo: str = Body(None), diagnostico: str = Body(None),
+                      tratamiento: str = Body(None), peso_kg: float = Body(None),
+                      veterinario: str = Body(None), notas: str = Body(None),
+                      request: Request = None,
+                      user=Depends(require_roles("admin", "gerencia", "veterinario"))):
+    rid = db.execute(
+        """INSERT INTO historial_clinico
+           (mascota_id, motivo, diagnostico, tratamiento, peso_kg, veterinario, notas)
+           VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (mid, motivo, diagnostico, tratamiento, peso_kg, veterinario, notas),
+        returning=True,
+    )
+    sec.audit("historial_clinico", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid)
+
+
+@app.get("/api/mascotas/{mid}/vacunas")
+def vacunas(mid: int, request: Request, user=Depends(require_user)):
+    return ok(vacunas=db.q(
+        "SELECT * FROM vacunas WHERE mascota_id=%s ORDER BY fecha_aplicacion DESC", (mid,)))
+
+
+@app.post("/api/mascotas/{mid}/vacunas")
+def agregar_vacuna(mid: int, nombre: str = Body(...), fecha_aplicacion: str = Body(...),
+                   lote: str = Body(None), proxima_dosis: str = Body(None),
+                   veterinario: str = Body(None), request: Request = None,
+                   user=Depends(require_roles("admin", "gerencia", "veterinario"))):
+    rid = db.execute(
+        """INSERT INTO vacunas (mascota_id, nombre, lote, fecha_aplicacion,
+                                proxima_dosis, veterinario)
+           VALUES (%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (mid, nombre, lote, fecha_aplicacion, proxima_dosis, veterinario),
+        returning=True,
+    )
+    sec.audit("vacunas", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid)
+
+
+# =====================================================================
+# FACTURACIÓN
+# =====================================================================
+def _negocio() -> dict:
+    rows = db.q("SELECT clave, valor FROM configuracion")
+    cfg = {r["clave"]: r["valor"] for r in rows}
+    return {
+        "razon_social": cfg.get("negocio.razon_social", "MRS PETS CORP, C.A."),
+        "rif": cfg.get("negocio.rif", ""),
+        "direccion": cfg.get("negocio.direccion", ""),
+        "telefono": cfg.get("negocio.telefono", ""),
+        "iva_pct": float(cfg.get("fiscal.iva_pct", 16) or 16),
+        "igtf_pct": float(cfg.get("fiscal.igtf_pct", 3) or 3),
+    }
+
+
+@app.post("/api/facturas")
+def crear_factura(data: FacturaIn, request: Request, user=Depends(require_staff)):
+    """Crea un BORRADOR. No consume número de serie."""
+    if not data.items:
+        raise HTTPException(400, "La factura necesita al menos un ítem.")
+
+    tutor = db.q("SELECT * FROM tutores WHERE id=%s", (data.tutor_id,), one=True) if data.tutor_id else None
+    nombre = data.cliente_nombre or (tutor["nombre"] if tutor else "Cliente Mostrador")
+    rif = data.cliente_rif or (tutor["rif"] if tutor else None)
+    tel = data.cliente_telefono or (tutor["telefono"] if tutor else None)
+    mail = data.cliente_email or (tutor["email"] if tutor else None)
+    direc = data.cliente_direccion or (tutor["direccion"] if tutor else None)
+
+    items = [i.dict() for i in data.items]
+    tot = fac.calcular_totales(items, data.descuento, data.iva_pct,
+                               data.igtf_pct, data.monto_divisas)
+
+    serie = db.q("SELECT * FROM series_factura WHERE codigo=%s", (data.serie,), one=True)
+    if not serie:
+        raise HTTPException(400, f"Serie '{data.serie}' no existe.")
+
+    rid = db.execute(
+        """INSERT INTO facturas
+           (serie_id, numero, numero_completo, tutor_id, mascota_id, cita_id,
+            cliente_nombre, cliente_rif, cliente_telefono, cliente_email, cliente_direccion,
+            subtotal, descuento, base_imponible, iva_pct, iva_monto, igtf_pct, igtf_monto,
+            total, tasa_bcv, total_ves, estado, usuario_emisor, notas)
+           VALUES (%s,0,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                   'borrador',%s,%s) RETURNING id""",
+        (serie["id"], f"BORRADOR-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+         data.tutor_id, data.mascota_id, data.cita_id,
+         nombre, rif, tel, mail, direc,
+         tot["subtotal"], tot["descuento"], tot["base_imponible"],
+         tot["iva_pct"], tot["iva_monto"], tot["igtf_pct"], tot["igtf_monto"],
+         tot["total"], data.tasa_bcv,
+         round(tot["total"] * data.tasa_bcv, 2) if data.tasa_bcv else None,
+         user["id"], data.notas),
+        returning=True,
+    )
+
+    for it in items:
+        cant = float(it.get("cantidad") or 1)
+        precio = float(it.get("precio_unitario") or 0)
+        desc = float(it.get("descuento_linea") or 0)
+        db.execute(
+            """INSERT INTO factura_items
+               (factura_id, servicio_id, producto_id, concepto, cantidad,
+                precio_unitario, descuento_linea, total_linea)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (rid, it.get("servicio_id"), it.get("producto_id"), it["concepto"],
+             cant, precio, desc, round(cant * precio - desc, 2)),
+        )
+
+    sec.audit("facturas", "INSERT", rid, usuario=user, ip=client_ip(request))
+    return ok(id=rid, estado="borrador", totales=tot)
+
+
+@app.post("/api/facturas/{fid}/emitir")
+def emitir_factura(fid: int, request: Request, user=Depends(require_staff)):
+    """
+    Emite: reserva el número correlativo y congela totales + total en letras.
+    Todo en una transacción: si algo falla, el número NO se consume.
+    """
+    f = db.q("SELECT * FROM facturas WHERE id=%s", (fid,), one=True)
+    if not f:
+        raise HTTPException(404, "Factura no encontrada.")
+    if f["estado"] != "borrador":
+        raise HTTPException(409, f"La factura ya está en estado '{f['estado']}'.")
+
+    serie = db.q("SELECT * FROM series_factura WHERE id=%s", (f["serie_id"],), one=True)
+    serie_id, numero, completo = fac.siguiente_numero(serie["codigo"])
+
+    letras = fac.total_en_letras(f["total"], f["moneda"])
+    ahora = datetime.now(timezone.utc).isoformat()
+
+    db.execute(
+        """UPDATE facturas SET serie_id=%s, numero=%s, numero_completo=%s,
+           fecha_emision=%s, total_letras=%s, estado='emitida' WHERE id=%s""",
+        (serie_id, numero, completo, ahora, letras, fid),
+    )
+
+    # Descuento de inventario en la misma operación
+    items = db.q("SELECT * FROM factura_items WHERE factura_id=%s", (fid,))
+    for it in items:
+        if it.get("producto_id"):
+            p = db.q("SELECT * FROM productos WHERE id=%s", (it["producto_id"],), one=True)
+            if p:
+                nuevo = p["stock"] - int(it["cantidad"])
+                if nuevo < 0:
+                    raise HTTPException(400, f"Stock insuficiente de {p['nombre']}.")
+                db.execute("UPDATE productos SET stock=%s WHERE id=%s", (nuevo, p["id"]))
+                db.execute(
+                    """INSERT INTO movimientos_inventario
+                       (producto_id, tipo, cantidad, stock_resultante, motivo, factura_id, usuario_id)
+                       VALUES (%s,'salida',%s,%s,%s,%s,%s)""",
+                    (p["id"], int(it["cantidad"]), nuevo, f"Factura {completo}", fid, user["id"]),
+                )
+
+    sec.audit("facturas", "EMITIR", fid, campo="estado", antes="borrador", despues="emitida",
+              usuario=user, ip=client_ip(request))
+    return ok(id=fid, numero_completo=completo, total=f["total"], total_letras=letras)
+
+
+@app.post("/api/facturas/{fid}/pagos")
+def registrar_pago(fid: int, data: PagoIn, request: Request, user=Depends(require_staff)):
+    f = db.q("SELECT * FROM facturas WHERE id=%s", (fid,), one=True)
+    if not f:
+        raise HTTPException(404, "Factura no encontrada.")
+    if f["estado"] == "anulada":
+        raise HTTPException(409, "No se puede cobrar una factura anulada.")
+
+    if data.monto <= 0:
+        raise HTTPException(400, "El monto del pago debe ser mayor que cero.")
+
+    tasa = data.tasa_aplicada or f.get("tasa_bcv") or 1
+    monto_usd = round(data.monto / tasa, 2) if data.moneda == "VES" else round(data.monto, 2)
+
+    # Saldo ANTES de insertar: si el pago excede lo que se debe, se rechaza
+    # sin escribir nada. Evita cobros de más y pagos huérfanos.
+    prev = db.q("SELECT * FROM v_facturas_saldo WHERE id=%s", (fid,), one=True)
+    saldo_prev = float(prev["saldo"]) if prev else float(f["total"])
+    if monto_usd > saldo_prev + 0.009:
+        raise HTTPException(
+            400,
+            f"El pago ({monto_usd:.2f}) excede el saldo pendiente ({saldo_prev:.2f}).",
+        )
+
+    # Insert + cambio de estado en UNA transacción: o queda todo, o nada.
+    with db.get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            db._to_sqlite(
+                """INSERT INTO pagos (factura_id, metodo, referencia, monto, moneda,
+                                      monto_usd, tasa_aplicada, usuario_id, notas)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+            ) if not db.IS_POSTGRES else
+            """INSERT INTO pagos (factura_id, metodo, referencia, monto, moneda,
+                                  monto_usd, tasa_aplicada, usuario_id, notas)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (fid, data.metodo, data.referencia, data.monto, data.moneda,
+             monto_usd, tasa, user["id"], data.notas),
+        )
+        cur.close()
+
+    saldo = db.q("SELECT * FROM v_facturas_saldo WHERE id=%s", (fid,), one=True)
+    saldo_final = float(saldo["saldo"]) if saldo else 0.0
+    nuevo_estado = "pagada" if saldo_final <= 0.009 else f["estado"]
+    if nuevo_estado == "pagada" and f["estado"] != "pagada":
+        db.execute("UPDATE facturas SET estado='pagada' WHERE id=%s", (fid,))
+
+    sec.audit("pagos", "INSERT", fid, campo="monto", despues=monto_usd,
+              usuario=user, ip=client_ip(request))
+    return ok(factura_id=fid, monto_usd=monto_usd,
+              saldo=round(saldo_final, 2), estado=nuevo_estado)
+
+
+@app.post("/api/facturas/{fid}/anular")
+def anular_factura(fid: int, data: AnularIn, request: Request,
+                   user=Depends(require_roles("admin", "gerencia"))):
+    """Solo gerencia. Genera nota de crédito y conserva el número original."""
+    f = db.q("SELECT * FROM facturas WHERE id=%s", (fid,), one=True)
+    if not f:
+        raise HTTPException(404, "Factura no encontrada.")
+    if f["estado"] == "anulada":
+        raise HTTPException(409, "Ya está anulada.")
+    if not data.motivo or len(data.motivo.strip()) < 5:
+        raise HTTPException(400, "Indique el motivo de la anulación (mín. 5 caracteres).")
+
+    serie = db.q("SELECT * FROM series_factura WHERE id=%s", (f["serie_id"],), one=True)
+    serie_id, numero, completo = fac.siguiente_numero(serie["codigo"])
+
+    db.execute(
+        """INSERT INTO notas_fiscales (tipo, serie_id, numero, numero_completo,
+                                       factura_id, monto, motivo, usuario_id)
+           VALUES ('credito',%s,%s,%s,%s,%s,%s,%s)""",
+        (serie_id, numero, f"NC-{completo}", fid, f["total"], data.motivo, user["id"]),
+    )
+    db.execute(
+        """UPDATE facturas SET estado='anulada', motivo_anulacion=%s,
+           anulada_por=%s, anulada_at=%s WHERE id=%s""",
+        (data.motivo, user["id"], datetime.now(timezone.utc).isoformat(), fid),
+    )
+    sec.audit("facturas", "ANULACION", fid, campo="estado", antes=f["estado"],
+              despues="anulada", usuario=user, ip=client_ip(request))
+    return ok(id=fid, estado="anulada", nota_credito=f"NC-{completo}")
+
+
+@app.get("/api/facturas")
+def listar_facturas(request: Request, desde: Optional[str] = None, hasta: Optional[str] = None,
+                    estado: Optional[str] = None, tutor_id: Optional[int] = None,
+                    user=Depends(require_user)):
+    sql = """SELECT f.*, s.codigo AS serie_codigo,
+                    (SELECT COALESCE(SUM(p.monto_usd),0) FROM pagos p WHERE p.factura_id=f.id) AS pagado
+             FROM facturas f JOIN series_factura s ON s.id=f.serie_id WHERE 1=1"""
+    params = []
+    if user["tipo"] == "cliente":
+        sql += " AND f.tutor_id = %s"
+        params.append(user["id"])
+    if tutor_id:
+        sql += " AND f.tutor_id = %s"
+        params.append(tutor_id)
+    if desde:
+        sql += " AND f.fecha_emision >= %s"
+        params.append(desde)
+    if hasta:
+        sql += " AND f.fecha_emision <= %s"
+        params.append(hasta)
+    if estado:
+        sql += " AND f.estado = %s"
+        params.append(estado)
+    sql += " ORDER BY f.id DESC LIMIT 500"
+    return ok(facturas=db.q(sql, tuple(params)))
+
+
+@app.get("/api/facturas/{fid}")
+def obtener_factura(fid: int, request: Request, user=Depends(require_user)):
+    f = db.q("SELECT * FROM facturas WHERE id=%s", (fid,), one=True)
+    if not f:
+        raise HTTPException(404, "Factura no encontrada.")
+    if user["tipo"] == "cliente" and f["tutor_id"] != user["id"]:
+        raise HTTPException(403, "No autorizado.")
+    f["items"] = db.q("SELECT * FROM factura_items WHERE factura_id=%s", (fid,))
+    f["pagos"] = db.q("SELECT * FROM pagos WHERE factura_id=%s ORDER BY fecha", (fid,))
+    return ok(factura=f)
+
+
+@app.get("/api/facturas/{fid}/pdf")
+def factura_pdf(fid: int, request: Request, formato: str = "carta",
+                user=Depends(require_user)):
+    f = db.q("SELECT * FROM facturas WHERE id=%s", (fid,), one=True)
+    if not f:
+        raise HTTPException(404, "Factura no encontrada.")
+    if user["tipo"] == "cliente" and f["tutor_id"] != user["id"]:
+        raise HTTPException(403, "No autorizado.")
+    items = db.q("SELECT * FROM factura_items WHERE factura_id=%s", (fid,))
+    pdf = fac.generar_pdf(f, items, _negocio(), formato)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition":
+                             f'inline; filename="{f["numero_completo"]}.pdf"'})
+
+
+# =====================================================================
+# REPORTES
+# =====================================================================
+@app.get("/api/reportes/ventas")
+def reporte_ventas(request: Request, desde: Optional[str] = None, hasta: Optional[str] = None,
+                   user=Depends(require_roles("admin", "gerencia"))):
+    where = "WHERE f.estado IN ('emitida','pagada')"
+    params = []
+    if desde:
+        where += " AND f.fecha_emision >= %s"
+        params.append(desde)
+    if hasta:
+        where += " AND f.fecha_emision <= %s"
+        params.append(hasta)
+
+    total = db.q(f"SELECT COUNT(*) AS n, COALESCE(SUM(f.total),0) AS total FROM facturas f {where}",
+                 tuple(params), one=True)
+    por_area = db.q(
+        f"""SELECT COALESCE(s.area,'otros') AS area, COUNT(DISTINCT f.id) AS facturas,
+                   COALESCE(SUM(i.total_linea),0) AS monto
+            FROM facturas f
+            JOIN factura_items i ON i.factura_id=f.id
+            LEFT JOIN servicios s ON s.id=i.servicio_id
+            {where} GROUP BY 1 ORDER BY monto DESC""", tuple(params))
+    por_metodo = db.q(
+        f"""SELECT p.metodo, COUNT(*) AS n, COALESCE(SUM(p.monto_usd),0) AS monto
+            FROM pagos p JOIN facturas f ON f.id=p.factura_id
+            {where} GROUP BY 1 ORDER BY monto DESC""", tuple(params))
+    return ok(resumen=total, por_area=por_area, por_metodo=por_metodo)
+
+
+@app.get("/api/reportes/cuentas-por-cobrar")
+def cuentas_por_cobrar(request: Request, user=Depends(require_roles("admin", "gerencia"))):
+    return ok(cuentas=db.q(
+        """SELECT * FROM v_facturas_saldo
+           WHERE estado IN ('emitida','vencida') AND saldo > 0.009
+           ORDER BY saldo DESC"""))
+
+
+# =====================================================================
+# LEIA (chat) — ahora con sesión obligatoria y persistencia
+# =====================================================================
+def _respuesta_leia(msg: str) -> str:
+    """
+    Respuesta por reglas. NO es un modelo de lenguaje: es un marcador de
+    posición honesto hasta conectar uno real. Incluye detección de urgencia.
+    """
+    m = (msg or "").lower()
+    urgencia = ["muriendo", "murió", "sangra", "sangrado", "convulsión", "convulsion",
+                "envenen", "atropell", "no respira", "emergencia", "urgente", "grave"]
+    if any(u in m for u in urgencia):
+        return ("⚠️ Esto suena a una emergencia. Por favor llame ahora mismo a la clínica "
+                "o traiga a su mascota de inmediato. No espere respuesta por este chat.")
+    if any(w in m for w in ["hola", "buenas", "buenos días", "buenas tardes"]):
+        return ("¡Hola! Soy Leia, asistente de Mrs Pets. Puedo ayudarle con citas de "
+                "grooming, clínica, hotel y con información de nuestros servicios.")
+    if "precio" in m or "cuánto" in m or "cuanto" in m or "cuesta" in m or "tarifa" in m:
+        return ("Los precios dependen del servicio y del tamaño de su mascota. "
+                "Grooming desde $12, consulta veterinaria $20, hotel $35 por noche. "
+                "¿Le preparo una cotización exacta?")
+    if "baño" in m or "bano" in m or "grooming" in m or "corte" in m:
+        return ("Con gusto. Atendemos grooming de lunes a sábado, 8:00 am a 6:00 pm. "
+                "¿Qué día le viene bien y qué raza es su mascota?")
+    if "horario" in m or "hora" in m or "abren" in m:
+        return ("Nuestro horario es de lunes a sábado, 8:00 am a 6:00 pm. "
+                "Emergencias fuera de horario por teléfono.")
+    if "cita" in m or "agendar" in m or "reservar" in m:
+        return ("Puedo agendarle una cita. Dígame: nombre de su mascota, servicio "
+                "que necesita y día preferido.")
+    if "cancelar" in m:
+        return ("Para cancelar o reprogramar, indíqueme el número de turno o el nombre "
+                "de su mascota y lo gestiono.")
+    return ("Entiendo. ¿Me cuenta un poco más para poder ayudarle? Puedo asistirle con "
+            "citas, precios, horarios y servicios de Mrs Pets.")
+
+
+@app.post("/api/leia/chat")
+def leia_chat(data: LeiaIn, request: Request, user=Depends(require_user)):
+    conv_id = data.conversacion_id
+    if not conv_id:
+        conv_id = db.execute(
+            "INSERT INTO leia_conversaciones (tutor_id, canal) VALUES (%s,'web') RETURNING id",
+            (user["id"] if user["tipo"] == "cliente" else None,), returning=True)
+    db.execute("INSERT INTO leia_mensajes (conversacion_id, rol, contenido) VALUES (%s,'user',%s)",
+               (conv_id, data.mensaje))
+    respuesta = _respuesta_leia(data.mensaje)
+    db.execute("INSERT INTO leia_mensajes (conversacion_id, rol, contenido) VALUES (%s,'assistant',%s)",
+               (conv_id, respuesta))
+    return ok(conversacion_id=conv_id, respuesta=respuesta,
+              motor="reglas", nota="Respuesta por reglas, no por modelo de lenguaje.")
+
+
+@app.get("/api/leia/conversaciones/{cid}")
+def leia_historial(cid: int, request: Request, user=Depends(require_user)):
+    return ok(mensajes=db.q(
+        "SELECT * FROM leia_mensajes WHERE conversacion_id=%s ORDER BY id", (cid,)))
+
+
+# =====================================================================
+# REPORTES DE PROBLEMA (botón "reportar problema")
+# =====================================================================
+@app.post("/api/reportes")
+def crear_reporte(data: ReporteIn, request: Request):
+    u = current_user(request)
+    rid = db.execute(
+        """INSERT INTO reportes_problema
+           (pantalla, accion, error_mensaje, error_stack, user_agent, url,
+            usuario_tipo, usuario_id)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+        (data.pantalla, data.accion, data.error_mensaje, data.error_stack,
+         request.headers.get("user-agent"), data.url,
+         u["tipo"] if u else None, u["id"] if u else None),
+        returning=True,
+    )
+    log.warning("REPORTE #%s | pantalla=%s | accion=%s | error=%s",
+                rid, data.pantalla, data.accion, data.error_mensaje)
+    return ok(id=rid)
+
+
+@app.get("/api/reportes")
+def listar_reportes(request: Request, user=Depends(require_roles("admin", "gerencia"))):
+    return ok(reportes=db.q(
+        "SELECT * FROM reportes_problema ORDER BY created_at DESC LIMIT 200"))
+
+
+# =====================================================================
+# AUDITORÍA Y CONFIGURACIÓN
+# =====================================================================
+@app.get("/api/auditoria")
+def ver_auditoria(request: Request, tabla: Optional[str] = None, limite: int = 200,
+                  user=Depends(require_roles("admin", "gerencia"))):
+    if tabla:
+        return ok(registros=db.q(
+            "SELECT * FROM auditoria WHERE tabla=%s ORDER BY id DESC LIMIT %s",
+            (tabla, limite)))
+    return ok(registros=db.q("SELECT * FROM auditoria ORDER BY id DESC LIMIT %s", (limite,)))
+
+
+@app.get("/api/configuracion")
+def ver_config(request: Request, user=Depends(require_staff)):
+    return ok(config=db.q("SELECT * FROM configuracion ORDER BY clave"))
+
+
+@app.patch("/api/configuracion/{clave}")
+def set_config(clave: str, valor: str = Body(..., embed=True), request: Request = None,
+               user=Depends(require_roles("admin", "gerencia"))):
+    antes = db.q("SELECT valor FROM configuracion WHERE clave=%s", (clave,), one=True)
+    db.execute(
+        """INSERT INTO configuracion (clave, valor) VALUES (%s,%s)
+           ON CONFLICT (clave) DO UPDATE SET valor=EXCLUDED.valor, updated_at=NOW()""",
+        (clave, valor),
+    )
+    sec.audit("configuracion", "UPDATE", None, campo=clave,
+              antes=antes["valor"] if antes else None, despues=valor, usuario=user)
+    return ok(clave=clave, valor=valor)
+
+
+# =====================================================================
+# MIGRACIÓN DESDE localStorage
+# =====================================================================
+@app.post("/api/migracion/importar")
+def importar(request: Request, payload: dict = Body(...),
+             user=Depends(require_roles("admin", "gerencia"))):
+    """
+    Recibe el JSON exportado del navegador y lo importa.
+    Idempotente: busca tutor por RIF -> teléfono -> nombre. No sobrescribe.
+    """
+    pacientes = payload.get("mrs_pets_admin_patients") or payload.get("pacientes") or []
+    if isinstance(pacientes, str):
+        import json
+        pacientes = json.loads(pacientes)
+
+    creados, existentes, errores = 0, 0, []
+    for p in pacientes:
+        try:
+            rif_n = norm_rif(p.get("rif"))
+            tel_n = norm_phone(p.get("ownerPhone") or p.get("phone"))
+            nombre = p.get("owner") or p.get("ownerName") or "Sin nombre"
+
+            prev = None
+            if rif_n:
+                prev = db.q("SELECT id FROM tutores WHERE rif_norm=%s", (rif_n,), one=True)
+            if not prev and tel_n:
+                prev = db.q("SELECT id FROM tutores WHERE telefono_norm=%s", (tel_n,), one=True)
+            if not prev:
+                prev = db.q("SELECT id FROM tutores WHERE LOWER(nombre)=LOWER(%s)", (nombre,), one=True)
+
+            if prev:
+                existentes += 1
+                continue
+
+            tid = db.execute(
+                """INSERT INTO tutores (nombre, rif, rif_norm, telefono, telefono_norm,
+                                        email, direccion, foto, pin_hash)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (nombre, p.get("rif"), rif_n, p.get("ownerPhone") or p.get("phone"), tel_n,
+                 p.get("email"), p.get("address"), p.get("ownerPhoto"),
+                 sec.hash_password(str(p.get("pin"))) if p.get("pin") else None),
+                returning=True,
+            )
+            db.execute(
+                """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, foto,
+                                         notas, condiciones)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (p.get("id") or f"PET-{tid}", tid, p.get("name") or p.get("petName"),
+                 p.get("species"), p.get("photo") or p.get("image"),
+                 p.get("notes"), p.get("diseaseDetails")),
+            )
+            creados += 1
+        except Exception as e:
+            errores.append({"registro": p.get("id"), "error": str(e)})
+
+    sec.audit("migracion", "IMPORTAR", None, despues=f"creados={creados}",
+              usuario=user, ip=client_ip(request))
+    return ok(creados=creados, existentes=existentes, errores=errores,
+              total_recibidos=len(pacientes))
+
+
+# =====================================================================
+# BARRERA DE ACCESO AL PORTAL (HTTP Basic) + estáticos
+# =====================================================================
+def _check_basic(request: Request) -> bool:
+    if not PORTAL_PASSWORD:
+        return True
+    import base64
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Basic "):
+        return False
+    try:
+        user, _, pwd = base64.b64decode(auth[6:]).decode().partition(":")
+        return user == PORTAL_USER and pwd == PORTAL_PASSWORD
+    except Exception:
+        return False
+
+
+@app.middleware("http")
+async def portal_gate(request: Request, call_next):
+    path = request.url.path
+    # La API tiene su propia autenticación por sesión; los estáticos van tras Basic.
+    if path.startswith("/api/") or path in ("/healthz",):
+        response = await call_next(request)
+    elif not _check_basic(request):
+        return PlainTextResponse(
+            "Acceso restringido — Mrs Pets staging",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Mrs Pets Staging"'},
+        )
+    else:
+        response = await call_next(request)
+
+    # Staging: que ningún buscador indexe el portal ni sus datos.
+    response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots():
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")
+
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
+
+
+@app.get("/")
+def index():
+    return FileResponse(os.path.join(STATIC_DIR, "root.html"))
+
+
+@app.get("/root.html")
+def root_html():
+    return FileResponse(os.path.join(STATIC_DIR, "root.html"))
+
+
+# Estáticos (css, js, assets)
+if os.path.isdir(STATIC_DIR):
+    app.mount("/css", StaticFiles(directory=os.path.join(STATIC_DIR, "css")), name="css")
+    app.mount("/js", StaticFiles(directory=os.path.join(STATIC_DIR, "js")), name="js")
+    if os.path.isdir(os.path.join(STATIC_DIR, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")),
+                  name="assets")
+
+
+# ---------------------------------------------------------------------
+# Manejo de errores — logs claros y consultables
+# ---------------------------------------------------------------------
+@app.exception_handler(Exception)
+async def unhandled(request: Request, exc: Exception):
+    log.error("ERROR en %s %s: %s", request.method, request.url.path, exc)
+    log.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": str(exc),
+                 "ruta": request.url.path,
+                 "hint": "Revise los logs del servidor en Render."},
+    )
