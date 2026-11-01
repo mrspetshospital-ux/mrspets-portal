@@ -17,6 +17,7 @@ Variables de entorno (ver .env.example):
 """
 import os
 import re
+import hmac
 import logging
 import traceback
 from datetime import datetime, timezone, timedelta
@@ -73,24 +74,44 @@ def _startup():
         log.error("No se pudo aplicar el esquema: %s", e)
         log.error(traceback.format_exc())
 
-    # Primer usuario staff
+    # Primer usuario staff -------------------------------------------------
+    # Si no existe se crea. Si existe pero ADMIN_PASSWORD ya no abre su hash,
+    # se re-sincroniza el hash: la variable de entorno manda. Así la dueña
+    # puede recuperar el acceso cambiando ADMIN_PASSWORD en Render, sin
+    # tocar la base de datos ni ejecutar nada a mano.
     if ADMIN_PASSWORD:
         try:
-            existe = db.q("SELECT id FROM staff_users WHERE LOWER(username)=LOWER(%s)",
-                          (ADMIN_USER,), one=True)
-            if not existe:
+            fila = db.q("SELECT id, password_hash FROM staff_users "
+                        "WHERE LOWER(username)=LOWER(%s)", (ADMIN_USER,), one=True)
+            if not fila:
                 db.execute(
                     """INSERT INTO staff_users (username, nombre, password_hash, rol)
                        VALUES (%s,%s,%s,'admin')""",
                     (ADMIN_USER, "Administrador", sec.hash_password(ADMIN_PASSWORD)),
                 )
-                log.info("Usuario staff '%s' creado", ADMIN_USER)
+                log.info("Usuario staff '%s' creado al arrancar.", ADMIN_USER)
+            elif not sec.verify_password(ADMIN_PASSWORD, fila["password_hash"]):
+                db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                           (sec.hash_password(ADMIN_PASSWORD), fila["id"]))
+                log.info("Contraseña de '%s' sincronizada con ADMIN_PASSWORD "
+                         "(el hash de la base no coincidía).", ADMIN_USER)
+            else:
+                log.info("Usuario staff '%s' listo (hash coincide con ADMIN_PASSWORD).",
+                         ADMIN_USER)
         except Exception as e:
-            log.error("No se pudo crear el usuario admin: %s", e)
+            log.error("No se pudo preparar el usuario admin '%s': %s", ADMIN_USER, e)
+    else:
+        log.warning("ADMIN_PASSWORD vacío: no se crea ni sincroniza el usuario "
+                    "'%s'. El acceso a Vista Empresa quedará sin respaldo.", ADMIN_USER)
 
     if not PORTAL_PASSWORD:
         log.warning("PORTAL_PASSWORD vacío: el portal queda SIN barrera de acceso. "
                     "Definir en Render antes de compartir la URL.")
+    elif not PORTAL_USER:
+        log.warning("PORTAL_USER vacío: la barrera de acceso usará el usuario '%s' "
+                    "(ADMIN_USER) para no dejar el portal inaccesible.", ADMIN_USER)
+    else:
+        log.info("Barrera de acceso activa para el usuario '%s'.", PORTAL_USER)
 
 
 # ---------------------------------------------------------------------
@@ -291,7 +312,10 @@ def health():
     h = db.health()
     return {"status": "ok" if h["ok"] else "error", "db": h,
             "version": "1.0.0-staging",
-            "portal_protegido": bool(PORTAL_PASSWORD)}
+            "portal_protegido": bool(PORTAL_PASSWORD),
+            "portal_usuario_configurado": bool(PORTAL_USER),
+            "admin_usuario": ADMIN_USER,
+            "admin_password_configurado": bool(ADMIN_PASSWORD)}
 
 
 # =====================================================================
@@ -299,12 +323,63 @@ def health():
 # =====================================================================
 @app.post("/api/auth/login")
 def staff_login(data: LoginIn, request: Request, response: Response):
-    row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s) AND activo=TRUE",
-               (data.username.strip(),), one=True)
-    if not row or not sec.verify_password(data.password, row["password_hash"]):
-        sec.audit("staff_users", "LOGIN_FALLIDO", usuario={"tipo": "staff", "nombre": data.username},
+    """
+    Login de personal. Dos fuentes, en este orden:
+
+      1. La tabla staff_users (hash PBKDF2 de la base de datos).
+      2. Respaldo: ADMIN_USER / ADMIN_PASSWORD de las variables de entorno.
+
+    El respaldo existe para que el dueño del portal nunca se quede fuera:
+    si el hash de la base se perdió o cambió, basta con poner la clave en
+    Render y entrar con ese usuario. Al entrar por esta vía se re-sincroniza
+    el hash, así las dos fuentes quedan alineadas.
+    """
+    username = (data.username or "").strip()
+    password = data.password or ""
+
+    row = None
+    if username:
+        row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s) AND activo=TRUE",
+                   (username,), one=True)
+
+    verificado = bool(row) and sec.verify_password(password, row["password_hash"])
+    origen = "base_de_datos"
+
+    # --- Respaldo por variable de entorno -------------------------------
+    if not verificado and username and ADMIN_PASSWORD and \
+            hmac.compare_digest(username.lower(), ADMIN_USER.lower()) and \
+            hmac.compare_digest(password, ADMIN_PASSWORD):
+        verificado = True
+        origen = "variable_de_entorno"
+        try:
+            if row:
+                # Alinear el hash con la clave de entorno.
+                db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                           (sec.hash_password(password), row["id"]))
+            else:
+                db.execute(
+                    """INSERT INTO staff_users (username, nombre, password_hash, rol)
+                       VALUES (%s,%s,%s,'admin')""",
+                    (ADMIN_USER, "Administrador", sec.hash_password(password)),
+                )
+                row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s)",
+                           (ADMIN_USER,), one=True)
+                log.info("Usuario '%s' creado al iniciar sesión (respaldo por variables).",
+                         ADMIN_USER)
+        except Exception as e:
+            log.error("No se pudo sincronizar el usuario '%s': %s", ADMIN_USER, e)
+
+    if not verificado or not row:
+        sec.audit("staff_users", "LOGIN_FALLIDO", usuario={"tipo": "staff", "nombre": username},
                   ip=client_ip(request))
-        raise HTTPException(401, "Credenciales inválidas.")
+        raise HTTPException(
+            401,
+            "Usuario o contraseña incorrectos. Escriba el usuario de personal "
+            "tal como está registrado y su contraseña.",
+        )
+
+    if origen == "variable_de_entorno":
+        log.info("Login de '%s' aceptado por respaldo ADMIN_USER/ADMIN_PASSWORD.", username)
     token = sec.create_session("staff", staff_id=row["id"], ip=client_ip(request),
                                user_agent=request.headers.get("user-agent"))
     set_session_cookie(response, token)
@@ -382,6 +457,32 @@ def me(request: Request):
     if not u:
         raise HTTPException(401, "Sin sesión.")
     return ok(user={k: v for k, v in u.items() if k != "token"})
+
+
+@app.get("/api/auth/staff-usuarios")
+def staff_usuarios():
+    """
+    Lista de usuarios de personal que EXISTEN en la base, para que el
+    desplegable "¿Quién es usted?" no ofrezca nombres inventados.
+
+    Solo devuelve usuario, nombre y rol. Nunca el hash ni la contraseña.
+    Endpoint público a propósito: la pantalla de login lo necesita antes de
+    que haya sesión. No expone nada que no esté ya en el formulario.
+    """
+    try:
+        filas = db.q(
+            "SELECT username, nombre, rol FROM staff_users WHERE activo=TRUE "
+            "ORDER BY CASE WHEN LOWER(username)=LOWER(%s) THEN 0 ELSE 1 END, username",
+            (ADMIN_USER,),
+        ) or []
+    except Exception as e:
+        log.error("No se pudo listar staff_users: %s", e)
+        filas = []
+
+    usuarios = [{"username": f["username"],
+                 "nombre": f["nombre"],
+                 "rol": f["rol"]} for f in filas]
+    return ok(usuarios=usuarios, total=len(usuarios))
 
 
 # =====================================================================
@@ -1148,17 +1249,29 @@ def importar(request: Request, payload: dict = Body(...),
 # BARRERA DE ACCESO AL PORTAL (HTTP Basic) + estáticos
 # =====================================================================
 def _check_basic(request: Request) -> bool:
+    """Barrera de acceso al portal (HTTP Basic).
+
+    Compara contra PORTAL_USER / PORTAL_PASSWORD de las variables de entorno.
+    - PORTAL_PASSWORD vacío  -> el portal queda abierto (se avisa al arrancar).
+    - PORTAL_USER vacío      -> se usa ADMIN_USER, para no dejar el portal
+                                inaccesible a nadie.
+    La comparación es en tiempo constante para no filtrar información por el
+    tiempo de respuesta.
+    """
     if not PORTAL_PASSWORD:
         return True
+    usuario_esperado = PORTAL_USER or ADMIN_USER
     import base64
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Basic "):
         return False
     try:
-        user, _, pwd = base64.b64decode(auth[6:]).decode().partition(":")
-        return user == PORTAL_USER and pwd == PORTAL_PASSWORD
+        user, _, pwd = base64.b64decode(auth[6:]).decode("utf-8").partition(":")
     except Exception:
         return False
+    usuario_ok = hmac.compare_digest(user.strip(), usuario_esperado)
+    clave_ok = hmac.compare_digest(pwd, PORTAL_PASSWORD)
+    return usuario_ok and clave_ok
 
 
 @app.middleware("http")
@@ -1171,7 +1284,7 @@ async def portal_gate(request: Request, call_next):
         return PlainTextResponse(
             "Acceso restringido — Mrs Pets staging",
             status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="Mrs Pets Staging"'},
+            headers={"WWW-Authenticate": 'Basic realm="Mrs Pets - usuario y clave del portal"'},
         )
     else:
         response = await call_next(request)
