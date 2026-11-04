@@ -734,18 +734,25 @@
             }
 
             // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE (con motor Margaret)
-            // Intento de enlace ágil con backend Teamily (Timeout 2.0s para no bloquear interacción)
+            // Petición POST real al backend con Board ID oficial y registro inmutable en Google Sheets
             try {
                 this.showTypingIndicator(true);
                 const teamilyCtrl = new AbortController();
-                const teamilyTimeout = setTimeout(() => teamilyCtrl.abort(), 2000);
+                const teamilyTimeout = setTimeout(() => teamilyCtrl.abort(), 12000);
                 const res = await fetch('/api/v1/teamily/agent-chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         input: userText,
                         agent_slug: 'margaret',
-                        agent_name: 'Margaret (Atención al Cliente)'
+                        agent_name: 'Margaret (Atención al Cliente)',
+                        board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+                        context: {
+                            userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                            petName: this.lastActivePetName || '',
+                            userType: isStaff ? 'staff_admin' : 'client',
+                            channel: 'Widget Search (Leia Search)'
+                        }
                     }),
                     signal: teamilyCtrl.signal
                 });
@@ -753,13 +760,13 @@
                 const data = await res.json();
                 this.showTypingIndicator(false);
 
-                if (res.ok && data.response_text) {
+                if (res.ok && data) {
                     const rawReply = typeof data.response_text === 'object' && data.response_text.text 
                         ? data.response_text.text 
-                        : data.response_text;
+                        : (data.response_text || (data.output && data.output.text));
 
-                    const isReceipt = String(rawReply).includes('BLUF:') || String(rawReply).includes('prueba entregada') || String(rawReply).includes('No puedo verificar') || String(rawReply).includes('serverMsgID');
-                    if (!isReceipt && rawReply && rawReply.trim().length > 0) {
+                    const isReceipt = String(rawReply).includes('serverMsgID');
+                    if (!isReceipt && rawReply && String(rawReply).trim().length > 0) {
                         this.addMessage({
                             sender: 'leia',
                             text: rawReply,
@@ -769,7 +776,7 @@
                     }
                 }
             } catch (err) {
-                // Timeout o contingencia de Teamily: activación instantánea de base de conocimiento local
+                // Contingencia de red o timeout: activación instantánea de base de conocimiento local
                 this.showTypingIndicator(false);
             }
 

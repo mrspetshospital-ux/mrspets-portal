@@ -220,8 +220,38 @@
       this.processAiResponse(text);
     },
 
-    processAiResponse(userText) {
+    async processAiResponse(userText) {
       const lower = userText.toLowerCase();
+
+      // Petición real al endpoint oficial con Board ID de Margaret y registro en Sheets
+      try {
+        const res = await fetch('/api/v1/teamily/agent-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: userText,
+            agent_slug: 'margaret',
+            agent_name: 'Margaret (Atención al Cliente)',
+            board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+            context: {
+              userName: 'Cliente VIP',
+              channel: 'Modal Concierge Card (Leia / Margaret)'
+            }
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const reply = typeof data.response_text === 'object' && data.response_text.text
+            ? data.response_text.text
+            : (data.response_text || (data.output && data.output.text));
+          if (reply && String(reply).trim().length > 0) {
+            this.appendLeiaBotMessage(reply);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[LeiaConciergeCard] Activando contingencia local Silent Luxury:', e);
+      }
 
       setTimeout(() => {
         if (lower.includes('grooming') || lower.includes('baño') || lower.includes('corte') || lower.includes('spa') || lower.includes('estetica')) {
@@ -235,7 +265,7 @@
         } else {
           this.appendLeiaBotMessage(`🎀 ¡Con todo el gusto! He registrado tu consulta en el sistema de Atención Concierge VIP & Reservaciones. Puedes seleccionar una de las opciones rápidas arriba o indicarme el nombre de tu perrito/gatito para asistirte.`);
         }
-      }, 700);
+      }, 400);
     },
 
     appendUserMessage(text, imgUrl = null) {

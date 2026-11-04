@@ -1255,45 +1255,81 @@ class MrsPetsArchitectureEngine {
       }, 1000);
     }
 
-    // 4. DESPACHO BIDIRECCIONAL EN VIVO HACIA MAKE.COM CON CONTEXTO LIMPIO (Timeout ágil 2.5s)
-    const chatPayload = {
-      sessionId: this.getChatSessionId(),
-      message: cleanText,
-      detalleAdicionales: cleanText,
-      userQuery: cleanText
+    // 4. DESPACHO REAL POR POST HACIA /api/v1/teamily/agent-chat (Margaret / Board ID 5803df5a-7127-4d28-b97c-5c840d47cdc7)
+    // Con registro automático inmutable en Google Sheets y respuesta real de Margaret (fachada Leia)
+    const agentPayload = {
+      input: cleanText,
+      agent_slug: 'margaret',
+      agent_name: 'Margaret (Atención al Cliente)',
+      board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+      context: {
+        userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
+        petName: this.lastActivePetName || (session && session.activePetName) || '',
+        userType: (session && session.userType) || 'client',
+        channel: 'Widget Circular (Leia / Margaret)'
+      }
     };
 
-    let makeResponseData = null;
+    let serverReplyText = null;
     try {
-      makeResponseData = await this.dispatchChatBidirectional(chatPayload);
+      const abortCtrl = new AbortController();
+      const fetchTimer = setTimeout(() => abortCtrl.abort(), 12000);
+      const res = await fetch('/api/v1/teamily/agent-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentPayload),
+        signal: abortCtrl.signal
+      });
+      clearTimeout(fetchTimer);
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          const rawReply = typeof data.response_text === 'object' && data.response_text.text
+            ? data.response_text.text
+            : (data.response_text || (data.output && data.output.text));
+          if (rawReply && String(rawReply).trim().length > 0) {
+            serverReplyText = rawReply;
+          }
+        }
+      }
     } catch (err) {
-      console.warn("[LEIA CHAT] Error al despachar a Make:", err);
-    } finally {
-      // 5. Limpiar estado de carga y restaurar formulario
-      if (timerInterval) clearInterval(timerInterval);
-
-      if (typingDiv && typingDiv.parentNode) {
-        typingDiv.parentNode.removeChild(typingDiv);
-      }
-
-      if (inputEl) {
-        inputEl.disabled = false;
-        inputEl.setAttribute('placeholder', 'Escribe a Leia Concierge...');
-        setTimeout(() => inputEl.focus(), 60);
-      }
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.style.opacity = '1';
-        sendBtn.style.cursor = 'pointer';
-      }
+      console.warn("[LEIA CHAT] Error al contactar /api/v1/teamily/agent-chat:", err);
     }
 
-    // 6. Renderizar respuesta HTTP 200 de Make formateada con Markdown o activar Fallback
-    if (makeResponseData && makeResponseData.hasCustomReply && makeResponseData.replyText) {
-      const formattedHtml = this.formatMarkdownToHtml(makeResponseData.replyText);
+    // Despacho complementario en segundo plano a Make.com (sin bloquear)
+    try {
+      this.dispatchChatBidirectional({
+        sessionId: this.getChatSessionId(),
+        message: cleanText,
+        detalleAdicionales: cleanText,
+        userQuery: cleanText
+      }).catch(() => {});
+    } catch (e) {}
+
+    // 5. Limpiar estado de carga y restaurar formulario
+    if (timerInterval) clearInterval(timerInterval);
+
+    if (typingDiv && typingDiv.parentNode) {
+      typingDiv.parentNode.removeChild(typingDiv);
+    }
+
+    if (inputEl) {
+      inputEl.disabled = false;
+      inputEl.setAttribute('placeholder', 'Escribe a Leia Concierge...');
+      setTimeout(() => inputEl.focus(), 60);
+    }
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      sendBtn.style.cursor = 'pointer';
+    }
+
+    // 6. Renderizar respuesta viva del servidor / Teamily Margaret o activar Fallback contextual
+    if (serverReplyText) {
+      const formattedHtml = this.formatMarkdownToHtml(serverReplyText);
       this.appendLeiaMessage(formattedHtml, 'bot');
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('Informe de Leia recibido desde Make.com ✨', 'success');
+        window.app.showToast('Respuesta de Leia Concierge recibida ✨', 'success');
       }
     } else {
       // Fallback contextual elegante bajo la doctrina de Lujo Silencioso
@@ -1307,9 +1343,9 @@ class MrsPetsArchitectureEngine {
     const session = sessionContext || this.getActiveSessionContext();
 
     // =========================================================================
-    // RUTA A: CONTEXTO ADMINISTRADOR HAR / STAFF OPERATIVO (Solo comandos internos)
+    // RUTA A: CONTEXTO ADMINISTRADOR HAR / STAFF OPERATIVO (Solo comandos internos explícitos)
     // =========================================================================
-    const isExplicitAdminCommand = lower.startsWith('/admin') || lower.startsWith('/staff') || lower.includes('manuales har') || lower.includes('tiempos de etapas') || lower.includes('control de roles') || lower.includes('consola operativa');
+    const isExplicitAdminCommand = lower.startsWith('/admin') || lower.startsWith('/staff') || lower.startsWith('/tiempos') || lower.startsWith('/roles');
     if (session.userType === 'staff_admin' && isExplicitAdminCommand) {
       let adminReply = "";
       if (lower.includes('tiempo') || lower.includes('etapa') || lower.includes('minuto') || lower.includes('retraso')) {
