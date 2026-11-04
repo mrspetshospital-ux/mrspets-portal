@@ -12,11 +12,11 @@ class AuthEngine {
   }
 
   getCurrentUser() {
-    if (this.userRole === 'candidate') {
+    if (this.userRole === 'candidate' || this.userRole === 'visitor' || this.userRole === 'guest' || !this.isAuthenticated || this.userRole !== 'client') {
       return {
-        isAuthenticated: false,
-        role: 'candidate',
-        userName: 'Postulante RRHH',
+        isAuthenticated: this.isAuthenticated && this.userRole === 'staff',
+        role: this.userRole || 'visitor',
+        userName: this.userName || 'Visitante VIP',
         tutorName: '',
         petName: '',
         phone: '',
@@ -96,23 +96,84 @@ class AuthEngine {
       });
     } catch(e) {}
 
-    // 🛡️ REGLA ANTI-PARPADEO ESTRICTA:
-    // Solo omitir el video splash si existe sesión empresarial activa o navegación con hash de ruta profunda.
-    const isEnt = sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true';
     const rawHash = (window.location.hash || '').replace('#', '').replace('tab-', '').trim();
     const hasHash = rawHash.length > 0 && rawHash !== 'welcome';
-    if (!hasHash && !isEnt) {
+
+    // 🛡️ Visita a la raíz o bienvenida: Limpiar banderas residuales para garantizar que siempre pase por video y portal de credenciales
+    if (!hasHash || rawHash === 'welcome') {
+      sessionStorage.removeItem('mrs_pets_visitor_session');
       localStorage.removeItem('mrs_pets_skip_splash');
+      sessionStorage.removeItem('mrs_pets_skip_splash');
+      sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
+      sessionStorage.removeItem('mrs_pets_staff_role');
+      sessionStorage.removeItem('mrs_pets_client_authenticated');
+      if (localStorage.getItem('mrs_pets_auth_role') === 'visitor') {
+        localStorage.removeItem('mrs_pets_auth_role');
+        localStorage.removeItem('mrs_pets_auth_name');
+      }
     }
+
+    // 🛡️ RESTAURACIÓN DE SESIÓN PERSISTENTE (Solo si hay sesión activa confirmada con credenciales en la pestaña)
+    const isEntSession = sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true';
+    const isClientSession = sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
+    const isVisitorSession = sessionStorage.getItem('mrs_pets_visitor_session') === 'true';
+    const storedRole = localStorage.getItem('mrs_pets_auth_role');
+    const storedName = localStorage.getItem('mrs_pets_auth_name');
+    const storedPetId = localStorage.getItem('mrs_pets_active_vip_patient_id');
     const hasSkipped = localStorage.getItem('mrs_pets_skip_splash') === 'true';
 
-    if (isEnt || (hasHash && hasSkipped) || (this.isAuthenticated && hasHash)) {
-      console.log("[AuthEngine] Navegación directa o sesión activa: acceso directo a la aplicación.");
+    // 1. Sesión Staff Empresarial activa en esta pestaña
+    if (isEntSession && hasSkipped) {
+      this.isAuthenticated = true;
+      this.userRole = 'staff';
+      this.userName = storedName || 'Staff Administrativo';
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
+      if (document.body) {
+        document.body.classList.add('enterprise-view-mode');
+        document.body.classList.remove('customer-view-mode');
+      }
+      if (window.adminEngine) {
+        window.adminEngine.isEnterpriseAuthenticated = true;
+        window.adminEngine.activeRole = sessionStorage.getItem('mrs_pets_staff_role') || 'admin';
+        window.adminEngine.viewEnvironment = 'enterprise';
+      }
+      console.log("[AuthEngine] Sesión de Staff restaurada correctamente.");
       this.hidePortalAndShowApp();
       return;
     }
 
-    // Secuencia de 3 Pasos: Iniciar con Paso 1 (Pantalla del Video) solo si es primera visita
+    // 2. Sesión Cliente VIP activa en esta pestaña ("Soy un Chico Mrs Pets")
+    if (isClientSession && hasSkipped) {
+      this.isAuthenticated = true;
+      this.userRole = 'client';
+      this.userName = storedName || localStorage.getItem('mrs_pets_active_customer_name') || 'Tutor VIP';
+      this.currentVipPetId = storedPetId;
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
+      if (window.adminEngine) {
+        window.adminEngine.viewEnvironment = 'customer';
+        window.adminEngine.isEnterpriseAuthenticated = false;
+      }
+      console.log("[AuthEngine] Sesión de Cliente VIP restaurada correctamente.");
+      this.hidePortalAndShowApp();
+      return;
+    }
+
+    // 3. Enlace profundo directo con sesión confirmada
+    if (hasHash && hasSkipped && (isEntSession || isClientSession)) {
+      this.hidePortalAndShowApp();
+      return;
+    }
+
+    // 4. Visita a la raíz o bienvenida sin sesión confirmada: Limpiar banderas residuales para garantizar video y concierge
+    localStorage.removeItem('mrs_pets_skip_splash');
+    sessionStorage.removeItem('mrs_pets_skip_splash');
+    sessionStorage.removeItem('mrs_pets_visitor_session');
+    if (storedRole === 'visitor') {
+      localStorage.removeItem('mrs_pets_auth_role');
+      localStorage.removeItem('mrs_pets_auth_name');
+    }
+
+    // Mostrar video splash cinematográfico y programar transición a Concierge VIP (confirmación de usuario y clave)
     this.showSplashVideo();
   }
 
@@ -360,10 +421,14 @@ class AuthEngine {
   }
 
   isEnterpriseStaffActive() {
-    if (this.userRole === 'staff') return true;
-    if (window.adminEngine && (window.adminEngine.currentEnvironment === 'enterprise' || window.adminEngine.isEnterpriseAuthenticated)) return true;
+    const portal = typeof document !== 'undefined' ? document.getElementById('access-links-portal') : null;
+    if (portal && (portal.classList.contains('active') || (portal.style.display !== 'none' && portal.style.visibility !== 'hidden'))) {
+      return false;
+    }
+    if (this.userRole === 'staff' && this.isAuthenticated) return true;
+    if (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) return true;
     try {
-      if (sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true') return true;
+      if (sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true' && this.isAuthenticated) return true;
     } catch (e) {}
     return false;
   }
@@ -638,7 +703,37 @@ class AuthEngine {
       this.splashTimer = null;
     }
     this.isVideoFinished = true;
-    document.documentElement.classList.remove('splash-bypassed');
+    if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
+      document.documentElement.classList.remove('splash-bypassed');
+    }
+    if (document.body) {
+      document.body.style.backgroundColor = '#121214';
+      document.body.classList.remove('enterprise-view-mode');
+      document.body.classList.add('customer-view-mode');
+    }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo(0, 0);
+    }
+
+    // 🛡️ ZERO-TRUST STAFF RESET:
+    // Al cargar o regresar al Portal Concierge VIP tras el video, cualquier sesión residual
+    // previa de staff en sessionStorage o en memoria debe quedar estrictamente reseteada.
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
+      sessionStorage.removeItem('mrs_pets_staff_role');
+      sessionStorage.removeItem('mrs_pets_client_authenticated');
+      sessionStorage.removeItem('mrs_pets_visitor_session');
+    }
+    if (window.adminEngine) {
+      window.adminEngine.isEnterpriseAuthenticated = false;
+      window.adminEngine.activeRole = null;
+      if (typeof window.adminEngine.setEnvironment === 'function') {
+        window.adminEngine.viewEnvironment = 'customer';
+      }
+    }
+    this.isAuthenticated = false;
+    this.userRole = null;
+
     const splash = document.getElementById('auth-splash-screen');
     const portal = document.getElementById('access-links-portal');
     const appContainer = document.getElementById('app-container');
@@ -653,11 +748,13 @@ class AuthEngine {
 
     // Revelar Portal Concierge VIP sin dejar ver el fondo blanco del body
     if (portal) {
+      portal.scrollTop = 0;
       portal.classList.add('active');
       portal.style.transition = 'none';
-      portal.style.setProperty('display', 'flex', 'important');
+      portal.style.display = 'block';
+      portal.style.setProperty('display', 'block', 'important');
       portal.style.setProperty('align-items', 'center', 'important');
-      portal.style.setProperty('justify-content', 'center', 'important');
+      portal.style.setProperty('justify-content', 'flex-start', 'important');
       portal.style.setProperty('visibility', 'visible', 'important');
       portal.style.setProperty('opacity', '1', 'important');
       portal.style.setProperty('pointer-events', 'auto', 'important');
@@ -668,7 +765,15 @@ class AuthEngine {
       const registerView = document.getElementById('portal-view-register');
       if (registerView) registerView.style.display = 'none';
       const cardContainer = document.getElementById('portal-card-container');
-      if (cardContainer) cardContainer.style.maxWidth = '580px';
+      if (cardContainer) {
+        cardContainer.style.maxWidth = '580px';
+        cardContainer.style.margin = 'auto';
+      }
+
+      // Mantener la visualización arriba para presentar las opciones VIP prioritarias
+      if (portal) {
+        portal.scrollTop = 0;
+      }
     }
 
     if (splash) {
@@ -699,19 +804,41 @@ class AuthEngine {
     if (portal) {
       portal.classList.remove('active');
       portal.style.transition = 'opacity 0.25s ease';
+      portal.style.display = 'none';
       portal.style.setProperty('display', 'none', 'important');
       portal.style.opacity = '0';
       portal.style.visibility = 'hidden';
       portal.style.setProperty('pointer-events', 'none', 'important');
     }
 
-    if (!this.isAuthenticated) {
+    const isStaffSession = (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true') ||
+      (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) ||
+      (this.userRole === 'staff' && this.isAuthenticated)
+    );
+
+    if (isStaffSession) {
+      this.isAuthenticated = true;
+      this.userRole = 'staff';
+      this.userName = sessionStorage.getItem('mrs_pets_auth_name') || localStorage.getItem('mrs_pets_auth_name') || 'Staff Administrativo';
+      if (document.body) {
+        document.body.classList.add('enterprise-view-mode');
+        document.body.classList.remove('customer-view-mode');
+      }
+      if (window.adminEngine) {
+        window.adminEngine.isEnterpriseAuthenticated = true;
+        window.adminEngine.viewEnvironment = 'enterprise';
+      }
+    } else if (!this.isAuthenticated) {
       this.isAuthenticated = true;
       this.userRole = 'visitor';
       this.userName = 'Visitante VIP';
+      sessionStorage.setItem('mrs_pets_visitor_session', 'true');
       localStorage.setItem('mrs_pets_auth_role', 'visitor');
       localStorage.setItem('mrs_pets_auth_name', 'Visitante VIP');
-      this.updateNavbarRole();
+      if (typeof this.updateNavbarRole === 'function') {
+        this.updateNavbarRole();
+      }
     }
     this.hidePortalAndShowApp();
   }
@@ -774,7 +901,12 @@ class AuthEngine {
       this.splashTimer = null;
     }
     localStorage.setItem('mrs_pets_skip_splash', 'true');
-    document.documentElement.classList.add('splash-bypassed');
+    if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
+      document.documentElement.classList.add('splash-bypassed');
+    }
+    if (document.body) {
+      document.body.style.backgroundColor = '';
+    }
 
     // Pause video so background ended events do not trigger portal transition
     const videoEl = document.getElementById('brand-splash-video');
@@ -790,6 +922,7 @@ class AuthEngine {
     const appContainer = document.getElementById('app-container');
 
     if (portal) {
+      portal.classList.remove('active');
       portal.style.transition = 'none';
       portal.style.setProperty('display', 'none', 'important');
       portal.style.opacity = '0';
@@ -812,23 +945,51 @@ class AuthEngine {
       appContainer.style.setProperty('pointer-events', 'auto', 'important');
     }
 
+    const isStaff = (this.userRole === 'staff' || (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true'));
+
+    if (isStaff) {
+      this.userRole = 'staff';
+      if (document.body) {
+        document.body.classList.add('enterprise-view-mode');
+        document.body.classList.remove('customer-view-mode');
+      }
+    }
+
     if (window.adminEngine) {
-      if (this.userRole === 'staff') {
+      if (isStaff) {
         window.adminEngine.setEnvironment('enterprise');
       } else {
         window.adminEngine.setEnvironment('customer');
       }
+    }
+
+    if (window.app && typeof window.app.switchTab === 'function') {
+      const curTab = (isStaff && (!window.app.currentTab || window.app.currentTab === 'welcome'))
+        ? 'admin'
+        : (window.app.currentTab || (isStaff ? 'admin' : (this.userRole === 'client' ? 'pet-status' : 'welcome')));
+      window.app.switchTab(curTab, true);
     }
   }
 
   showSplashVideo() {
     const rawHash = (window.location.hash || '').replace('#', '').replace('tab-', '').trim();
     if (rawHash.length > 0 && rawHash !== 'welcome') {
-      this.hidePortalAndShowApp();
-      return;
+      const isAuth = (
+        this.isAuthenticated ||
+        sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true' ||
+        sessionStorage.getItem('mrs_pets_client_authenticated') === 'true'
+      );
+      if (isAuth) {
+        this.hidePortalAndShowApp();
+        return;
+      } else {
+        try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
+      }
     }
     this.isVideoFinished = false;
-    document.documentElement.classList.remove('splash-bypassed');
+    if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
+      document.documentElement.classList.remove('splash-bypassed');
+    }
     const splash = document.getElementById('auth-splash-screen');
     const portal = document.getElementById('access-links-portal');
     const appContainer = document.getElementById('app-container');
@@ -869,9 +1030,8 @@ class AuthEngine {
   }
 
   openVipLookupModal(initialQuery = '') {
-    if (this.isAuthenticated) {
-      this.hidePortalAndShowApp();
-    }
+    this.closeConciergePortal();
+    this.hidePortalAndShowApp();
     const isStaff = (typeof this.isEnterpriseStaffActive === 'function' && this.isEnterpriseStaffActive()) ||
                     (window.RBACMiddleware && typeof window.RBACMiddleware.isStaffOrAdmin === 'function' && window.RBACMiddleware.isStaffOrAdmin());
 
@@ -916,10 +1076,9 @@ class AuthEngine {
       lookupModal.style.setProperty('display', 'none', 'important');
     }
 
-    // 2. Solo revelar app si ya está autenticado; de lo contrario mantener portal blindado
-    if (this.isAuthenticated) {
-      this.hidePortalAndShowApp();
-    }
+    // 2. Revelar app y ocultar portal splash para mostrar formulario de registro
+    this.closeConciergePortal();
+    this.hidePortalAndShowApp();
 
     // 3. Prellenar formulario de registro de splash si existe
     const regTutor = document.getElementById('reg-tutor-name');
@@ -962,26 +1121,70 @@ class AuthEngine {
     }, 100);
   }
 
+  normalizeSearchStr(str) {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos/tildes
+      .replace(/ll/g, 'l')             // Tolerancia fonética (dalybel <-> dalybell, montilla <-> montila)
+      .replace(/[^a-z0-9]/g, '')       // Quitar espacios, guiones y signos
+      .trim();
+  }
+
+  getPatientsList() {
+    let patients = [];
+    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus) && window.adminEngine.patientsStatus.length > 0) {
+      patients = [...window.adminEngine.patientsStatus];
+    } else if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets) && window.petStatusEngine.pets.length > 0) {
+      patients = [...window.petStatusEngine.pets];
+    }
+    const hasDalybell = patients.some(p => this.normalizeSearchStr(p.owner || p.ownerName).includes('dalybel'));
+    if (!hasDalybell) {
+      patients.unshift({
+        id: 'PET-101',
+        name: 'Princesa',
+        petName: 'Princesa',
+        species: 'Yorkshire Terrier VIP',
+        owner: 'Dalybell Ramírez Montilla',
+        ownerName: 'Dalybell Ramírez Montilla',
+        rif: 'V-18.452.910',
+        email: 'dalybell.montilla@example.com',
+        ownerPhone: '+58 414-3891102',
+        pin: '1234',
+        area: 'grooming',
+        stepIndex: 1,
+        turno: 1,
+        photo: 'assets/media__1787695246337.jpg',
+        image: 'assets/media__1787695246337.jpg',
+        ownerPhoto: 'assets/leia_avatar.jpg'
+      });
+    }
+    return patients;
+  }
+
+  getPatientById(petId) {
+    if (!petId) return null;
+    const patients = this.getPatientsList();
+    return patients.find(p => p.id === petId) || null;
+  }
+
   _executeSearchVipClients(query) {
     const container = document.getElementById('vip-lookup-results-container');
     const headerTitle = document.getElementById('vip-lookup-header-title');
     if (!container) return;
 
-    const q = (query || '').toLowerCase().trim();
+    const q = (query || '').trim();
+    const normQ = this.normalizeSearchStr(q);
 
-    // Source patients from adminEngine or petStatusEngine
-    let patients = [];
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus) && window.adminEngine.patientsStatus.length > 0) {
-      patients = window.adminEngine.patientsStatus;
-    } else if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-      patients = window.petStatusEngine.pets;
-    }
+    // Source patients from unified list
+    const patients = this.getPatientsList();
 
     const isStaff = (typeof this.isEnterpriseStaffActive === 'function' && this.isEnterpriseStaffActive()) ||
                     (window.RBACMiddleware && typeof window.RBACMiddleware.isStaffOrAdmin === 'function' && window.RBACMiddleware.isStaffOrAdmin());
 
     // ROL VISITANTES / CLIENTES: Si no ha escrito nada, no volcar la base de datos de clientes
-    if (!isStaff && !q) {
+    if (!isStaff && !normQ) {
       if (headerTitle) {
         headerTitle.style.display = 'none';
       }
@@ -997,21 +1200,24 @@ class AuthEngine {
       return;
     }
 
-    // Filtrar pacientes
+    // Filtrar pacientes con coincidencia tolerante normalizada
     const matches = patients.filter(p => {
-      if (!q) return isStaff; // Staff puede ver todos si q está vacío
-      const owner = (p.owner || p.ownerName || '').toLowerCase();
-      const pet = (p.name || p.petName || '').toLowerCase();
+      if (!normQ) return isStaff; // Staff puede ver todos si q está vacío
+      const owner = this.normalizeSearchStr(p.owner || p.ownerName || '');
+      const pet = this.normalizeSearchStr(p.name || p.petName || '');
       if (!isStaff) {
-        // En rol de visitantes: buscar estrictamente por nombre de dueño o de la mascota
-        return owner.includes(q) || pet.includes(q);
+        // En rol de visitantes: buscar por nombre de dueño o de la mascota (ej: "Dalybel" -> "Dalybell Ramírez Montilla")
+        return owner.includes(normQ) || normQ.includes(owner) || pet.includes(normQ) || normQ.includes(pet);
       }
       // En rol staff: buscar por todos los campos operativos
-      const rif = (p.rif || '').toLowerCase();
-      const email = (p.email || '').toLowerCase();
-      const phone = (p.ownerPhone || p.phone || '').toLowerCase();
-      const species = (p.species || '').toLowerCase();
-      return owner.includes(q) || pet.includes(q) || rif.includes(q) || email.includes(q) || phone.includes(q) || species.includes(q);
+      const rif = this.normalizeSearchStr(p.rif || '');
+      const email = this.normalizeSearchStr(p.email || '');
+      const phone = this.normalizeSearchStr(p.ownerPhone || p.phone || '');
+      const species = this.normalizeSearchStr(p.species || '');
+      return owner.includes(normQ) || normQ.includes(owner) ||
+             pet.includes(normQ) || normQ.includes(pet) ||
+             rif.includes(normQ) || email.includes(normQ) ||
+             phone.includes(normQ) || species.includes(normQ);
     });
 
     const safeQuery = (query || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -1148,13 +1354,7 @@ class AuthEngine {
   }
 
   requestProfilePin(petId, onAuthenticatedCallback, options = {}) {
-    let patient = null;
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-      patient = window.adminEngine.patientsStatus.find(p => p.id === petId);
-    }
-    if (!patient && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-      patient = window.petStatusEngine.pets.find(p => p.id === petId);
-    }
+    const patient = this.getPatientById(petId);
 
     if (!patient) {
       if (window.app && typeof window.app.showToast === 'function') {
@@ -1236,14 +1436,7 @@ class AuthEngine {
 
     if (!this.pendingPinPetId) return;
 
-    let patient = null;
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-      patient = window.adminEngine.patientsStatus.find(p => p.id === this.pendingPinPetId);
-    }
-    if (!patient && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-      patient = window.petStatusEngine.pets.find(p => p.id === this.pendingPinPetId);
-    }
-
+    const patient = this.getPatientById(this.pendingPinPetId);
     const expectedPin = (patient && patient.pin) ? String(patient.pin).trim() : '1234';
 
     if (!inputVal || (inputVal !== expectedPin)) {
@@ -1269,6 +1462,7 @@ class AuthEngine {
     this.setProfilePinAuthenticated(verifiedPetId, true);
     this.wasInVipLookupModal = false;
 
+    window._isVerifyingProfilePin = true;
     if (window.app && typeof window.app.closeModal === 'function') {
       window.app.closeModal('client-profile-pin-modal');
     } else {
@@ -1285,6 +1479,7 @@ class AuthEngine {
     } else {
       this.selectVipProfileVerified(verifiedPetId);
     }
+    window._isVerifyingProfilePin = false;
   }
 
   closeProfilePinModal() {
@@ -1333,19 +1528,16 @@ class AuthEngine {
   }
 
   selectVipProfileVerified(petId) {
-    let patient = null;
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-      patient = window.adminEngine.patientsStatus.find(p => p.id === petId);
-    }
-    if (!patient && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-      patient = window.petStatusEngine.pets.find(p => p.id === petId);
-    }
-
-    const ownerName = patient ? (patient.owner || patient.ownerName) : 'Tutor VIP';
-    const petName = patient ? (patient.name || patient.petName) : 'Mascota';
+    const patient = this.getPatientById(petId);
+    const ownerName = patient ? (patient.owner || patient.ownerName) : 'Dalybell Ramírez Montilla';
+    const petName = patient ? (patient.name || patient.petName) : 'Princesa';
 
     this.currentVipPetId = petId;
     localStorage.setItem('mrs_pets_active_vip_patient_id', petId);
+    localStorage.setItem('mrs_pets_active_customer_name', ownerName);
+    localStorage.setItem('mrs_pets_auth_role', 'client');
+    localStorage.setItem('mrs_pets_auth_name', `${ownerName} (Tutor de ${petName})`);
+    sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
     localStorage.setItem('mrs_pets_skip_splash', 'true');
 
     // Limpieza de modales de reservación y deduplicación estricta de citas pendientes
@@ -1363,9 +1555,11 @@ class AuthEngine {
       window.adminEngine.deduplicatePendingAppointments();
     }
 
+    window._isVerifyingProfilePin = true;
     if (window.app && typeof window.app.closeModal === 'function') {
       window.app.closeModal('vip-client-lookup-modal');
     }
+    window._isVerifyingProfilePin = false;
 
     this.loginSuccess('client', `${ownerName} (Tutor de ${petName})`);
 
@@ -1395,7 +1589,7 @@ class AuthEngine {
     this.openVipLookupModal('');
   }
 
-  quickReservationLogin(event) {
+  quickReservationLogin(event, targetArea = 'clinica') {
     if (event && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
@@ -1404,7 +1598,26 @@ class AuthEngine {
     this.isAuthenticated = true;
     this.userRole = 'visitor';
     this.userName = 'Visitante VIP';
-    localStorage.setItem('mrs_pets_skip_splash', 'true');
+    this.currentVipPetId = null;
+
+    try {
+      localStorage.removeItem('mrs_pets_active_vip_patient_id');
+      localStorage.removeItem('mrs_pets_active_customer_name');
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
+      localStorage.setItem('mrs_pets_auth_role', 'visitor');
+      localStorage.setItem('mrs_pets_auth_name', 'Visitante VIP');
+      sessionStorage.removeItem('mrs_pets_client_authenticated');
+
+      // Limpiar autorizaciones de PIN residuales en la pestaña para evitar suplantaciones
+      if (typeof sessionStorage !== 'undefined') {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('mrs_pets_pin_auth_')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      }
+    } catch (e) {}
 
     // 2. Revelar la plataforma principal y ocultar portal splash
     this.hidePortalAndShowApp();
@@ -1417,16 +1630,32 @@ class AuthEngine {
       window.app.switchTab('welcome', true);
     }
 
-    // 3. Abrir el modal unificado de reservaciones (Grooming / Clínica / Hotel)
-    if (window.clinicaEngine && typeof window.clinicaEngine.openGroomingBookingModal === 'function') {
-      window.clinicaEngine.openGroomingBookingModal('Circuito Grooming Spa 7 Estaciones');
-    } else {
-      const groomingModal = document.getElementById('booking-modal-grooming');
-      if (groomingModal) groomingModal.classList.add('active');
+    // 3. Abrir el modal de reservación seleccionado en BLANCO absoluto para nuevo registro
+    if (targetArea === 'clinica') {
+      if (window.clinicaEngine && typeof window.clinicaEngine.openClinicaBookingModal === 'function') {
+        window.clinicaEngine.openClinicaBookingModal('Consulta Médica General', '', '', { resetBlank: true });
+      } else {
+        const clinicaModal = document.getElementById('booking-modal-clinica');
+        if (clinicaModal) clinicaModal.classList.add('active');
+      }
+    } else if (targetArea === 'grooming') {
+      if (window.clinicaEngine && typeof window.clinicaEngine.openGroomingBookingModal === 'function') {
+        window.clinicaEngine.openGroomingBookingModal('Circuito Grooming Spa 7 Estaciones', '', '', { resetBlank: true });
+      } else {
+        const groomingModal = document.getElementById('booking-modal-grooming');
+        if (groomingModal) groomingModal.classList.add('active');
+      }
+    } else if (targetArea === 'hotel') {
+      if (window.clinicaEngine && typeof window.clinicaEngine.openHotelBookingModal === 'function') {
+        window.clinicaEngine.openHotelBookingModal('Suite Royal Bioclimática #4', '', '', { resetBlank: true });
+      } else {
+        const hotelModal = document.getElementById('booking-modal-hotel');
+        if (hotelModal) hotelModal.classList.add('active');
+      }
     }
 
     if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast('📅 Reservaciones: Rol de Visitante VIP activo', 'info');
+      window.app.showToast('📅 Reservación: Formulario en blanco listo para ingresar sus datos', 'info');
     }
   }
 
@@ -1583,13 +1812,86 @@ class AuthEngine {
   }
 
   quickStaffLogin(bypassPrompt = false, targetStaffUser = null) {
-    this.closeConciergePortal();
+    const portal = typeof document !== 'undefined' ? document.getElementById('access-links-portal') : null;
+    const isPortalActive = portal && (
+      portal.classList.contains('active') ||
+      (portal.style.display !== 'none' && portal.style.visibility !== 'hidden')
+    );
+
+    // 🛡️ ZERO-TRUST: Si el portal VIP Concierge está activo, NUNCA considerar sesión previa de staff.
+    // Obligar a que ingrese la clave para evitar accesos indebidos o no autorizados.
+    if (isPortalActive) {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
+        sessionStorage.removeItem('mrs_pets_staff_role');
+      }
+      if (window.adminEngine) {
+        window.adminEngine.isEnterpriseAuthenticated = false;
+        window.adminEngine.activeRole = null;
+      }
+      this.isAuthenticated = false;
+      this.userRole = null;
+    }
+
+    // 1. Solo si NO estamos en el portal y el usuario ya está explícitamente autenticado como staff en esta sesión
+    const isAlreadyStaff = !isPortalActive && (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true') &&
+      (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) &&
+      (this.userRole === 'staff' && this.isAuthenticated)
+    );
+
+    if (isAlreadyStaff) {
+      this.closeConciergePortal();
+      this.hidePortalAndShowApp();
+      if (window.adminEngine) {
+        window.adminEngine.setEnvironment('enterprise');
+      }
+      if (window.app && typeof window.app.switchTab === 'function') {
+        window.app.switchTab('admin', true);
+      }
+      return;
+    }
+
+    // 2. Si se encuentra en el portal o no está autenticado, solicitar la clave obligatoriamente
+    // NUNCA ocultar el portal ni mostrar el appContainer antes de autenticar en el servidor
+    const passInput = document.getElementById('login-staff-pass');
+    if (passInput) {
+      passInput.value = '';
+      passInput.style.borderColor = '#475569';
+    }
+
+    if (targetStaffUser) {
+      const selectEl = document.getElementById('login-staff-select');
+      const userEl = document.getElementById('login-staff-user');
+      if (userEl) userEl.value = targetStaffUser;
+      if (selectEl) selectEl.value = targetStaffUser;
+    }
+
     if (window.app && typeof window.app.openModal === 'function') {
       window.app.openModal('enterprise-login-modal');
     } else {
       const modal = document.getElementById('enterprise-login-modal');
-      if (modal) modal.classList.add('active');
+      if (modal) {
+        modal.classList.add('active');
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('pointer-events', 'auto', 'important');
+      }
     }
+
+    // Enfocar el campo de clave o de selección de usuario
+    setTimeout(() => {
+      const pass = document.getElementById('login-staff-pass');
+      const select = document.getElementById('login-staff-select');
+      const user = document.getElementById('login-staff-user');
+      if (user && user.value && pass) {
+        pass.value = '';
+        try { pass.focus(); } catch(e) {}
+      } else if (select) {
+        try { select.focus(); } catch(e) {}
+      }
+    }, 120);
   }
 
   loginSuccess(role, userName) {
@@ -1597,11 +1899,27 @@ class AuthEngine {
     this.userRole = role || 'client';
     this.userName = userName;
     localStorage.setItem('mrs_pets_skip_splash', 'true');
+    localStorage.setItem('mrs_pets_auth_role', this.userRole);
+    localStorage.setItem('mrs_pets_auth_name', this.userName);
+
+    if (role === 'staff') {
+      sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
+      if (window.adminEngine) {
+        window.adminEngine.isEnterpriseAuthenticated = true;
+        window.adminEngine.activeRole = sessionStorage.getItem('mrs_pets_staff_role') || 'admin';
+      }
+    } else {
+      sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
+      if (window.adminEngine) {
+        window.adminEngine.isEnterpriseAuthenticated = false;
+      }
+    }
 
     if (window.adminEngine) {
       window.adminEngine.setEnvironment(role === 'staff' ? 'enterprise' : 'customer');
     }
 
+    this.closeConciergePortal();
     this.hidePortalAndShowApp();
 
     if (role === 'client') {
@@ -1661,16 +1979,30 @@ class AuthEngine {
 
     localStorage.removeItem('mrs_pets_active_customer_name');
     localStorage.removeItem('mrs_pets_active_customer_rif');
-
-    // Clear saved auto-skip flag and PIN credentials so user MUST authenticate on returning!
     localStorage.removeItem('mrs_pets_skip_splash');
     localStorage.removeItem('mrs_pets_active_vip_patient_id');
+    localStorage.removeItem('mrs_pets_auth_role');
+    localStorage.removeItem('mrs_pets_auth_name');
+
+    sessionStorage.removeItem('mrs_pets_client_authenticated');
+    sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
+    sessionStorage.removeItem('mrs_pets_staff_role');
+    sessionStorage.removeItem('mrs_pets_visitor_session');
+    sessionStorage.removeItem('mrs_pets_skip_splash');
+
     try {
       Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('mrs_pets_pin_auth_')) {
           sessionStorage.removeItem(key);
         }
       });
+    } catch(e) {}
+
+    document.documentElement.classList.remove('splash-bypassed');
+
+    // Notificar al backend de la revocación de la cookie de sesión si existe
+    try {
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     } catch(e) {}
 
     const appContainer = document.getElementById('app-container');
@@ -1852,12 +2184,21 @@ class AuthEngine {
         body: JSON.stringify({ username: staffUsername, password: pass })
       }).then(r => r.json()).then(data => {
         if (data.status === 'success') {
+          const authRole = data.role || (data.user && data.user.role) || 'admin';
           if (window.adminEngine) {
             window.adminEngine.isEnterpriseAuthenticated = true;
-            window.adminEngine.activeRole = data.user.role || 'admin';
-            try { sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true'); } catch(e){}
+            window.adminEngine.activeRole = authRole;
+            window.adminEngine.viewEnvironment = 'enterprise';
+            try { 
+              sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
+              sessionStorage.setItem('mrs_pets_staff_role', authRole);
+            } catch(e){}
           }
-          this.quickStaffLogin(true, staffMatch);
+          this.isAuthenticated = true;
+          this.userRole = 'staff';
+          this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : (data.username || staffUsername);
+          localStorage.setItem('mrs_pets_skip_splash', 'true');
+          this.loginSuccess('staff', this.userName);
         } else {
           if (window.app && typeof window.app.showToast === 'function') {
             window.app.showToast(data.message || `❌ Credenciales inválidas para "${user}".`, 'danger');
@@ -1878,19 +2219,25 @@ class AuthEngine {
     }
 
     // 3. Base de datos de Clientes Registrados ("Soy un Chico Mrs. Pets")
-    let patients = [];
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-      patients = window.adminEngine.patientsStatus;
-    } else if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-      patients = window.petStatusEngine.pets;
-    }
+    const patients = this.getPatientsList();
+    const normUser = this.normalizeSearchStr(cleanUser);
 
     const matched = patients.find(p => {
-      const owner = (p.owner || p.ownerName || '').toLowerCase().trim();
-      const pet = (p.name || p.petName || '').toLowerCase().trim();
-      const rif = (p.rif || '').toLowerCase().trim();
-      const phone = (p.ownerPhone || p.phone || '').toLowerCase().trim();
-      return owner.includes(cleanUser) || cleanUser.includes(owner) || pet === cleanUser || rif === cleanUser || phone.includes(cleanUser);
+      const owner = this.normalizeSearchStr(p.owner || p.ownerName || '');
+      const pet = this.normalizeSearchStr(p.name || p.petName || '');
+      const rif = this.normalizeSearchStr(p.rif || '');
+      const phone = this.normalizeSearchStr(p.ownerPhone || p.phone || '');
+      const email = this.normalizeSearchStr(p.email || '');
+
+      return (
+        owner.includes(normUser) ||
+        normUser.includes(owner) ||
+        pet.includes(normUser) ||
+        normUser.includes(pet) ||
+        rif.includes(normUser) ||
+        phone.includes(normUser) ||
+        email.includes(normUser)
+      );
     });
 
     if (matched) {
@@ -1922,9 +2269,8 @@ class AuthEngine {
   }
 
   openRegistrationPortalModal(prefillData) {
-    if (this.isAuthenticated) {
-      this.hidePortalAndShowApp();
-    }
+    this.closeConciergePortal();
+    this.hidePortalAndShowApp();
     if (window.registrationEngine && typeof window.registrationEngine.openRegistrationModal === 'function') {
       window.registrationEngine.openRegistrationModal(prefillData);
     } else {

@@ -239,6 +239,7 @@ class ClinicaEngine {
         philosophy: 'Medicina veterinaria basada en evidencia y trato compasivo con tecnología de vanguardia.',
         specialties: ['Cirugía General', 'Traumatología', 'Medicina Interna'],
         avatar: '👨‍⚕️',
+        photo: 'assets/leia_avatar.jpg',
         availability: 'Disponible Hoy'
       },
       {
@@ -262,6 +263,8 @@ class ClinicaEngine {
         availability: 'Disponible Jueves'
       }
     ];
+
+    this.loadStaffFromStorage();
 
     // Base de datos de expedientes médicos privados
     this.patientsDatabase = {
@@ -857,19 +860,133 @@ class ClinicaEngine {
     }, 150);
   }
 
-  // STAFF MÉDICO CON ESTÉTICA SILENT LUXURY Y CERO PRECIOS
+  loadStaffFromStorage() {
+    try {
+      const saved = localStorage.getItem('mrs_pets_clinica_staff');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.staff = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load clinica staff from localStorage:", e);
+    }
+    this.syncStaffWithAdminProfiles();
+  }
+
+  // SINCRONIZACIÓN REACTIVA BIDIRECCIONAL CON ADMIN STAFF PROFILES
+  syncStaffWithAdminProfiles() {
+    let adminProfiles = [];
+    try {
+      if (window.adminEngine && Array.isArray(window.adminEngine.staffProfiles) && window.adminEngine.staffProfiles.length > 0) {
+        adminProfiles = window.adminEngine.staffProfiles;
+      } else {
+        const raw = localStorage.getItem('mrs_pets_staff_profiles');
+        if (raw) adminProfiles = JSON.parse(raw);
+      }
+    } catch (e) {}
+
+    if (!Array.isArray(adminProfiles) || adminProfiles.length === 0) return;
+
+    // Dr. Alejandro Morales (Director Médico & Cirujano Principal)
+    const drMorales = adminProfiles.find(u => 
+      u.id === 'USR-01' || 
+      ((u.username || '').toLowerCase() === 'dr.morales') ||
+      ((u.name || '').toLowerCase().includes('alejandro morales'))
+    );
+
+    if (drMorales) {
+      let doc1 = this.staff.find(d => d.id === 'DOC-1' || (d.name && d.name.toLowerCase().includes('morales')));
+      if (!doc1) {
+        doc1 = {
+          id: 'DOC-1',
+          name: 'Dr. Alejandro Morales',
+          title: 'Director Médico & Cirujano Principal',
+          credentials: 'MV. M.Sc. Cirugía de Tejidos Blandos (LUZ • España)',
+          philosophy: 'Medicina veterinaria basada en evidencia y trato compasivo con tecnología de vanguardia.',
+          specialties: ['Cirugía General', 'Traumatología', 'Medicina Interna'],
+          avatar: '👨‍⚕️',
+          photo: 'assets/leia_avatar.jpg',
+          availability: 'Disponible Hoy'
+        };
+        this.staff.unshift(doc1);
+      }
+      doc1.name = 'Dr. Alejandro Morales';
+      if (drMorales.photo) {
+        doc1.photo = drMorales.photo;
+      }
+      const isActive = (drMorales.active !== false && drMorales.estado !== 'inactivo');
+      doc1.availability = isActive ? 'Disponible Hoy' : 'No Disponible';
+      doc1.active = isActive;
+    }
+
+    // Dra. Patricia Silva (USR-08 / dra.silva)
+    const draSilva = adminProfiles.find(u => 
+      u.id === 'USR-08' || 
+      ((u.username || '').toLowerCase() === 'dra.silva') ||
+      ((u.name || '').toLowerCase().includes('patricia silva'))
+    );
+
+    if (draSilva) {
+      let docSilva = this.staff.find(d => d.id === 'DOC-SILVA' || (d.name && d.name.toLowerCase().includes('patricia silva')));
+      if (!docSilva) {
+        docSilva = {
+          id: 'DOC-SILVA',
+          name: 'Dra. Patricia Silva',
+          title: 'Médico Veterinario Especialista',
+          credentials: 'MV. Especialista en Cuidados Intensivos y Neonatología (LUZ)',
+          philosophy: 'Atención personalizada y compasiva con los más altos estándares hospitalarios.',
+          specialties: ['Medicina Felina', 'Cuidados Intensivos', 'Dermatología'],
+          avatar: '👩‍⚕️',
+          photo: 'assets/leia_avatar.jpg',
+          availability: 'Disponible Hoy'
+        };
+        this.staff.splice(1, 0, docSilva);
+      }
+      docSilva.name = 'Dra. Patricia Silva';
+      if (draSilva.photo) {
+        docSilva.photo = draSilva.photo;
+      }
+      const isSilvaActive = (draSilva.active !== false && draSilva.estado !== 'inactivo');
+      docSilva.availability = isSilvaActive ? 'Disponible Hoy' : 'No Disponible';
+      docSilva.active = isSilvaActive;
+    }
+
+    try {
+      localStorage.setItem('mrs_pets_clinica_staff', JSON.stringify(this.staff));
+    } catch (e) {}
+  }
+
+  // STAFF MÉDICO CON ESTÉTICA SILENT LUXURY Y FOTOS REALES
   renderStaff() {
     const container = document.getElementById('clinica-staff-grid');
     if (!container) return;
+
+    this.syncStaffWithAdminProfiles();
 
     container.innerHTML = '';
     this.staff.forEach(doc => {
       const card = document.createElement('div');
       card.className = 'clinica-staff-card';
+      const hasPhoto = !!(doc.photo && doc.photo.trim().length > 0);
+      const photoHtml = hasPhoto
+        ? `<img src="${doc.photo}" alt="${doc.name}" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:block;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">`
+        : '';
+      const fallbackDisplay = hasPhoto ? 'none' : 'flex';
+
+      const isAvailable = !doc.availability || (!doc.availability.toLowerCase().includes('no') && !doc.availability.toLowerCase().includes('inactiv'));
+      const availBg = isAvailable ? 'rgba(74, 107, 93, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+      const availColor = isAvailable ? '#4A6B5D' : '#DC2626';
+      const availBorder = isAvailable ? 'rgba(74, 107, 93, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+
       card.innerHTML = `
         <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
-          <div style="width:58px; height:58px; border-radius:50%; background:rgba(212, 175, 55, 0.12); border:2px solid #D4AF37; display:flex; align-items:center; justify-content:center; font-size:1.9rem; flex-shrink:0;">
-            ${doc.avatar}
+          <div style="width:64px; height:64px; border-radius:50%; background:rgba(212, 175, 55, 0.12); border:2.5px solid #D4AF37; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; position:relative; box-shadow:0 4px 14px rgba(212,175,55,0.22);">
+            ${photoHtml}
+            <div style="display:${fallbackDisplay}; width:100%; height:100%; align-items:center; justify-content:center; font-size:1.9rem;">
+              ${doc.avatar || '👨‍⚕️'}
+            </div>
           </div>
           <div>
             <h4 style="font-size:1.15rem; font-weight:700; color:#2C2C2E; margin:0 0 3px 0; letter-spacing:-0.2px;">${doc.name}</h4>
@@ -881,10 +998,10 @@ class ClinicaEngine {
         <p style="font-size:0.83rem; color:#52525B; line-height:1.5; margin-bottom:18px; font-style:italic;">"${doc.philosophy}"</p>
 
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(0, 0, 0, 0.06); padding-top:14px; margin-top:auto;">
-          <span style="font-size:0.75rem; font-weight:700; color:#4A6B5D; background:rgba(74, 107, 93, 0.1); padding:4px 10px; border-radius:20px; border:1px solid rgba(74, 107, 93, 0.25);">
+          <span style="font-size:0.75rem; font-weight:700; color:${availColor}; background:${availBg}; padding:4px 10px; border-radius:20px; border:1px solid ${availBorder};">
             ● ${doc.availability}
           </span>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="clinicaEngine.openClinicaBookingModal('Consulta Especializada con ${doc.name}')" style="background:#FBFBFD; color:#2C2C2E; border:1px solid rgba(0,0,0,0.12); font-weight:600; padding:7px 14px; border-radius:8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="clinicaEngine.openClinicaBookingModal('Consulta Especializada con ${doc.name}')" style="background:#FBFBFD; color:#2C2C2E; border:1px solid rgba(0,0,0,0.12); font-weight:600; padding:7px 14px; border-radius:8px; cursor:pointer;">
             Agendar Consulta ➔
           </button>
         </div>
@@ -1120,7 +1237,7 @@ class ClinicaEngine {
     // 1. Si el usuario ingresó la clave en el campo del formulario de reservación
     if (enteredPin !== null && enteredPin !== undefined && String(enteredPin).trim() !== '') {
       const cleanPin = String(enteredPin).trim();
-      if (cleanPin === expectedPin || isSessionAuthed) {
+      if (cleanPin === expectedPin) {
         if (window.authEngine && typeof window.authEngine.setProfilePinAuthenticated === 'function') {
           window.authEngine.setProfilePinAuthenticated(existingPatient.id, true);
         }
@@ -1136,7 +1253,7 @@ class ClinicaEngine {
         }
         const errMsg = isThirdParty
           ? '❌ Clave de autorización del titular incorrecta. Para evitar instrucciones cruzadas, se exige la clave personal del titular destino.'
-          : '❌ Clave personal incorrecta. Ingrese su clave personal o 1234.';
+          : `❌ Clave personal incorrecta para ${existingPatient.owner || 'este titular'}. Ingrese la clave correcta para autorizar la reservación.`;
         if (window.app && typeof window.app.showToast === 'function') {
           window.app.showToast(errMsg, 'error');
         }
@@ -1266,6 +1383,100 @@ class ClinicaEngine {
     return '08:00';
   }
 
+  checkSlotAvailability(area, date, time) {
+    if (window.adminEngine && typeof window.adminEngine.checkSlotAvailability === 'function') {
+      return window.adminEngine.checkSlotAvailability(area, date, time);
+    }
+    // Fallback de contingencia directa con localStorage si adminEngine no está disponible
+    try {
+      const saved = localStorage.getItem('mrs_pets_blocked_slots');
+      if (saved) {
+        const list = JSON.parse(saved);
+        const normTime = String(time || '').trim().substring(0, 5);
+        const normDate = String(date || '').trim().split('T')[0];
+        const normArea = String(area || '').toLowerCase().trim();
+        const blocked = list.find(b => {
+          if (!b) return false;
+          const bDate = String(b.date || '').trim().split('T')[0];
+          if (bDate !== normDate) return false;
+          const bArea = String(b.area || '').toLowerCase().trim();
+          if (bArea !== 'all' && bArea !== 'todas' && bArea !== normArea) return false;
+          const bTime = String(b.time || '').trim().substring(0, 5);
+          if (b.time === 'all_day' || b.time === 'all' || !b.time) return true;
+          return bTime === normTime;
+        });
+        if (blocked) {
+          const reasonText = blocked.reason ? ` (${blocked.reason})` : '';
+          return { available: false, reason: `Horario restringido/bloqueado por el personal${reasonText}`, blockedEntry: blocked };
+        }
+      }
+    } catch(e) {}
+    return { available: true };
+  }
+
+  validateSlotAvailability(modalType = 'grooming') {
+    const dateInput = document.getElementById(`booking-${modalType}-date`) || document.getElementById(`booking-${modalType}-checkin`);
+    const timeInput = document.getElementById(`booking-${modalType}-time`);
+    if (!dateInput || !timeInput) return;
+
+    const dateVal = dateInput.value;
+    const timeVal = timeInput.value;
+    const warningEl = document.getElementById(`${modalType}-blocked-slot-warning`);
+
+    // Si es modal de Grooming y timeInput es select, refrescar opciones de horarios bloqueados
+    if (modalType === 'grooming' && timeInput.tagName === 'SELECT') {
+      Array.from(timeInput.options).forEach(opt => {
+        const optTime = opt.value;
+        const optCheck = this.checkSlotAvailability('grooming', dateVal, optTime);
+        if (!opt.dataset.originalText) {
+          opt.dataset.originalText = opt.innerText;
+        }
+        if (!optCheck.available) {
+          opt.disabled = true;
+          opt.innerText = `⛔ ${opt.dataset.originalText} (Bloqueado: ${optCheck.blockedEntry?.reason || 'No disponible'})`;
+        } else {
+          opt.disabled = false;
+          opt.innerText = opt.dataset.originalText;
+        }
+      });
+    }
+
+    const check = this.checkSlotAvailability(modalType, dateVal, timeVal);
+    if (!check.available) {
+      if (warningEl) {
+        warningEl.style.display = 'block';
+        warningEl.innerHTML = `⚠️ <strong>Horario No Disponible:</strong> ${check.reason}.<br><span style="font-size:0.78rem; color:#7f1d1d;">Por favor seleccione otra hora o fecha para su cita.</span>`;
+      }
+      timeInput.style.borderColor = '#EF4444';
+      timeInput.style.backgroundColor = '#FEF2F2';
+    } else {
+      if (warningEl) {
+        warningEl.style.display = 'none';
+        warningEl.innerHTML = '';
+      }
+      timeInput.style.borderColor = '';
+      timeInput.style.backgroundColor = '';
+    }
+  }
+
+  onTimeChange(modalType = 'grooming') {
+    if (modalType === 'grooming') {
+      this.updateTimeAmPmBadge('grooming');
+    } else if (modalType === 'clinica') {
+      this.updateBudgetPreviewTime();
+    }
+    this.validateSlotAvailability(modalType);
+  }
+
+  displayBlockedSlotAlert(modalType, date, time, reason) {
+    const warningEl = document.getElementById(`${modalType}-blocked-slot-warning`);
+    if (warningEl) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = `⛔ <strong>Horario Bloqueado en Agenda:</strong> ${reason}.<br><span style="font-size:0.8rem; font-weight:800;">Fecha: ${date} • Hora: ${time}</span><br><span style="font-size:0.78rem;">Por favor seleccione otro horario disponible para su cita.</span>`;
+      warningEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
   onDateChange(modalType = 'grooming') {
     const dateInput = document.getElementById(`booking-${modalType}-date`) || document.getElementById(`booking-${modalType}-checkin`);
     const timeInput = document.getElementById(`booking-${modalType}-time`);
@@ -1273,6 +1484,7 @@ class ClinicaEngine {
       timeInput.value = this.getSmartBookingTime(dateInput.value);
       this.updateTimeAmPmBadge(modalType);
     }
+    this.validateSlotAvailability(modalType);
   }
 
   getAllPatients() {
@@ -1337,56 +1549,39 @@ class ClinicaEngine {
   }
 
   setupBookingPinField(modalType, activeUser, finalPet, finalTutor) {
-    const isAuthed = Boolean(
-      window.authEngine && (
-        (activeUser && activeUser.petId && typeof window.authEngine.isProfilePinAuthenticated === 'function' && window.authEngine.isProfilePinAuthenticated(activeUser.petId)) ||
-        (window.authEngine.isAuthenticated && window.authEngine.userRole === 'client') ||
-        (window.authEngine.isAuthenticated && window.authEngine.userRole === 'staff')
-      )
-    );
-    const existingP = (activeUser && activeUser.petObj) || this.findExistingPatient(finalPet, finalTutor);
-    const expectedPin = (existingP && existingP.pin) ? String(existingP.pin).trim() : '1234';
-
     const pinInput = document.getElementById(`booking-${modalType}-pin`);
     const pinBadge = document.getElementById(`booking-${modalType}-pin-badge`);
 
+    // 🔒 REGLA DE SEGURIDAD ESTRICTA (Mrs. Pets Anti-Suplantación):
+    // El campo de PIN NUNCA se rellena automáticamente por código con la clave de la base de datos.
+    // Permanece en blanco para que el usuario ingrese su clave personal
+    // o para que el administrador de contraseñas de su propio dispositivo la complete si la guardó allí.
     if (pinInput) {
-      if (isAuthed) {
-        pinInput.value = expectedPin;
-        pinInput.style.borderColor = '#10B981';
-      } else {
-        pinInput.value = '';
-        pinInput.style.borderColor = '#CBD5E1';
-      }
+      pinInput.value = '';
+      pinInput.style.borderColor = '#CBD5E1';
     }
     if (pinBadge) {
-      if (isAuthed) {
-        pinBadge.innerHTML = '✅ Clave Validada en Sesión VIP';
-        pinBadge.style.background = '#ECFDF5';
-        pinBadge.style.color = '#047857';
-        pinBadge.style.border = '1px solid #A7F3D0';
-      } else {
-        pinBadge.innerHTML = (modalType === 'grooming' ? 'Obligatorio para Clientes Existentes' : 'Obligatorio para Reservar');
-        pinBadge.style.background = '#FEF3C7';
-        pinBadge.style.color = '#D97706';
-        pinBadge.style.border = '1px solid #FCD34D';
-      }
+      pinBadge.innerHTML = '🔒 Clave Personal Requerida para Confirmar';
+      pinBadge.style.background = '#FEF3C7';
+      pinBadge.style.color = '#D97706';
+      pinBadge.style.border = '1px solid #FCD34D';
     }
   }
 
   // 1. CLÍNICA VETERINARIA BOOKING
-  openClinicaBookingModal(serviceTitle = 'Consulta Médica General', prefillPetName = '', prefillTutorName = '') {
+  openClinicaBookingModal(serviceTitle = 'Consulta Médica General', prefillPetName = '', prefillTutorName = '', options = {}) {
     const titleEl = document.getElementById('booking-clinica-service');
     if (titleEl) titleEl.innerText = serviceTitle;
 
-    const activeUser = (window.authEngine && typeof window.authEngine.getCurrentUser === 'function')
+    const isClientAuth = Boolean(window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'client');
+    const activeUser = (isClientAuth && typeof window.authEngine.getCurrentUser === 'function')
       ? window.authEngine.getCurrentUser()
       : null;
 
-    const isVisitor = Boolean(window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest'));
-    const finalTutor = prefillTutorName || (activeUser && activeUser.tutorName && !isVisitor ? activeUser.tutorName : '');
-    let finalPet = prefillPetName || (activeUser && activeUser.petName && !isVisitor ? activeUser.petName : '');
-    if (!finalPet && finalTutor) {
+    const isReset = Boolean(options && options.resetBlank);
+    const finalTutor = (isReset || !isClientAuth) ? (prefillTutorName || '') : (prefillTutorName || (activeUser && activeUser.tutorName ? activeUser.tutorName : ''));
+    let finalPet = (isReset || !isClientAuth) ? (prefillPetName || '') : (prefillPetName || (activeUser && activeUser.petName ? activeUser.petName : ''));
+    if (!finalPet && finalTutor && isClientAuth) {
       const tutorPets = this.getPetsForTutor(finalTutor);
       if (tutorPets && tutorPets.length > 0) {
         const p = tutorPets[0];
@@ -1400,10 +1595,26 @@ class ClinicaEngine {
     const petInput = document.getElementById('booking-clinica-pet');
     if (petInput) petInput.value = finalPet;
 
+    // Contact fields: in blank if reset or new, or activeUser's if authenticated client
+    const emailInput = document.getElementById('booking-clinica-email');
+    if (emailInput) {
+      emailInput.value = (isClientAuth && activeUser && activeUser.email && !isReset) ? activeUser.email : '';
+    }
+
+    const phoneInput = document.getElementById('booking-clinica-phone');
+    if (phoneInput) {
+      phoneInput.value = (isClientAuth && activeUser && activeUser.phone && !isReset) ? activeUser.phone : '';
+    }
+
+    const reasonInput = document.getElementById('booking-clinica-reason');
+    if (reasonInput) {
+      reasonInput.value = '';
+    }
+
     this.setupBookingPinField('clinica', activeUser, finalPet, finalTutor);
 
     const dateInput = document.getElementById('booking-clinica-date');
-    if (dateInput && !dateInput.value) {
+    if (dateInput) {
       const today = new Date();
       dateInput.value = today.toISOString().split('T')[0];
     }
@@ -1411,21 +1622,6 @@ class ClinicaEngine {
     const timeInput = document.getElementById('booking-clinica-time');
     if (timeInput) {
       timeInput.value = this.getSmartBookingTime(dateInput ? dateInput.value : null);
-    }
-
-    // Prellenar datos de contacto y selector de doctor/estudio
-    const cleanTutorPrefill = finalTutor.trim();
-    const cleanPetPrefill = finalPet.split('(')[0].trim();
-    const existingPatient = this.findExistingPatient(cleanPetPrefill, cleanTutorPrefill);
-
-    const emailInput = document.getElementById('booking-clinica-email');
-    if (emailInput) {
-      emailInput.value = (activeUser && activeUser.email) ? activeUser.email : (existingPatient?.email || 'cliente@mrspets.com');
-    }
-
-    const phoneInput = document.getElementById('booking-clinica-phone');
-    if (phoneInput) {
-      phoneInput.value = (activeUser && activeUser.phone) ? activeUser.phone : (existingPatient?.ownerPhone || '+58 414-6799510');
     }
 
     const studySelect = document.getElementById('booking-clinica-study');
@@ -1438,8 +1634,15 @@ class ClinicaEngine {
 
     this.updateBudgetVesDisplay();
 
-    app.openModal('booking-modal-clinica');
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('booking-modal-clinica');
+    } else {
+      const modal = document.getElementById('booking-modal-clinica');
+      if (modal) modal.classList.add('active');
+    }
+
     this.lookupClient('clinica');
+    setTimeout(() => this.validateSlotAvailability('clinica'), 50);
   }
 
   updateBudgetVesDisplay() {
@@ -1496,20 +1699,13 @@ class ClinicaEngine {
     let rawTutor = nameInput ? nameInput.value.trim() : '';
     let rawPet = petInput ? petInput.value.trim() : '';
 
-    // Autocompletar con usuario en sesión o defaults corporativos si están vacíos
-    if (!rawTutor) {
-      const activeUser = (window.authEngine && typeof window.authEngine.getCurrentUser === 'function')
-        ? window.authEngine.getCurrentUser()
-        : null;
-      rawTutor = (activeUser && activeUser.tutorName) || (window.authEngine && window.authEngine.userName) || 'Dalybell Ramírez Montilla';
-      if (nameInput) nameInput.value = rawTutor;
-    }
-    if (!rawPet) {
-      const activeUser = (window.authEngine && typeof window.authEngine.getCurrentUser === 'function')
-        ? window.authEngine.getCurrentUser()
-        : null;
-      rawPet = (activeUser && activeUser.petName) || 'Princesa (Yorkshire Terrier VIP)';
-      if (petInput) petInput.value = rawPet;
+    if (!rawTutor || !rawPet) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ Por favor ingrese el Nombre del Tutor y de la Mascota para generar el presupuesto.', 'warning');
+      }
+      if (!rawTutor && nameInput) nameInput.focus();
+      else if (!rawPet && petInput) petInput.focus();
+      return;
     }
 
     const cleanTutor = rawTutor;
@@ -1673,7 +1869,7 @@ class ClinicaEngine {
       const time = document.getElementById('booking-clinica-time')?.value || '09:00';
       const reason = document.getElementById('booking-clinica-reason')?.value || '';
       const pinInput = document.getElementById('booking-clinica-pin');
-      const enteredPin = (pinInput && pinInput.value.trim()) ? pinInput.value.trim() : '1234';
+      const enteredPin = pinInput ? pinInput.value.trim() : '';
 
       const doctorSelect = document.getElementById('booking-clinica-doctor');
       const doctorVal = doctorSelect ? doctorSelect.value : 'Dr. Carlos Mendoza (Especialista en Imagenología & Rayos X)';
@@ -1689,6 +1885,18 @@ class ClinicaEngine {
 
       const phoneInput = document.getElementById('booking-clinica-phone');
       const phoneVal = (phoneInput && phoneInput.value.trim()) ? phoneInput.value.trim() : '+58 414-6799510';
+
+      // 0. VERIFICACIÓN ESTRICTA DE HORARIO Y DISPONIBILIDAD EN AGENDA LIVE
+      const slotCheck = this.checkSlotAvailability('clinica', date, time);
+      if (!slotCheck.available) {
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`⛔ No es posible realizar la reserva: ${slotCheck.reason}`, 'error');
+        }
+        this.displayBlockedSlotAlert('clinica', date, time, slotCheck.reason);
+        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+        this._isConfirmingClinica = false;
+        return;
+      }
 
       if (!name || !pet) {
         if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
@@ -1707,9 +1915,27 @@ class ClinicaEngine {
       const cleanPet = pet.split('(')[0].trim();
       const existing = this.findExistingPatient(cleanPet, cleanTutor);
 
-      if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmClinicaBooking(null), enteredPin, 'clinica', cleanTutor)) {
-        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
-        return;
+      if (existing) {
+        if (!enteredPin) {
+          if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+          if (pinInput) {
+            pinInput.style.borderColor = '#EF4444';
+            pinInput.classList.add('shake-anim');
+            setTimeout(() => pinInput.classList.remove('shake-anim'), 400);
+            pinInput.focus();
+          }
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`🔒 Ingrese la clave personal de ${existing.owner || cleanTutor} para confirmar la reservación.`, 'error');
+          }
+          this._isConfirmingClinica = false;
+          return;
+        }
+
+        if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmClinicaBooking(null), enteredPin, 'clinica', cleanTutor)) {
+          if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+          this._isConfirmingClinica = false;
+          return;
+        }
       }
 
       const bookingId = (window.antiDosBookingEngine && typeof window.antiDosBookingEngine.getNextCorrelativeId === 'function')
@@ -2071,6 +2297,20 @@ class ClinicaEngine {
             }
           }
         }
+
+        // Correlacionar datos de contacto de la base de datos (sin tocar la clave de seguridad)
+        const cleanPetSearch = (petVal || '').split('(')[0].trim();
+        const matchedPatient = this.findExistingPatient(cleanPetSearch, matchedTutor);
+        if (matchedPatient) {
+          const emailInput = document.getElementById(`booking-${modalType}-email`);
+          const phoneInput = document.getElementById(`booking-${modalType}-phone`);
+          if (emailInput && (!emailInput.value || sourceField === 'tutor')) {
+            emailInput.value = matchedPatient.email || '';
+          }
+          if (phoneInput && (!phoneInput.value || sourceField === 'tutor')) {
+            phoneInput.value = matchedPatient.ownerPhone || matchedPatient.phone || '';
+          }
+        }
       } else {
         // Partial or unregistered tutor name. Clear pet input if it holds an old registered pet from a different tutor.
         if (sourceField === 'tutor' && petVal) {
@@ -2312,6 +2552,7 @@ class ClinicaEngine {
 
   lookupGroomingClient() {
     this.lookupClient('grooming');
+    setTimeout(() => this.validateSlotAvailability('grooming'), 50);
   }
 
   // ===================================================
@@ -2389,7 +2630,7 @@ class ClinicaEngine {
   // 2. GROOMING SPA BOOKING
   // ===================================================
 
-  openGroomingBookingModal(packageTitle = 'Circuito Grooming Spa 7 Estaciones', prefillPetName = '', prefillTutorName = '') {
+  openGroomingBookingModal(packageTitle = 'Circuito Grooming Spa 7 Estaciones', prefillPetName = '', prefillTutorName = '', options = {}) {
     const modal = document.getElementById('booking-modal-grooming');
     if (modal) {
       modal.style.removeProperty('display');
@@ -2399,20 +2640,15 @@ class ClinicaEngine {
     const titleEl = document.getElementById('booking-grooming-package');
     if (titleEl) titleEl.innerText = packageTitle;
 
-    const activeUser = (window.authEngine && typeof window.authEngine.getCurrentUser === 'function')
+    const isClientAuth = Boolean(window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'client');
+    const activeUser = (isClientAuth && typeof window.authEngine.getCurrentUser === 'function')
       ? window.authEngine.getCurrentUser()
       : null;
 
-    const isVisitor = Boolean(window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest'));
-    const currentAuthTutor = (window.authEngine && window.authEngine.userName && !window.authEngine.userName.toLowerCase().includes('staff') && !isVisitor)
-      ? window.authEngine.userName
-      : ((window.adminEngine && typeof window.adminEngine.getCurrentCustomerName === 'function' && window.adminEngine.viewEnvironment === 'customer' && !isVisitor)
-          ? window.adminEngine.getCurrentCustomerName()
-          : '');
-
-    const finalTutor = prefillTutorName || (activeUser && activeUser.tutorName && !isVisitor ? activeUser.tutorName : (currentAuthTutor || ''));
-    let finalPet = prefillPetName || (activeUser && activeUser.petName && !isVisitor ? activeUser.petName : '');
-    if (!finalPet && finalTutor) {
+    const isReset = Boolean(options && options.resetBlank);
+    const finalTutor = (isReset || !isClientAuth) ? (prefillTutorName || '') : (prefillTutorName || (activeUser && activeUser.tutorName ? activeUser.tutorName : ''));
+    let finalPet = (isReset || !isClientAuth) ? (prefillPetName || '') : (prefillPetName || (activeUser && activeUser.petName ? activeUser.petName : ''));
+    if (!finalPet && finalTutor && isClientAuth) {
       const tutorPets = this.getPetsForTutor(finalTutor);
       if (tutorPets && tutorPets.length > 0) {
         const p = tutorPets[0];
@@ -2446,6 +2682,7 @@ class ClinicaEngine {
       if (modal) modal.classList.add('active');
     }
     this.lookupClient('grooming');
+    setTimeout(() => this.validateSlotAvailability('grooming'), 50);
   }
 
   confirmGroomingBooking(event) {
@@ -2491,6 +2728,18 @@ class ClinicaEngine {
     const formattedTime = (typeof this.formatTimeWithAmPm === 'function') ? this.formatTimeWithAmPm(time24) : '08:00 AM';
     const shampoo = (shampooInput && shampooInput.value) ? shampooInput.value : 'Champú pH neutro';
 
+    // 0. VERIFICACIÓN ESTRICTA DE HORARIO Y DISPONIBILIDAD EN AGENDA LIVE
+    const slotCheck = this.checkSlotAvailability('grooming', date, time24);
+    if (!slotCheck.available) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⛔ No es posible realizar la reserva: ${slotCheck.reason}`, 'error');
+      }
+      this.displayBlockedSlotAlert('grooming', date, time24, slotCheck.reason);
+      if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+      this._isConfirmingGrooming = false;
+      return;
+    }
+
     const cleanTutor = name.trim();
     const cleanPet = pet.split('(')[0].trim();
 
@@ -2501,9 +2750,26 @@ class ClinicaEngine {
     }
 
     const existing = this.findExistingPatient(cleanPet, cleanTutor);
-    if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmGroomingBooking(null), enteredPin, 'grooming', cleanTutor)) {
-      if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
-      return;
+    if (existing) {
+      if (!enteredPin) {
+        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+        if (pinInput) {
+          pinInput.style.borderColor = '#EF4444';
+          pinInput.classList.add('shake-anim');
+          setTimeout(() => pinInput.classList.remove('shake-anim'), 400);
+          pinInput.focus();
+        }
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`🔒 Ingrese la clave personal de ${existing.owner || cleanTutor} para confirmar la reservación.`, 'error');
+        }
+        this._isConfirmingGrooming = false;
+        return;
+      }
+      if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmGroomingBooking(null), enteredPin, 'grooming', cleanTutor)) {
+        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+        this._isConfirmingGrooming = false;
+        return;
+      }
     }
 
     const bookingId = (window.antiDosBookingEngine && typeof window.antiDosBookingEngine.getNextCorrelativeId === 'function')
@@ -2704,18 +2970,19 @@ class ClinicaEngine {
   }
 
   // 3. HOTEL BOUTIQUE BOOKING
-  openHotelBookingModal(suiteTitle = 'Suite Royal Bioclimática #4', prefillPetName = '', prefillTutorName = '') {
+  openHotelBookingModal(suiteTitle = 'Suite Royal Bioclimática #4', prefillPetName = '', prefillTutorName = '', options = {}) {
     const titleEl = document.getElementById('booking-hotel-suite');
     if (titleEl) titleEl.innerText = suiteTitle;
 
-    const activeUser = (window.authEngine && typeof window.authEngine.getCurrentUser === 'function')
+    const isClientAuth = Boolean(window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'client');
+    const activeUser = (isClientAuth && typeof window.authEngine.getCurrentUser === 'function')
       ? window.authEngine.getCurrentUser()
       : null;
 
-    const isVisitor = Boolean(window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest'));
-    const finalTutor = prefillTutorName || (activeUser && activeUser.tutorName && !isVisitor ? activeUser.tutorName : '');
-    let finalPet = prefillPetName || (activeUser && activeUser.petName && !isVisitor ? activeUser.petName : '');
-    if (!finalPet && finalTutor) {
+    const isReset = Boolean(options && options.resetBlank);
+    const finalTutor = (isReset || !isClientAuth) ? (prefillTutorName || '') : (prefillTutorName || (activeUser && activeUser.tutorName ? activeUser.tutorName : ''));
+    let finalPet = (isReset || !isClientAuth) ? (prefillPetName || '') : (prefillPetName || (activeUser && activeUser.petName ? activeUser.petName : ''));
+    if (!finalPet && finalTutor && isClientAuth) {
       const tutorPets = this.getPetsForTutor(finalTutor);
       if (tutorPets && tutorPets.length > 0) {
         const p = tutorPets[0];
@@ -2774,6 +3041,7 @@ class ClinicaEngine {
       if (modal) modal.classList.add('active');
     }
     this.lookupClient('hotel');
+    setTimeout(() => this.validateSlotAvailability('hotel'), 50);
   }
 
   confirmHotelBooking(event) {
@@ -2803,6 +3071,18 @@ class ClinicaEngine {
         : (!document.body.classList.contains('customer-view-mode') && window.authEngine?.userRole !== 'client');
       const packSalida = isStaffMode ? (document.getElementById('booking-hotel-packsalida')?.checked || false) : false;
 
+      // 0. VERIFICACIÓN ESTRICTA DE HORARIO Y DISPONIBILIDAD EN AGENDA LIVE
+      const slotCheck = this.checkSlotAvailability('hotel', checkin, time);
+      if (!slotCheck.available) {
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`⛔ No es posible realizar la reserva: ${slotCheck.reason}`, 'error');
+        }
+        this.displayBlockedSlotAlert('hotel', checkin, time, slotCheck.reason);
+        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+        this._isConfirmingHotel = false;
+        return;
+      }
+
       if (!name || !pet) {
         if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
         if (window.app && typeof window.app.showToast === 'function') {
@@ -2820,9 +3100,27 @@ class ClinicaEngine {
       const cleanPet = pet.split('(')[0].trim();
       const existing = (typeof this.findExistingPatient === 'function') ? this.findExistingPatient(cleanPet, cleanTutor) : null;
 
-      if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmHotelBooking(null), enteredPin, 'hotel', cleanTutor)) {
-        if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
-        return;
+      if (existing) {
+        if (!enteredPin) {
+          if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+          if (pinInput) {
+            pinInput.style.borderColor = '#EF4444';
+            pinInput.classList.add('shake-anim');
+            setTimeout(() => pinInput.classList.remove('shake-anim'), 400);
+            pinInput.focus();
+          }
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`🔒 Ingrese la clave personal de ${existing.owner || cleanTutor} para confirmar la reservación.`, 'error');
+          }
+          this._isConfirmingHotel = false;
+          return;
+        }
+
+        if (!this.ensureProfileSecurityUnlocked(existing, () => this.confirmHotelBooking(null), enteredPin, 'hotel', cleanTutor)) {
+          if (window.app && typeof window.app.resetButton === 'function') window.app.resetButton(submitBtn);
+          this._isConfirmingHotel = false;
+          return;
+        }
       }
 
       const bookingId = (window.antiDosBookingEngine && typeof window.antiDosBookingEngine.getNextCorrelativeId === 'function')

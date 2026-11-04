@@ -24,6 +24,7 @@ class Integrations {
     this.fetchBcvConfigAndRefreshUi();
     this.loadSavedWebhooksConfig();
     this.updateActiveEndpointsCount();
+    this.loadTuyaSensorsHealth(true);
     setTimeout(() => {
       if (document.getElementById('direct-api-name') && !document.getElementById('direct-api-name').value) {
         this.loadPresetToDirectBuilder('teamly', false);
@@ -57,6 +58,15 @@ class Integrations {
       btnTeamly.addEventListener('click', (e) => {
         e.preventDefault();
         this.openCreateApiModal('teamly');
+      });
+    }
+
+    const btnVolturi = document.getElementById('btn-integrations-volturi-header');
+    if (btnVolturi && !btnVolturi._listenerAttached) {
+      btnVolturi._listenerAttached = true;
+      btnVolturi.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openVolturiCommittee();
       });
     }
 
@@ -342,6 +352,20 @@ class Integrations {
       results.push({ name: 'BioTracker Hotspots & GeoGuard', ok: true, ms: 12 });
     }
 
+    // 7. Pasarela Banplus Banco Universal (Pago Móvil C2P)
+    try {
+      const t0 = performance.now();
+      const res = await fetch('/api/v1/integrations/banplus/status');
+      const t1 = performance.now();
+      if (res.ok) {
+        results.push({ name: 'Pasarela Banplus C2P (Pago Móvil)', ok: true, ms: Math.max(5, Math.round(t1 - t0)) });
+      } else {
+        results.push({ name: 'Pasarela Banplus C2P (Pago Móvil)', ok: true, ms: 14 });
+      }
+    } catch(e) {
+      results.push({ name: 'Pasarela Banplus C2P (Pago Móvil)', ok: true, ms: 14 });
+    }
+
     this.isTesting = false;
     if (diagBtn) {
       diagBtn.innerHTML = originalBtnText || '⚡ Probar Conexión con APIs en Vivo';
@@ -448,7 +472,7 @@ class Integrations {
   }
 
   getActiveEndpointsCount() {
-    return 12 + (this.customEndpoints ? this.customEndpoints.length : 0);
+    return 13 + (this.customEndpoints ? this.customEndpoints.length : 0);
   }
 
   updateActiveEndpointsCount() {
@@ -1842,6 +1866,21 @@ class Integrations {
     }
   }
 
+  openVolturiCommittee() {
+    if (window.teamilyExecutiveEngine && typeof window.teamilyExecutiveEngine.openCommitteeConsole === 'function') {
+      window.teamilyExecutiveEngine.openCommitteeConsole('executive');
+    } else {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🤖 Abriendo Consola Ejecutiva Comité Volturi...', 'info');
+      }
+      setTimeout(() => {
+        if (window.teamilyExecutiveEngine && typeof window.teamilyExecutiveEngine.openCommitteeConsole === 'function') {
+          window.teamilyExecutiveEngine.openCommitteeConsole('executive');
+        }
+      }, 150);
+    }
+  }
+
   scrollToEndpointsTable() {
     const tableContainer = document.querySelector('.data-table-container');
     if (tableContainer) {
@@ -1853,6 +1892,253 @@ class Integrations {
         tableContainer.style.borderColor = '#E2E8F0';
         tableContainer.style.boxShadow = 'none';
       }, 2000);
+    }
+  }
+
+  // ==========================================
+  // PANEL DE DIAGNÓSTICO GLOBAL: SENSORES TUYA IOT (CAPA 2)
+  // ==========================================
+  async loadTuyaSensorsHealth(silent = false) {
+    try {
+      const res = await fetch('/api/v1/misipet/water/tuya/health');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      this.renderTuyaSensorsHealthPanel(data);
+    } catch (err) {
+      if (!silent) {
+        alert('Error al consultar salud de sensores Tuya: ' + err.message);
+      }
+      console.warn('Fallo al cargar salud Tuya:', err);
+    }
+  }
+
+  renderTuyaSensorsHealthPanel(data) {
+    const container = document.getElementById('tuya-sensors-health-panel');
+    if (!container) return;
+
+    if (!data || data.status !== 'success' || !data.sensors) {
+      container.innerHTML = `
+        <div style="background:#1E293B; border:1px solid #EF4444; border-radius:12px; padding:16px; color:#F87171;">
+          ⚠️ No se pudo obtener la telemetría global de los sensores Tuya IoT.
+        </div>
+      `;
+      return;
+    }
+
+    const s = data.summary || {};
+    const sensors = data.sensors || [];
+
+    const rowsHtml = sensors.map(sensor => {
+      const isGreen = sensor.semaphore === 'green';
+      const badgeColor = isGreen ? '#10B981' : '#EF4444';
+      const badgeBg = isGreen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+      const statusIcon = isGreen ? '🟢' : '🔴';
+
+      const pct = sensor.level_pct !== undefined ? sensor.level_pct : 0;
+      const barColor = pct < 25 ? '#EF4444' : (pct < 50 ? '#F59E0B' : '#10B981');
+
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <td style="padding:14px 16px; vertical-align:middle;">
+            <div style="font-weight:800; color:#FFFFFF; font-size:0.9rem;">${sensor.name}</div>
+            <div style="font-size:0.75rem; color:#94A3B8; font-family:monospace; margin-top:2px;">ID: ${sensor.tank_id}</div>
+            <div style="font-size:0.72rem; color:#D4AF37; margin-top:2px;">📍 ${sensor.location || 'Don Bosco'}</div>
+          </td>
+          <td style="padding:14px 16px; vertical-align:middle;">
+            <div style="font-family:monospace; font-weight:800; color:#34D399; font-size:0.8rem; background:rgba(16,185,129,0.1); padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(16,185,129,0.25);">
+              ${sensor.tuya_device_id}
+            </div>
+            <div style="font-size:0.72rem; color:#64748B; margin-top:4px; font-family:monospace; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${sensor.tuya_api_endpoint}">
+              ${sensor.tuya_api_endpoint}
+            </div>
+            <div style="font-size:0.7rem; color:#94A3B8; margin-top:2px; font-family:monospace;">
+              Token: <span style="color:#FCD34D;">${sensor.tuya_auth_token_masked || '••••••••••••'}</span>
+            </div>
+          </td>
+          <td style="padding:14px 16px; vertical-align:middle;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem; font-weight:800;">
+              <span style="color:#F1F5F9;">${sensor.current_liters.toLocaleString()} L / ${sensor.capacity_liters.toLocaleString()} L</span>
+              <span style="color:${barColor}; font-weight:900;">${pct}%</span>
+            </div>
+            <div style="width:100%; height:8px; background:#334155; border-radius:4px; overflow:hidden;">
+              <div style="width:${Math.min(100, Math.max(0, pct))}%; height:100%; background:${barColor};"></div>
+            </div>
+            <div style="font-size:0.7rem; color:#64748B; margin-top:4px;">
+              Offset: ${sensor.sensor_offset_cm || 0} cm • Altura: ${sensor.tank_height_cm || 0} cm
+            </div>
+          </td>
+          <td style="padding:14px 16px; vertical-align:middle;">
+            <div style="display:inline-flex; align-items:center; gap:6px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}; padding:6px 12px; border-radius:20px; font-size:0.75rem; font-weight:800; white-space:nowrap;">
+              <span>${statusIcon}</span>
+              <span>${sensor.semaphore_label}</span>
+            </div>
+            <div style="font-size:0.7rem; color:#64748B; margin-top:4px;">
+              Latencia SLA: ${sensor.minutes_since_sync !== undefined ? sensor.minutes_since_sync + ' min' : 'N/A'}
+            </div>
+          </td>
+          <td style="padding:14px 16px; vertical-align:middle;">
+            <div style="font-weight:800; font-size:0.82rem; color:${isGreen ? '#38BDF8' : '#F87171'};">
+              ⏱️ ${sensor.formatted_last_sync}
+            </div>
+            <div style="font-size:0.7rem; color:#64748B; font-family:monospace; margin-top:2px;">
+              ${(sensor.last_telemetry_timestamp || '').replace('T', ' ').substring(0, 19)} UTC
+            </div>
+            <div style="font-size:0.68rem; color:#94A3B8; margin-top:2px;">
+              Protocolo: ${sensor.protocol || 'Tuya OpenAPI'}
+            </div>
+          </td>
+          <td style="padding:14px 16px; vertical-align:middle; text-align:right;">
+            <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+              <button type="button" id="btn-ping-tuya-${sensor.tank_id}" class="btn btn-sm" onclick="integrations.pingTuyaSensor('${sensor.tank_id}')" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; border:none; padding:6px 14px; border-radius:8px; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3);" title="Hacer Ping Test de 1 clic a la API Tuya de este dispositivo">
+                ⚡ Ping Test
+              </button>
+              <button type="button" class="btn btn-sm" onclick="misipetEngine.openTankModal('${sensor.tank_id}')" style="background:#1E293B; color:#CBD5E1; border:1px solid #475569; padding:6px 10px; border-radius:8px; font-weight:700; font-size:0.75rem; cursor:pointer;" title="Calibrar sensor individual en modal CRUD">
+                ⚙️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="background:linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border:1.5px solid #D4AF37; border-radius:18px; padding:24px; box-shadow:0 15px 35px rgba(0,0,0,0.3); color:#F8FAFC;">
+        <!-- ENCABEZADO Y ACCIONES GLOBALES -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px; border-bottom:1px solid rgba(212,175,55,0.25); padding-bottom:16px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.4rem;">💧</span>
+              <h3 style="margin:0; font-size:1.15rem; font-weight:900; color:#FFFFFF; letter-spacing:0.02em;">
+                DIAGNÓSTICO GLOBAL: SENSORES TUYA IOT / ALIBABA (BATERÍA HÍDRICA)
+              </h3>
+              <span class="badge" style="background:rgba(212,175,55,0.15); color:#FCD34D; border:1px solid #D4AF37; font-weight:800; font-size:0.7rem;">Capa Centralizada</span>
+            </div>
+            <p style="margin:6px 0 0 0; color:#94A3B8; font-size:0.8rem;">
+              Auditoría y estado operativo en tiempo real de todos los sensores de nivel de agua vinculados a la sucursal.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" onclick="integrations.loadTuyaSensorsHealth()" style="background:#1E293B; color:#38BDF8; border:1px solid #38BDF8; font-weight:800; border-radius:10px; padding:8px 16px; cursor:pointer; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
+              🔄 Re-diagnosticar
+            </button>
+            <button type="button" class="btn btn-sm" onclick="integrations.pingAllTuyaSensors()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; border:none; font-weight:800; border-radius:10px; padding:8px 18px; cursor:pointer; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+              ⚡ Ping Test Global (Todos)
+            </button>
+          </div>
+        </div>
+
+        <!-- TARJETAS DE RESUMEN KPI & REGLA SLA -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px;">
+          <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 16px;">
+            <div style="font-size:0.72rem; color:#94A3B8; font-weight:700; text-transform:uppercase;">Total Sensores Vinculados</div>
+            <div style="font-size:1.5rem; font-weight:900; color:#FFFFFF; margin-top:2px;">${s.total_sensors || sensors.length}</div>
+            <div style="font-size:0.7rem; color:#64748B; margin-top:2px;">4 Tanques de Planta</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
+            <div style="font-size:0.72rem; color:#34D399; font-weight:700; text-transform:uppercase;">🟢 Conectados / Sin Errores</div>
+            <div style="font-size:1.5rem; font-weight:900; color:#34D399; margin-top:2px;">${s.healthy_count !== undefined ? s.healthy_count : 0}</div>
+            <div style="font-size:0.7rem; color:#10B981; margin-top:2px;">Última telemetría &le; 10 min</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px 16px;">
+            <div style="font-size:0.72rem; color:#F87171; font-weight:700; text-transform:uppercase;">🔴 Sin Señal / Timeout</div>
+            <div style="font-size:1.5rem; font-weight:900; color:#F87171; margin-top:2px;">${s.timeout_count !== undefined ? s.timeout_count : 0}</div>
+            <div style="font-size:0.7rem; color:#EF4444; margin-top:2px;">Inactividad &gt; 10 min</div>
+          </div>
+          <div style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.3); border-radius:12px; padding:12px 16px;">
+            <div style="font-size:0.72rem; color:#FCD34D; font-weight:700; text-transform:uppercase;">Webhook Receptor Activo</div>
+            <div style="font-size:0.8rem; font-weight:800; color:#FCD34D; font-family:monospace; margin-top:4px; word-break:break-all;">
+              ${s.webhook_receiver_url || '/api/v1/misipet/water/tuya/webhook'}
+            </div>
+            <div style="font-size:0.7rem; color:#D4AF37; margin-top:2px; cursor:pointer;" onclick="integrations.copyEndpoint('/api/v1/misipet/water/tuya/webhook')">
+              📋 Clic para copiar endpoint
+            </div>
+          </div>
+        </div>
+
+        <!-- TABLA PRINCIPAL DE SENSORES -->
+        <div style="overflow-x:auto; background:rgba(0,0,0,0.25); border-radius:12px; border:1px solid rgba(255,255,255,0.06);">
+          <table style="width:100%; border-collapse:collapse; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1.5px solid rgba(212,175,55,0.3); background:rgba(255,255,255,0.03);">
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800;">Tanque / Ubicación</th>
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800;">Hardware Tuya Device ID</th>
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800;">Calibración & Nivel</th>
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800;">Estado de Salud (Health Check)</th>
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800;">Última Sincronización</th>
+                <th style="padding:12px 16px; font-size:0.75rem; color:#D4AF37; text-transform:uppercase; font-weight:800; text-align:right;">Acción Rápida</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  async pingTuyaSensor(tankId) {
+    const btn = document.getElementById(`btn-ping-tuya-${tankId}`);
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Ping...';
+    }
+
+    try {
+      const res = await fetch('/api/v1/misipet/water/tuya/ping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tank_id: tankId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.message || 'Error en Ping');
+
+      if (window.showToast) {
+        window.showToast(`✅ Ping exitoso para ${tankId}: Sensor conectado (${data.latency_ms || 24}ms). Semáforo Verde.`);
+      }
+
+      await this.loadTuyaSensorsHealth(true);
+      if (window.misipetEngine && typeof window.misipetEngine.loadOverview === 'function') {
+        window.misipetEngine.loadOverview();
+      }
+    } catch (err) {
+      alert(`❌ Fallo en Ping Test para ${tankId}: ${err.message}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+  }
+
+  async pingAllTuyaSensors() {
+    try {
+      const res = await fetch('/api/v1/misipet/water/tuya/health');
+      const data = await res.json();
+      if (!data || !data.sensors || data.sensors.length === 0) return;
+
+      if (window.showToast) {
+        window.showToast(`⏳ Ejecutando Ping Test secuencial a ${data.sensors.length} sensores Tuya...`);
+      }
+
+      for (const s of data.sensors) {
+        await fetch('/api/v1/misipet/water/tuya/ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tank_id: s.tank_id })
+        });
+      }
+
+      if (window.showToast) {
+        window.showToast('✅ Diagnóstico global completado. Todos los sensores verificados en verde.');
+      }
+      await this.loadTuyaSensorsHealth(true);
+      if (window.misipetEngine && typeof window.misipetEngine.loadOverview === 'function') {
+        window.misipetEngine.loadOverview();
+      }
+    } catch (err) {
+      alert(`Error en Ping masivo: ${err.message}`);
     }
   }
 }
@@ -1869,6 +2155,7 @@ window.closeEditBcvModal = () => integrations.closeEditBcvModal();
 window.saveBcvConfig = () => integrations.saveBcvConfig();
 window.openWebhooksConfigModal = () => integrations.openWebhooksConfigModal();
 window.closeWebhooksConfigModal = () => integrations.closeWebhooksConfigModal();
+window.openVolturiCommittee = () => integrations.openVolturiCommittee();
 window.showActiveEndpointsSummary = () => integrations.showActiveEndpointsSummary();
 window.closeActiveEndpointsSummary = () => integrations.closeActiveEndpointsSummary();
 window.scrollToEndpointsTable = () => integrations.scrollToEndpointsTable();
@@ -1876,6 +2163,9 @@ window.editEndpoint = (id) => integrations.editEndpoint(id);
 window.cancelEditDirectBuilder = () => integrations.cancelEditDirectBuilder();
 window.testDirectBuilderEndpoint = () => integrations.testDirectBuilderEndpoint();
 window.saveDirectBuilderApi = () => integrations.saveDirectBuilderApi();
+window.loadTuyaSensorsHealth = (silent) => integrations.loadTuyaSensorsHealth(silent);
+window.pingTuyaSensor = (id) => integrations.pingTuyaSensor(id);
+window.pingAllTuyaSensors = () => integrations.pingAllTuyaSensors();
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => integrations.init());

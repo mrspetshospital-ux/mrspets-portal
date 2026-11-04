@@ -41,7 +41,8 @@ class AdminEngine {
       { id: 'USR-04', nombre: 'Asistente', apellido: 'Recepción', name: 'Asistente de Recepción & Caja', username: 'recepcion', rol_principal: 'hotel', role: 'hotel', estaciones_autorizadas: ['recepcion', 'entrega', 'catalogo_productos'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' },
       { id: 'USR-05', nombre: 'Andrea', apellido: 'Colina', name: 'Andrea Colina (Grooming Specialist)', username: 'andrea.colina', rol_principal: 'groomer', role: 'groomer', estaciones_autorizadas: ['recepcion', 'revision_dermica', 'bano', 'deslanado', 'corte', 'entrega', 'catalogo_productos'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' },
       { id: 'USR-06', nombre: 'Carlos', apellido: 'Mendoza', name: 'Carlos Mendoza (Staff / Especialista Recepción)', username: 'carlos', rol_principal: 'admin', role: 'admin', estaciones_autorizadas: ['recepcion', 'revision_dermica', 'bano', 'deslanado', 'corte', 'entrega', 'catalogo_productos'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' },
-      { id: 'USR-07', nombre: 'hp', apellido: 'Administrador General', name: 'hp (Administrador General & Recepción)', username: 'hp', rol_principal: 'admin', role: 'admin', estaciones_autorizadas: ['recepcion', 'revision_dermica', 'bano', 'deslanado', 'corte', 'entrega', 'catalogo_productos'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' }
+      { id: 'USR-07', nombre: 'hp', apellido: 'Administrador General', name: 'hp (Administrador General & Recepción)', username: 'hp', rol_principal: 'admin', role: 'admin', estaciones_autorizadas: ['recepcion', 'revision_dermica', 'bano', 'deslanado', 'corte', 'entrega', 'catalogo_productos'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' },
+      { id: 'USR-09', nombre: 'Carlos', apellido: 'Pérez', name: 'Carlos Pérez (Supervisor de Operaciones LAN)', username: 'supervisor', rol_principal: 'supervisor', role: 'supervisor', estaciones_autorizadas: ['misipet', 'sala_maquinas', 'hvac', 'ups_matriz', 'ti_redes', 'recepcion'], permission: 'edit', canCreateProducts: true, active: true, estado: 'activo', photo: 'assets/leia_avatar.jpg' }
     ];
     this.currentStaffUser = this.staffProfiles[0];
 
@@ -95,7 +96,7 @@ class AdminEngine {
     // Registered Catalog
     this.catalog = [
       { id: 'PROD-101', name: 'Royal Canin Mini Adult (3kg)', category: 'Alimento Canino / Felino', price: 28.50, stock: 15, active: true, barcode: '7501092834710', image: 'assets/media__1787694901704.jpg' },
-      { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene & Spa', price: 18.00, stock: 24, active: true, barcode: '7509823412093', image: 'assets/media__1787695246337.jpg' },
+      { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene y Cuidado', price: 18.00, stock: 24, active: true, barcode: '7509823412093', image: 'assets/media__1787695246337.jpg' },
       { id: 'PROD-103', name: 'Bravecto Perros 10-20kg', category: 'Farmacia', price: 42.00, stock: 8, active: true, barcode: '7508492019482', image: 'assets/media__1787694901704.jpg' },
       { id: 'SERV-GROOMING', name: 'Circuito Grooming Spa (7 Estaciones)', category: 'Servicio Grooming', price: 25.00, stock: 99, active: true, barcode: '7504829103949', image: 'assets/mrs_pets_official_logo.png' },
       { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, stock: 99, active: true, barcode: '7504829103948', image: 'assets/media__1787695254613.jpg' }
@@ -178,6 +179,7 @@ class AdminEngine {
   init() {
     this.loadPatientsFromStorage();
     this.loadReservationsFromStorage();
+    this.loadBlockedSlotsFromStorage();
     this.loadStaffFromStorage();
     this.loadCatalogFromStorage();
     this.loadRolesFromStorage();
@@ -422,8 +424,31 @@ class AdminEngine {
           this.deduplicatePendingAppointments();
         }
       }
+      this.loadBlockedSlotsFromStorage();
     } catch (e) {
       console.warn("Could not load reservations from localStorage:", e);
+    }
+  }
+
+  loadBlockedSlotsFromStorage() {
+    try {
+      const saved = localStorage.getItem('mrs_pets_blocked_slots');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          this.blockedSlots = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load blocked slots from localStorage:", e);
+    }
+  }
+
+  saveBlockedSlotsToStorage() {
+    try {
+      localStorage.setItem('mrs_pets_blocked_slots', JSON.stringify(this.blockedSlots || []));
+    } catch (e) {
+      console.warn("Could not save blocked slots to localStorage:", e);
     }
   }
 
@@ -470,6 +495,7 @@ class AdminEngine {
       this.deduplicatePendingAppointments();
       localStorage.setItem('mrs_pets_booked_appointments', JSON.stringify(this.bookedAppointments || []));
       localStorage.setItem('mrs_pets_pending_appointments', JSON.stringify(this.pendingAppointments || []));
+      this.saveBlockedSlotsToStorage();
     } catch (e) {
       console.warn("Could not save reservations to localStorage:", e);
     }
@@ -481,7 +507,15 @@ class AdminEngine {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.catalog = parsed;
+          this.catalog = parsed.map(item => {
+            if (item && (item.category === 'Fármacos & Antiparasitarios' || item.category === 'Fármacos y Antiparasitarios')) {
+              item.category = 'Farmacia';
+            }
+            if (item && (item.category === 'Higiene & Spa' || item.category === 'Higiene y Spa')) {
+              item.category = 'Higiene y Cuidado';
+            }
+            return item;
+          });
         }
       } else {
         this.saveCatalogToStorage();
@@ -562,6 +596,15 @@ class AdminEngine {
       this.activeRole = this.currentStaffUser.role || 'admin';
       this.permissionMode = this.currentStaffUser.permission || 'edit';
     }
+
+    try {
+      if (window.clinicaEngine && typeof window.clinicaEngine.syncStaffWithAdminProfiles === 'function') {
+        window.clinicaEngine.syncStaffWithAdminProfiles();
+      }
+      if (window.misipetEngine && typeof window.misipetEngine.syncStaffFromAdminProfiles === 'function') {
+        window.misipetEngine.syncStaffFromAdminProfiles();
+      }
+    } catch(e) {}
   }
 
   saveStaffToStorage() {
@@ -1232,12 +1275,20 @@ class AdminEngine {
       body.classList.add('customer-view-mode');
       body.classList.remove('enterprise-view-mode');
 
-      // 🐾 RESTAURACIÓN DE IDENTIDAD TUTOR VIP AL RETORNAR A VISTA CLIENTE (CASO DALYBELL)
-      let activeCustomer = 'Dalybell Ramírez Montilla';
-      const storedCustomer = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_customer_name') : null;
-      if (storedCustomer && !storedCustomer.toLowerCase().includes('staff') && storedCustomer !== 'Visitante VIP') {
-        activeCustomer = storedCustomer.split('(')[0].trim();
+      // 🛡️ REGLA SIDEBAR: Cerrar familia exclusiva de Staff al cambiar a Vista Cliente
+      const staffFamily = document.querySelector('.sidebar details.staff-only-family');
+      if (staffFamily && staffFamily.open) {
+        staffFamily.removeAttribute('open');
+        staffFamily.open = false;
       }
+
+      // 🐾 RESTAURACIÓN DE IDENTIDAD TUTOR VIP AL RETORNAR A VISTA CLIENTE
+      const storedCustomer = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_customer_name') : null;
+      let activeCustomer = (storedCustomer && !storedCustomer.toLowerCase().includes('staff') && storedCustomer !== 'Visitante VIP')
+        ? storedCustomer.split('(')[0].trim()
+        : (window.authEngine && window.authEngine.userName && window.authEngine.userName !== 'Visitante VIP' && !window.authEngine.userName.toLowerCase().includes('staff')
+            ? window.authEngine.userName.split('(')[0].trim()
+            : 'Dalybell Ramírez Montilla');
       try { localStorage.setItem('mrs_pets_active_customer_name', activeCustomer); } catch(e) {}
 
       let activePetId = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_vip_patient_id') : 'PET-101';
@@ -1254,7 +1305,7 @@ class AdminEngine {
       }
       try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId || 'PET-101'); } catch(e) {}
 
-      if (window.authEngine) {
+      if (window.authEngine && window.authEngine.userRole !== 'visitor' && window.authEngine.userRole !== 'guest') {
         window.authEngine.userRole = 'client';
         window.authEngine.isAuthenticated = true;
         window.authEngine.userName = activeCustomer;
@@ -1280,9 +1331,16 @@ class AdminEngine {
     } else {
       this.permissionMode = 'edit';
       this.isEnterpriseAuthenticated = true;
-      if (window.authEngine) window.authEngine.userRole = 'staff';
+      if (window.authEngine) {
+        window.authEngine.userRole = 'staff';
+        window.authEngine.isAuthenticated = true;
+      }
       try {
         if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('mrs_pets_auth_role', 'staff');
+          localStorage.setItem('mrs_pets_skip_splash', 'true');
+        }
       } catch (e) {}
       body.classList.add('enterprise-view-mode');
       body.classList.remove('customer-view-mode');
@@ -1419,6 +1477,25 @@ class AdminEngine {
     const userVal = userValInput ? userValInput.value.trim().toLowerCase() : '';
     const passVal = passValInput ? passValInput.value.trim() : '';
 
+    if (!userVal) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ Por favor seleccione o escriba su usuario de Staff.', 'warning');
+      }
+      if (userValInput) userValInput.focus();
+      return;
+    }
+
+    if (!passVal) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🔒 Clave de acceso requerida: Ingrese su contraseña para ingresar.', 'warning');
+      }
+      if (passValInput) {
+        passValInput.style.borderColor = '#EF4444';
+        passValInput.focus();
+      }
+      return;
+    }
+
     let srvUser = null;
     let srvRole = 'staff';
     let authOk = false;
@@ -1456,8 +1533,12 @@ class AdminEngine {
       this.currentStaffUser = userMatch;
       this.activeRole = srvRole;
       this.permissionMode = 'edit';
+      this.viewEnvironment = 'enterprise';
       sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
       sessionStorage.setItem('mrs_pets_staff_role', srvRole);
+      localStorage.setItem('mrs_pets_auth_role', 'staff');
+      localStorage.setItem('mrs_pets_auth_name', userMatch.name || srvUser);
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
 
       // Cerrar modales
       document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -1468,20 +1549,62 @@ class AdminEngine {
         window.app.closeModal('enterprise-login-modal');
       }
 
-      this.setEnvironment('enterprise');
-      if (window.authEngine) window.authEngine.userRole = 'staff';
+      // Desactivar y ocultar splash y portal
+      const portal = document.getElementById('access-links-portal');
+      if (portal) {
+        portal.classList.remove('active');
+        portal.style.transition = 'none';
+        portal.style.setProperty('display', 'none', 'important');
+        portal.style.opacity = '0';
+        portal.style.visibility = 'hidden';
+        portal.style.setProperty('pointer-events', 'none', 'important');
+      }
+      const splash = document.getElementById('auth-splash-screen');
+      if (splash) {
+        splash.style.transition = 'none';
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        splash.style.setProperty('display', 'none', 'important');
+        splash.style.setProperty('pointer-events', 'none', 'important');
+      }
+      document.documentElement.classList.add('splash-bypassed');
+      const appContainer = document.getElementById('app-container');
+      if (appContainer) {
+        appContainer.style.setProperty('display', 'flex', 'important');
+        appContainer.style.opacity = '1';
+        appContainer.style.visibility = 'visible';
+        appContainer.style.setProperty('pointer-events', 'auto', 'important');
+      }
 
+      if (window.authEngine) {
+        window.authEngine.userRole = 'staff';
+        window.authEngine.isAuthenticated = true;
+        window.authEngine.userName = userMatch.name || srvUser;
+        window.authEngine.isVideoFinished = true;
+      }
+
+      document.body.classList.add('enterprise-view-mode');
+      document.body.classList.remove('customer-view-mode');
+
+      this.setEnvironment('enterprise');
+
+      if (window.app && typeof window.app.switchTab === 'function') {
+        window.app.switchTab('admin', true);
+      }
+
+      this.refreshAllOperationalViews();
+      this.renderStaffProfilesManager();
       this.renderRoleSelector();
       this.renderPermissionToggle();
       this.renderClientDatabaseManager();
+      this.renderEnvironmentToggle();
       this.updateHeaderAccountDisplay();
 
       if (window.clinicaEngine && typeof window.clinicaEngine.refreshPendingApprovalsNotifications === 'function') {
         window.clinicaEngine.refreshPendingApprovalsNotifications();
       }
-
-      if (window.app && typeof window.app.switchTab === 'function') {
-        window.app.switchTab(srvRole === 'admin' ? 'integrations' : 'admin', true);
+      if (window.RBACMiddleware && typeof window.RBACMiddleware.updateSidebarVisibility === 'function') {
+        window.RBACMiddleware.updateSidebarVisibility();
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1490,8 +1613,13 @@ class AdminEngine {
         window.app.showToast(`🔓 Sesión autenticada en servidor: @${srvUser} (${srvRole.toUpperCase()})`, 'success');
       }
     } else {
+      if (passValInput) {
+        passValInput.value = '';
+        passValInput.style.borderColor = '#EF4444';
+        try { passValInput.focus(); } catch(e) {}
+      }
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('❌ Credenciales inválidas. Configure usuarios en el servidor con python3 manage_staff.py add-user.', 'error');
+        window.app.showToast('❌ Contraseña o usuario incorrectos. Ingrese la clave válida para acceder a la Vista Empresa.', 'error');
       }
     }
   }
@@ -1859,6 +1987,18 @@ class AdminEngine {
   }
 
   // 👥 STAFF PROFILES & ACCOUNTS MANAGER (CREAR Y GESTIONAR ROLES & ESTACIONES)
+  filterStaffProfiles(query) {
+    this.staffSearchQuery = (query || '').trim();
+    this.renderStaffProfilesManager();
+    const input = document.getElementById('staff-search-filter');
+    if (input) {
+      input.focus();
+      const val = input.value;
+      input.value = '';
+      input.value = val;
+    }
+  }
+
   renderStaffProfilesManager() {
     const container = document.getElementById('admin-staff-profiles-container');
     if (!container) return;
@@ -1874,7 +2014,32 @@ class AdminEngine {
       { key: 'entrega', label: '✨ Entrega' }
     ];
 
+    const q = (this.staffSearchQuery || '').toLowerCase();
+    const filteredList = q ? this.staffProfiles.filter(u => {
+      const matchName = (u.name || '').toLowerCase().includes(q);
+      const matchFirst = (u.nombre || '').toLowerCase().includes(q);
+      const matchLast = (u.apellido || '').toLowerCase().includes(q);
+      const matchUser = (u.username || '').toLowerCase().includes(q);
+      const matchRole = (u.rol_principal || u.role || '').toLowerCase().includes(q);
+      const matchId = (u.id || '').toLowerCase().includes(q);
+      return matchName || matchFirst || matchLast || matchUser || matchRole || matchId;
+    }) : this.staffProfiles;
+
     container.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap;">
+        <div style="position:relative; flex:1; max-width:440px;">
+          <input type="text" id="staff-search-filter" class="form-input" placeholder="🔍 Buscar personal o médico por nombre, usuario o rol (ej: Dr. Morales, Groomer)..." value="${this.staffSearchQuery || ''}" oninput="adminEngine.filterStaffProfiles(this.value)" style="border-radius:10px; padding:8px 12px; font-size:0.83rem; border:1.5px solid rgba(212,175,55,0.4); background:#FFFFFF; color:#1C1C1E; font-weight:700;">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="adminEngine.openManageRolesModal()" style="font-size:0.75rem; border-radius:8px; font-weight:700; padding:7px 12px;">
+            🏷️ Gestionar Roles
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.openCreateStaffModal()" style="font-size:0.75rem; border-radius:8px; font-weight:800; background:#D4AF37; color:#1C1C1E; border:none; padding:7px 14px; cursor:pointer;">
+            ➕ Nuevo Colaborador / Médico
+          </button>
+        </div>
+      </div>
+
       <div class="data-table-container">
         <table class="data-table">
           <thead>
@@ -1889,16 +2054,19 @@ class AdminEngine {
             </tr>
           </thead>
           <tbody>
-            ${this.staffProfiles.map(u => {
+            ${filteredList.map(u => {
               const auths = u.estaciones_autorizadas || [];
-              const fullname = (u.nombre && u.apellido) ? `${u.nombre} ${u.apellido}` : u.name;
+              let fullname = u.name || ((u.nombre && u.apellido) ? `${u.nombre} ${u.apellido}` : u.id);
+              if ((u.rol_principal === 'doctor' || u.role === 'doctor') && !fullname.toLowerCase().includes('dr')) {
+                fullname = `Dr. ${fullname}`;
+              }
               const isUserActive = u.active || u.estado === 'activo';
               const rInfo = this.getRoleInfo(u.rol_principal || u.role);
               return `
               <tr>
                 <td>
                   <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="${u.photo || 'assets/leia_avatar.jpg'}" style="width:40px; height:40px; border-radius:50%; border:1.5px solid #D4AF37; object-fit:cover;">
+                    <img src="${u.photo || 'assets/leia_avatar.jpg'}" alt="${fullname}" style="width:40px; height:40px; border-radius:50%; border:1.5px solid #D4AF37; object-fit:cover;" onerror="this.src='assets/leia_avatar.jpg';">
                     <div>
                       <div style="font-weight:800; color:var(--obsidian-black);">${u.id}</div>
                       <div style="font-size:0.75rem; color:#d97706; font-weight:800;">@${u.username}</div>
@@ -2000,6 +2168,20 @@ class AdminEngine {
 
   addPendingAppointment(appointmentData) {
     if (!appointmentData) return null;
+
+    // VALIDACIÓN ESTRICTA DE AGENDA LIVE: Comprobar si el horario o fecha están bloqueados
+    const checkArea = appointmentData.area || 'grooming';
+    const checkDate = appointmentData.date || new Date().toISOString().split('T')[0];
+    const checkTime = appointmentData.time || '10:00';
+    const availability = this.checkSlotAvailability(checkArea, checkDate, checkTime);
+    if (!availability.available) {
+      console.warn(`[Agenda Blocker] Cita rechazada para ${appointmentData.pet || 'Mascota'}: ${availability.reason}`);
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⛔ Solicitud no procesada: ${availability.reason}`, 'error');
+      }
+      return { error: true, blocked: true, reason: availability.reason };
+    }
+
     const pendingId = appointmentData.id || `PEND-${Math.floor(1000 + Math.random() * 9000)}`;
     const newPending = {
       id: pendingId,
@@ -3151,11 +3333,15 @@ class AdminEngine {
   handleStaffPhotoUpload(event) {
     const file = event && event.target && event.target.files ? event.target.files[0] : null;
     if (file) {
-      const url = URL.createObjectURL(file);
-      const preview = document.getElementById('new-staff-photo-preview');
-      const input = document.getElementById('new-staff-photo');
-      if (preview) preview.src = url;
-      if (input) input.value = url;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const preview = document.getElementById('new-staff-photo-preview');
+        const input = document.getElementById('new-staff-photo');
+        if (preview) preview.src = dataUrl;
+        if (input) input.value = dataUrl;
+      };
+      reader.readAsDataURL(file);
     }
   }
 
@@ -3265,6 +3451,23 @@ class AdminEngine {
     this.renderStaffProfilesManager();
     this.renderActiveStaffSelector();
 
+    if (window.clinicaEngine) {
+      if (typeof window.clinicaEngine.syncStaffWithAdminProfiles === 'function') {
+        window.clinicaEngine.syncStaffWithAdminProfiles();
+      }
+      if (typeof window.clinicaEngine.renderStaff === 'function') {
+        window.clinicaEngine.renderStaff();
+      }
+    }
+    if (window.misipetEngine) {
+      if (typeof window.misipetEngine.syncStaffFromAdminProfiles === 'function') {
+        window.misipetEngine.syncStaffFromAdminProfiles();
+      }
+      if (typeof window.misipetEngine.renderLowerScreen === 'function') {
+        window.misipetEngine.renderLowerScreen();
+      }
+    }
+
     if (document.getElementById('new-staff-firstname')) document.getElementById('new-staff-firstname').value = '';
     if (document.getElementById('new-staff-lastname')) document.getElementById('new-staff-lastname').value = '';
     if (document.getElementById('new-staff-name')) document.getElementById('new-staff-name').value = '';
@@ -3290,6 +3493,24 @@ class AdminEngine {
       if (window.petStatusEngine && typeof window.petStatusEngine.render === 'function') {
         window.petStatusEngine.render();
       }
+
+      if (window.clinicaEngine) {
+        if (typeof window.clinicaEngine.syncStaffWithAdminProfiles === 'function') {
+          window.clinicaEngine.syncStaffWithAdminProfiles();
+        }
+        if (typeof window.clinicaEngine.renderStaff === 'function') {
+          window.clinicaEngine.renderStaff();
+        }
+      }
+      if (window.misipetEngine) {
+        if (typeof window.misipetEngine.syncStaffFromAdminProfiles === 'function') {
+          window.misipetEngine.syncStaffFromAdminProfiles();
+        }
+        if (typeof window.misipetEngine.renderLowerScreen === 'function') {
+          window.misipetEngine.renderLowerScreen();
+        }
+      }
+
       app.showToast(`Perfil @${user.username} ${user.active ? 'activado' : 'desactivado'}.`, 'warning');
     }
   }
@@ -3368,8 +3589,28 @@ class AdminEngine {
       window.petStatusEngine.render();
     }
 
+    // 🔄 Sincronización en vivo con Cuerpo Médico & Especialistas Principales (Clínica)
+    if (window.clinicaEngine) {
+      if (typeof window.clinicaEngine.syncStaffWithAdminProfiles === 'function') {
+        window.clinicaEngine.syncStaffWithAdminProfiles();
+      }
+      if (typeof window.clinicaEngine.renderStaff === 'function') {
+        window.clinicaEngine.renderStaff();
+      }
+    }
+
+    // 🔄 Sincronización en vivo con Centro Quirúrgico MisiPet
+    if (window.misipetEngine) {
+      if (typeof window.misipetEngine.syncStaffFromAdminProfiles === 'function') {
+        window.misipetEngine.syncStaffFromAdminProfiles();
+      }
+      if (typeof window.misipetEngine.renderLowerScreen === 'function') {
+        window.misipetEngine.renderLowerScreen();
+      }
+    }
+
     app.closeModal('edit-staff-modal');
-    app.showToast(`✅ Perfil y credenciales de @${username} (${user.name}) actualizados correctamente.`, 'success');
+    app.showToast(`✅ Perfil y foto de @${username} (${user.name}) actualizados correctamente.`, 'success');
   }
 
   deleteStaffUser(userId) {
@@ -3409,29 +3650,102 @@ class AdminEngine {
   handleEditStaffPhotoUpload(event) {
     const file = event && event.target && event.target.files ? event.target.files[0] : null;
     if (file) {
-      const url = URL.createObjectURL(file);
-      const preview = document.getElementById('edit-staff-photo-preview');
-      const input = document.getElementById('edit-staff-photo');
-      if (preview) preview.src = url;
-      if (input) input.value = url;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const preview = document.getElementById('edit-staff-photo-preview');
+        const input = document.getElementById('edit-staff-photo');
+        if (preview) preview.src = dataUrl;
+        if (input) input.value = dataUrl;
+      };
+      reader.readAsDataURL(file);
     }
+  }
+
+  normalizeTimeForComparison(t) {
+    if (!t) return '';
+    let s = String(t).trim().toUpperCase();
+    if (s === 'ALL_DAY' || s === 'ALL' || s === 'TODO_EL_DIA' || s.includes('TODO EL D')) return 'ALL_DAY';
+    const match = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const mins = match[2];
+      const ampm = match[3];
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+      return `${String(hours).padStart(2, '0')}:${mins}`;
+    }
+    return s.substring(0, 5);
+  }
+
+  normalizeAreaForComparison(a) {
+    if (!a) return 'all';
+    const s = String(a).toLowerCase().trim();
+    if (s.includes('groom')) return 'grooming';
+    if (s.includes('clinic') || s.includes('médic')) return 'clinica';
+    if (s.includes('hotel') || s.includes('guarder') || s.includes('suite')) return 'hotel';
+    if (s.includes('tiend') || s.includes('boutique')) return 'tienda';
+    if (s === 'all' || s.includes('toda')) return 'all';
+    return s;
   }
 
   // CHECK SLOT AVAILABILITY AGAINST LIVE AGENDA
   checkSlotAvailability(area, date, time) {
-    // Rule 3: Strict 6:00 PM (18:00) closing limit for appointments
-    if (time && time > '18:00' && area !== 'emergency') {
+    const normTime = this.normalizeTimeForComparison(time);
+    const normDate = String(date || '').trim().split('T')[0];
+    const normArea = this.normalizeAreaForComparison(area);
+
+    // Regla: Límite estricto de cierre a las 6:00 PM (18:00)
+    if (normTime && normTime > '18:00' && normArea !== 'emergency' && normTime !== 'ALL_DAY') {
       return { available: false, reason: `Las operaciones y citas concluyen estrictamente a las 6:00 p.m. (18:00) en Mrs. Pets.` };
     }
 
-    const blocked = this.blockedSlots.find(b => b.area === area && b.date === date && b.time === time);
-    if (blocked) {
-      return { available: false, reason: `Horario restringido/bloqueado por el personal (${blocked.reason})` };
+    if (!Array.isArray(this.blockedSlots)) {
+      this.loadBlockedSlotsFromStorage();
     }
 
-    const occupied = this.bookedAppointments.find(a => a.area === area && a.date === date && a.time === time);
+    const blocked = (this.blockedSlots || []).find(b => {
+      if (!b) return false;
+      const bDate = String(b.date || '').trim().split('T')[0];
+      if (bDate !== normDate) return false;
+
+      const bArea = this.normalizeAreaForComparison(b.area);
+      const areaMatches = (bArea === 'all' || normArea === 'all' || bArea === normArea);
+      if (!areaMatches) return false;
+
+      const bTime = this.normalizeTimeForComparison(b.time);
+      if (bTime === 'ALL_DAY' || !bTime) return true;
+
+      return bTime === normTime;
+    });
+
+    if (blocked) {
+      const reasonText = blocked.reason ? ` (${blocked.reason})` : '';
+      return {
+        available: false,
+        reason: `Horario restringido/bloqueado por el personal${reasonText}`,
+        blockedEntry: blocked
+      };
+    }
+
+    const occupied = (this.bookedAppointments || []).find(a => {
+      if (!a) return false;
+      const aDate = String(a.date || '').trim().split('T')[0];
+      if (aDate !== normDate) return false;
+
+      const aArea = this.normalizeAreaForComparison(a.area);
+      if (aArea !== normArea && normArea !== 'all' && aArea !== 'all') return false;
+
+      const aTime = this.normalizeTimeForComparison(a.time);
+      return aTime === normTime;
+    });
+
     if (occupied) {
-      return { available: false, reason: `Horario ya reservado en agenda por la mascota "${occupied.pet}"` };
+      return {
+        available: false,
+        reason: `Horario ya reservado en agenda por la mascota "${occupied.pet}"`,
+        occupiedEntry: occupied
+      };
     }
 
     return { available: true };
@@ -3516,6 +3830,7 @@ class AdminEngine {
               <div class="form-group">
                 <label class="form-label">Área a Restringir</label>
                 <select class="form-select" id="admin-block-area" style="font-size:0.8rem; border-radius:8px;">
+                  <option value="all">🏢 Toda la Sucursal (Todas las Áreas / Reunión)</option>
                   <option value="grooming">✂️ Grooming (Estética)</option>
                   <option value="clinica">🩺 Clínica Veterinaria</option>
                   <option value="hotel">🏨 Hotel (Admisión / Guardería)</option>
@@ -3530,12 +3845,37 @@ class AdminEngine {
 
             <div class="form-row" style="margin-bottom:8px;">
               <div class="form-group">
-                <label class="form-label">Hora (Formato 24h, ej: 11:00)</label>
-                <input type="text" class="form-input" id="admin-block-time" placeholder="11:00" required style="font-size:0.8rem; border-radius:8px;">
+                <label class="form-label">Hora (o Todo el Día)</label>
+                <select class="form-select" id="admin-block-time" style="font-size:0.8rem; border-radius:8px;">
+                  <option value="10:00" selected>🌅 10:00 AM (10:00)</option>
+                  <option value="07:00">🌅 07:00 AM</option>
+                  <option value="07:30">🌅 07:30 AM</option>
+                  <option value="08:00">🌅 08:00 AM</option>
+                  <option value="08:30">🌅 08:30 AM</option>
+                  <option value="09:00">🌅 09:00 AM</option>
+                  <option value="09:30">🌅 09:30 AM</option>
+                  <option value="10:30">🌅 10:30 AM</option>
+                  <option value="11:00">🌅 11:00 AM</option>
+                  <option value="11:30">🌅 11:30 AM</option>
+                  <option value="12:00">☀️ 12:00 PM</option>
+                  <option value="12:30">☀️ 12:30 PM</option>
+                  <option value="13:00">☀️ 01:00 PM</option>
+                  <option value="13:30">☀️ 01:30 PM</option>
+                  <option value="14:00">☀️ 02:00 PM</option>
+                  <option value="14:30">☀️ 02:30 PM</option>
+                  <option value="15:00">☀️ 03:00 PM</option>
+                  <option value="15:30">☀️ 03:30 PM</option>
+                  <option value="16:00">☀️ 04:00 PM</option>
+                  <option value="16:30">☀️ 04:30 PM</option>
+                  <option value="17:00">☀️ 05:00 PM</option>
+                  <option value="17:30">☀️ 05:30 PM</option>
+                  <option value="18:00">☀️ 06:00 PM</option>
+                  <option value="all_day">⛔ Todo el Día (Jornada Completa)</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Motivo de Restricción</label>
-                <input type="text" class="form-input" id="admin-block-reason" placeholder="Ej: Sanitización de quirófano" required style="font-size:0.8rem; border-radius:8px;">
+                <input type="text" class="form-input" id="admin-block-reason" placeholder="Ej: Reunión de equipo / Mantenimiento" required style="font-size:0.8rem; border-radius:8px;">
               </div>
             </div>
 
@@ -3578,8 +3918,8 @@ class AdminEngine {
             `).join('')}
             ${this.blockedSlots.map(b => `
               <tr style="background:#fff5f5;">
-                <td><span class="badge" style="background:#fef2f2; color:#b91c1c; text-transform:uppercase;">${b.area}</span></td>
-                <td style="font-weight:800; color:#b91c1c;">📅 ${b.date}<br><span style="font-size:0.85rem;">⏰ ${b.time}</span></td>
+                <td><span class="badge" style="background:#fef2f2; color:#b91c1c; text-transform:uppercase;">${b.area === 'all' ? '🏢 TODAS LAS ÁREAS' : b.area}</span></td>
+                <td style="font-weight:800; color:#b91c1c;">📅 ${b.date}<br><span style="font-size:0.85rem;">⏰ ${b.time === 'all_day' ? 'TODO EL DÍA' : b.time}</span></td>
                 <td><span class="badge badge-danger">⛔ Horario Bloqueado</span></td>
                 <td style="font-weight:700; color:#b91c1c;" colspan="2">${b.reason}</td>
                 <td><button class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} style="background:#10b981; border:none;" onclick="adminEngine.unblockSlot('${b.id}')">Desbloquear</button></td>
@@ -3601,22 +3941,52 @@ class AdminEngine {
   }
 
   submitBlockSlot(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
     if (this.permissionMode === 'view') {
       app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura.', 'error');
       return;
     }
 
-    const area = document.getElementById('admin-block-area').value;
-    const date = document.getElementById('admin-block-date').value;
-    const time = document.getElementById('admin-block-time').value;
-    const reason = document.getElementById('admin-block-reason').value;
+    const area = document.getElementById('admin-block-area')?.value || 'grooming';
+    const date = document.getElementById('admin-block-date')?.value || '';
+    const time = document.getElementById('admin-block-time')?.value || '10:00';
+    const reason = document.getElementById('admin-block-reason')?.value?.trim() || 'Restricción de agenda por el personal';
 
-    const blockId = `BLK-${Math.floor(10 + Math.random() * 90)}`;
-    this.blockedSlots.push({ id: blockId, area, date, time, reason });
+    if (!date) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ Por favor seleccione la fecha a bloquear.', 'warning');
+      }
+      return;
+    }
 
+    const blockId = `BLK-${Date.now()}-${Math.floor(10 + Math.random() * 90)}`;
+    const newBlock = { id: blockId, area, date, time, reason, createdAt: new Date().toISOString() };
+
+    const normTargetArea = this.normalizeAreaForComparison(area);
+    const normTargetDate = String(date).trim().split('T')[0];
+    const normTargetTime = this.normalizeTimeForComparison(time);
+
+    const existingIdx = this.blockedSlots.findIndex(b => {
+      if (!b) return false;
+      return String(b.date).split('T')[0] === normTargetDate &&
+             this.normalizeAreaForComparison(b.area) === normTargetArea &&
+             this.normalizeTimeForComparison(b.time) === normTargetTime;
+    });
+
+    if (existingIdx !== -1) {
+      this.blockedSlots[existingIdx].reason = reason;
+    } else {
+      this.blockedSlots.push(newBlock);
+    }
+
+    this.saveBlockedSlotsToStorage();
     this.renderAgendaManager();
-    app.showToast(`⛔ Horario ${time} del ${date} para ${area.toUpperCase()} bloqueado en agenda.`, 'warning');
+
+    const areaLabel = area === 'all' ? 'TODA LA SUCURSAL' : area.toUpperCase();
+    const timeLabel = (time === 'all_day' || time === 'all') ? 'TODO EL DÍA' : time;
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`⛔ Horario ${timeLabel} del ${date} para ${areaLabel} bloqueado en agenda (Motivo: ${reason}).`, 'warning');
+    }
   }
 
   unblockSlot(blockId) {
@@ -3625,8 +3995,11 @@ class AdminEngine {
       return;
     }
     this.blockedSlots = this.blockedSlots.filter(b => b.id !== blockId);
+    this.saveBlockedSlotsToStorage();
     this.renderAgendaManager();
-    app.showToast('✅ Restricción de horario eliminada de la agenda.', 'success');
+    if (window.app && typeof window.app.showToast === 'function') {
+      app.showToast('✅ Restricción de horario eliminada de la agenda.', 'success');
+    }
   }
 
   cancelAppointment(aptId) {
@@ -3679,6 +4052,9 @@ class AdminEngine {
   setRole(role) {
     this.activeRole = role;
     this.renderRoleSelector();
+    if (role === 'supervisor' && window.misipetEngine && typeof window.misipetEngine.setRole === 'function') {
+      window.misipetEngine.setRole('supervisor');
+    }
     app.showToast(`🔒 Perfil activado: ${role.toUpperCase()} (Mrs. Pets Staff)`, 'info');
   }
 
@@ -3692,6 +4068,7 @@ class AdminEngine {
       { id: 'hotel', title: '🏨 Hotel (Admisión / Guardería)', desc: 'Suites Bioclimáticas & Cam Cams 24/7' },
       { id: 'tienda', title: '🛍️ Tienda & Boutique VIP', desc: 'Boutique, Nutrición Specialist & Farmacia' },
       { id: 'admision', title: '📋 Recepción & Admisión VIP', desc: 'Recepción de Tutores, Fichas & Bioseguridad' },
+      { id: 'supervisor', title: '🛡️ Supervisor de Operaciones LAN', desc: 'Modo Supervisor LAN, MisiPet Command, Telemetría & Infraestructura' },
       { id: 'admin', title: '🛡️ Administración General', desc: 'Catálogo de Productos, Precios & Permisos' }
     ];
 

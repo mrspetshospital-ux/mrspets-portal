@@ -11,6 +11,7 @@ class VoiceSimulator {
     this.recognition = null;
     this.synth = window.speechSynthesis;
     this.animFrameId = null;
+    this.currentAudio = null;
     
     this.initSpeechRecognition();
   }
@@ -105,6 +106,13 @@ class VoiceSimulator {
     }
     if (this.synth) {
       this.synth.cancel();
+    }
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch (e) {}
+      this.currentAudio = null;
     }
 
     cancelAnimationFrame(this.animFrameId);
@@ -208,9 +216,68 @@ class VoiceSimulator {
     box.scrollTop = box.scrollHeight;
   }
 
-  speak(text) {
+  async speak(text, agentId = 'leia') {
+    if (!text) return;
+
+    // Detener cualquier audio previo
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch (e) {}
+      this.currentAudio = null;
+    }
+    if (this.synth) {
+      this.synth.cancel();
+    }
+
+    const avatar = document.getElementById('phone-avatar');
+    if (avatar) avatar.classList.add('speaking');
+
+    // 1. Intentar reproducir con voz hiperrealista ElevenLabs vía backend proxy
+    try {
+      const res = await fetch('/api/v1/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          agent_id: agentId
+        })
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('audio')) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        this.currentAudio = audio;
+
+        audio.onended = () => {
+          if (avatar) avatar.classList.remove('speaking');
+          URL.revokeObjectURL(audioUrl);
+        };
+        audio.onerror = () => {
+          console.warn('[VoiceSimulator] Error reproduciendo audio ElevenLabs, usando fallback nativo');
+          this.fallbackSpeak(text);
+        };
+
+        await audio.play();
+        return;
+      }
+    } catch (err) {
+      console.warn('[VoiceSimulator] Fallback a sintetizador nativo del navegador:', err);
+    }
+
+    // 2. Fallback transparente con Web Speech API
+    this.fallbackSpeak(text);
+  }
+
+  fallbackSpeak(text) {
     if (!this.synth) return;
     this.synth.cancel();
+
+    const avatar = document.getElementById('phone-avatar');
+    if (avatar) avatar.classList.add('speaking');
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
@@ -220,6 +287,13 @@ class VoiceSimulator {
     const voices = this.synth.getVoices();
     const spanishVoice = voices.find(v => v.lang.includes('es'));
     if (spanishVoice) utterance.voice = spanishVoice;
+
+    utterance.onend = () => {
+      if (avatar) avatar.classList.remove('speaking');
+    };
+    utterance.onerror = () => {
+      if (avatar) avatar.classList.remove('speaking');
+    };
 
     this.synth.speak(utterance);
   }

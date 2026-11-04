@@ -28,6 +28,19 @@ class App {
     if (typeof adminEngine !== 'undefined') {
       adminEngine.renderClientDatabaseManager();
     }
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true') {
+      if (document.body) {
+        document.body.classList.add('enterprise-view-mode');
+        document.body.classList.remove('customer-view-mode');
+      }
+      if (typeof adminEngine !== 'undefined') {
+        adminEngine.viewEnvironment = 'enterprise';
+        adminEngine.isEnterpriseAuthenticated = true;
+      }
+      const rawHash = (window.location.hash || '').replace('#', '').replace('tab-', '').trim();
+      const targetTab = (rawHash && rawHash !== 'welcome') ? rawHash : 'admin';
+      this.switchTab(targetTab, true);
+    }
     this.bindNavigation();
     this.bindQuickActions();
     this.renderActivityStream();
@@ -80,10 +93,10 @@ class App {
     const initialHash = window.location.hash.replace('#', '').replace('tab-', '').trim();
     if (initialHash && initialHash !== 'welcome') {
       setTimeout(() => {
-        const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command'];
-        if (protectedTabs.includes(initialHash) && !isUserStaffOrAdmin()) {
-          // Si el usuario llega por enlace directo con un hash protegido sin autenticación previa,
-          // preservamos el reproductor de video de bienvenida y limpiamos el hash sin alertas bloqueantes
+        const isAuth = isUserStaffOrAdmin() || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
+        if (!isAuth) {
+          // Si el usuario llega por enlace con cualquier hash sin autenticación previa,
+          // preservamos el reproductor de video de bienvenida y limpiamos el hash sin saltar al panel
           try {
             history.replaceState(null, '', window.location.pathname);
           } catch (e) {}
@@ -107,6 +120,9 @@ class App {
 
     // Control Global FIFO de Acordeones / Desplegables (Máximo 2 simultáneos)
     this.initGlobalAccordionFifoControl();
+
+    // 🛡️ REGLA EXCLUSIVA SIDEBAR: No más de una pestaña del menú lateral abierta a la vez (Staff y Visitante)
+    this.initSidebarAccordionControl();
   }
 
   initGlobalAccordionFifoControl() {
@@ -142,6 +158,66 @@ class App {
         openStack = openStack.filter(item => item !== details);
       }
     }, true);
+  }
+
+  // 🛡️ REGLA EXCLUSIVA SIDEBAR: Máximo UNA pestaña del menú de la izquierda abierta a la vez
+  // Si se abre Grooming y luego se abre Clínica Veterinaria, Grooming se cierra automáticamente.
+  // Aplica idéntico tanto para modo Staff como para modo Visitante/Cliente.
+  initSidebarAccordionControl() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    const sidebarFamilies = sidebar.querySelectorAll('details.nav-family');
+    if (!sidebarFamilies.length) return;
+
+    // 1. Interceptar el click en la cabecera (<summary>) para cerrar las demás antes de la pintura
+    sidebarFamilies.forEach(family => {
+      const summary = family.querySelector('summary') || family.querySelector('.nav-family-title');
+      if (summary) {
+        summary.addEventListener('click', () => {
+          // Si esta familia está cerrada y el usuario la va a abrir:
+          if (!family.open) {
+            sidebarFamilies.forEach(other => {
+              if (other !== family && other.open) {
+                other.removeAttribute('open');
+                other.open = false;
+              }
+            });
+          }
+        });
+      }
+
+      // 2. Escucha reactiva en evento 'toggle' nativo (red de seguridad universal para teclado y APIs)
+      family.addEventListener('toggle', () => {
+        if (family.open) {
+          sidebarFamilies.forEach(other => {
+            if (other !== family && other.open) {
+              other.removeAttribute('open');
+              other.open = false;
+            }
+          });
+        }
+      });
+    });
+
+    // 3. Al hacer clic en cualquier .nav-item dentro del menú de la izquierda
+    const allSidebarNavItems = sidebar.querySelectorAll('.nav-item');
+    allSidebarNavItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const parentFamily = item.closest('details.nav-family');
+        if (parentFamily) {
+          if (!parentFamily.open) {
+            parentFamily.open = true;
+          }
+          sidebarFamilies.forEach(other => {
+            if (other !== parentFamily && other.open) {
+              other.removeAttribute('open');
+              other.open = false;
+            }
+          });
+        }
+      });
+    });
   }
 
   initResizeHandler() {
@@ -252,14 +328,37 @@ class App {
     
     let activeNav = targetElement;
     if (!activeNav && tabName) {
-      activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+      if (areaFilter) {
+        activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"][data-area-filter="${areaFilter}"]`);
+      }
+      if (!activeNav) {
+        activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+      }
     }
 
+    const allSidebarFamilies = document.querySelectorAll('.sidebar details.nav-family');
     if (activeNav) {
       activeNav.classList.add('active');
       const parentFamily = activeNav.closest('details.nav-family');
-      if (parentFamily && !parentFamily.open) {
-        parentFamily.open = true;
+      if (parentFamily) {
+        if (!parentFamily.open) {
+          parentFamily.open = true;
+        }
+        allSidebarFamilies.forEach(other => {
+          if (other !== parentFamily && other.open) {
+            other.removeAttribute('open');
+            other.open = false;
+          }
+        });
+      } else {
+        // Pestaña fuera de familias (Bienvenido Portal VIP, C.Centro MPF, Misipet 2.0):
+        // cerrar todas las familias para dejar el menú lateral limpio
+        allSidebarFamilies.forEach(other => {
+          if (other.open) {
+            other.removeAttribute('open');
+            other.open = false;
+          }
+        });
       }
     }
 
@@ -355,7 +454,19 @@ class App {
         marketingCommandCenterEngine.render();
       }
 
+      if (tabName === 'clinica' && typeof clinicaEngine !== 'undefined') {
+        if (typeof clinicaEngine.syncStaffWithAdminProfiles === 'function') {
+          clinicaEngine.syncStaffWithAdminProfiles();
+        }
+        if (typeof clinicaEngine.renderStaff === 'function') {
+          clinicaEngine.renderStaff();
+        }
+      }
+
       if (tabName === 'misipet' && window.misipetEngine) {
+        if (typeof window.misipetEngine.syncStaffFromAdminProfiles === 'function') {
+          window.misipetEngine.syncStaffFromAdminProfiles();
+        }
         window.misipetEngine.init();
       }
 
@@ -578,6 +689,7 @@ class App {
     // NUNCA exponer el app-container ni la cuenta activa por defecto. Retornar obligatoriamente al Portal Concierge.
     if (!window.authEngine || !window.authEngine.isAuthenticated) {
       const portalModals = [
+        'enterprise-login-modal',
         'registration-modal',
         'vip-client-lookup-modal',
         'client-profile-pin-modal',
@@ -589,9 +701,9 @@ class App {
         'hotel-booking-modal'
       ];
       if (portalModals.includes(modalId)) {
-        // PERO: Si el usuario está cambiando de área de reserva o está activo en rol de visitante, NO bloquear la app
-        if (window._isSwitchingBookingArea) return;
-        if (window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest')) {
+        // PERO: Si el usuario está cambiando de área de reserva, verificando PIN o está activo en rol de cliente/visitante, NO bloquear la app
+        if (window._isSwitchingBookingArea || window._isVerifyingProfilePin) return;
+        if (window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest' || window.authEngine.userRole === 'client' || window.authEngine.currentVipPetId)) {
           return;
         }
         localStorage.removeItem('mrs_pets_skip_splash');

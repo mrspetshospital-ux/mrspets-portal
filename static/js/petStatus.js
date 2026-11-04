@@ -1133,7 +1133,7 @@ class PetStatusEngine {
     this.render();
   }
 
-  setDateFilter(dateFilter, btnEl) {
+  setDateFilter(dateFilter = 'today', btnEl = null) {
     this.currentDateFilter = dateFilter;
     const buttons = document.querySelectorAll('.status-date-btn');
     buttons.forEach(b => {
@@ -1151,6 +1151,16 @@ class PetStatusEngine {
     const customContainer = document.getElementById('status-custom-date-container');
     if (customContainer) {
       customContainer.style.display = dateFilter === 'custom' ? 'flex' : 'none';
+      if (dateFilter === 'custom') {
+        const fromInput = document.getElementById('status-date-from');
+        const toInput = document.getElementById('status-date-to');
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        if (fromInput && !fromInput.value) fromInput.value = todayStr;
+        if (toInput && !toInput.value) toInput.value = todayStr;
+        this.customFrom = fromInput ? fromInput.value : todayStr;
+        this.customTo = toInput ? toInput.value : todayStr;
+      }
     }
 
     this.render();
@@ -1323,12 +1333,7 @@ class PetStatusEngine {
     const isToday = (dateStr === todayStr) || (diffDays === 0);
 
     if (dateFilter === 'today') {
-      // 🔒 REGLA ESTRICTA: Las citas a futuro NUNCA deben aparecer en 'Hoy' (para Staff)
-      // Sin embargo, en Vista Cliente (!this.isStaffMode()), el tutor VIP debe ver SIEMPRE sus reservaciones activas/aprobadas
-      if (!this.isStaffMode() && pet && pet.hasReservation) {
-        return true;
-      }
-
+      // 🔒 REGLA ESTRICTA: Las citas a futuro NUNCA deben aparecer en 'Hoy' bajo ninguna circunstancia
       if (isFuture) return false;
 
       // Si la fecha programada es hoy, incluir
@@ -1342,7 +1347,7 @@ class PetStatusEngine {
       }
 
       return false;
-    } else if (dateFilter === 'future' || dateFilter === 'upcoming') {
+    } else if (dateFilter === 'future' || dateFilter === 'upcoming' || dateFilter === 'next_week' || dateFilter === 'nextWeek') {
       return isFuture;
     } else if (dateFilter === 'week') {
       // Semana cubre desde 7 días en el pasado hasta 7 días a futuro (esta semana y próximos 7 días)
@@ -1504,6 +1509,14 @@ class PetStatusEngine {
       }
       if (!clientPet && clientPets.length > 0) {
         clientPet = clientPets[0];
+      }
+
+      if (!clientPet) {
+        // En Vista Tutor VIP, si no hay citas registradas para el período activo (ej. Hoy), buscar si tiene una cita activa reservada
+        const allClientPets = this.pets.filter(p => this.isClientMatch(p, activeCustomerName, activeCustomerPhone, activePetId) && p.hasReservation !== false && !p.isCompleted);
+        if (allClientPets.length > 0) {
+          clientPet = activePetId ? (allClientPets.find(p => p.id === activePetId) || allClientPets[0]) : allClientPets[0];
+        }
       }
 
       if (!clientPet) {
@@ -1898,11 +1911,12 @@ class PetStatusEngine {
       if (elAll) elAll.innerText = totalCount;
     }
 
-    // Dynamic Area Filter Count Badges
-    const allAreaCount = basePets.length + tiendaSalesList.length;
-    const groomingAreaCount = basePets.filter(p => this.normalizeService(p.area) === 'grooming').length;
-    const clinicaAreaCount = basePets.filter(p => this.normalizeService(p.area) === 'clinica').length;
-    const hotelAreaCount = basePets.filter(p => this.normalizeService(p.area) === 'hotel').length;
+    // Dynamic Area Filter Count Badges (sincronizados rigurosamente con el filtro de fecha activo)
+    const basePetsForCurrentDate = basePets.filter(p => this.isWithinDateRange(p, this.currentDateFilter));
+    const allAreaCount = basePetsForCurrentDate.length + tiendaSalesList.length;
+    const groomingAreaCount = basePetsForCurrentDate.filter(p => this.normalizeService(p.area) === 'grooming').length;
+    const clinicaAreaCount = basePetsForCurrentDate.filter(p => this.normalizeService(p.area) === 'clinica').length;
+    const hotelAreaCount = basePetsForCurrentDate.filter(p => this.normalizeService(p.area) === 'hotel').length;
     const tiendaAreaCount = tiendaSalesList.length;
 
     const elAreaAll = document.getElementById('area-count-all');

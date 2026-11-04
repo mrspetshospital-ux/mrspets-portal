@@ -45,7 +45,7 @@
             const auth = window.authEngine || window.AuthEngine;
             if (auth) {
                 const role = String(auth.userRole || auth.currentUser?.role || '').toLowerCase();
-                if (role === 'admin' || role === 'staff' || role === 'veterinario' || role === 'groomer') {
+                if (role === 'admin' || role === 'staff' || role === 'supervisor' || role === 'veterinario' || role === 'groomer') {
                     return true;
                 }
             }

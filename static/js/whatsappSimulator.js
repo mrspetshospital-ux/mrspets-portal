@@ -106,7 +106,15 @@ class WhatsAppSimulator {
     } else {
       const lower = userText.toLowerCase();
 
-      if (lower.includes('rif') || lower.includes('juridico') || lower.includes('razon') || lower.includes('empresa')) {
+      if (lower.includes('oneal') || lower.includes("o'neal")) {
+        const patients = (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) ? window.adminEngine.patientsStatus : [];
+        const misipetData = (window.misipetEngine && window.misipetEngine.overviewData) ? window.misipetEngine.overviewData : null;
+        const sem = misipetData ? (misipetData.semaphore_counts || {}) : { yellow: 0, red: 0, green: 14 };
+        reply = `📢 *O'NEAL (TEAMLY AI - TELEMERCADEO & OPERACIONES)*\n\n¡Hola! Conectado desde la sucursal Av. 2 El Milagro para tu reporte en calle:\n\n• 📅 *Reservaciones Activas Hoy:* ${patients.length} consentidos en circuito.\n• 🛠️ *Mantenimientos Pendientes:* ${sem.yellow || 0} preventivos, ${sem.red || 0} de atención inmediata.\n• 📢 *Campaña Activa:* Grooming VIP & Hidratación de Pulpejos (TikTok/Meta ROAS 4.2x).\n\n¿Deseas que revise una cita o actualice el centro MPF?`;
+      } else if (lower.includes('vanessa')) {
+        const apps = JSON.parse(localStorage.getItem('mrs_pets_hr_applications') || '[]');
+        reply = `💼 *VANESSA (TEAMLY AI - RECURSOS HUMANOS)*\n\n¡Hola! Base de datos de talento humano sincronizada con la web:\n\n• 📄 *Total CVs Recibidos:* ${apps.length} postulaciones registradas.\n• 👥 *Candidatos en base:* ${apps.slice(0, 3).map(a => a.fullName).join(', ') || 'María Briceño (Estilista Canino)'}.\n\nListos para revisión de expedientes y programación de entrevistas.`;
+      } else if (lower.includes('rif') || lower.includes('juridico') || lower.includes('razon') || lower.includes('empresa')) {
         reply = "📜 *INFORMACIÓN FISCAL & CORPORATIVA (MRS PETS MARACAIBO)*\n\n• Nombre Comercial: *Mrs. Pets*\n• Razón Social: *Big & Little Dogs, C.A.*\n• RIF Fiscal: *J-40120233-0*\n• Ubicación: *Avenida 2 El Milagro, Maracaibo, Venezuela*\n• Asistente Ejecutiva & Concierge VIP: *Leia 🎀*\n• Filosofía: *\"We see pets — donde recibimos mascotas y despedimos amigos\"*\n• WhatsApp Oficial: *+58 414-6799510*";
       } else if (lower.includes('chico') || lower.includes('nuevo') || lower.includes('registro') || lower.includes('biotracker')) {
         reply = "👑 *MODELO ÁGIL BioTracker GeoGuard (MRS PETS)*\n\nPara cuidar tu tiempo y privacidad, ¡no te pedimos direcciones exactas!\n\n1️⃣ Nombre y WhatsApp de contacto\n2️⃣ Nombre de tu príncipe o princesa (perrito o gatito)\n3️⃣ Sector de Maracaibo (ej. Las Delicias, El Milagro, Bella Vista, Tierra Negra, Indio Mara, La Lago)\n\n¡Ingreso inmediato a nuestra red preventiva de salud!";

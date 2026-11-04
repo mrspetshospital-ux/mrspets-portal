@@ -969,6 +969,9 @@ class StoreEngine {
             if (item && (item.category === 'Fármacos & Antiparasitarios' || item.category === 'Fármacos y Antiparasitarios')) {
               item.category = 'Farmacia';
             }
+            if (item && (item.category === 'Higiene & Spa' || item.category === 'Higiene y Spa')) {
+              item.category = 'Higiene y Cuidado';
+            }
             return item;
           });
           if (window.adminEngine) {
@@ -985,7 +988,7 @@ class StoreEngine {
     if (!Array.isArray(sourceCatalog) || sourceCatalog.length === 0) {
       sourceCatalog = [
         { id: 'PROD-101', name: 'Royal Canin Mini Adult (3kg)', category: 'Alimento Canino / Felino', price: 28.50, stock: 15, active: true, image: 'assets/media__1787694901704.jpg' },
-        { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene & Spa', price: 18.00, stock: 24, active: true, image: 'assets/media__1787695246337.jpg' },
+        { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene y Cuidado', price: 18.00, stock: 24, active: true, image: 'assets/media__1787695246337.jpg' },
         { id: 'PROD-103', name: 'Bravecto Perros 10-20kg', category: 'Farmacia', price: 42.00, stock: 8, active: true, image: 'assets/media__1787694901704.jpg' },
         { id: 'PROD-104', name: 'Hill\'s Prescription Diet k/d Renal (3.8kg)', category: 'Alimento Canino / Felino', price: 46.00, stock: 0, active: true, image: 'assets/hero_border_collie.jpg' },
         { id: 'PROD-105', name: 'Pro Plan Veterinary Diets OM Obesity (7.5kg)', category: 'Alimento Canino / Felino', price: 58.00, stock: 0, active: true, image: 'assets/media__1787694901704.jpg' },

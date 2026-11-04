@@ -283,6 +283,45 @@ class GlobalSearchEngine {
 
     const results = [];
 
+    // 0. AGENTES EJECUTIVOS IA (COMITÉ VOLTURI & TEAMLY.AI)
+    const volturiAgents = (window.teamilyExecutiveEngine && typeof window.teamilyExecutiveEngine.getAgents === 'function')
+      ? window.teamilyExecutiveEngine.getAgents()
+      : [];
+
+    volturiAgents.forEach(agent => {
+      const matchScore = this.calculateMatch(q, [
+        agent.name,
+        agent.role,
+        agent.description,
+        agent.teamlySlug,
+        'volturi',
+        'comite',
+        'teamly',
+        'ia',
+        'agente'
+      ]);
+      if (matchScore > 0) {
+        results.push({
+          score: matchScore + 40,
+          type: 'agent',
+          category: 'Agentes Ejecutivos IA (Comité Volturi • Teamly)',
+          id: `agent-${agent.id}`,
+          title: `${agent.icon || '🤖'} ${agent.name}`,
+          subtitle: `Rol: <strong>${agent.role}</strong> • Slug: <code>${agent.teamlySlug || 'geo-a'}</code>`,
+          meta: agent.description || 'Subagente de Teamly AI',
+          badge: 'Teamly AI',
+          badgeBg: '#F3E8FF',
+          badgeColor: '#7E22CE',
+          action: () => {
+            this.close();
+            if (window.teamilyExecutiveEngine) {
+              window.teamilyExecutiveEngine.openDirectChatModal(agent.id);
+            }
+          }
+        });
+      }
+    });
+
     // 1. MASCOTAS VIP / PACIENTES
     const petsSource = this.getPetsDataSource();
     petsSource.forEach(p => {
@@ -526,7 +565,7 @@ class GlobalSearchEngine {
     }
     return [
       { id: 'PROD-101', name: 'Royal Canin Mini Adult (3kg)', category: 'Alimento Canino / Felino', price: 28.50, description: 'Nutrición balanceada de alta gama para perros adultos de raza pequeña.' },
-      { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene & Spa', price: 18.00, description: 'Fórmula enriquecida con oxígeno activo para regeneración del manto dérmico.' },
+      { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene y Cuidado', price: 18.00, description: 'Fórmula enriquecida con oxígeno activo para regeneración del manto dérmico.' },
       { id: 'PROD-103', name: 'Bravecto Perros 10-20kg', category: 'Farmacia', price: 42.00, description: 'Comprimido masticable con 12 semanas de protección continua contra garrapatas y pulgas.' },
       { id: 'SERV-GROOMING', name: 'Circuito Grooming Spa (7 Estaciones)', category: 'Servicio Grooming', price: 25.00, description: 'Circuito integral de estética canina y felina con hidratación de pulpejos obligatoria.' },
       { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, description: 'Limpieza bucal especializada para eliminación de sarro sin dolor.' }

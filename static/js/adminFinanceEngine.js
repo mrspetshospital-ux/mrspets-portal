@@ -10,9 +10,16 @@ class AdminFinanceEngine {
     this.storageKeyVariables = 'mrs_pets_dynamic_variables';
     this.storageKeyExpenses = 'mrs_pets_operating_expenses';
     this.storageKeyStockRestitution = 'mrs_pets_stock_restitution';
-    this.currentDateRange = 'month'; // 'day', 'week', 'month', 'year', 'custom'
+    this.storageKeyInvoices = 'mrs_pets_fiscal_invoices';
+    this.currentDateRange = 'month'; // 'day', 'week', 'quincena', 'month', 'semester', 'year', 'custom'
     this.customFrom = '';
     this.customTo = '';
+
+    // Filtros de facturación contable y fiscal SENIAT
+    this.invoiceFilterPeriod = 'day'; // 'day', 'week', 'quincena', 'month', 'semester', 'year', 'all'
+    this.invoiceFilterDate = ''; // Fecha específica de visita 'YYYY-MM-DD' ("¿Cuándo fue que vino?")
+    this.invoiceSearchQuery = ''; // Búsqueda de cliente, RIF, factura, mascota
+    this.invoiceDivisionFilter = 'all'; // 'all', 'clinica', 'grooming', 'hotel', 'tienda'
 
     // Variables dinámicas en memoria
     this.dynamicVariables = [];
@@ -20,6 +27,8 @@ class AdminFinanceEngine {
     this.expenses = {};
     // Ítems de reposición logística
     this.restitutionItems = [];
+    // Histórico de Facturas Fiscales SENIAT
+    this.invoices = [];
   }
 
   init() {
@@ -32,6 +41,9 @@ class AdminFinanceEngine {
     }
     if (this.restitutionItems.length === 0) {
       this.seedInitialRestitution();
+    }
+    if (this.invoices.length === 0) {
+      this.seedInitialInvoices();
     }
   }
 
@@ -80,6 +92,8 @@ class AdminFinanceEngine {
       if (exp) this.expenses = JSON.parse(exp);
       const rest = localStorage.getItem(this.storageKeyStockRestitution);
       if (rest) this.restitutionItems = JSON.parse(rest);
+      const inv = localStorage.getItem(this.storageKeyInvoices);
+      if (inv) this.invoices = JSON.parse(inv);
     } catch (e) {
       console.warn('Error al cargar estado de Administración y Finanzas:', e);
     }
@@ -90,6 +104,7 @@ class AdminFinanceEngine {
       localStorage.setItem(this.storageKeyVariables, JSON.stringify(this.dynamicVariables));
       localStorage.setItem(this.storageKeyExpenses, JSON.stringify(this.expenses));
       localStorage.setItem(this.storageKeyStockRestitution, JSON.stringify(this.restitutionItems));
+      localStorage.setItem(this.storageKeyInvoices, JSON.stringify(this.invoices));
     } catch (e) {
       console.error('Error al guardar estado de Administración y Finanzas:', e);
     }
@@ -243,6 +258,1299 @@ class AdminFinanceEngine {
     this.saveState();
   }
 
+  // ==================== MÓDULO FISCAL SENIAT: HISTÓRICO, MÉTODOS Y FECHAS ====================
+  getTodayDateStr() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  getDateWithOffset(daysOffset) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  getDaysDiffFromToday(dateStr) {
+    if (!dateStr) return 9999;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(dateStr + 'T00:00:00');
+    if (isNaN(target.getTime())) return 9999;
+    const diffTime = today.getTime() - target.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  seedInitialInvoices() {
+    const today = this.getTodayDateStr();
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+
+    this.invoices = [
+      // 1. FACTURACIÓN DEL DÍA (HOY)
+      {
+        id: 'INV-2026-000418',
+        invoiceNumber: 'FACT-2026-000418',
+        controlNumber: '00-008938',
+        fiscalSeries: 'SERIE-A',
+        date: today,
+        time: '09:30 AM',
+        timestamp: `${today}T09:30:00`,
+        cashier: 'Dalybell Ramírez (Caja Central)',
+        division: 'grooming',
+        divisionLabel: '✂️ Grooming & Spa Canino/Felino',
+        customer: {
+          name: 'Dalybell Ramírez Montilla',
+          rif: 'V-18.452.910',
+          email: 'dalybell@mrspets.com',
+          phone: '+58 (414) 389-1102',
+          address: 'Av. 3Y San Martín, Bella Vista, Maracaibo, Zulia'
+        },
+        pet: {
+          name: 'Princesa',
+          species: 'Canino / Border Collie VIP',
+          patientId: 'PAC-2026-018'
+        },
+        items: [
+          { code: 'GRM-01', description: 'Grooming Estilo Asiático VIP + Baño Ozono & Mascarilla Hidratante', quantity: 1, unitPrice: 45.00, isExempt: false, total: 45.00 },
+          { code: 'GRM-02', description: 'Corte de Uñas & Vaciado de Glándulas', quantity: 1, unitPrice: 10.00, isExempt: false, total: 10.00 },
+          { code: 'GRM-03', description: 'Perfume Pet Royale Signature 60ml', quantity: 1, unitPrice: 15.00, isExempt: false, total: 15.00 }
+        ],
+        subtotal: 70.00,
+        taxableAmount: 70.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 11.20,
+        totalUsd: 81.20,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((81.20 * bcvRate).toFixed(2)),
+        paymentMethod: 'Pago Móvil Banplus C2P',
+        paymentReference: 'C2P-BANPLUS-992144',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${today} a las 09:35 AM`,
+        emailHistory: [
+          { date: today, time: '09:35 AM', recipientEmail: 'dalybell@mrspets.com', sentBy: 'Dalybell Ramírez', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+      {
+        id: 'INV-2026-000417',
+        invoiceNumber: 'FACT-2026-000417',
+        controlNumber: '00-008937',
+        fiscalSeries: 'SERIE-A',
+        date: today,
+        time: '11:15 AM',
+        timestamp: `${today}T11:15:00`,
+        cashier: 'Dra. Sofía Mendoza (Recepción Médica)',
+        division: 'clinica',
+        divisionLabel: '🩺 Clínica Veterinaria 24H & Cirugía',
+        customer: {
+          name: 'Carlos Mendoza',
+          rif: 'V-14.882.109',
+          email: 'carlos.mendoza@email.com',
+          phone: '+58 (412) 555-1234',
+          address: 'Urb. Virginia, Calle 67, Maracaibo, Zulia'
+        },
+        pet: {
+          name: 'Fifi',
+          species: 'Canino / Poodle Toy VIP',
+          patientId: 'PAC-2026-022'
+        },
+        items: [
+          { code: 'CLN-01', description: 'Consulta Pediátrica Especializada + Evaluación Cardíaca', quantity: 1, unitPrice: 35.00, isExempt: false, total: 35.00 },
+          { code: 'CLN-02', description: 'Vacuna Séxtuple Canina Nobivac', quantity: 1, unitPrice: 25.00, isExempt: false, total: 25.00 },
+          { code: 'CLN-03', description: 'Desparasitación Interna Drontal Plus', quantity: 1, unitPrice: 12.00, isExempt: false, total: 12.00 }
+        ],
+        subtotal: 72.00,
+        taxableAmount: 72.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 11.52,
+        totalUsd: 83.52,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((83.52 * bcvRate).toFixed(2)),
+        paymentMethod: 'Tarjeta Débito Banplus (POS)',
+        paymentReference: 'POS-BANPLUS-441029',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${today} a las 11:20 AM`,
+        emailHistory: [
+          { date: today, time: '11:20 AM', recipientEmail: 'carlos.mendoza@email.com', sentBy: 'Dra. Sofía Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+      {
+        id: 'INV-2026-000416',
+        invoiceNumber: 'FACT-2026-000416',
+        controlNumber: '00-008936',
+        fiscalSeries: 'SERIE-A',
+        date: today,
+        time: '02:40 PM',
+        timestamp: `${today}T14:40:00`,
+        cashier: 'Mariana Briceño (Concierge Tienda)',
+        division: 'tienda',
+        divisionLabel: '🛍️ Tienda de Lujo & Farmacia Veterinaria',
+        customer: {
+          name: 'Patricia Villalobos',
+          rif: 'V-19.874.521-0',
+          email: 'patricia.v@gmail.com',
+          phone: '+58 (414) 679-9510',
+          address: 'Av. El Milagro, Res. El Faro, Maracaibo, Zulia'
+        },
+        pet: {
+          name: 'Simba',
+          species: 'Canino / Golden Retriever',
+          patientId: 'PAC-2026-035'
+        },
+        items: [
+          { code: 'TND-01', description: 'Alimento Royal Canin Maxi Adult 15kg', quantity: 1, unitPrice: 85.00, isExempt: false, total: 85.00 },
+          { code: 'TND-02', description: 'Antipulgas y Garrapatas Bravecto 20-40kg', quantity: 1, unitPrice: 38.00, isExempt: false, total: 38.00 }
+        ],
+        subtotal: 123.00,
+        taxableAmount: 123.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 19.68,
+        totalUsd: 142.68,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((142.68 * bcvRate).toFixed(2)),
+        paymentMethod: 'Stripe Card Vault USD',
+        paymentReference: 'ch_3Nkp91MrsPetsStripe',
+        status: 'EMITIDA',
+        emailStatus: 'Pendiente de confirmación de correo',
+        emailHistory: [],
+        printCount: 1
+      },
+
+      // 2. FACTURACIÓN DE LA SEMANA (2 y 4 días atrás)
+      {
+        id: 'INV-2026-000415',
+        invoiceNumber: 'FACT-2026-000415',
+        controlNumber: '00-008935',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-2),
+        time: '10:10 AM',
+        timestamp: `${this.getDateWithOffset(-2)}T10:10:00`,
+        cashier: 'Carlos Mendoza (Caja Grooming)',
+        division: 'grooming',
+        divisionLabel: '✂️ Grooming & Spa Canino/Felino',
+        customer: {
+          name: 'Andrés Morales',
+          rif: 'V-20.145.890',
+          email: 'andres.morales@outlook.com',
+          phone: '+58 (424) 612-4488',
+          address: 'Sector Tierra Negra, Calle 70, Maracaibo'
+        },
+        pet: {
+          name: 'Buddy',
+          species: 'Canino / Bulldog Francés',
+          patientId: 'PAC-2026-041'
+        },
+        items: [
+          { code: 'GRM-04', description: 'Baño Terapéutico Dermatológico + Limpieza de Pliegues Faciales', quantity: 1, unitPrice: 40.00, isExempt: false, total: 40.00 }
+        ],
+        subtotal: 40.00,
+        taxableAmount: 40.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 6.40,
+        totalUsd: 46.40,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((46.40 * bcvRate).toFixed(2)),
+        paymentMethod: 'Pago Móvil Banplus C2P',
+        paymentReference: 'C2P-BANPLUS-881290',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-2)} a las 10:15 AM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-2), time: '10:15 AM', recipientEmail: 'andres.morales@outlook.com', sentBy: 'Carlos Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+      {
+        id: 'INV-2026-000414',
+        invoiceNumber: 'FACT-2026-000414',
+        controlNumber: '00-008934',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-4),
+        time: '04:20 PM',
+        timestamp: `${this.getDateWithOffset(-4)}T16:20:00`,
+        cashier: 'Dra. Sofía Mendoza (Recepción Médica)',
+        division: 'clinica',
+        divisionLabel: '🩺 Clínica Veterinaria 24H & Cirugía',
+        customer: {
+          name: 'María Eugenia Faría',
+          rif: 'V-16.784.320',
+          email: 'mariaeugenia.f@gmail.com',
+          phone: '+58 (416) 555-8901',
+          address: 'Sector Paraíso, Av. 20, Maracaibo'
+        },
+        pet: {
+          name: 'Luna',
+          species: 'Felino / Persa Blanco',
+          patientId: 'PAC-2026-050'
+        },
+        items: [
+          { code: 'CLN-04', description: 'Perfil Bioquímico IDEXX Catalyst One + Ecografía Abdominal', quantity: 1, unitPrice: 95.00, isExempt: false, total: 95.00 }
+        ],
+        subtotal: 95.00,
+        taxableAmount: 95.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 15.20,
+        totalUsd: 110.20,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((110.20 * bcvRate).toFixed(2)),
+        paymentMethod: 'Zelle Wells Fargo',
+        paymentReference: 'ZEL-881920149',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-4)} a las 04:25 PM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-4), time: '04:25 PM', recipientEmail: 'mariaeugenia.f@gmail.com', sentBy: 'Dra. Sofía Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+
+      // 3. FACTURACIÓN DE LA QUINCENA (9 y 12 días atrás)
+      {
+        id: 'INV-2026-000413',
+        invoiceNumber: 'FACT-2026-000413',
+        controlNumber: '00-008933',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-9),
+        time: '01:15 PM',
+        timestamp: `${this.getDateWithOffset(-9)}T13:15:00`,
+        cashier: 'Dalybell Ramírez (Caja Central)',
+        division: 'hotel',
+        divisionLabel: '🏨 Admisión Hotel 5★ & Guardería',
+        customer: {
+          name: 'Roberto González',
+          rif: 'V-12.441.980',
+          email: 'r.gonzalez@inversiones.com',
+          phone: '+58 (414) 601-2233',
+          address: 'Urb. La Lago, Calle 73, Maracaibo'
+        },
+        pet: {
+          name: 'Max',
+          species: 'Canino / Pastor Alemán',
+          patientId: 'PAC-2026-058'
+        },
+        items: [
+          { code: 'HTL-01', description: 'Suite Bioclimática VIP Hotel Canino (3 Noches) + Circuito de Spa & Agility', quantity: 1, unitPrice: 180.00, isExempt: false, total: 180.00 }
+        ],
+        subtotal: 180.00,
+        taxableAmount: 180.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 28.80,
+        totalUsd: 208.80,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((208.80 * bcvRate).toFixed(2)),
+        paymentMethod: 'Pago Móvil Banplus C2P',
+        paymentReference: 'C2P-BANPLUS-776211',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-9)} a las 01:20 PM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-9), time: '01:20 PM', recipientEmail: 'r.gonzalez@inversiones.com', sentBy: 'Dalybell Ramírez', status: 'Entregado OK' }
+        ],
+        printCount: 2
+      },
+      {
+        id: 'INV-2026-000412',
+        invoiceNumber: 'FACT-2026-000412',
+        controlNumber: '00-008932',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-12),
+        time: '11:40 AM',
+        timestamp: `${this.getDateWithOffset(-12)}T11:40:00`,
+        cashier: 'Mariana Briceño (Concierge Tienda)',
+        division: 'tienda',
+        divisionLabel: '🛍️ Tienda de Lujo & Farmacia Veterinaria',
+        customer: {
+          name: 'Elena Corzo de Martínez',
+          rif: 'V-15.309.214',
+          email: 'elena.corzo@hotmail.com',
+          phone: '+58 (424) 688-9900',
+          address: 'Urb. El Rosal, Maracaibo'
+        },
+        pet: {
+          name: 'Rocky',
+          species: 'Canino / Beagle',
+          patientId: 'PAC-2026-064'
+        },
+        items: [
+          { code: 'TND-03', description: 'Cama Ortopédica Memory Foam + Suplemento Articular Condroitina', quantity: 1, unitPrice: 75.00, isExempt: false, total: 75.00 }
+        ],
+        subtotal: 75.00,
+        taxableAmount: 75.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 12.00,
+        totalUsd: 87.00,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((87.00 * bcvRate).toFixed(2)),
+        paymentMethod: 'Tarjeta Débito Bancaria (POS)',
+        paymentReference: 'POS-099411',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-12)} a las 11:45 AM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-12), time: '11:45 AM', recipientEmail: 'elena.corzo@hotmail.com', sentBy: 'Mariana Briceño', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+
+      // 4. FACTURACIÓN DEL MES (20 y 26 días atrás)
+      {
+        id: 'INV-2026-000411',
+        invoiceNumber: 'FACT-2026-000411',
+        controlNumber: '00-008931',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-20),
+        time: '03:00 PM',
+        timestamp: `${this.getDateWithOffset(-20)}T15:00:00`,
+        cashier: 'Dra. Sofía Mendoza (Recepción Médica)',
+        division: 'clinica',
+        divisionLabel: '🩺 Clínica Veterinaria 24H & Cirugía',
+        customer: {
+          name: 'Dalybell Ramírez Montilla',
+          rif: 'V-18.452.910',
+          email: 'dalybell@mrspets.com',
+          phone: '+58 (414) 389-1102',
+          address: 'Av. 3Y San Martín, Bella Vista, Maracaibo'
+        },
+        pet: {
+          name: 'Princesa',
+          species: 'Canino / Border Collie VIP',
+          patientId: 'PAC-2026-018'
+        },
+        items: [
+          { code: 'CLN-05', description: 'Limpieza Dental por Ultrasonido sin Anestesia + Profilaxis', quantity: 1, unitPrice: 60.00, isExempt: false, total: 60.00 }
+        ],
+        subtotal: 60.00,
+        taxableAmount: 60.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 9.60,
+        totalUsd: 69.60,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((69.60 * bcvRate).toFixed(2)),
+        paymentMethod: 'Pago Móvil Banplus C2P',
+        paymentReference: 'C2P-BANPLUS-663219',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-20)} a las 03:05 PM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-20), time: '03:05 PM', recipientEmail: 'dalybell@mrspets.com', sentBy: 'Dra. Sofía Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+      {
+        id: 'INV-2026-000410',
+        invoiceNumber: 'FACT-2026-000410',
+        controlNumber: '00-008930',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-26),
+        time: '10:00 AM',
+        timestamp: `${this.getDateWithOffset(-26)}T10:00:00`,
+        cashier: 'Carlos Mendoza (Caja Grooming)',
+        division: 'grooming',
+        divisionLabel: '✂️ Grooming & Spa Canino/Felino',
+        customer: {
+          name: 'Guillermo Belloso',
+          rif: 'V-08.991.240',
+          email: 'gbelloso@belloso.com.ve',
+          phone: '+58 (414) 631-0022',
+          address: 'Av. Bella Vista con Calle 72, Maracaibo'
+        },
+        pet: {
+          name: 'Thor',
+          species: 'Canino / Rottweiler',
+          patientId: 'PAC-2026-071'
+        },
+        items: [
+          { code: 'GRM-05', description: 'Baño Antiparasitario + Deslanado Profundo Raza Gigante', quantity: 1, unitPrice: 55.00, isExempt: false, total: 55.00 }
+        ],
+        subtotal: 55.00,
+        taxableAmount: 55.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 8.80,
+        totalUsd: 63.80,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((63.80 * bcvRate).toFixed(2)),
+        paymentMethod: 'Efectivo USD',
+        paymentReference: 'CASH-USD-5510',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-26)} a las 10:05 AM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-26), time: '10:05 AM', recipientEmail: 'gbelloso@belloso.com.ve', sentBy: 'Carlos Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+
+      // 5. FACTURACIÓN DEL SEMESTRE (50 y 95 días atrás)
+      {
+        id: 'INV-2026-000409',
+        invoiceNumber: 'FACT-2026-000409',
+        controlNumber: '00-008929',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-50),
+        time: '12:00 PM',
+        timestamp: `${this.getDateWithOffset(-50)}T12:00:00`,
+        cashier: 'Dalybell Ramírez (Caja Central)',
+        division: 'hotel',
+        divisionLabel: '🏨 Admisión Hotel 5★ & Guardería',
+        customer: {
+          name: 'Patricia Villalobos',
+          rif: 'V-19.874.521-0',
+          email: 'patricia.v@gmail.com',
+          phone: '+58 (414) 679-9510',
+          address: 'Av. El Milagro, Res. El Faro, Maracaibo'
+        },
+        pet: {
+          name: 'Simba',
+          species: 'Canino / Golden Retriever',
+          patientId: 'PAC-2026-035'
+        },
+        items: [
+          { code: 'HTL-02', description: 'Hospedaje Suites Familiares Bioclimáticas (5 Días) + Menú Gourmet Barf', quantity: 1, unitPrice: 250.00, isExempt: false, total: 250.00 }
+        ],
+        subtotal: 250.00,
+        taxableAmount: 250.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 40.00,
+        totalUsd: 290.00,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((290.00 * bcvRate).toFixed(2)),
+        paymentMethod: 'Stripe Card Vault USD',
+        paymentReference: 'ch_2Mb88109MrsPets',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-50)} a las 12:05 PM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-50), time: '12:05 PM', recipientEmail: 'patricia.v@gmail.com', sentBy: 'Dalybell Ramírez', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      },
+      {
+        id: 'INV-2026-000408',
+        invoiceNumber: 'FACT-2026-000408',
+        controlNumber: '00-008928',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-95),
+        time: '02:30 PM',
+        timestamp: `${this.getDateWithOffset(-95)}T14:30:00`,
+        cashier: 'Dra. Sofía Mendoza (Recepción Médica)',
+        division: 'clinica',
+        divisionLabel: '🩺 Clínica Veterinaria 24H & Cirugía',
+        customer: {
+          name: 'Carlos Mendoza',
+          rif: 'V-14.882.109',
+          email: 'carlos.mendoza@email.com',
+          phone: '+58 (412) 555-1234',
+          address: 'Urb. Virginia, Maracaibo'
+        },
+        pet: {
+          name: 'Fifi',
+          species: 'Canino / Poodle Toy VIP',
+          patientId: 'PAC-2026-022'
+        },
+        items: [
+          { code: 'CLN-06', description: 'Cirugía Menor Esterilización Ovariohisterectomía Láser', quantity: 1, unitPrice: 160.00, isExempt: false, total: 160.00 }
+        ],
+        subtotal: 160.00,
+        taxableAmount: 160.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 25.60,
+        totalUsd: 185.60,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((185.60 * bcvRate).toFixed(2)),
+        paymentMethod: 'Tarjeta Débito Banplus (POS)',
+        paymentReference: 'POS-BANPLUS-330198',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-95)} a las 02:35 PM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-95), time: '02:35 PM', recipientEmail: 'carlos.mendoza@email.com', sentBy: 'Dra. Sofía Mendoza', status: 'Entregado OK' }
+        ],
+        printCount: 2
+      },
+
+      // 6. FACTURACIÓN DEL AÑO (210 días atrás)
+      {
+        id: 'INV-2026-000407',
+        invoiceNumber: 'FACT-2026-000407',
+        controlNumber: '00-008927',
+        fiscalSeries: 'SERIE-A',
+        date: this.getDateWithOffset(-210),
+        time: '11:00 AM',
+        timestamp: `${this.getDateWithOffset(-210)}T11:00:00`,
+        cashier: 'Dalybell Ramírez (Caja Central)',
+        division: 'clinica',
+        divisionLabel: '🩺 Clínica Veterinaria 24H & Cirugía',
+        customer: {
+          name: 'Dalybell Ramírez Montilla',
+          rif: 'V-18.452.910',
+          email: 'dalybell@mrspets.com',
+          phone: '+58 (414) 389-1102',
+          address: 'Av. 3Y San Martín, Bella Vista, Maracaibo'
+        },
+        pet: {
+          name: 'Princesa',
+          species: 'Canino / Border Collie VIP',
+          patientId: 'PAC-2026-018'
+        },
+        items: [
+          { code: 'CLN-07', description: 'Colocación de Microchip Internacional ISO 11784/11785 + Pasaporte Sanitario', quantity: 1, unitPrice: 50.00, isExempt: false, total: 50.00 }
+        ],
+        subtotal: 50.00,
+        taxableAmount: 50.00,
+        exemptAmount: 0.00,
+        ivaRate: 0.16,
+        ivaAmount: 8.00,
+        totalUsd: 58.00,
+        bcvRate: bcvRate,
+        totalVes: parseFloat((58.00 * bcvRate).toFixed(2)),
+        paymentMethod: 'Pago Móvil Banplus C2P',
+        paymentReference: 'C2P-BANPLUS-119280',
+        status: 'EMITIDA',
+        emailStatus: `Enviada el ${this.getDateWithOffset(-210)} a las 11:05 AM`,
+        emailHistory: [
+          { date: this.getDateWithOffset(-210), time: '11:05 AM', recipientEmail: 'dalybell@mrspets.com', sentBy: 'Dalybell Ramírez', status: 'Entregado OK' }
+        ],
+        printCount: 1
+      }
+    ];
+
+    this.saveState();
+  }
+
+  // ==================== MÉTODOS DE FILTRADO Y BÚSQUEDA ====================
+  getFilteredInvoices() {
+    const today = this.getTodayDateStr();
+
+    return this.invoices.filter(inv => {
+      // 1. Filtro por fecha específica de visita ("¿Cuándo vino el cliente?")
+      if (this.invoiceFilterDate) {
+        if (inv.date !== this.invoiceFilterDate) return false;
+      } else {
+        // 2. Filtro por período solicitado
+        const daysDiff = this.getDaysDiffFromToday(inv.date);
+
+        if (this.invoiceFilterPeriod === 'day') {
+          if (inv.date !== today && daysDiff !== 0) return false;
+        } else if (this.invoiceFilterPeriod === 'week') {
+          if (daysDiff < 0 || daysDiff > 7) return false;
+        } else if (this.invoiceFilterPeriod === 'quincena') {
+          if (daysDiff < 0 || daysDiff > 15) return false;
+        } else if (this.invoiceFilterPeriod === 'month') {
+          if (daysDiff < 0 || daysDiff > 30) return false;
+        } else if (this.invoiceFilterPeriod === 'semester') {
+          if (daysDiff < 0 || daysDiff > 180) return false;
+        } else if (this.invoiceFilterPeriod === 'year') {
+          if (daysDiff < 0 || daysDiff > 365) return false;
+        }
+        // 'all': no date restriction
+      }
+
+      // 3. Filtro por división contable
+      if (this.invoiceDivisionFilter && this.invoiceDivisionFilter !== 'all') {
+        if (inv.division !== this.invoiceDivisionFilter) return false;
+      }
+
+      // 4. Filtro por texto de búsqueda libre (cliente, RIF, factura, mascota, cajero)
+      if (this.invoiceSearchQuery && this.invoiceSearchQuery.trim()) {
+        const q = this.invoiceSearchQuery.trim().toLowerCase();
+        const num = (inv.invoiceNumber || '').toLowerCase();
+        const ctrl = (inv.controlNumber || '').toLowerCase();
+        const cName = ((inv.customer && inv.customer.name) || '').toLowerCase();
+        const cRif = ((inv.customer && inv.customer.rif) || '').toLowerCase();
+        const cEmail = ((inv.customer && inv.customer.email) || '').toLowerCase();
+        const pName = ((inv.pet && inv.pet.name) || '').toLowerCase();
+        const cashier = (inv.cashier || '').toLowerCase();
+        const itemsStr = (inv.items || []).map(i => i.description || '').join(' ').toLowerCase();
+
+        const match = num.includes(q) || ctrl.includes(q) || cName.includes(q) ||
+                      cRif.includes(q) || cEmail.includes(q) || pName.includes(q) ||
+                      cashier.includes(q) || itemsStr.includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    }).sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+  }
+
+  setInvoiceFilterPeriod(period) {
+    this.invoiceFilterPeriod = period;
+    this.invoiceFilterDate = ''; // Limpiar filtro de fecha individual para dar paso al período
+    this.render();
+  }
+
+  setInvoiceFilterDate(dateStr) {
+    this.invoiceFilterDate = String(dateStr || '').trim();
+    this.render();
+  }
+
+  clearInvoiceDateFilter() {
+    this.invoiceFilterDate = '';
+    this.render();
+  }
+
+  setInvoiceSearchQuery(query) {
+    this.invoiceSearchQuery = String(query || '').trim();
+    this.render();
+  }
+
+  setInvoiceDivisionFilter(division) {
+    this.invoiceDivisionFilter = division;
+    this.render();
+  }
+
+  scrollToInvoicesSection() {
+    if (typeof document === 'undefined') return;
+    const sec = document.getElementById('admin-section-fiscal-invoices');
+    if (sec) {
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      sec.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+      sec.style.borderColor = '#38BDF8';
+      sec.style.boxShadow = '0 0 24px rgba(56, 189, 248, 0.4)';
+      setTimeout(() => {
+        sec.style.borderColor = '#D4AF37';
+        sec.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)';
+      }, 2000);
+    }
+  }
+
+  // ==================== VISOR OFICIAL SENIAT & ACCIONES DE FACTURA ====================
+  openInvoiceViewer(invoiceId) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (!inv) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('No se encontró la factura fiscal seleccionada.', 'warning');
+      }
+      return;
+    }
+
+    const bcvRate = inv.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const itemsHtml = (inv.items || []).map((it, idx) => `
+      <tr style="border-bottom:1px solid #E2E8F0; font-size:0.83rem;">
+        <td style="padding:10px 8px; text-align:center; font-weight:800; color:#475569;">${idx + 1}</td>
+        <td style="padding:10px 8px; font-weight:700; color:#0F172A;">
+          <div>${it.description}</div>
+          <div style="font-size:0.72rem; color:#64748B;">Código: ${it.code || 'SRV-' + (idx + 1)}</div>
+        </td>
+        <td style="padding:10px 8px; text-align:center; font-weight:800; color:#0F172A;">${it.quantity}</td>
+        <td style="padding:10px 8px; text-align:right; font-weight:700; color:#334155;">$${it.unitPrice.toFixed(2)}</td>
+        <td style="padding:10px 8px; text-align:center; font-weight:800; color:${it.isExempt ? '#059669' : '#3B82F6'}; font-size:0.75rem;">
+          ${it.isExempt ? 'EXENTO' : '16% (G)'}
+        </td>
+        <td style="padding:10px 8px; text-align:right; font-weight:900; color:#0F172A;">$${it.total.toFixed(2)}</td>
+        <td style="padding:10px 8px; text-align:right; font-weight:800; color:#059669;">Bs. ${(it.total * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      </tr>
+    `).join('');
+
+    const emailHistoryHtml = (inv.emailHistory && inv.emailHistory.length > 0)
+      ? inv.emailHistory.map(h => `
+          <div style="font-size:0.75rem; color:#475569; padding:4px 0; border-bottom:1px dashed #E2E8F0; display:flex; justify-content:space-between; flex-wrap:wrap;">
+            <span>📅 ${h.date} - ${h.time} | Destinatario: <strong>${h.recipientEmail}</strong></span>
+            <span style="color:#059669; font-weight:700;">✓ ${h.status}</span>
+          </div>
+        `).join('')
+      : '<div style="font-size:0.75rem; color:#94A3B8; font-style:italic;">No hay envíos adicionales registrados.</div>';
+
+    const modalHtml = `
+      <div id="invoice-fiscal-print-container" style="background:#FFFFFF; color:#0F172A; border-radius:18px; border:2px solid #D4AF37; max-width:820px; margin:auto; box-shadow:0 12px 36px rgba(0,0,0,0.25); overflow:hidden; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <!-- ENCABEZADO OFICIAL SENIAT -->
+        <div style="background:linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color:#FFFFFF; padding:22px 26px; border-bottom:3px solid #D4AF37; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="font-size:0.75rem; font-weight:900; letter-spacing:1px; color:#D4AF37; text-transform:uppercase;">República Bolivariana de Venezuela • SENIAT</div>
+            <h2 style="margin:4px 0 2px 0; font-size:1.4rem; font-weight:900; color:#FFFFFF;">BIG & LITTLE DOGS, C.A.</h2>
+            <div style="font-size:0.95rem; font-weight:800; color:#FBBF24;">MRS. PETS MARACAIBO</div>
+            <div style="font-size:0.78rem; color:#CBD5E1; margin-top:4px;">
+              <strong>RIF: J-40120233-0</strong> • Domicilio Fiscal: Av. 2 El Milagro con Calle 78, diagonal a C.C. Lago Mall, Maracaibo, Estado Zulia.<br>
+              Teléfono: +58 (261) 792-8844 / +58 (414) 639-9510 • Email: administracion@mrspets.com
+            </div>
+          </div>
+          <div style="text-align:right; background:rgba(255,255,255,0.06); padding:12px 18px; border-radius:12px; border:1px solid rgba(212,175,55,0.4);">
+            <div style="font-size:0.75rem; font-weight:800; color:#D4AF37; text-transform:uppercase;">Factura Fiscal Digital</div>
+            <div style="font-size:1.35rem; font-weight:900; color:#38BDF8; letter-spacing:0.5px;">${inv.invoiceNumber}</div>
+            <div style="font-size:0.8rem; font-weight:800; color:#CBD5E1; margin-top:2px;">N° de Control SENIAT: <strong style="color:#FFFFFF;">${inv.controlNumber}</strong></div>
+            <div style="font-size:0.75rem; color:#94A3B8;">Serie Fiscal: ${inv.fiscalSeries || 'SERIE-A'}</div>
+          </div>
+        </div>
+
+        <div style="padding:22px 26px;">
+          <!-- METADATOS DE EMISIÓN & RECEPTOR -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:18px;">
+            <!-- Datos del Cliente -->
+            <div>
+              <div style="font-size:0.75rem; font-weight:900; color:#64748B; text-transform:uppercase; margin-bottom:6px;">👤 Datos del Receptor / Cliente:</div>
+              <div style="font-size:0.95rem; font-weight:900; color:#0F172A;">${inv.customer.name}</div>
+              <div style="font-size:0.82rem; color:#334155; margin-top:2px;"><strong>C.I. / RIF:</strong> ${inv.customer.rif}</div>
+              <div style="font-size:0.82rem; color:#334155;"><strong>Teléfono:</strong> ${inv.customer.phone || 'N/A'}</div>
+              <div style="font-size:0.82rem; color:#334155;"><strong>Email:</strong> ${inv.customer.email || 'N/A'}</div>
+              <div style="font-size:0.78rem; color:#64748B;"><strong>Dirección:</strong> ${inv.customer.address || 'Maracaibo, Estado Zulia'}</div>
+            </div>
+
+            <!-- Datos de Operación & Paciente -->
+            <div>
+              <div style="font-size:0.75rem; font-weight:900; color:#64748B; text-transform:uppercase; margin-bottom:6px;">🐾 Paciente & Operación Contable:</div>
+              <div style="font-size:0.9rem; font-weight:800; color:#0F172A;">Mascota: <strong style="color:#D4AF37;">${inv.pet.name}</strong> (${inv.pet.species})</div>
+              <div style="font-size:0.8rem; color:#475569; margin-top:2px;"><strong>Historial Paciente:</strong> ${inv.pet.patientId || 'PAC-VIP'}</div>
+              <div style="font-size:0.8rem; color:#475569;"><strong>Fecha de Emisión:</strong> 📅 ${inv.date} a las ⏰ ${inv.time}</div>
+              <div style="font-size:0.8rem; color:#475569;"><strong>Cajero / Emisor:</strong> ${inv.cashier}</div>
+              <div style="font-size:0.8rem; color:#475569;"><strong>División:</strong> ${inv.divisionLabel}</div>
+            </div>
+          </div>
+
+          <!-- TABLA DE DETALLE DE ÍTEMS -->
+          <div style="overflow-x:auto; border:1px solid #CBD5E1; border-radius:10px; margin-bottom:18px;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr style="background:#F1F5F9; border-bottom:1.5px solid #CBD5E1; font-size:0.75rem; text-transform:uppercase; color:#475569;">
+                  <th style="padding:10px 8px; text-align:center;">#</th>
+                  <th style="padding:10px 8px; text-align:left;">Descripción del Bien / Servicio Contable</th>
+                  <th style="padding:10px 8px; text-align:center;">Cant.</th>
+                  <th style="padding:10px 8px; text-align:right;">P. Unit ($)</th>
+                  <th style="padding:10px 8px; text-align:center;">Alícuota</th>
+                  <th style="padding:10px 8px; text-align:right;">Total ($)</th>
+                  <th style="padding:10px 8px; text-align:right;">Total (Bs.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TOTALES Y LIQUIDACIÓN TRIBUTARIA SENIAT -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin-bottom:20px;">
+            <!-- Forma de Pago y Tasa Oficial -->
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; font-size:0.82rem;">
+              <div style="font-weight:900; color:#0F172A; margin-bottom:6px;">💳 Modalidad de Pago & Referencia:</div>
+              <div>Método: <strong>${inv.paymentMethod}</strong></div>
+              <div>Referencia Transaccional: <strong style="color:#0284C7;">${inv.paymentReference || 'N/A'}</strong></div>
+              <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #CBD5E1; color:#047857; font-weight:800;">
+                🏛️ Tasa Oficial BCV: ${bcvRate.toFixed(2)} Bs./USD (Gaceta Oficial)
+              </div>
+              <div style="font-size:0.74rem; color:#64748B; margin-top:4px;">
+                Conforme a la providencia administrativa del SENIAT y la Ley de Impuesto al Valor Agregado (IVA).
+              </div>
+            </div>
+
+            <!-- Liquidación Fiscal -->
+            <div style="background:#0F172A; color:#FFFFFF; border:1.5px solid #D4AF37; border-radius:12px; padding:14px; font-size:0.85rem;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#CBD5E1;">Subtotal Exento / No Sujeto:</span>
+                <strong style="color:#10B981;">$${(inv.exemptAmount || 0).toFixed(2)} USD</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#CBD5E1;">Base Imponible Gravable (16%):</span>
+                <strong>$${(inv.taxableAmount || 0).toFixed(2)} USD</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.15);">
+                <span style="color:#FBBF24;">IVA 16% SENIAT:</span>
+                <strong style="color:#FBBF24;">$${(inv.ivaAmount || 0).toFixed(2)} USD (Bs. ${((inv.ivaAmount || 0) * bcvRate).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})})</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+                <span style="font-size:1.05rem; font-weight:900; color:#FFFFFF;">TOTAL FACTURA:</span>
+                <span style="font-size:1.35rem; font-weight:900; color:#38BDF8;">$${inv.totalUsd.toFixed(2)} USD</span>
+              </div>
+              <div style="text-align:right; font-size:0.95rem; font-weight:900; color:#34D399;">
+                Bs. ${inv.totalVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOQUE DE ATENCIÓN AL CLIENTE: REENVÍO POR CORREO ELECTRÓNICO & WHATSAPP -->
+          <div style="background:#EFF6FF; border:1.5px solid #93C5FD; border-radius:14px; padding:16px; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+              <div>
+                <strong style="color:#1E3A8A; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+                  <span>📧 Atención al Cliente: Reenvío de Factura por Correo Electrónico</span>
+                </strong>
+                <p style="margin:3px 0 0 0; font-size:0.78rem; color:#3B82F6;">
+                  Si el cliente manifiesta que no le llegó su factura o cambió de correo, confirme la dirección y presione el botón de reenvío.
+                </p>
+              </div>
+              <span class="badge" style="background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; font-size:0.75rem; padding:4px 8px; border-radius:6px; font-weight:800;">
+                Estatus: ${inv.emailStatus}
+              </span>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <input type="email" id="invoice-resend-email-target" value="${inv.customer.email || ''}" placeholder="correo.cliente@ejemplo.com" style="flex:1; min-width:260px; padding:9px 14px; border-radius:8px; border:1.5px solid #93C5FD; font-size:0.85rem; font-weight:700; color:#0F172A; background:#FFFFFF;">
+              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.resendInvoiceEmail('${inv.id}', document.getElementById('invoice-resend-email-target').value)" style="background:linear-gradient(135deg, #2563EB, #1D4ED8); color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,0.3); display:inline-flex; align-items:center; gap:6px;">
+                <span>📧 Reenviar por Correo Ahora</span>
+              </button>
+            </div>
+
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid #BFDBFE;">
+              <div style="font-size:0.75rem; font-weight:800; color:#1E40AF; margin-bottom:4px;">Historial de Envíos al Cliente:</div>
+              ${emailHistoryHtml}
+            </div>
+          </div>
+
+          <!-- BOTONERA DE ACCIÓN Y CIERRE -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid #E2E8F0; padding-top:16px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.printInvoiceDirectly('${inv.id}')" style="background:#0F172A; color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <span>🖨️ Imprimir Factura Fiscal</span>
+              </button>
+              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.sendInvoiceWhatsApp('${inv.id}')" style="background:#10B981; color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <span>💬 Enviar por WhatsApp</span>
+              </button>
+              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.downloadInvoiceJson('${inv.id}')" style="background:#F1F5F9; color:#334155; font-weight:800; padding:10px 14px; border-radius:10px; border:1px solid #CBD5E1; cursor:pointer;">
+                <span>📥 Descargar Formato JSON</span>
+              </button>
+            </div>
+            <button type="button" class="btn btn-sm" onclick="app.closeModal('general-modal')" style="background:#E2E8F0; color:#1E293B; font-weight:800; padding:10px 20px; border-radius:10px; border:none; cursor:pointer;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.showModal(modalHtml);
+  }
+
+  resendInvoiceEmail(invoiceId, targetEmail) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    const email = String(targetEmail || '').trim();
+    if (!email || !email.includes('@')) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('Por favor ingrese un correo electrónico válido.', 'warning');
+      }
+      return;
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = this.getTodayDateStr();
+
+    inv.customer.email = email;
+    inv.status = 'REENVIADA';
+    inv.emailStatus = `Reenviada por correo a ${email} el ${dateStr} a las ${timeStr}`;
+    if (!inv.emailHistory) inv.emailHistory = [];
+    inv.emailHistory.unshift({
+      date: dateStr,
+      time: timeStr,
+      recipientEmail: email,
+      sentBy: 'Personal Administrativo',
+      status: 'Reenviado con éxito (HTTP 200 OK)'
+    });
+
+    this.saveState();
+    this.render();
+
+    // Reabrir el visor con la información actualizada
+    this.openInvoiceViewer(invoiceId);
+
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`✨ Factura ${inv.invoiceNumber} reenviada exitosamente a ${email}`, 'success');
+    }
+  }
+
+  quickResendInvoice(invoiceId) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+    const targetEmail = (inv.customer && inv.customer.email) || 'cliente@mrspets.com';
+    this.resendInvoiceEmail(invoiceId, targetEmail);
+  }
+
+  printInvoiceDirectly(invoiceId) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (inv) {
+      inv.printCount = (inv.printCount || 0) + 1;
+      this.saveState();
+    }
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      window.print();
+    } else if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`Preparando impresión de Factura ${inv ? inv.invoiceNumber : ''}...`, 'info');
+    }
+  }
+
+  sendInvoiceWhatsApp(invoiceId) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+
+    const phoneClean = (inv.customer.phone || '').replace(/[^0-9]/g, '');
+    const bcvRate = inv.bcvRate || 48.50;
+    const msg = `🐾 *FACTURA FISCAL DIGITAL - MRS. PETS MARACAIBO* 🐾
+` +
+                `*Factura N°:* ${inv.invoiceNumber}
+` +
+                `*Control SENIAT:* ${inv.controlNumber}
+` +
+                `*Cliente:* ${inv.customer.name} (RIF: ${inv.customer.rif})
+` +
+                `*Paciente:* ${inv.pet.name} (${inv.pet.species})
+` +
+                `*Fecha:* ${inv.date} ${inv.time}
+` +
+                `*División:* ${inv.divisionLabel}
+` +
+                `------------------------------------
+` +
+                `*Total USD:* $${inv.totalUsd.toFixed(2)} USD
+` +
+                `*Total Bs. (BCV ${bcvRate}):* Bs. ${inv.totalVes.toLocaleString('es-VE')}
+` +
+                `*Método:* ${inv.paymentMethod}
+` +
+                `------------------------------------
+` +
+                `¡Gracias por confiar en Mrs. Pets Maracaibo! Big & Little Dogs C.A. RIF: J-40120233-0`;
+
+    const url = `https://wa.me/${phoneClean || '584143891102'}?text=${encodeURIComponent(msg)}`;
+    if (typeof window !== 'undefined' && typeof window.open === 'function') {
+      window.open(url, '_blank');
+    }
+  }
+
+  downloadInvoiceJson(invoiceId) {
+    const inv = this.invoices.find(i => i.id === invoiceId);
+    if (!inv) return;
+    const str = JSON.stringify(inv, null, 2);
+    if (typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+      const blob = new Blob([str], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FACTURA_${inv.invoiceNumber}_SENIAT.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  exportInvoicesJson() {
+    const filtered = this.getFilteredInvoices();
+    const payload = {
+      empresa: 'Big & Little Dogs, C.A. (Mrs. Pets Maracaibo)',
+      rif: 'J-40120233-0',
+      fechaExportacion: new Date().toISOString(),
+      filtroAplicado: {
+        periodo: this.invoiceFilterPeriod,
+        fechaVisita: this.invoiceFilterDate,
+        busqueda: this.invoiceSearchQuery,
+        division: this.invoiceDivisionFilter
+      },
+      cantidadFacturas: filtered.length,
+      facturas: filtered
+    };
+
+    if (typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HISTORICO_FACTURAS_SENIAT_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`📥 Histórico de ${filtered.length} facturas descargado exitosamente.`, 'success');
+      }
+    }
+    return payload;
+  }
+
+  // ==================== MÓDULO GENERAR NUEVA FACTURA FISCAL ====================
+  openCreateInvoiceModal() {
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const nextNum = 419 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0);
+    const invNumStr = `FACT-2026-000${nextNum}`;
+    const ctrlNumStr = `00-0089${39 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0)}`;
+
+    const modalHtml = `
+      <div style="background:#FFFFFF; color:#0F172A; border-radius:18px; border:2px solid #D4AF37; max-width:760px; margin:auto; box-shadow:0 12px 36px rgba(0,0,0,0.25); overflow:hidden; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="background:linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color:#FFFFFF; padding:20px 24px; border-bottom:3px solid #D4AF37; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="margin:0; font-size:1.25rem; font-weight:900; color:#FFFFFF; display:flex; align-items:center; gap:8px;">
+              <span>🧾 Emisión de Factura Fiscal Oficial SENIAT</span>
+            </h3>
+            <p style="margin:3px 0 0 0; font-size:0.8rem; color:#CBD5E1;">
+              Big & Little Dogs, C.A. (RIF: J-40120233-0) • Control Tributario Maracaibo
+            </p>
+          </div>
+          <button type="button" class="btn btn-sm" onclick="app.closeModal('general-modal')" style="background:transparent; color:#FFFFFF; font-size:1.3rem; border:none; cursor:pointer;">✕</button>
+        </div>
+
+        <form id="form-create-fiscal-invoice" onsubmit="event.preventDefault(); adminFinanceEngine.handleCreateInvoiceSubmit(this);" style="padding:22px 24px;">
+          <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; margin-bottom:14px; background:#F8FAFC; padding:12px; border-radius:10px; border:1px solid #E2E8F0;">
+            <div>
+              <span style="font-size:0.75rem; color:#64748B; font-weight:800;">N° FACTURA ASIGNADO:</span>
+              <div style="font-size:1.05rem; font-weight:900; color:#0284C7;">${invNumStr}</div>
+              <input type="hidden" name="invoiceNumber" value="${invNumStr}">
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:#64748B; font-weight:800;">N° CONTROL SENIAT:</span>
+              <div style="font-size:1.05rem; font-weight:900; color:#0F172A;">${ctrlNumStr}</div>
+              <input type="hidden" name="controlNumber" value="${ctrlNumStr}">
+            </div>
+          </div>
+
+          <!-- SELECTOR RÁPIDO DE CLIENTE FRECUENTE -->
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.8rem; font-weight:800; color:#475569; margin-bottom:4px;">
+              ⚡ Autocompletar con Cliente Frecuente:
+            </label>
+            <select onchange="adminFinanceEngine.prefillCustomerData(this.value)" style="width:100%; padding:8px 12px; border-radius:8px; border:1.5px solid #CBD5E1; font-weight:700; font-size:0.85rem; background:#FFFFFF;">
+              <option value="">-- Seleccionar cliente o ingresar manualmente abajo --</option>
+              <option value="dalybell">Dalybell Ramírez Montilla (V-18.452.910 • Princesa - Border Collie)</option>
+              <option value="carlos">Carlos Mendoza (V-14.882.109 • Fifi - Poodle Toy)</option>
+              <option value="patricia">Patricia Villalobos (V-19.874.521-0 • Simba - Golden Retriever)</option>
+              <option value="andres">Andrés Morales (V-20.145.890 • Buddy - Bulldog Francés)</option>
+              <option value="mariaeugenia">María Eugenia Faría (V-16.784.320 • Luna - Gato Persa)</option>
+              <option value="roberto">Roberto González (V-12.441.980 • Max - Pastor Alemán)</option>
+            </select>
+          </div>
+
+          <!-- DATOS DEL CLIENTE -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Nombre / Razón Social *</label>
+              <input type="text" name="customerName" id="create-customer-name" required placeholder="Ej: Dalybell Ramírez Montilla" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">C.I. / RIF *</label>
+              <input type="text" name="customerRif" id="create-customer-rif" required placeholder="Ej: V-18.452.910" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Correo Electrónico *</label>
+              <input type="email" name="customerEmail" id="create-customer-email" required placeholder="correo@ejemplo.com" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Teléfono</label>
+              <input type="text" name="customerPhone" id="create-customer-phone" placeholder="+58 (414) 000-0000" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem;">
+            </div>
+          </div>
+
+          <!-- DATOS DE LA MASCOTA Y PERSONAL -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Nombre de la Mascota *</label>
+              <input type="text" name="petName" id="create-pet-name" required placeholder="Ej: Princesa" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Especie / Raza</label>
+              <input type="text" name="petSpecies" id="create-pet-species" placeholder="Ej: Canino / Border Collie" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">Cajero / Staff que Factura *</label>
+              <select name="cashier" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+                <option value="Dalybell Ramírez (Caja Central)">Dalybell Ramírez (Caja Central)</option>
+                <option value="Dra. Sofía Mendoza (Recepción Médica)">Dra. Sofía Mendoza (Recepción Médica)</option>
+                <option value="Carlos Mendoza (Caja Grooming)">Carlos Mendoza (Caja Grooming)</option>
+                <option value="Mariana Briceño (Concierge Tienda)">Mariana Briceño (Concierge Tienda)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.78rem; font-weight:800; color:#475569; margin-bottom:4px;">División Contable *</label>
+              <select name="division" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+                <option value="grooming">✂️ Grooming & Spa Canino/Felino</option>
+                <option value="clinica">🩺 Clínica Veterinaria 24H & Cirugía</option>
+                <option value="hotel">🏨 Admisión Hotel 5★ & Guardería</option>
+                <option value="tienda">🛍️ Tienda de Lujo & Farmacia</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- DETALLE DEL SERVICIO / PRODUCTO -->
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; margin-bottom:14px;">
+            <label style="display:block; font-size:0.8rem; font-weight:900; color:#0F172A; margin-bottom:6px;">
+              📦 Concepto Vendido a Nivel Contable:
+            </label>
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:10px;">
+              <div>
+                <input type="text" name="itemDescription" id="create-item-desc" required placeholder="Ej: Consulta Especializada + Vacuna Séxtuple" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+              </div>
+              <div>
+                <input type="number" step="0.01" min="1" name="itemPrice" id="create-item-price" required placeholder="Precio ($ USD)" oninput="adminFinanceEngine.updateCreateInvoiceTotals()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:800;">
+              </div>
+              <div>
+                <select name="paymentMethod" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; font-weight:700;">
+                  <option value="Pago Móvil Banplus C2P">Banplus Pago Móvil C2P</option>
+                  <option value="Tarjeta Débito Banplus (POS)">Tarjeta Débito POS</option>
+                  <option value="Stripe Card Vault USD">Stripe Card USD</option>
+                  <option value="Zelle Wells Fargo">Zelle Wells Fargo</option>
+                  <option value="Efectivo USD">Efectivo USD</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- TOTALES EN VIVO -->
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; background:#0F172A; color:#FFFFFF; padding:10px 14px; border-radius:8px;">
+              <span style="font-size:0.82rem; color:#CBD5E1;">Base + IVA 16% SENIAT (Tasa BCV: ${bcvRate}):</span>
+              <div>
+                <span id="preview-invoice-usd" style="font-size:1.1rem; font-weight:900; color:#38BDF8;">$0.00 USD</span>
+                <span id="preview-invoice-ves" style="font-size:0.9rem; font-weight:800; color:#34D399; margin-left:8px;">(Bs. 0.00)</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn btn-sm" onclick="app.closeModal('general-modal')" style="background:#F1F5F9; color:#475569; font-weight:800; padding:10px 16px; border-radius:8px; border:none; cursor:pointer;">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-sm" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:10px 22px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 12px rgba(212,175,55,0.4);">
+              🧾 Emitir & Registrar Factura Fiscal SENIAT
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    this.showModal(modalHtml);
+  }
+
+  prefillCustomerData(key) {
+    if (typeof document === 'undefined') return;
+    const presets = {
+      dalybell: { name: 'Dalybell Ramírez Montilla', rif: 'V-18.452.910', email: 'dalybell@mrspets.com', phone: '+58 (414) 389-1102', pet: 'Princesa', species: 'Canino / Border Collie VIP' },
+      carlos: { name: 'Carlos Mendoza', rif: 'V-14.882.109', email: 'carlos.mendoza@email.com', phone: '+58 (412) 555-1234', pet: 'Fifi', species: 'Canino / Poodle Toy VIP' },
+      patricia: { name: 'Patricia Villalobos', rif: 'V-19.874.521-0', email: 'patricia.v@gmail.com', phone: '+58 (414) 679-9510', pet: 'Simba', species: 'Canino / Golden Retriever' },
+      andres: { name: 'Andrés Morales', rif: 'V-20.145.890', email: 'andres.morales@outlook.com', phone: '+58 (424) 612-4488', pet: 'Buddy', species: 'Canino / Bulldog Francés' },
+      mariaeugenia: { name: 'María Eugenia Faría', rif: 'V-16.784.320', email: 'mariaeugenia.f@gmail.com', phone: '+58 (416) 555-8901', pet: 'Luna', species: 'Felino / Persa Blanco' },
+      roberto: { name: 'Roberto González', rif: 'V-12.441.980', email: 'r.gonzalez@inversiones.com', phone: '+58 (414) 601-2233', pet: 'Max', species: 'Canino / Pastor Alemán' }
+    };
+
+    const p = presets[key];
+    if (p) {
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      };
+      setVal('create-customer-name', p.name);
+      setVal('create-customer-rif', p.rif);
+      setVal('create-customer-email', p.email);
+      setVal('create-customer-phone', p.phone);
+      setVal('create-pet-name', p.pet);
+      setVal('create-pet-species', p.species);
+    }
+  }
+
+  updateCreateInvoiceTotals() {
+    if (typeof document === 'undefined') return;
+    const priceEl = document.getElementById('create-item-price');
+    const usdEl = document.getElementById('preview-invoice-usd');
+    const vesEl = document.getElementById('preview-invoice-ves');
+    if (!priceEl || !usdEl || !vesEl) return;
+
+    const price = parseFloat(priceEl.value) || 0;
+    const iva = price * 0.16;
+    const totalUsd = price + iva;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const totalVes = totalUsd * bcvRate;
+
+    usdEl.textContent = `$${totalUsd.toFixed(2)} USD`;
+    vesEl.textContent = `(Bs. ${totalVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})})`;
+  }
+
+  handleCreateInvoiceSubmit(form) {
+    const fd = new FormData(form);
+    const invoiceNumber = fd.get('invoiceNumber');
+    const controlNumber = fd.get('controlNumber');
+    const customerName = fd.get('customerName');
+    const customerRif = fd.get('customerRif');
+    const customerEmail = fd.get('customerEmail');
+    const customerPhone = fd.get('customerPhone');
+    const petName = fd.get('petName');
+    const petSpecies = fd.get('petSpecies') || 'Canino VIP';
+    const cashier = fd.get('cashier') || 'Dalybell Ramírez (Caja Central)';
+    const division = fd.get('division') || 'grooming';
+    const itemDesc = fd.get('itemDescription') || 'Servicio Integral Mrs. Pets';
+    const itemPrice = parseFloat(fd.get('itemPrice')) || 50.00;
+    const paymentMethod = fd.get('paymentMethod') || 'Pago Móvil Banplus C2P';
+
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const subtotal = itemPrice;
+    const taxableAmount = itemPrice;
+    const exemptAmount = 0.00;
+    const ivaRate = 0.16;
+    const ivaAmount = parseFloat((subtotal * ivaRate).toFixed(2));
+    const totalUsd = parseFloat((subtotal + ivaAmount).toFixed(2));
+    const totalVes = parseFloat((totalUsd * bcvRate).toFixed(2));
+
+    const divisionLabels = {
+      grooming: '✂️ Grooming & Spa Canino/Felino',
+      clinica: '🩺 Clínica Veterinaria 24H & Cirugía',
+      hotel: '🏨 Admisión Hotel 5★ & Guardería',
+      tienda: '🛍️ Tienda de Lujo & Farmacia'
+    };
+
+    const today = this.getTodayDateStr();
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+    const newInvoice = {
+      id: `INV-${Date.now()}`,
+      invoiceNumber: invoiceNumber,
+      controlNumber: controlNumber,
+      fiscalSeries: 'SERIE-A',
+      date: today,
+      time: timeStr,
+      timestamp: now.toISOString(),
+      cashier: cashier,
+      division: division,
+      divisionLabel: divisionLabels[division] || division,
+      customer: {
+        name: customerName,
+        rif: customerRif,
+        email: customerEmail,
+        phone: customerPhone,
+        address: 'Maracaibo, Estado Zulia'
+      },
+      pet: {
+        name: petName,
+        species: petSpecies,
+        patientId: `PAC-VIP-${Math.floor(100 + Math.random() * 900)}`
+      },
+      items: [
+        {
+          code: 'SRV-GEN-01',
+          description: itemDesc,
+          quantity: 1,
+          unitPrice: itemPrice,
+          isExempt: false,
+          total: itemPrice
+        }
+      ],
+      subtotal: subtotal,
+      taxableAmount: taxableAmount,
+      exemptAmount: exemptAmount,
+      ivaRate: ivaRate,
+      ivaAmount: ivaAmount,
+      totalUsd: totalUsd,
+      bcvRate: bcvRate,
+      totalVes: totalVes,
+      paymentMethod: paymentMethod,
+      paymentReference: `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+      status: 'EMITIDA',
+      emailStatus: `Enviada el ${today} a las ${timeStr}`,
+      emailHistory: [
+        { date: today, time: timeStr, recipientEmail: customerEmail, sentBy: cashier, status: 'Entregado OK' }
+      ],
+      printCount: 0
+    };
+
+    this.invoices.unshift(newInvoice);
+    this.saveState();
+    this.render();
+
+    // Abrir de inmediato el visor de la factura recién generada
+    this.openInvoiceViewer(newInvoice.id);
+
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`🧾 Factura Fiscal ${newInvoice.invoiceNumber} emitida exitosamente para ${customerName}`, 'success');
+    }
+  }
+
+
   // ==================== CÁLCULOS FINANCIEROS Y MATRICES ====================
   getFinancialData(dateRange = 'month') {
     const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
@@ -255,10 +1563,13 @@ class AdminFinanceEngine {
     }
     if (storeSalesTotal === 0) storeSalesTotal = 2450.00;
 
-    // Multiplicadores según rango de fecha
+    // Multiplicadores según rango de fecha (día, semana, quincena, mes, semestre, año)
     let factor = 1.0;
     if (dateRange === 'day') factor = 0.033;
     else if (dateRange === 'week') factor = 0.23;
+    else if (dateRange === 'quincena') factor = 0.50;
+    else if (dateRange === 'month') factor = 1.0;
+    else if (dateRange === 'semester') factor = 6.0;
     else if (dateRange === 'year') factor = 12.0;
     else factor = 1.0; // month
 
@@ -758,6 +2069,16 @@ class AdminFinanceEngine {
       stockRestitutionPandora: {
         criticalItemsCount: this.restitutionItems.filter(i => i.currentStock <= i.safetyStock).length,
         items: this.restitutionItems
+      },
+      fiscalInvoicesHistory: {
+        totalInvoicesCount: this.invoices.length,
+        activeFilter: {
+          period: this.invoiceFilterPeriod,
+          dateOfVisit: this.invoiceFilterDate,
+          searchQuery: this.invoiceSearchQuery,
+          division: this.invoiceDivisionFilter
+        },
+        invoices: this.invoices
       }
     };
   }
@@ -958,27 +2279,40 @@ class AdminFinanceEngine {
             </div>
           </div>
 
-          <!-- BOTONES SUPERIORES DE GENERACIÓN DE REPORTES PARA IA -->
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.showManagementModal()" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(212,175,55,0.35); display:inline-flex; align-items:center; gap:6px;">
+          <!-- BOTONES SUPERIORES: ACCIONES FISCALES Y REPORTES DE GERENCIA -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button type="button" id="btn-finance-gen-report" class="btn btn-sm" onclick="adminFinanceEngine.showManagementModal()" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(212,175,55,0.35); display:inline-flex; align-items:center; gap:6px;" title="Generar Informe de Gestión Financiera y Fiscal">
               <span>📊 Generar Informe de Gestión</span>
             </button>
-            <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.showRestitutionModal()" style="background:#10B981; color:#0F172A; font-weight:900; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.35); display:inline-flex; align-items:center; gap:6px;">
-              <span>📦 Reporte Restitución (Pandora)</span>
+            <button type="button" id="btn-finance-pandora-restitution" class="btn btn-sm" onclick="adminFinanceEngine.showRestitutionModal()" style="background:#10B981; color:#0F172A; font-weight:900; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.35); display:inline-flex; align-items:center; gap:6px;" title="Reportar Detección de Pandora y Control de Restitución">
+              <span>🛡️ Reportar Detección de Pandora</span>
             </button>
-            <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.exportJsonReport()" style="background:rgba(255,255,255,0.1); color:#FFFFFF; font-weight:800; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.25); cursor:pointer;" title="Descargar estructura de datos JSON limpia para IA">
+            <button type="button" id="btn-finance-export-json" class="btn btn-sm" onclick="adminFinanceEngine.exportJsonReport()" style="background:rgba(255,255,255,0.12); color:#FFFFFF; font-weight:800; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Descargar estructura de datos JSON limpia para IA">
               <span>📥 Exportar JSON</span>
+            </button>
+            <button type="button" id="btn-finance-invoices-master" class="btn btn-sm" onclick="adminFinanceEngine.scrollToInvoicesSection()" style="background:linear-gradient(135deg, #38BDF8, #0284C7); color:#FFFFFF; font-weight:900; padding:10px 16px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(56,189,248,0.35); display:inline-flex; align-items:center; gap:6px;" title="Visualizar histórico contable y generar facturas fiscales SENIAT">
+              <span>🧾 Visualizar & Generar Facturas</span>
+            </button>
+            <button type="button" id="btn-finance-create-invoice-quick" class="btn btn-sm" onclick="adminFinanceEngine.openCreateInvoiceModal()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.35); display:inline-flex; align-items:center; gap:6px;" title="Emitir Factura Fiscal SENIAT Manual">
+              <span>➕ Generar Factura</span>
             </button>
           </div>
         </div>
 
-        <!-- FILTROS DE RANGO DE FECHAS (DÍA, SEMANA, MES, AÑO, PERSONALIZADO) -->
+        <!-- FILTROS DE RANGO DE FECHAS (DÍA, SEMANA, QUINCENA, MES, SEMESTRE, AÑO) -->
         <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(212,175,55,0.25); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <span style="font-size:0.8rem; font-weight:800; color:#FBBF24; margin-right:4px;">📅 Rango de Fechas:</span>
-            ${['day', 'week', 'month', 'year'].map(r => `
-              <button type="button" onclick="adminFinanceEngine.setDateRange('${r}')" style="padding:6px 14px; border-radius:8px; border:none; font-weight:800; font-size:0.78rem; cursor:pointer; background:${this.currentDateRange === r ? '#D4AF37' : 'rgba(255,255,255,0.08)'}; color:${this.currentDateRange === r ? '#0F172A' : '#CBD5E1'}; transition:all 0.2s ease;">
-                ${r === 'day' ? 'Día (Hoy)' : (r === 'week' ? 'Semana' : (r === 'month' ? 'Mes en Curso' : 'Año Fiscal'))}
+            <span style="font-size:0.8rem; font-weight:800; color:#FBBF24; margin-right:4px;">📅 Período Global:</span>
+            ${[
+              { id: 'day', label: 'Día (Hoy)' },
+              { id: 'week', label: 'Semana' },
+              { id: 'quincena', label: 'Quincena' },
+              { id: 'month', label: 'Mes en Curso' },
+              { id: 'semester', label: 'Semestre' },
+              { id: 'year', label: 'Año Fiscal' }
+            ].map(r => `
+              <button type="button" onclick="adminFinanceEngine.setDateRange('${r.id}')" style="padding:6px 14px; border-radius:8px; border:none; font-weight:800; font-size:0.78rem; cursor:pointer; background:${this.currentDateRange === r.id ? '#D4AF37' : 'rgba(255,255,255,0.08)'}; color:${this.currentDateRange === r.id ? '#0F172A' : '#CBD5E1'}; transition:all 0.2s ease;">
+                ${r.label}
               </button>
             `).join('')}
           </div>
@@ -1143,6 +2477,250 @@ class AdminFinanceEngine {
           </div>
         </div>
       </div>
+
+      <!-- SECCIÓN FISCAL: HISTÓRICO DE FACTURACIÓN FISCAL SENIAT & ATENCIÓN AL CLIENTE -->
+      ${(() => {
+        const filteredInvoices = this.getFilteredInvoices();
+        const totalInvoicedUsd = filteredInvoices.reduce((sum, inv) => sum + (inv.totalUsd || 0), 0);
+        const totalInvoicedVes = filteredInvoices.reduce((sum, inv) => sum + (inv.totalVes || 0), 0);
+        const totalBaseUsd = filteredInvoices.reduce((sum, inv) => sum + (inv.taxableAmount || 0), 0);
+        const totalIvaUsd = filteredInvoices.reduce((sum, inv) => sum + (inv.ivaAmount || 0), 0);
+
+        const periodLabels = {
+          day: 'Día (Hoy)',
+          week: 'Semana (7 Días)',
+          quincena: 'Quincena (15 Días)',
+          month: 'Mes (30 Días)',
+          semester: 'Semestre (6 Meses)',
+          year: 'Año Fiscal (12 Meses)',
+          all: 'Todo el Histórico'
+        };
+
+        const invoicesRowsHtml = filteredInvoices.length > 0
+          ? filteredInvoices.map(inv => `
+              <tr class="fiscal-invoice-row"
+                  ondblclick="adminFinanceEngine.openInvoiceViewer('${inv.id}')"
+                  title="💡 Doble clic para abrir la factura fiscal completa y gestionar impresión o reenvío"
+                  style="border-bottom:1px solid #E2E8F0; cursor:pointer; transition:background 0.15s ease;"
+                  onmouseover="this.style.background='#F8FAFC';"
+                  onmouseout="this.style.background='transparent';">
+                <td style="padding:12px 10px; font-weight:800; color:#0F172A;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="color:#0284C7;">🧾</span>
+                    <span>${inv.invoiceNumber}</span>
+                  </div>
+                  <div style="font-size:0.73rem; color:#64748B; margin-top:2px;">Ctrl: <strong>${inv.controlNumber}</strong></div>
+                </td>
+                <td style="padding:12px 10px; font-size:0.83rem; color:#334155; white-space:nowrap;">
+                  <div>📅 ${inv.date}</div>
+                  <div style="font-size:0.75rem; color:#64748B;">⏰ ${inv.time}</div>
+                </td>
+                <td style="padding:12px 10px;">
+                  <strong style="color:#0F172A; font-size:0.88rem;">${inv.customer.name}</strong>
+                  <div style="font-size:0.75rem; color:#64748B;">RIF: ${inv.customer.rif}</div>
+                  <div style="font-size:0.73rem; color:#2563EB;">${inv.customer.email}</div>
+                </td>
+                <td style="padding:12px 10px; font-size:0.83rem; color:#334155;">
+                  <div style="font-weight:800; color:#0F172A;">🐾 ${inv.pet.name}</div>
+                  <div style="font-size:0.73rem; color:#64748B;">${inv.pet.species}</div>
+                </td>
+                <td style="padding:12px 10px; font-size:0.82rem; color:#334155;">
+                  <span class="badge" style="background:#F1F5F9; color:#0F172A; border:1px solid #CBD5E1; font-size:0.75rem; padding:3px 8px; border-radius:6px; font-weight:700;">
+                    👤 ${inv.cashier}
+                  </span>
+                  <div style="font-size:0.72rem; color:#64748B; margin-top:2px;">${inv.divisionLabel}</div>
+                </td>
+                <td style="padding:12px 10px; font-size:0.82rem; color:#1E293B; max-width:240px;">
+                  <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${inv.items.map(i => `${i.quantity}x ${i.description}`).join(' • ')}">
+                    ${inv.items.map(i => `<strong>${i.quantity}x</strong> ${i.description}`).join(', ')}
+                  </div>
+                  <div style="font-size:0.72rem; color:#64748B; margin-top:2px;">Base: $${(inv.taxableAmount || 0).toFixed(2)} + IVA 16%: $${(inv.ivaAmount || 0).toFixed(2)}</div>
+                </td>
+                <td style="padding:12px 10px; font-weight:900; color:#0F172A; font-size:0.92rem; text-align:right; white-space:nowrap;">
+                  $${inv.totalUsd.toFixed(2)} <span style="font-size:0.72rem; color:#64748B;">USD</span>
+                </td>
+                <td style="padding:12px 10px; font-weight:900; color:#059669; font-size:0.85rem; text-align:right; white-space:nowrap;">
+                  Bs. ${inv.totalVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                </td>
+                <td style="padding:12px 10px; font-size:0.75rem; white-space:nowrap;">
+                  <span class="badge" style="background:${inv.status === 'REENVIADA' ? '#EFF6FF' : '#ECFDF5'}; color:${inv.status === 'REENVIADA' ? '#1D4ED8' : '#047857'}; border:1px solid ${inv.status === 'REENVIADA' ? '#93C5FD' : '#A7F3D0'}; padding:3px 7px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+                    ${inv.status === 'REENVIADA' ? '🔄 Reenviada' : '✉️ Emitida'}
+                  </span>
+                  <div style="font-size:0.7rem; color:#64748B; margin-top:3px; max-width:130px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${inv.emailStatus}">
+                    ${inv.emailStatus}
+                  </div>
+                </td>
+                <td style="padding:12px 10px; text-align:center;">
+                  <div style="display:flex; gap:6px; justify-content:center;">
+                    <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.openInvoiceViewer('${inv.id}')" style="background:#0F172A; color:#D4AF37; border:1px solid #D4AF37; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:800;" title="Abrir y Visualizar Factura SENIAT">
+                      👁️ Ver
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.quickResendInvoice('${inv.id}')" style="background:#2563EB; color:#FFFFFF; border:none; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:800;" title="Reenviar por Correo al Cliente">
+                      📧 Reenviar
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.printInvoiceDirectly('${inv.id}')" style="background:#F1F5F9; color:#0F172A; border:1px solid #CBD5E1; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer;" title="Imprimir Factura">
+                      🖨️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')
+          : `
+              <tr>
+                <td colspan="10" style="padding:32px 16px; text-align:center; color:#64748B;">
+                  <div style="font-size:2rem; margin-bottom:8px;">🔍</div>
+                  <div style="font-weight:800; font-size:0.95rem; color:#0F172A;">No se encontraron facturas fiscales para este filtro.</div>
+                  <div style="font-size:0.8rem; margin-top:4px;">
+                    ${this.invoiceFilterDate ? `No hay registros para la fecha de visita: <strong>${this.invoiceFilterDate}</strong>.` : `No hay facturas en el período seleccionado (${periodLabels[this.invoiceFilterPeriod] || this.invoiceFilterPeriod}).`}
+                  </div>
+                  <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.clearInvoiceDateFilter(); adminFinanceEngine.setInvoiceFilterPeriod('all');" style="margin-top:12px; background:#D4AF37; color:#0F172A; font-weight:800; padding:6px 14px; border-radius:8px; border:none; cursor:pointer;">
+                    🔄 Mostrar Todo el Histórico
+                  </button>
+                </td>
+              </tr>
+            `;
+
+        return `
+          <div id="admin-section-fiscal-invoices" style="background:#FFFFFF; border:2px solid #D4AF37; border-radius:20px; padding:22px; margin-bottom:24px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+            <!-- ENCABEZADO DE SECCIÓN -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
+              <div>
+                <h4 style="margin:0; font-size:1.2rem; font-weight:900; color:#0F172A; display:flex; align-items:center; gap:8px;">
+                  <span>🧾 Histórico de Facturación Fiscal SENIAT & Operaciones Contables</span>
+                  <span class="badge" style="background:#0F172A; color:#D4AF37; font-size:0.72rem; padding:3px 8px; border-radius:6px; font-weight:900; border:1px solid #D4AF37;">CONTROL FISCAL OFICIAL</span>
+                </h4>
+                <p style="margin:4px 0 0 0; font-size:0.82rem; color:#64748B;">
+                  Consulta de facturas del día, semana, quincena, mes, semestre y año. Atención al cliente con búsqueda por fecha de visita ("¿Cuándo vino?"), doble clic para apertura de factura, impresión y reenvío inmediato por correo electrónico.
+                </p>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.openCreateInvoiceModal()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; padding:9px 18px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 3px 12px rgba(16,185,129,0.35); display:inline-flex; align-items:center; gap:6px;">
+                  <span>➕ Generar Factura</span>
+                </button>
+                <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.exportInvoicesJson()" style="background:#F8FAFC; color:#334155; font-weight:800; padding:9px 14px; border-radius:10px; border:1px solid #CBD5E1; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Exportar listado actual de facturas en JSON">
+                  <span>📥 Exportar Facturas JSON</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- FILTROS INTERACTIVOS: PERÍODOS SOLICITADOS -->
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px; padding:16px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span style="font-size:0.8rem; font-weight:900; color:#0F172A; margin-right:4px;">⏱️ Período de Facturación:</span>
+                  ${[
+                    { id: 'day', label: 'Día (Hoy)' },
+                    { id: 'week', label: 'Semana' },
+                    { id: 'quincena', label: 'Quincena' },
+                    { id: 'month', label: 'Mes' },
+                    { id: 'semester', label: 'Semestre' },
+                    { id: 'year', label: 'Año' },
+                    { id: 'all', label: 'Todo el Histórico' }
+                  ].map(p => `
+                    <button type="button" onclick="adminFinanceEngine.setInvoiceFilterPeriod('${p.id}')" style="padding:6px 12px; border-radius:8px; border:1px solid ${this.invoiceFilterPeriod === p.id && !this.invoiceFilterDate ? '#D4AF37' : '#CBD5E1'}; font-weight:800; font-size:0.78rem; cursor:pointer; background:${this.invoiceFilterPeriod === p.id && !this.invoiceFilterDate ? '#0F172A' : '#FFFFFF'}; color:${this.invoiceFilterPeriod === p.id && !this.invoiceFilterDate ? '#D4AF37' : '#475569'}; transition:all 0.15s ease;">
+                      ${p.label}
+                    </button>
+                  `).join('')}
+                </div>
+
+                <div style="font-size:0.78rem; color:#059669; font-weight:800;">
+                  🏛️ Tasa BCV: ${fin.bcvRate.toFixed(2)} Bs./USD
+                </div>
+              </div>
+
+              <!-- BÚSQUEDA POR FECHA DE VISITA ("¿CUÁNDO FUE QUE VINO?") + TEXTO + DIVISIÓN -->
+              <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <!-- Selector de fecha específica de visita -->
+                <div style="display:flex; align-items:center; gap:6px; background:#FFFFFF; padding:6px 10px; border-radius:8px; border:1.5px solid ${this.invoiceFilterDate ? '#2563EB' : '#CBD5E1'};">
+                  <label for="admin-invoice-date-picker" style="font-size:0.78rem; font-weight:900; color:#0F172A; white-space:nowrap;">
+                    📅 ¿Cuándo vino el cliente?
+                  </label>
+                  <input type="date" id="admin-invoice-date-picker" value="${this.invoiceFilterDate}" onchange="adminFinanceEngine.setInvoiceFilterDate(this.value)" style="border:none; outline:none; font-size:0.82rem; font-weight:700; color:#0F172A; background:transparent; cursor:pointer;" title="Filtrar por fecha exacta de visita">
+                  ${this.invoiceFilterDate ? `
+                    <button type="button" onclick="adminFinanceEngine.clearInvoiceDateFilter()" style="border:none; background:transparent; color:#EF4444; font-size:0.9rem; cursor:pointer; font-weight:900;" title="Limpiar fecha específica">✕</button>
+                  ` : ''}
+                </div>
+
+                <!-- Buscador por texto -->
+                <div style="flex:1; min-width:240px;">
+                  <input type="text" id="admin-invoice-search" placeholder="🔍 Buscar por Cliente, C.I./RIF, Factura, Mascota o Concepto..." value="${this.invoiceSearchQuery}" oninput="adminFinanceEngine.setInvoiceSearchQuery(this.value)" style="width:100%; padding:8px 12px; border-radius:8px; border:1.5px solid #CBD5E1; font-size:0.84rem; font-weight:600; color:#0F172A; background:#FFFFFF;">
+                </div>
+
+                <!-- Selector de División -->
+                <div>
+                  <select onchange="adminFinanceEngine.setInvoiceDivisionFilter(this.value)" style="padding:8px 12px; border-radius:8px; border:1.5px solid #CBD5E1; font-weight:700; font-size:0.82rem; color:#0F172A; background:#FFFFFF; cursor:pointer;">
+                    <option value="all" ${this.invoiceDivisionFilter === 'all' ? 'selected' : ''}>🏢 Todas las Divisiones</option>
+                    <option value="clinica" ${this.invoiceDivisionFilter === 'clinica' ? 'selected' : ''}>🩺 Clínica Veterinaria 24H</option>
+                    <option value="grooming" ${this.invoiceDivisionFilter === 'grooming' ? 'selected' : ''}>✂️ Grooming & Spa</option>
+                    <option value="hotel" ${this.invoiceDivisionFilter === 'hotel' ? 'selected' : ''}>🏨 Admisión Hotel 5★</option>
+                    <option value="tienda" ${this.invoiceDivisionFilter === 'tienda' ? 'selected' : ''}>🛍️ Tienda & Farmacia</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- TARJETAS RÁPIDAS DE RESUMEN CONTABLE DEL FILTRO SELECCIONADO -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px;">
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px;">
+                <div style="font-size:0.72rem; font-weight:800; color:#64748B; text-transform:uppercase;">Facturas Registradas</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#0F172A; margin:2px 0;">${filteredInvoices.length} <span style="font-size:0.8rem; font-weight:700; color:#64748B;">Facturas</span></div>
+                <div style="font-size:0.74rem; color:#475569;">${this.invoiceFilterDate ? `Fecha de visita: ${this.invoiceFilterDate}` : `Período: ${periodLabels[this.invoiceFilterPeriod] || this.invoiceFilterPeriod}`}</div>
+              </div>
+
+              <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:12px; padding:12px;">
+                <div style="font-size:0.72rem; font-weight:800; color:#047857; text-transform:uppercase;">Total Facturado (USD)</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#065F46; margin:2px 0;">$${totalInvoicedUsd.toFixed(2)} <span style="font-size:0.8rem; font-weight:700;">USD</span></div>
+                <div style="font-size:0.74rem; font-weight:800; color:#059669;">Base Gravable: $${totalBaseUsd.toFixed(2)}</div>
+              </div>
+
+              <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; padding:12px;">
+                <div style="font-size:0.72rem; font-weight:800; color:#166534; text-transform:uppercase;">Total Facturado (Bs. BCV)</div>
+                <div style="font-size:1.25rem; font-weight:900; color:#15803D; margin:2px 0;">Bs. ${totalInvoicedVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                <div style="font-size:0.74rem; color:#166534;">Tasa Oficial Consolidada</div>
+              </div>
+
+              <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:12px; padding:12px;">
+                <div style="font-size:0.72rem; font-weight:800; color:#1E40AF; text-transform:uppercase;">IVA SENIAT 16%</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#1D4ED8; margin:2px 0;">$${totalIvaUsd.toFixed(2)} <span style="font-size:0.8rem; font-weight:700;">USD</span></div>
+                <div style="font-size:0.74rem; font-weight:800; color:#2563EB;">Bs. ${(totalIvaUsd * fin.bcvRate).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+              </div>
+            </div>
+
+            <!-- BANNER INFORMATIVO DE DOBLE CLIC Y REENVÍO -->
+            <div style="background:rgba(212,175,55,0.08); border-left:4px solid #D4AF37; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div style="font-size:0.82rem; color:#1E293B;">
+                💡 <strong>Atención al Cliente:</strong> Haz <strong>doble clic</strong> sobre cualquier fila del listado para abrir de inmediato la Factura Fiscal Oficial SENIAT, imprimirla o reenviarla por correo si el cliente no la recibió.
+              </div>
+              <span style="font-size:0.75rem; color:#B45309; font-weight:800;">
+                Doble Clic • Impresión Directa • Reenvío de Correo
+              </span>
+            </div>
+
+            <!-- TABLA DEL HISTÓRICO DE FACTURAS -->
+            <div style="overflow-x:auto; border:1px solid #CBD5E1; border-radius:12px;">
+              <table style="width:100%; border-collapse:collapse; background:#FFFFFF;">
+                <thead>
+                  <tr style="background:#0F172A; color:#FFFFFF; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #D4AF37;">
+                    <th style="padding:10px; text-align:left;">N° Factura / Control</th>
+                    <th style="padding:10px; text-align:left;">Fecha & Hora</th>
+                    <th style="padding:10px; text-align:left;">Cliente & RIF</th>
+                    <th style="padding:10px; text-align:left;">Mascota</th>
+                    <th style="padding:10px; text-align:left;">Quién Facturó</th>
+                    <th style="padding:10px; text-align:left;">Qué se Vendió (Contable)</th>
+                    <th style="padding:10px; text-align:right;">Total USD</th>
+                    <th style="padding:10px; text-align:right;">Total Bs. (BCV)</th>
+                    <th style="padding:10px; text-align:left;">Estatus Correo</th>
+                    <th style="padding:10px; text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${invoicesRowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      })()}
 
       <!-- SECCIÓN C: GESTOR WEB FLEXIBLE DE VARIABLES Y CONCEPTOS FINANCIEROS (CRUD) -->
       <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:18px; padding:20px; margin-bottom:24px; box-shadow:0 4px 14px rgba(0,0,0,0.03);">
