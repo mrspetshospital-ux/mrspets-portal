@@ -68,8 +68,8 @@
             const container = document.createElement('div');
             container.id = 'leia-multimodal-chat-container';
             container.innerHTML = `
-                <!-- BOTÓN FLOTANTE DISCRETO (FAB: LEIA CON SEARCH) -->
-                <button type="button" id="leia-chat-fab" class="leia-chat-fab" onclick="window.LeiaChatEngine.toggleChat();" title="Consultar con Leia Concierge & IA">
+                <!-- BOTÓN FLOTANTE DISCRETO (FAB: LEIA SEARCH) -->
+                <button type="button" id="leia-chat-fab" class="leia-chat-fab" onclick="window.LeiaChatEngine.toggleChat();" title="Leia Search 🔍 • Asistencia & Consultas del Equipo">
                     <img src="assets/leia_avatar.jpg" alt="Leia Avatar" class="leia-fab-avatar">
                     <span class="leia-fab-online-dot"></span>
                     <span class="leia-fab-badge-text">Leia Search 🔍</span>
@@ -85,8 +85,8 @@
                                 <span class="leia-header-status-dot"></span>
                             </div>
                             <div>
-                                <h4 class="leia-header-title">Leia Concierge VIP *</h4>
-                                <span class="leia-header-role" id="leia-header-role-badge">Atención a Clientes & Orquestador IA</span>
+                                <h4 class="leia-header-title" style="color:#ffffff !important;">Leia 🎀</h4>
+                                <span class="leia-header-role" id="leia-header-role-badge">Asistencia & Consultas del Equipo</span>
                             </div>
                         </div>
                         <div class="leia-header-actions">
@@ -102,14 +102,14 @@
                         <button type="button" class="stop-voice-btn" onclick="window.LeiaChatEngine.stopVoiceInteraction();">Finalizar audio</button>
                     </div>
 
-                    <!-- Feed de Mensajes -->
-                    <div id="leia-chat-messages" class="leia-chat-messages">
+                    <!-- Feed de Mensajes de Búsqueda Profunda -->
+                    <div id="leia-search-chat-messages" class="leia-chat-messages" style="color:#ffffff !important;">
                         <!-- Mensajes inyectados dinámicamente -->
                     </div>
 
                     <!-- Indicador de Escribiendo... -->
                     <div id="leia-typing-indicator" class="leia-typing-indicator" style="display:none;">
-                        <span class="typing-text">Leia está procesando...</span>
+                        <span class="typing-text">Leia está respondiendo...</span>
                         <div class="typing-dots">
                             <span></span><span></span><span></span>
                         </div>
@@ -120,8 +120,8 @@
                         <div class="preview-file-info">
                             <span id="leia-preview-icon" class="preview-icon">📎</span>
                             <div class="preview-meta">
-                                <strong id="leia-preview-name" class="preview-name">archivo.pdf</strong>
-                                <small id="leia-preview-size" class="preview-size">0 KB</small>
+                                <strong id="leia-preview-name" class="preview-name" style="color:#ffffff !important;">archivo.pdf</strong>
+                                <small id="leia-preview-size" class="preview-size" style="color:#cbd5e1 !important;">0 KB</small>
                             </div>
                         </div>
                         <button type="button" class="btn-remove-attachment" onclick="window.LeiaChatEngine.clearAttachment();" title="Quitar archivo">&times;</button>
@@ -142,9 +142,9 @@
                         </div>
 
                         <div class="leia-input-row">
-                            <input type="text" id="leia-chat-text-input" class="leia-chat-text-input" placeholder="Escribe a Leia Concierge..." autocomplete="off">
-                            <button type="submit" id="btn-leia-send" class="btn-leia-send" title="Enviar">
-                                ➔
+                            <input type="text" id="leia-chat-text-input" class="leia-chat-text-input" placeholder="Buscar productos, precios BCV, procedimientos o directivas..." autocomplete="off">
+                            <button type="submit" id="btn-leia-send" class="btn-leia-send" title="Buscar">
+                                🔍
                             </button>
                         </div>
 
@@ -220,9 +220,9 @@
 
             if (roleBadge) {
                 if (isStaff) {
-                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name})</span>`;
+                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name}) • Margaret</span>`;
                 } else {
-                    roleBadge.innerHTML = `<span>Asistente Ejecutiva & Concierge VIP • Av. 2 El Milagro</span>`;
+                    roleBadge.innerHTML = `<span>Atención a Clientes & Search Concierge • Av. 2 El Milagro</span>`;
                 }
             }
         },
@@ -236,14 +236,15 @@
             if (isStaff) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Hola **${user.name}**! Modo Staff Administrativo Activo 👑.\n\nPuedes consultar datos de la plataforma o adjuntar:\n• **Audios de reuniones** (extraigo actas, directrices y creo tareas en **Teamly** con enrutamiento al Archivo Muerto Digital).\n• **Facturas / Comprobantes** (custodia permanente fiscal SENIAT).\n• **Catálogo** y precios oficiales.`,
+                    text: `¡Hola **${user.name}**! Te saluda **Leia 🎀** (Atención Ejecutiva & Staff).\n\nPuedo apoyarte con consultas administrativas, coordinación de citas o enlace con el Comité Volturi (Talibel, Manolo, Valeria, Mike, Charly). ¿En qué podemos avanzar hoy?`,
+                    buttons: ['📅 Reservas & Citas', '🤝 Contactar Administración', '✂️ Grooming & Spa', '🏛️ Comité Volturi'],
                     timestamp: new Date()
                 });
             } else {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Hola! Soy **Leia**, asistente ejecutiva y Concierge VIP de **Mrs. Pets** (Big & Little Dogs, C.A.), ubicado en la Avenida 2 El Milagro, Maracaibo ✨🐾.\n\nNuestra filosofía: *"We see pets — donde recibimos mascotas y despedimos amigos"*.\n\nPara brindarte la mejor atención a ti y a tu príncipe o princesa:\n**¿Ya eres un "chico Mrs. Pet" o eres un cliente nuevo?**`,
-                    buttons: ['🐾 Ya soy un Chico Mrs. Pet', '✨ Soy Cliente Nuevo (Registro Rápido)'],
+                    text: `¡Hola! Soy **Leia 🎀** ✨🐾.\n\nQué gusto tenerte aquí. Estoy a tu completa disposición para orientarte sobre nuestro equipo, administración, servicios o resolver cualquier duda de **Mrs. Pets**.\n\n¿Con quién tengo el gusto de hablar y en qué puedo ayudarte hoy?`,
+                    buttons: ['🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
                     timestamp: new Date()
                 });
             }
@@ -256,7 +257,7 @@
         },
 
         renderMessages() {
-            const container = document.getElementById('leia-chat-messages');
+            const container = document.getElementById('leia-search-chat-messages') || document.getElementById('leia-chat-messages');
             if (!container) return;
 
             container.innerHTML = this.messages.map(m => {
@@ -265,8 +266,8 @@
 
                 // Formateo simple de markdown
                 let formattedText = m.text
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#fef08a !important;">$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em style="color:#e2e8f0 !important;">$1</em>')
                     .replace(/\n/g, '<br>');
 
                 let attachmentHtml = '';
@@ -275,8 +276,8 @@
                         <div class="chat-attachment-pill">
                             <span class="attach-icon">${m.attachment.icon}</span>
                             <div class="attach-meta">
-                                <strong>${m.attachment.name}</strong>
-                                <small>${m.attachment.size}</small>
+                                <strong style="color:#ffffff !important;">${m.attachment.name}</strong>
+                                <small style="color:#cbd5e1 !important;">${m.attachment.size}</small>
                             </div>
                         </div>
                     `;
@@ -286,7 +287,7 @@
                 if (Array.isArray(m.buttons) && m.buttons.length > 0) {
                     buttonsHtml = `
                         <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
-                            ${m.buttons.map(b => `<button type="button" class="btn btn-sm" style="background:#070a11; border:1px solid #D4AF37; color:#fef08a; font-size:0.75rem; border-radius:12px; padding:4px 10px; cursor:pointer; font-weight:700;" onclick="window.LeiaChatEngine.sendUserQuickText('${b.replace(/'/g, "\\'")}')">${b}</button>`).join('')}
+                            ${m.buttons.map(b => `<button type="button" class="btn btn-sm" style="background:#070a11; border:1px solid #D4AF37; color:#fef08a !important; font-size:0.75rem; border-radius:12px; padding:4px 10px; cursor:pointer; font-weight:700;" onclick="window.LeiaChatEngine.sendUserQuickText('${b.replace(/'/g, "\\'")}')">${b}</button>`).join('')}
                         </div>
                     `;
                 }
@@ -294,15 +295,64 @@
                 return `
                     <div class="chat-bubble-row ${isLeia ? 'leia-row' : 'user-row'}">
                         ${isLeia ? '<img src="assets/leia_avatar.jpg" alt="Leia" class="bubble-avatar">' : ''}
-                        <div class="chat-bubble ${isLeia ? 'leia-bubble' : 'user-bubble'}">
-                            <div class="bubble-content">${formattedText}</div>
+                        <div class="chat-bubble ${isLeia ? 'leia-bubble' : 'user-bubble'}" style="color:#ffffff !important;">
+                            <div class="bubble-content" style="color:#ffffff !important;">${formattedText}</div>
                             ${attachmentHtml}
                             ${buttonsHtml}
-                            <span class="bubble-time">${timeStr}</span>
+                            ${isLeia ? `<div style="margin-top:6px;"><button type="button" class="btn-voice-leia" onclick="window.LeiaChatEngine.playVoice(this)" data-text="${encodeURIComponent(m.text)}" style="background: rgba(212,175,55,0.18); border: 1px solid rgba(212,175,55,0.4); color: #fef08a !important; border-radius: 6px; padding: 2px 7px; font-size: 0.68rem; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔊 Escuchar (ElevenLabs)</button></div>` : ''}
+                            <span class="bubble-time" style="color:#cbd5e1 !important;">${timeStr}</span>
                         </div>
                     </div>
                 `;
             }).join('');
+        },
+
+        async playVoice(btnEl) {
+            const rawText = decodeURIComponent(btnEl.getAttribute('data-text') || '');
+            const clean = rawText.replace(/[*_#`]/g, '').trim();
+            if (!clean) return;
+
+            const prevHtml = btnEl.innerHTML;
+            btnEl.innerHTML = '⏳ Generando audio ElevenLabs...';
+            btnEl.disabled = true;
+
+            try {
+                const res = await fetch('/api/v1/voice/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: clean,
+                        agent_id: 'leia'
+                    })
+                });
+
+                const contentType = res.headers.get('content-type') || '';
+                if (res.ok && contentType.includes('audio')) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+
+                    btnEl.innerHTML = '🔊 Reproduciendo ElevenLabs...';
+
+                    audio.onended = () => {
+                        btnEl.innerHTML = prevHtml;
+                        btnEl.disabled = false;
+                        URL.revokeObjectURL(url);
+                    };
+                    audio.onerror = () => {
+                        btnEl.innerHTML = prevHtml;
+                        btnEl.disabled = false;
+                    };
+
+                    await audio.play();
+                    return;
+                }
+            } catch (e) {
+                console.warn('[LeiaChatEngine] Error reproduciendo voz ElevenLabs:', e);
+            }
+
+            btnEl.innerHTML = prevHtml;
+            btnEl.disabled = false;
         },
 
         sendUserQuickText(text) {
@@ -632,85 +682,272 @@
             }, 800);
         },
 
-        generateAssistantReply(userText) {
+        async generateAssistantReply(userText) {
             const t = (userText || '').toLowerCase();
 
-            // 1. Protocolo de Ingreso: Chico Mrs. Pet
-            if (t.includes('chico mrs pet') || t.includes('chico mrs. pet') || t.includes('ya soy chico') || t.includes('soy chico')) {
+            // 0. Prioridad de Escalamiento: Si el cliente o usuario pide hablar con Talibel, Administración o el Comité Volturi
+            const isRequestingTalibel = t.includes('talibel') || t.includes('dalybell') || t.includes('talibell');
+            const isRequestingAdmin = t.includes('administracion') || t.includes('administración') || t.includes('gerencia') || t.includes('volturi') || t.includes('directiva');
+
+            if (isRequestingTalibel) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Qué alegría tenerte de regreso en casa! 🐾 En **Mrs. Pets** recibimos mascotas y despedimos amigos.\n\nPor favor facilítame el nombre de tu amado **príncipe o princesa** (o tu número telefónico) para cargar de inmediato su expediente clínico y de estética. ¿En qué podemos consentirlo hoy?`,
+                    text: `👩‍💼 **Margaret (Atención al Cliente):** ¡Con el mayor gusto! Te comunico de inmediato con **Talibel** del área de administración ejecutiva.\n\nHe registrado tu solicitud de contacto prioritario para que Talibel tome el caso directamente contigo. ¿Deseas que abra la consola administrativa?`,
+                    buttons: ['🏛️ Abrir Consola Volturi', '💬 Continuar con Margaret'],
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 2. Protocolo de Ingreso: Cliente Nuevo -> Modelo de Registro Ágil y BioTracker GeoGuard (Sin Fricción)
-            if (t.includes('cliente nuevo') || t.includes('nuevo cliente') || t.includes('soy nuevo') || t.includes('registro rapido') || t.includes('registrar') || t.includes('registro')) {
+            if (isRequestingAdmin) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Es un inmenso honor darte la bienvenida a **Mrs. Pets** (Avenida 2 El Milagro)! 👑✨\n\nPara evitar que te aburras o sientas invasión a tu privacidad, **no te pediremos direcciones exactas**. Con nuestro modelo ágil **BioTracker GeoGuard**, indícanos únicamente estas 3 variables esenciales:\n\n1️⃣ **Tu Nombre y WhatsApp** de contacto.\n2️⃣ **Nombre de tu Príncipe o Princesa** y su especie (perrito o gatito).\n3️⃣ **Sector de Maracaibo** donde resides para ingresarlo a nuestra red preventiva de salud y alertas epidemiológicas.\n\n*(Puedes pulsar tu sector aquí abajo o escribirlo directamente)*:`,
+                    text: `🎀 **Leia (Concierge VIP):** ¡Entendido! Te enlazo de inmediato con el **Área de Administración y el Comité Volturi** (Talibel, Manolo en Finanzas, Valeria en RRHH, Mike en Operaciones y Charly).\n\n¿Con qué director o área deseas conversar?`,
+                    buttons: ['📊 Manolo (Finanzas)', '👥 Valeria (RRHH)', '⚙️ Mike (Operaciones)', '🏛️ Ver Comité Volturi'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            // Si solicita explícitamente a un miembro del Comité Volturi
+            if (window.teamilyExecutiveEngine && typeof window.teamilyExecutiveEngine.getAgents === 'function') {
+                const agents = window.teamilyExecutiveEngine.getAgents();
+                const matchedAgent = agents.find(a => {
+                    const cleanName = (a.name || '').toLowerCase();
+                    const cleanSlug = (a.teamlySlug || '').toLowerCase();
+                    const cleanId = (a.id || '').toLowerCase();
+                    if (cleanId === 'margaret') return false; // Margaret opera internamente
+                    return (cleanName && t.includes(cleanName.split(' ')[0])) || (cleanSlug && t.includes(cleanSlug)) || (cleanId && t.includes(cleanId));
+                });
+
+                if (matchedAgent && (t.includes('comunic') || t.includes('hablar') || t.includes('pasa') || t.includes('pregunta') || t.includes('conversa') || t.includes('chatea') || t.startsWith(matchedAgent.name.toLowerCase()))) {
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia:** ¡Por supuesto! Te transfiero de inmediato con **${matchedAgent.name}** (*${matchedAgent.role}*).\n\nAbriendo canal 1 a 1 para que converses directamente...`,
+                        timestamp: new Date()
+                    });
+                    setTimeout(() => {
+                        window.teamilyExecutiveEngine.openDirectChatModal(matchedAgent.id);
+                    }, 800);
+                    return;
+                }
+            }
+
+            // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE (con motor Margaret)
+            // Intento de enlace ágil con backend Teamily (Timeout 2.0s para no bloquear interacción)
+            try {
+                this.showTypingIndicator(true);
+                const teamilyCtrl = new AbortController();
+                const teamilyTimeout = setTimeout(() => teamilyCtrl.abort(), 2000);
+                const res = await fetch('/api/v1/teamily/agent-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        input: userText,
+                        agent_slug: 'margaret',
+                        agent_name: 'Margaret (Atención al Cliente)'
+                    }),
+                    signal: teamilyCtrl.signal
+                });
+                clearTimeout(teamilyTimeout);
+                const data = await res.json();
+                this.showTypingIndicator(false);
+
+                if (res.ok && data.response_text) {
+                    const rawReply = typeof data.response_text === 'object' && data.response_text.text 
+                        ? data.response_text.text 
+                        : data.response_text;
+
+                    const isReceipt = String(rawReply).includes('BLUF:') || String(rawReply).includes('prueba entregada') || String(rawReply).includes('No puedo verificar') || String(rawReply).includes('serverMsgID');
+                    if (!isReceipt && rawReply && rawReply.trim().length > 0) {
+                        this.addMessage({
+                            sender: 'leia',
+                            text: rawReply,
+                            timestamp: new Date()
+                        });
+                        return;
+                    }
+                }
+            } catch (err) {
+                // Timeout o contingencia de Teamily: activación instantánea de base de conocimiento local
+                this.showTypingIndicator(false);
+            }
+
+            // 2. Si el usuario se presenta o saluda con su nombre ("Soy Harry", "Harry Luzardo", "Carlos", etc.)
+            const nameIntro = userText.match(/(?:soy|me llamo|mi nombre es|te habla|habla)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]+)/i);
+            const isDirectName = (!t.includes('reserva') && !t.includes('cita') && !t.includes('baño') && !t.includes('grooming') && !t.includes('clinica') && !t.includes('hotel') && t.split(' ').length <= 4 && (t.includes('harry') || t.includes('luzardo') || t.includes('carlos') || t.includes('maria') || t.includes('maría') || t.includes('pedro') || t.includes('ana') || t.includes('jose') || t.includes('josé')));
+
+            if (nameIntro || isDirectName) {
+                let rawName = nameIntro ? nameIntro[1].trim() : userText.trim();
+                rawName = rawName.replace(/[.,!¡?¿]/g, '').trim();
+                if (rawName.length > 1 && rawName.length < 40) {
+                    const titleCaseName = rawName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    this.tutorName = titleCaseName;
+                    this._expectingPetName = true;
+                    const honorific = (t.includes('harry') || t.includes('luzardo')) ? `Don ${titleCaseName}` : titleCaseName;
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia:** ¡Qué inmenso gusto saludarte, **${honorific}**! ✨🐾\n\nVeo que eres cliente de nuestra casa. Nos encanta recibirte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Cómo está tu consentido hoy? **¿Me recuerdas el nombre de tu amado perrito o gatito?**`,
+                        timestamp: new Date()
+                    });
+                    return;
+                }
+            }
+
+            // 2.1 Reconocimiento de Nombre de Mascota / Consentido tras "¿Ya eres Chico Mrs. Pet?"
+            const isPetNamePhrase = t.includes('se llama') || t.includes('su nombre es') || t.includes('mi perrito') || t.includes('mi mascota') || t.includes('mi consentido') || t.includes('mi principe') || t.includes('mi príncipe') || t.includes('mi princesa') || t.includes('mi gatico') || t.includes('mi gato');
+            if (this._expectingPetName || isPetNamePhrase) {
+                let petName = userText.replace(/^(se llama|su nombre es|mi perrito es|mi mascota es|mi consentido es|mi perrito se llama|mi gato se llama|mi príncipe es|mi princesa es|mi príncipe se llama|mi princesa se llama|se trata de|es|el nombre es)\s+/i, '').trim();
+                petName = petName.replace(/[.,!¡?¿]/g, '').trim();
+                if (petName.length > 0 && petName.length < 35 && !t.includes('chico mrs pet') && !t.includes('cliente nuevo') && !t.includes('reserva')) {
+                    petName = petName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    this._expectingPetName = false;
+                    this.lastActivePetName = petName;
+                    try { sessionStorage.setItem('mrs_pets_active_pet_name', petName); } catch(e){}
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia:** 🐾 **¡Qué belleza de consentido! Nos encanta recibir a ${petName}.**\n\nHemos cargado su expediente para consentirlo con el protocolo *Silent Luxury*. ¿En cuál de nuestras 4 áreas de servicio deseas que lo atendamos hoy?\n\n• ✂️ **Circuito Grooming Spa 7 Estaciones:** Baño relajante con ozonoterapia, corte de alta gama y su **hidratación de pulpejos obligatoria** (siempre incluida sin costo adicional 🐾).\n• 🩺 **Clínica Médica & Diagnóstico:** Consulta especializada y laboratorio IDEXX in-house.\n• 🏨 **Suites Bioclimáticas Hotel 5★:** Con monitoreo 24/7 y parque recreativo libre de estrés.\n• 🛍️ **Boutique & Consentidos:** Alimentos premium, suplementos y accesorios exclusivos.\n\n¿Deseas que coordinemos una reserva para **${petName}** hoy?`,
+                        buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Veterinaria', '🏨 Suite Hotel VIP', '🛍️ Boutique & Tienda', '🤝 Hablar con Administración'],
+                        timestamp: new Date()
+                    });
+                    return;
+                }
+            }
+
+            // 2.2 Deseo hacer una reserva / Cita (incluso en Search)
+            if (t.includes('reserva') || t.includes('reservar') || t.includes('cita') || t.includes('agendar') || t.includes('turno')) {
+                const pet = this.lastActivePetName || 'tu príncipe o princesa';
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🎀 **Leia:** 📅 **¡Con el mayor gusto coordinamos la reserva para ${pet}!**\n\n¿Para cuál de nuestros servicios te gustaría el turno?\n1️⃣ ✂️ **Grooming Spa** (con hidratación de pulpejos incluida)\n2️⃣ 🩺 **Consulta Médica Veterinaria**\n3️⃣ 🏨 **Hospedaje en Hotel VIP 5★**\n\nPor favor indícame la fecha y hora de tu preferencia. *Recuerda que nuestra atención en sucursal (Av. 2 El Milagro) es de Lunes a Sábado hasta las **6:00 p.m.** estrictamente*.`,
+                    buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Médica', '🏨 Hotel VIP 5★'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            // 2.3 Solicitud de hablar con Talibel o Administración / Equipo
+            if (t.includes('talibel') || t.includes('dalybell') || t.includes('administracion') || t.includes('administración') || t.includes('equipo') || t.includes('hablar con alguien') || t.includes('gerencia') || t.includes('comite') || t.includes('comité') || t.includes('volturi')) {
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🎀 **Leia:** ¡Con todo gusto! Te comunico de inmediato con **Talibel** o con el área de **Administración y Gerencia** de Mrs. Pets ✨.\n\nHe registrado tu requerimiento prioritario. Puedes escribirme aquí mismo el detalle exacto de tu consulta para transferirlo con tu expediente, o si prefieres indícame si deseas coordinar una llamada directa con nosotros.`,
+                    buttons: ['👑 Contactar a Talibel', '👑 Comité Volturi'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            // 2.4 Protocolo de Ingreso: Chico Mrs. Pet
+            if (t.includes('chico mrs pet') || t.includes('chico mrs. pet') || t.includes('ya soy chico') || t.includes('soy chico')) {
+                this._expectingPetName = true;
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🎀 **Leia:** ¡Qué alegría tenerte de regreso en casa! 🐾 En **Mrs. Pets** recibimos mascotas y despedimos amigos.\n\nPor favor facilítame el nombre de tu amado **príncipe o princesa** (o tu número telefónico de WhatsApp) para cargar de inmediato su expediente clínico y de estética. ¿En qué podemos consentirlo hoy?`,
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            // 3. Protocolo de Ingreso: Cliente Nuevo -> Modelo de Registro Ágil y BioTracker GeoGuard (Sin Fricción)
+            if (t.includes('cliente nuevo') || t.includes('nuevo cliente') || t.includes('soy nuevo') || t.includes('registro rapido') || t.includes('registrar') || t.includes('registro') || t.includes('biotracker')) {
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🎀 **Leia:** ¡Es un inmenso honor darte la bienvenida a **Mrs. Pets** (Avenida 2 El Milagro)! 👑✨\n\nPara cuidar tu privacidad, **no te pediremos direcciones exactas**. Con nuestro modelo ágil **BioTracker GeoGuard**, indícanos únicamente estas 3 variables esenciales:\n\n1️⃣ **Tu Nombre y WhatsApp** de contacto.\n2️⃣ **Nombre de tu Príncipe o Princesa** y su especie (perrito o gatito).\n3️⃣ **Sector de Maracaibo** donde resides para ingresarlo a nuestra red preventiva de salud.\n\n*(Puedes pulsar tu sector aquí abajo o escribirlo directamente)*:`,
                     buttons: ['Las Delicias', 'El Milagro', 'Bella Vista', 'Tierra Negra', 'Indio Mara', 'La Lago'],
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 3. Confirmación de Sector Maracaibo (BioTracker GeoGuard)
+            // 4. Confirmación de Sector Maracaibo (BioTracker GeoGuard)
             const sectores = ['las delicias', 'el milagro', 'bella vista', 'tierra negra', 'indio mara', 'la lago', 'delicias', 'milagro'];
             if (sectores.some(s => t.includes(s))) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Registro Ágil completado con éxito en **BioTracker GeoGuard**! 🎉👑\n\nHemos vinculado a tu príncipe/princesa a nuestra red preventiva de salud en el sector Maracaibo bajo el estándar de excelencia del Comité Volturi.\n\nSus datos están protegidos y ya puedes disfrutar de nuestros servicios exclusivos. Te recordamos con orgullo que todos nuestros paquetes de estética estándar incluyen con orgullo la **hidratación de pulpejos** (*hidratación de pulpejos*) incorporada como parte del paquete completo, y que nuestra atención presencial en la Avenida 2 El Milagro finaliza de manera estricta a las **6:00 p.m.**\n\n¿Deseas que coordinemos una cita de grooming, clínica o suite de hotel para consentirlo?`,
+                    text: `🎀 **Leia:** ¡Registro Ágil completado con éxito en **BioTracker GeoGuard**! 🎉👑\n\nHemos vinculado a tu consentido a nuestra red de bienestar en el sector Maracaibo bajo el estándar de excelencia de Mrs. Pets.\n\nSus datos están protegidos y ya puedes disfrutar de nuestros servicios exclusivos. Te recuerdo con orgullo que todos nuestros paquetes de estética estándar incluyen la **hidratación de pulpejos** (*hidratación de pulpejos*) incorporada como parte del paquete completo, y que nuestra atención presencial en la Avenida 2 El Milagro finaliza de manera estricta a las **6:00 p.m.**\n\n¿Deseas que coordinemos una cita de grooming spa, consulta veterinaria o suite de hotel?`,
+                    buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Veterinaria', '🏨 Suite Hotel VIP'],
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 4. Regla Estricta de Tratamiento: Jamás 'perros y gatos'
+            // 5. Regla Estricta de Tratamiento: Jamás 'perros y gatos'
             if (t.includes('perro') || t.includes('perros') || t.includes('gato') || t.includes('gatos')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `👑 **Regla de Honor en Mrs. Pets:** En nuestra casa jamás utilizamos términos genéricos como "perros y gatos"; para nosotros todos nuestros consentidos son **príncipes** y **princesas** ✨.\n\n¿En qué podemos consentir hoy a tu amado príncipe o princesa?`,
+                    text: `🎀 **Leia:** 👑 **Regla de Honor en Mrs. Pets:** En nuestra casa jamás utilizamos términos genéricos como "perros y gatos"; para nosotros todos nuestros consentidos son **príncipes** y **princesas** ✨.\n\n¿En qué podemos consentir hoy a tu amado príncipe o princesa?`,
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 5. Horario de Sucursal & Ubicación
+            // 6. Horario de Sucursal & Ubicación
             if (t.includes('horario') || t.includes('sucursal') || t.includes('direccion') || t.includes('ubicacion') || t.includes('donde estan') || t.includes('sede')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `📍 **Sucursal & Horarios Oficiales (Mrs. Pets - Big & Little Dogs, C.A.):**\n\n• **Ubicación:** Avenida 2 El Milagro, Maracaibo, Venezuela.\n• **Horario:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (La atención presencial en sucursal finaliza de manera estricta a las **6:00 p.m.** sin excepción).\n• **Filosofía Institucional:** *"We see pets — donde recibimos mascotas y despedimos amigos"*.`,
+                    text: `🎀 **Leia:** 📍 **Sucursal & Horarios Oficiales (Mrs. Pets - Big & Little Dogs, C.A.):**\n\n• **Ubicación:** Avenida 2 El Milagro, diagonal a Lago Mall, Maracaibo, Venezuela.\n• **Horario:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (La atención presencial en sucursal finaliza de manera estricta a las **6:00 p.m.** sin excepción).\n• **Filosofía:** *"We see pets — donde recibimos mascotas y despedimos amigos"*.`,
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 6. Especificaciones de Grooming & Hidratación de Pulpejos
+            // 7. Especificaciones de Grooming & Hidratación de Pulpejos
             if (t.includes('grooming') || t.includes('baño') || t.includes('corte') || t.includes('peluqueria') || t.includes('pulpejo') || t.includes('spa')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `✂️ **Grooming & Spa Canino/Felino (7 Estaciones):**\n\nAclaramos con orgullo que la **hidratación de pulpejos** (*hidratación de pulpejos*) viene incorporada y forma parte del paquete completo de grooming para tu príncipe o princesa ✨.\n\nRecuerda siempre que la atención presencial en sucursal finaliza de manera estricta a las **6:00 p.m.** (de 8:00 a.m. a 6:00 p.m.).\n\n¿Deseas que reservemos la cita para tu príncipe o princesa?`,
+                    text: `🎀 **Leia:** ✂️ **Grooming & Spa Canino/Felino (7 Estaciones):**\n\nAclaramos con orgullo que la **hidratación de pulpejos** (*hidratación de pulpejos*) viene incorporada y forma parte del paquete completo de grooming para tu príncipe o princesa ✨.\n\nRecuerda siempre que la atención presencial en sucursal finaliza de manera estricta a las **6:00 p.m.** (de 8:00 a.m. a 6:00 p.m.).\n\n¿Deseas que reservemos la cita para tu príncipe o princesa hoy?`,
+                    buttons: ['📅 Reservar Turno de Grooming', '🐾 Chico Mrs. Pet'],
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // 7. Multimedia & Servicios VIP
+            // 8. Multimedia & Servicios VIP
             if (t.includes('foto') || t.includes('audio') || t.includes('documento') || t.includes('camara') || t.includes('pago') || t.includes('comprobante')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `📸🎙️📄 **Multimedia & Servicios VIP:**\n\nEstoy capacitada para recibir fotos, audios (interacción de voz natural) y documentos de los clientes para gestionar reservaciones, citas o validar pagos de manera automatizada.\n\nMantenemos siempre el estándar de lujo y eficiencia que caracteriza al **Comité Volturi de Mrs. Pets**.`,
+                    text: `🎀 **Leia:** 📸🎙️📄 **Multimedia & Servicios VIP:**\n\nEstoy capacitada para recibir fotos, audios (interacción de voz natural) y documentos de los tutores para gestionar citas o validar pagos de manera automatizada bajo el estándar de excelencia de Mrs. Pets.`,
                     timestamp: new Date()
                 });
                 return;
+            }
+
+            // 8.1. Consulta de Boutique & Farmacia
+            const isStoreSearch = t.includes('buscar') || t.includes('catalogo') || t.includes('catálogo') || t.includes('producto') || t.includes('tienda') || t.includes('boutique') || t.includes('alimento') || t.includes('comida') || t.includes('shampoo') || t.includes('collar') || t.includes('bravecto') || t.includes('nexgard') || t.includes('snack') || t.includes('juguete');
+            if (isStoreSearch && window.storeEngine && Array.isArray(window.storeEngine.products) && window.storeEngine.products.length > 0) {
+                const searchKeywords = t.replace(/(buscar|catalogo|catálogo|producto|tienda|boutique|en|de|la|el|los|las|un|una)\s+/gi, '').trim().split(' ').filter(w => w.length > 2);
+                let matches = window.storeEngine.products;
+                if (searchKeywords.length > 0) {
+                    matches = window.storeEngine.products.filter(p => {
+                        const pName = (p.name || '').toLowerCase();
+                        const pDesc = (p.description || '').toLowerCase();
+                        const pCat = (p.category || '').toLowerCase();
+                        return searchKeywords.some(k => pName.includes(k) || pDesc.includes(k) || pCat.includes(k));
+                    });
+                }
+                const results = matches.slice(0, 4);
+                if (results.length > 0) {
+                    const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 48.50;
+                    const itemsText = results.map(p => {
+                        const priceBs = (Number(p.price || 0) * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        return `• 🛍️ **${p.name}**\n  💵 **$${Number(p.price || 0).toFixed(2)} USD** (${priceBs} Bs. BCV)`;
+                    }).join('\n\n');
+
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia:** ¡Con gusto! Aquí tienes las opciones disponibles en nuestra boutique:\n\n${itemsText}\n\n¿Deseas que te reservemos alguno para tu visita?`,
+                        buttons: ['🛒 Ver Boutique Completa', '📅 Hacer una Reserva'],
+                        timestamp: new Date()
+                    });
+                    return;
+                }
             }
 
             if (t.includes('rrhh') || t.includes('trabaj') || t.includes('empleo') || t.includes('postul') || t.includes('vacante')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `💼 ¡Nos encantaría que formes parte del equipo de **Mrs. Pets**!\n\nPuedes enviar tu postulación directamente en nuestro portal de talento humano. Haz clic aquí para ir al formulario:\n👉 [Formulario de Postulación RRHH](#concierge-hr-recruitment-section)`,
+                    text: `🎀 **Leia:** 💼 ¡Nos encantaría que formes parte del equipo de **Mrs. Pets**!\n\nNuestra Directora de Talento Humano **Valeria** supervisa las postulaciones. Puedes registrar tu hoja de vida directamente en nuestro formulario de RRHH:\n👉 [Formulario de Postulación RRHH](#concierge-hr-recruitment-section)`,
+                    buttons: ['👥 Hablar con Valeria (RRHH)'],
                     timestamp: new Date()
                 });
                 const el = document.getElementById('concierge-hr-recruitment-section');
@@ -722,21 +959,22 @@
                 return;
             }
 
-            if (t.includes('precio') || t.includes('tasa') || t.includes('bcv') || t.includes('dolar') || t.includes('bolivar')) {
+            if (t.includes('precio') || t.includes('tasa') || t.includes('bcv') || t.includes('dolar') || t.includes('bolivar') || t.includes('costo') || t.includes('cuanto') || t.includes('cuánto')) {
                 const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 48.50;
                 const formattedRate = window.FinancialEngine ? window.FinancialEngine.formatVenezuelanNumber(bcvRate) : '48,50';
                 this.addMessage({
                     sender: 'leia',
-                    text: `⚖️ **Información Financiera Oficial:**\n\nNuestras operaciones se rigen estrictamente por la **Tasa Oficial del Banco Central de Venezuela (BCV)**:\n• **1 USD = ${formattedRate} Bs. (BCV)**\n• Alícuota de IVA: **16.0%** (SENIAT).\n\nPuedes alternar los precios de la tienda en el botón superior **[USD / Bs. BCV]**.`,
+                    text: `🎀 **Leia:** 💵 **Precios Transparentes & Tasa Oficial BCV:**\n\nEn Mrs. Pets todas nuestras tarifas en Bolívares se calculan con exactitud matemática bajo la **Tasa Oficial del Banco Central de Venezuela (BCV)**:\n• **1 USD = ${formattedRate} Bs. (BCV)** con IVA 16.0% SENIAT debidamente respaldado.\n• Métodos Aceptados: Stripe Terminal WisePOS E, Zelle corporativo, Pago Móvil y Efectivo USD en bóveda.\n\nPuedes alternar los precios en el botón superior **[USD / Bs. BCV]**.`,
                     timestamp: new Date()
                 });
                 return;
             }
 
-            if (t.includes('clinica') || t.includes('medico') || t.includes('veterinario') || t.includes('vacuna')) {
+            if (t.includes('clinica') || t.includes('medico') || t.includes('veterinario') || t.includes('vacuna') || t.includes('procedimiento') || t.includes('idexx') || t.includes('dicom')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `🩺 **Clínica Veterinaria Mrs. Pets (Avenida 2 El Milagro):**\n\nContamos con dirección médica del Dr. Alejandro Morales y la Dra. Patricia Silva, quirófano bioclimático y laboratorio clínico IDEXX in-house. Atendemos de Lunes a Sábado hasta las 6:00 p.m. estrictamente.`,
+                    text: `🎀 **Leia:** 🩺 **Clínica Veterinaria Mrs. Pets (Avenida 2 El Milagro):**\n\n• **Laboratorio Clínico IDEXX in-house:** Perfil hemático y bioquímica en 15 minutos.\n• **Diagnóstico por Imagen PACS/LIS:** Visor DICOM HD en vivo y ecografía Doppler.\n• **Quirófano Especializado:** Cirugía de tejidos blandos y anestesia inhalatoria.\n• **Horario Médico:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. estrictamente.\n\n¿Deseas coordinar un turno con el veterinario de guardia?`,
+                    buttons: ['🩺 Consulta Médica', '📅 Hacer una Reserva'],
                     timestamp: new Date()
                 });
                 return;
@@ -745,17 +983,18 @@
             if (t.includes('hotel') || t.includes('guarderia') || t.includes('hospedaje')) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `🏨 **Hotel & Guardería VIP 5 Estrellas:**\n\nSuites bioclimáticas con cámaras web en vivo, supervisión 24/7 y nutrición premium. Puedes hacer tu reserva con antelación en el portal.`,
+                    text: `🎀 **Leia:** 🏨 **Hotel VIP 5★ & Guardería Bioclimática:**\n\nSuites climatizadas con monitoreo 24/7 y parque recreativo libre de estrés. ¿Para qué fecha deseas hospedar a tu consentido?`,
+                    buttons: ['📅 Reservar Hospedaje'],
                     timestamp: new Date()
                 });
                 return;
             }
 
-            // Respuesta por defecto exclusiva
+            // Respuesta por defecto cálida de Leia (Margaret)
             this.addMessage({
                 sender: 'leia',
-                text: `¡Hola! Soy **Leia**, asistente ejecutiva y Concierge VIP de **Mrs. Pets** (Big & Little Dogs, C.A.), ubicado en la Avenida 2 El Milagro, Maracaibo ✨🐾.\n\nNuestra filosofía: *"We see pets — donde recibimos mascotas y despedimos amigos"*.\n\nPara atenderte con la mayor exclusividad:\n**¿Ya eres un "chico Mrs. Pet" o eres un cliente nuevo?**`,
-                buttons: ['🐾 Ya soy un Chico Mrs. Pet', '✨ Soy Cliente Nuevo (Registro Rápido)'],
+                text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre cualquiera de nuestras 4 áreas de servicio: Grooming Spa, Clínica, Hotel, Tienda, o pedirme comunicarte con Talibel y el área de Administración)*.`,
+                buttons: ['🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
                 timestamp: new Date()
             });
         }

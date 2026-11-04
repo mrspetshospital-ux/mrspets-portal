@@ -127,12 +127,36 @@ html.splash-bypassed #auth-splash-screen {
   pointer-events: none !important;
 }
 
+#access-links-portal:not(.active) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 #access-links-portal {
   display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  background: linear-gradient(160deg, #1C1C1E 0%, #121214 60%, #0A0A0C 100%) !important;
+  background-color: #121214 !important;
+  color: #FBFBFD !important;
+  z-index: 100000 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  -webkit-overflow-scrolling: touch;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  box-sizing: border-box;
+  justify-content: flex-start;
+  padding: 40px 16px !important;
 }
 
 #access-links-portal.active {
@@ -140,17 +164,25 @@ html.splash-bypassed #auth-splash-screen {
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  z-index: 100000 !important;
+}
+
+#access-links-portal #portal-card-container {
+  margin: auto !important;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
    ESTABILIZACIÓN DE IMÁGENES, VIDEOS Y COMPOSITOR GPU (CERO TREPIDACIÓN/TEMBLOR)
    ========================================================================== */
-/* Regla estricta anti-temblor de imágenes (cero trepidación subpixelar en zoom/scroll) */
+/* Regla estricta anti-temblor de imágenes (cero trepidación subpixelar en zoom/scroll y hover) */
 img {
   image-rendering: auto !important;
   transform: none !important;
   will-change: auto !important;
+}
+
+img:hover {
+  transform: none !important;
 }
 
 video, canvas {
@@ -799,6 +831,7 @@ h1, h2, h3, h4, h5, h6 {
   width: calc(100% - var(--sidebar-width));
   max-width: calc(100% - var(--sidebar-width));
   overflow-x: hidden;
+  contain: layout style;
 }
 
 /* Header - Clean White & Gold (Zero-Jitter Responsive Architecture) */
@@ -810,19 +843,19 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
   position: sticky;
   top: 0;
   z-index: 90;
   box-shadow: 0 4px 25px rgba(11, 15, 25, 0.04);
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
@@ -836,8 +869,10 @@ h1, h2, h3, h4, h5, h6 {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px;
+  flex-shrink: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 /* Control estricto anti-desbordamiento y anti-temblor al redimensionar ventana */
@@ -918,6 +953,10 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
   background: #FBFBFD !important;
   min-height: calc(100vh - var(--header-height));
+}
+
+.main-wrapper, .content-body, .tab-view {
+  contain: layout style;
 }
 
 .tab-view {
@@ -1837,6 +1876,54 @@ canvas#waveform-canvas {
 
 .modal-overlay.active .modal-card {
   transform: none !important;
+}
+
+/* ==========================================================================
+   MODAL DE IDENTIFICACIÓN & AUTENTICACIÓN STAFF / VISTA EMPRESA
+   SILENT LUXURY OBSIDIAN & GOLD (ALTO CONTRASTE • CERO PANTALLA EN BLANCO)
+   ========================================================================== */
+#enterprise-login-modal .modal-card,
+.modal-card.modal-dark {
+  background: linear-gradient(145deg, #070a11, #1e293b) !important;
+  border: 1.5px solid #fbbf24 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85) !important;
+}
+
+#enterprise-login-modal .modal-card h1,
+#enterprise-login-modal .modal-card h2,
+#enterprise-login-modal .modal-card h3,
+#enterprise-login-modal .modal-card h4,
+#enterprise-login-modal .modal-card .card-title {
+  color: #FFFFFF !important;
+}
+
+#enterprise-login-modal .modal-card p,
+#enterprise-login-modal .modal-card span:not(.badge):not(#btn-enterprise-auth-submit span) {
+  color: #CBD5E1 !important;
+}
+
+#enterprise-login-modal .modal-card label,
+#enterprise-login-modal .modal-card .form-label {
+  color: #F8FAFC !important;
+}
+
+#enterprise-login-modal .modal-card select,
+#enterprise-login-modal .modal-card input {
+  background: #0f172a !important;
+  color: #FFFFFF !important;
+  border: 1px solid #475569 !important;
+}
+
+#enterprise-login-modal .modal-card select option {
+  background: #0f172a !important;
+  color: #FFFFFF !important;
+}
+
+#enterprise-login-modal .modal-card .btn-close-modal {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Environment View Modes (Cliente vs Empresa) */
@@ -3400,11 +3487,13 @@ details.admin-accordion-card[open] .accordion-chevron-icon {
 }
 
 .clinica-area-reference-banner img {
-  transition: transform 0.4s ease, filter 0.4s ease;
+  transform: none !important;
+  transition: none !important;
 }
 .clinica-area-reference-banner:hover img {
   transform: none !important;
-  filter: brightness(0.96) !important;
+  filter: none !important;
+  transition: none !important;
 }
 
 #new-concept-dropzone {
@@ -4398,8 +4487,10 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
   background: rgba(212, 175, 55, 0.12);
 }
 
-/* FEED DE MENSAJES */
-.leia-chat-messages {
+/* FEED DE MENSAJES Y BURBUJAS SILENT LUXURY (TEXTO BLANCO PURO) */
+.leia-chat-messages,
+#leia-chat-messages,
+#leia-search-chat-messages {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
@@ -4407,6 +4498,134 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
   flex-direction: column;
   gap: 12px;
   background: #121214;
+  color: #FFFFFF !important;
+}
+
+/* FILAS DE BURBUJAS DE BÚSQUEDA PROFUNDA (LEIA SEARCH) */
+.chat-bubble-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.chat-bubble-row.leia-row {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.chat-bubble-row.user-row {
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.bubble-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #D4AF37;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.chat-bubble {
+  max-width: 84%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  word-break: break-word;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.chat-bubble * {
+  color: #FFFFFF !important;
+}
+
+.chat-bubble strong,
+.chat-bubble b {
+  color: #FEF08A !important;
+  font-weight: 800;
+}
+
+.chat-bubble em,
+.chat-bubble i {
+  color: #E2E8F0 !important;
+}
+
+.chat-bubble a {
+  color: #60A5FA !important;
+  text-decoration: underline;
+}
+
+.chat-bubble.leia-bubble {
+  background: #1e293b !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+  border-bottom-left-radius: 4px;
+  color: #FFFFFF !important;
+}
+
+.chat-bubble.user-bubble {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.5) !important;
+  border-bottom-right-radius: 4px;
+  color: #FFFFFF !important;
+}
+
+.bubble-content {
+  color: #FFFFFF !important;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.bubble-time {
+  display: block;
+  font-size: 0.68rem;
+  color: #CBD5E1 !important;
+  margin-top: 6px;
+  text-align: right;
+}
+
+/* BURBUJAS DEL WIDGET MODAL DE CLIENTES (AVATAR REDONDO) */
+#leia-chat-card {
+  color: #FFFFFF !important;
+}
+
+#leia-chat-card p,
+#leia-chat-card div,
+#leia-chat-card span:not(.badge),
+#leia-chat-card em {
+  color: #FFFFFF !important;
+}
+
+#leia-chat-card strong,
+#leia-chat-card b {
+  color: #FEF08A !important;
+}
+
+.leia-client-bot-bubble {
+  background: #1e293b !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(251, 191, 36, 0.35) !important;
+  border-radius: 14px 14px 14px 2px !important;
+  padding: 12px 15px !important;
+  font-size: 0.88rem !important;
+  line-height: 1.5 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+.leia-client-user-bubble {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  border-radius: 14px 14px 2px 14px !important;
+  padding: 12px 15px !important;
+  font-size: 0.88rem !important;
+  line-height: 1.5 !important;
+  align-self: flex-end !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
 }
 
 .leia-msg {
@@ -4421,16 +4640,16 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
 .leia-msg-user {
   align-self: flex-end;
   background: linear-gradient(135deg, #4A6B5D, #2C4A3E);
-  color: #FFFFFF;
+  color: #FFFFFF !important;
   border-bottom-right-radius: 4px;
   border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .leia-msg-bot {
   align-self: flex-start;
-  background: #2C2C2E;
-  color: #FBFBFD;
-  border: 1px solid rgba(212, 175, 55, 0.25);
+  background: #1e293b !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(212, 175, 55, 0.35);
   border-bottom-left-radius: 4px;
 }
 
@@ -7375,4 +7594,19 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
 .btn-cctv-config:hover {
   background: #0D9488;
   color: #FFFFFF;
+}
+
+/* ==========================================================================
+   MRS. PETS - CENTRO DE CONTROL UNIFICADO DE IA (AGENT STUDIO RESPONSIVENESS)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .governance-controls-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dual-webhooks-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .action-buttons-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
