@@ -349,14 +349,20 @@ class WarRoomEngine:
         incident_id = f"INC-{now.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
         affected = affected_nodes or ["make", "volturi"]
         
+        target_webhook = self.node_configs.get("make_webhook_url") or os.environ.get(
+            "MAKE_WEBHOOK_URL_WAR_ROOM",
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+        )
         default_details = {
-            "endpoint": "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6",
+            "endpoint": target_webhook,
+            "service": service,
+            "component_affected": service,
             "http_status": 502,
             "latency_ms": 5230,
             "attempt_count": 3,
-            "root_cause": "Timeout persistente en gateway de Make.com al procesar la cola de sincronización omnicanal.",
-            "impact_assessment": "Pérdida de eventos automáticos de interacción hacia Google Sheets (Hoja 1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4).",
-            "system_trace": f"HTTPError: 502 Bad Gateway at POST https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6 [TraceID: {uuid.uuid4().hex[:12]}]"
+            "root_cause": f"Falla operativa reportada en el componente {service}.",
+            "impact_assessment": f"Degradación operacional y potencial corte en el flujo de {service}.",
+            "system_trace": f"IncidentReported: Service={service} at {now.isoformat()} [TraceID: {uuid.uuid4().hex[:12]}]"
         }
         if details:
             default_details.update(details)
@@ -364,15 +370,15 @@ class WarRoomEngine:
         proposed_patch = {
             "patch_id": f"PATCH-{uuid.uuid4().hex[:8].upper()}",
             "strategy": "FAILOVER_REROUTE_AND_SYNC",
-            "action_title": "Reenrutamiento a Pasarela Secundaria & Purgado de Cola Muerta (DLQ)",
-            "description": "Reenrutar tráfico al endpoint de respaldo https://hook.us1.make.com/mrspets_leia_multimodal con retroceso exponencial, purgar cola de eventos y registrar auditoría inmutable en Google Sheets.",
+            "action_title": f"Reenrutamiento a Pasarela Secundaria & Purgado de Cola ({service})",
+            "description": f"Reenrutar tráfico al endpoint de contingencia {target_webhook} con retroceso exponencial, purgar cola de eventos y registrar auditoría inmutable en Google Sheets.",
             "patch_payload": {
-                "active_failover_url": "https://hook.us1.make.com/mrspets_leia_multimodal",
+                "active_failover_url": target_webhook,
                 "retry_backoff_base_sec": 1.5,
                 "circuit_breaker": "HALF_OPEN",
                 "max_retries": 5,
                 "dlq_flush_mode": "FIFO_RESILIENT",
-                "target_spreadsheet": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4",
+                "target_spreadsheet": self.node_configs.get("google_sheets_id", "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"),
                 "target_sheet_tab": "Registro de Interacciones"
             },
             "recommended_by": "Google AntiGravity & Comité Volturi",
@@ -383,7 +389,8 @@ class WarRoomEngine:
             "incident_id": incident_id,
             "title": title,
             "service": service,
-            "severity": "CRITICA",
+            "component_affected": service,
+            "severity": details.get("severity", "CRITICA") if details else "CRITICA",
             "error_code": error_code,
             "detected_at": now.isoformat(),
             "affected_nodes": affected,
@@ -391,6 +398,47 @@ class WarRoomEngine:
             "proposed_solution": proposed_patch,
             "status": "ACTIVA"
         }
+        
+        # Despachar notificación estructurada al Webhook de Make.com
+        if target_webhook and target_webhook.startswith("https://hook."):
+            make_payload = {
+                "event": "WAR_ROOM_INCIDENT_REPORTED",
+                "incident_id": incident_id,
+                "service": service,
+                "component_affected": service,
+                "severity": incident["severity"],
+                "title": title,
+                "details": default_details,
+                "affected_nodes": affected,
+                "timestamp": now.isoformat(),
+                "source": "Mrs. Pets PWA — Cuarto de Guerra",
+                "region": "US-2",
+                "status": "INCIDENCIA_ACTIVA",
+                "telemetry": {
+                    "engine": "AntiGravity Resilient Router",
+                    "version": "2.5.0",
+                    "circuit_breaker": "OPEN_WARNING",
+                    "spreadsheet_id": self.node_configs.get("google_sheets_id", "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4")
+                }
+            }
+            try:
+                req_data = json.dumps(make_payload).encode("utf-8")
+                req = urllib.request.Request(
+                    target_webhook,
+                    data=req_data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "MrsPets-WarRoom-IncidentReporter/2.0"
+                    },
+                    method="POST"
+                )
+                ctx_ssl = ssl.create_default_context()
+                ctx_ssl.check_hostname = False
+                ctx_ssl.verify_mode = ssl.CERT_NONE
+                with urllib.request.urlopen(req, timeout=4.0, context=ctx_ssl) as r:
+                    incident["make_dispatch_status"] = r.status
+            except Exception as ex:
+                incident["make_dispatch_error"] = str(ex)
         
         # Actualizar estatus global y de los nodos involucrados
         self.status = "ALERTA"

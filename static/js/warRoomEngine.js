@@ -30,6 +30,9 @@
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox'
+      this.selectedIncidentService = 'Make.com Webhook Omnichannel';
+      this.savedIssueDesc = '';
+      this.savedIssueSeverity = 'CRÍTICA';
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -509,9 +512,24 @@
         badge.style.background = isAlert ? '#EF4444' : '#10B981';
       }
 
-      // Si el usuario está escribiendo activamente en un input, solo actualizar el feed del chat
+      // Preservar valores de formulario de incidencias antes de cualquier refresco
+      const curService = document.getElementById('wr-new-issue-service')?.value;
+      const curDesc = document.getElementById('wr-new-issue-desc')?.value;
+      const curSev = document.getElementById('wr-new-issue-severity')?.value;
+      if (curService) this.selectedIncidentService = curService;
+      if (curDesc !== undefined && curDesc !== null && curDesc !== '') this.savedIssueDesc = curDesc;
+      if (curSev) this.savedIssueSeverity = curSev;
+
+      // Si el usuario está escribiendo o interactuando activamente con el formulario o selector, no sobrescribir el DOM
       const activeEl = document.activeElement;
-      const isInputFocused = activeEl && (activeEl.id === 'wr-chat-input' || activeEl.id === 'wr-new-issue-desc' || activeEl.classList.contains('wr-cfg-input'));
+      const isInputFocused = activeEl && (
+        activeEl.id === 'wr-chat-input' || 
+        activeEl.id === 'wr-new-issue-desc' || 
+        activeEl.id === 'wr-new-issue-service' ||
+        activeEl.id === 'wr-new-issue-severity' ||
+        activeEl.classList.contains('wr-cfg-input') ||
+        activeEl.classList.contains('wr-service-pill')
+      );
       if (!forceFullRender && isInputFocused) {
         this.renderChatFeedOnly();
         return;
@@ -877,38 +895,95 @@
         `;
       }
 
+      // Servicios del Ecosistema de Infraestructura de Mrs. Pets
+      const servicesList = [
+        { id: 'Make.com Webhook Omnichannel', name: 'Make.com', icon: '🔗', desc: 'Webhooks & Omnicanalidad (US-2)', color: '#60A5FA' },
+        { id: 'Render Cloud Server', name: 'Render Cloud', icon: '☁️', desc: 'Backend FastAPI & Base de Datos', color: '#38BDF8' },
+        { id: 'Q-Vet DICOM PACS', name: 'Q-Vet PACS', icon: '🩺', desc: 'Historia Clínica & Radiología Digital', color: '#34D399' },
+        { id: 'IDEXX Analizadores Laboratorio', name: 'IDEXX Lab', icon: '🧪', desc: 'Catalyst One & ProCyte Dx', color: '#A78BFA' },
+        { id: 'Leia Concierge & Atencion VIP', name: 'Leia Concierge', icon: '🎀', desc: 'Atención VIP & Lujo Silencioso', color: '#F472B6' },
+        { id: 'Teamly / Elias Agentes', name: 'Teamly (Elías)', icon: '🤝', desc: 'Enjambre Agentes Autónomos', color: '#FB923C' },
+        { id: 'Comite Volturi Gobernanza', name: 'Comité Volturi', icon: '🏛️', desc: 'Gobernanza IA, Tasa BCV & SENIAT', color: '#FBBF24' },
+        { id: 'Google AntiGravity Engine', name: 'AntiGravity', icon: '⚡', desc: 'Ingeniería Autónoma & Hotfixes', color: '#10B981' },
+        { id: 'Pasarelas Banplus & Zinli API', name: 'Pasarelas Pago', icon: '💳', desc: 'Banplus, Zinli & Facturación POS', color: '#E879F9' },
+        { id: 'Google Sheets Bitacora Inmutable', name: 'Google Sheets', icon: '📊', desc: 'Bitácora Inmutable de Auditoría', color: '#FDE047' }
+      ];
+
+      const currentService = this.selectedIncidentService || 'Make.com Webhook Omnichannel';
+      const currentSeverity = this.savedIssueSeverity || 'CRÍTICA';
+      const currentDesc = this.savedIssueDesc || '';
+      const targetWebhookUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+
       // Formulario para declarar fallas manualmente
       const manualFormHtml = `
-        <div style="background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:20px;">
-          <div style="font-size:0.85rem; font-weight:800; color:#FDE047; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <span>🚨</span> Declarar Incidencia o Reportar Anomalía Manual a la Mesa
+        <div style="background:#111827; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <div style="font-size:0.9rem; font-weight:800; color:#FDE047; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+            <span>🚨</span> Declarar Incidencia o Reportar Anomalía a la Mesa de 5 Nodos
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+
+          <!-- SELECTOR VISUAL POR ELEMENTOS SELECCIONABLES (PILLS) -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.75rem; color:#94A3B8; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <span>⚡ Alternar Servicio Afectado (Haz clic libremente sobre cualquier componente):</span>
+              <span id="wr-service-active-label" style="color:#10B981; font-weight:800; font-size:0.75rem;">Seleccionado: ${this.escapeHtml(currentService)}</span>
+            </div>
+            <div id="wr-service-pills-container" style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${servicesList.map(s => {
+                const isSelected = s.id === currentService;
+                return `
+                  <button type="button" class="wr-service-pill ${isSelected ? 'active' : ''}" onclick="window.warRoomEngine.onSelectIncidentService('${s.id}')" style="cursor:pointer; font-size:0.75rem; font-weight:800; padding:7px 13px; border-radius:10px; border:1.5px solid ${isSelected ? '#10B981' : 'rgba(255,255,255,0.12)'}; background:${isSelected ? 'rgba(16,185,129,0.25)' : '#1F2937'}; color:${isSelected ? '#34D399' : '#CBD5E1'}; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 10px rgba(16,185,129,0.35)' : 'none'};">
+                    <span style="font-size:0.95rem;">${s.icon}</span>
+                    <span>${s.name}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
             <div>
-              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:4px;">Microservicio / Componente Afectado:</label>
-              <select id="wr-new-issue-service" style="width:100%; background:#1F2937; border:1px solid #374151; color:#FFFFFF; border-radius:8px; padding:8px 12px; font-size:0.8rem; font-weight:600; outline:none;">
-                <option value="Leia Concierge & Teamily IA">🤖 Leia Concierge & Teamily IA (No responde / Bucle)</option>
-                <option value="Make.com Webhook Omnichannel">🔗 Make.com Webhook Omnichannel (Error 502 / Caído)</option>
-                <option value="Q-Vet DICOM PACS">🩺 Q-Vet DICOM PACS (Latencia / Desconectado)</option>
-                <option value="Pasarelas Banplus & Zinli API">💳 Pasarelas Financieras Banplus & Zinli</option>
-                <option value="Google Sheets Bitácora Inmutable">📊 Google Sheets Registro de Interacciones</option>
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Menú Desplegable de Microservicio / Infraestructura:</label>
+              <select id="wr-new-issue-service" onchange="window.warRoomEngine.onSelectIncidentService(this.value)" style="width:100%; background:#1F2937; border:1.5px solid #10B981; color:#FFFFFF; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer;">
+                ${servicesList.map(s => `
+                  <option value="${s.id}" ${s.id === currentService ? 'selected' : ''}>
+                    ${s.icon} ${s.name} — ${s.desc}
+                  </option>
+                `).join('')}
               </select>
             </div>
             <div>
-              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:4px;">Nivel de Severidad:</label>
-              <select id="wr-new-issue-severity" style="width:100%; background:#1F2937; border:1px solid #374151; color:#FFFFFF; border-radius:8px; padding:8px 12px; font-size:0.8rem; font-weight:600; outline:none;">
-                <option value="CRÍTICA">🚨 CRÍTICA (Interrupción Total del Servicio)</option>
-                <option value="ALTA">⚠️ ALTA (Degradación de Respuesta)</option>
-                <option value="MEDIA">⚡ MEDIA (Latencia / Reintentos)</option>
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Nivel de Severidad:</label>
+              <select id="wr-new-issue-severity" onchange="window.warRoomEngine.updateJsonLivePreview()" style="width:100%; background:#1F2937; border:1.5px solid #374151; color:#FFFFFF; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer;">
+                <option value="CRÍTICA" ${currentSeverity === 'CRÍTICA' ? 'selected' : ''}>🚨 CRÍTICA (Interrupción Total del Servicio)</option>
+                <option value="ALTA" ${currentSeverity === 'ALTA' ? 'selected' : ''}>⚠️ ALTA (Degradación de Respuesta / Latencia)</option>
+                <option value="MEDIA" ${currentSeverity === 'MEDIA' ? 'selected' : ''}>⚡ MEDIA (Anomalía No Bloqueante / Reintentos)</option>
               </select>
             </div>
           </div>
-          <div style="margin-bottom:12px;">
-            <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:4px;">Detalles y Síntomas de la Falla:</label>
-            <textarea id="wr-new-issue-desc" rows="3" placeholder="Describe la falla detallada (ej: 'Leia no está conversando ni respondiendo a los tutores, responde mensaje vacío o se queda en bucle en el webhook de Make')..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:10px 12px; font-size:0.8rem; color:#F1F5F9; font-family:inherit; resize:none; outline:none;"></textarea>
+
+          <!-- VISTA PREVIA DINÁMICA DEL PAYLOAD HACIA MAKE.COM -->
+          <div style="margin-bottom:14px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Telemetría Dinámica para Webhook Make.com (US-2):</span>
+              <span id="wr-json-service-badge" style="font-size:0.7rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
+            </div>
+            <pre id="wr-json-live-preview" style="margin:0; font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:#38BDF8; white-space:pre-wrap; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px;">${JSON.stringify({
+              event: 'WAR_ROOM_INCIDENT_REPORTED',
+              service: currentService,
+              component_affected: currentService,
+              severity: currentSeverity,
+              reported_by: this.getAuthorizedAdminName(),
+              webhook_target: targetWebhookUrl
+            }, null, 2)}</pre>
           </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Detalles y Síntomas de la Falla:</label>
+            <textarea id="wr-new-issue-desc" oninput="window.warRoomEngine.updateJsonLivePreview()" rows="3" placeholder="Describe la falla detallada (ej: 'El servidor Render reporta timeout en conexión PostgreSQL', 'El webhook de Make no está entregando telemetría', 'Q-Vet no sincroniza radiografías DICOM')..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:none; outline:none;">${this.escapeHtml(currentDesc)}</textarea>
+          </div>
+
           <div style="display:flex; justify-content:flex-end;">
-            <button type="button" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.82rem; padding:10px 20px; border-radius:8px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+            <button type="button" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.82rem; padding:11px 22px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(239,68,68,0.35);">
               <span>🚨 Declarar Falla & Alertar a los 5 Nodos</span>
             </button>
           </div>
@@ -918,54 +993,169 @@
       return activeIncHtml + manualFormHtml;
     }
 
+    onSelectIncidentService(serviceKey) {
+      this.selectedIncidentService = serviceKey;
+      const selectEl = document.getElementById('wr-new-issue-service');
+      if (selectEl && selectEl.value !== serviceKey) {
+        selectEl.value = serviceKey;
+      }
+      const badge = document.getElementById('wr-json-service-badge');
+      if (badge) badge.innerText = serviceKey;
+
+      const activeLabel = document.getElementById('wr-service-active-label');
+      if (activeLabel) activeLabel.innerText = `Seleccionado: ${serviceKey}`;
+
+      // Actualizar estado visual de los pills
+      const container = document.getElementById('wr-service-pills-container');
+      if (container) {
+        const buttons = container.querySelectorAll('.wr-service-pill');
+        buttons.forEach(btn => {
+          const isMatch = btn.getAttribute('onclick')?.includes(`'${serviceKey}'`);
+          if (isMatch) {
+            btn.style.border = '1.5px solid #10B981';
+            btn.style.background = 'rgba(16,185,129,0.25)';
+            btn.style.color = '#34D399';
+            btn.style.boxShadow = '0 0 10px rgba(16,185,129,0.35)';
+          } else {
+            btn.style.border = '1.5px solid rgba(255,255,255,0.12)';
+            btn.style.background = '#1F2937';
+            btn.style.color = '#CBD5E1';
+            btn.style.boxShadow = 'none';
+          }
+        });
+      }
+
+      this.updateJsonLivePreview();
+    }
+
+    updateJsonLivePreview() {
+      const previewEl = document.getElementById('wr-json-live-preview');
+      if (!previewEl) return;
+      const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
+      const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
+      const desc = document.getElementById('wr-new-issue-desc')?.value || '';
+      const adminName = this.getAuthorizedAdminName();
+      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+
+      const payloadPreview = {
+        event: 'WAR_ROOM_INCIDENT_REPORTED',
+        service: service,
+        component_affected: service,
+        severity: severity,
+        description: desc ? (desc.slice(0, 80) + (desc.length > 80 ? '...' : '')) : '(Sin descripción aún)',
+        reported_by: adminName,
+        source: 'Mrs. Pets PWA — Cuarto de Guerra',
+        region: 'US-2',
+        status: 'INCIDENCIA_ACTIVA',
+        webhook_target: targetUrl
+      };
+      previewEl.innerText = JSON.stringify(payloadPreview, null, 2);
+    }
+
     async declareManualIncident() {
       const descInput = document.getElementById('wr-new-issue-desc');
       const serviceSelect = document.getElementById('wr-new-issue-service');
       const severitySelect = document.getElementById('wr-new-issue-severity');
 
-      const desc = descInput ? descInput.value.trim() : '';
+      const desc = descInput ? descInput.value.trim() : (this.savedIssueDesc || '');
       if (!desc) {
         if (descInput) {
           descInput.style.borderColor = '#EF4444';
           descInput.focus();
         }
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('Por favor describe los síntomas de la falla antes de declarar la incidencia.', 'warning');
+        }
         return;
       }
 
-      const service = serviceSelect ? serviceSelect.value : 'Leia Concierge & Teamily IA';
-      const severity = severitySelect ? severitySelect.value : 'CRÍTICA';
+      const selectedService = this.selectedIncidentService || serviceSelect?.value || 'Make.com Webhook Omnichannel';
+      const severity = severitySelect ? severitySelect.value : (this.savedIssueSeverity || 'CRÍTICA');
       const adminName = this.getAuthorizedAdminName();
+      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const incidentId = `INC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
+
+      // Determinar nodos afectados dinámicamente según el componente
+      let affectedNodes = ['antigravity', 'volturi'];
+      const sLower = selectedService.toLowerCase();
+      if (sLower.includes('make')) affectedNodes.push('make');
+      else if (sLower.includes('teamly') || sLower.includes('elías') || sLower.includes('elias')) affectedNodes.push('teamly');
+      else if (sLower.includes('leia')) affectedNodes.push('teamly');
+      else if (sLower.includes('render')) affectedNodes.push('make');
+      else if (sLower.includes('q-vet') || sLower.includes('idexx')) affectedNodes.push('make');
+      else affectedNodes.push('make');
+
+      // Objeto JSON estructurado despachado dinámicamente hacia Make.com
+      const makeIncidentPayload = {
+        event: 'WAR_ROOM_INCIDENT_REPORTED',
+        incident_id: incidentId,
+        service: selectedService,
+        component_affected: selectedService,
+        severity: severity,
+        description: desc,
+        reported_by: adminName,
+        source: 'Mrs. Pets PWA — Cuarto de Guerra',
+        region: 'US-2',
+        status: 'INCIDENCIA_ACTIVA',
+        timestamp: new Date().toISOString(),
+        affected_nodes: affectedNodes,
+        telemetry: {
+          engine: 'AntiGravity Resilient Router',
+          version: '2.5.0',
+          selected_service: selectedService,
+          affected_service: selectedService,
+          circuit_breaker: 'OPEN_WARNING',
+          spreadsheet_id: this.nodeConfigs.google_sheets_id || '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4',
+          tab: 'Registro de Interacciones'
+        }
+      };
 
       try {
+        // 1. Envío al backend
         await fetch('/api/v1/war-room/simulate-alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             signal: 'ALERT',
-            service: service,
-            title: `Incidencia Declarada: ${service}`,
+            service: selectedService,
+            component_affected: selectedService,
+            title: `Incidencia en ${selectedService}`,
             error_code: 'MANUAL_REPORTED_FAILURE',
             details: {
               reported_by: adminName,
               report_description: desc,
               severity: severity,
+              service: selectedService,
+              component_affected: selectedService,
               reported_at: new Date().toISOString()
             },
-            affected_nodes: ['antigravity', 'volturi', service.includes('Leia') ? 'teamly' : 'make']
+            make_payload: makeIncidentPayload,
+            affected_nodes: affectedNodes
           })
         });
 
+        // 2. Disparo directo complementario a Make.com desde el navegador
+        if (targetUrl && targetUrl.startsWith('https://hook.')) {
+          fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(makeIncidentPayload),
+            mode: 'no-cors'
+          }).catch(() => {});
+        }
+
         // Notificar en el chat del War Room
-        await this.sendChatMessage(`🚨 Reporte Formal de Falla en [${service}]: ${desc}`);
+        await this.sendChatMessage(`🚨 Reporte Formal de Falla en [${selectedService}]: ${desc}`);
         if (descInput) descInput.value = '';
+        this.savedIssueDesc = '';
         this.activeTab = 'chat';
         await this.fetchStatus();
 
         if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast(`🚨 Incidencia declarada en [${service}]. Mesa alertada.`, 'warning');
+          window.app.showToast(`🚨 Incidencia en [${selectedService}] reportada. Telemetría despachada a Make.com (US-2).`, 'warning');
         }
       } catch (err) {
-        alert('Incidencia registrada.');
+        alert(`Incidencia registrada para ${selectedService}.`);
       }
     }
 
@@ -1677,8 +1867,11 @@
   warRoom.sendChatMessage = warRoom.sendChatMessage.bind(warRoom);
   warRoom.quickReportIssue = warRoom.quickReportIssue.bind(warRoom);
   warRoom.declareManualIncident = warRoom.declareManualIncident.bind(warRoom);
+  warRoom.onSelectIncidentService = warRoom.onSelectIncidentService.bind(warRoom);
+  warRoom.updateJsonLivePreview = warRoom.updateJsonLivePreview.bind(warRoom);
   warRoom.saveNodeConfigs = warRoom.saveNodeConfigs.bind(warRoom);
   warRoom.pingNode = warRoom.pingNode.bind(warRoom);
+  warRoom.testMakeLinksReception = warRoom.testMakeLinksReception.bind(warRoom);
 
   window.WarRoomEngine = WarRoomEngine;
   window.warRoomEngine = warRoom;

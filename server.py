@@ -1662,13 +1662,26 @@ async def war_room_pulse_endpoint(request: Request, data: Optional[WarRoomPulseI
     if war_room_engine:
         if war_room_engine.status == "ALERTA" and (not data.signal or data.signal == "RESOLVE"):
             return war_room_engine.execute_patch("AUTO-RESOLVE", "Google AntiGravity", "Alternador de prueba")
+        service_name = data.service or "Make.com Webhook Omnichannel"
         inc = war_room_engine.trigger_incident(
-            service=data.service or "Make.com Webhook Omnichannel",
-            title=data.title or "Fallo de Comunicación en Webhook Make.com (HTTP 502)",
-            error_code=data.error_code or "WEBHOOK_UNREACHABLE_502",
+            service=service_name,
+            title=data.title or f"Incidencia Declarada: {service_name}",
+            error_code=data.error_code or "MANUAL_REPORTED_FAILURE",
             details=data.details,
             affected_nodes=data.affected_nodes
         )
+        if centralita_router and inc:
+            try:
+                centralita_router.record_trace(
+                    message_id=inc.get("incident_id", f"INC-{uuid.uuid4().hex[:6]}"),
+                    agente_origen="Cuarto de Guerra",
+                    agente_destino=service_name,
+                    webhook_utilizado=os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6"),
+                    estado="INCIDENCIA_DECLARADA",
+                    respuesta_preview=f"Falla en [{service_name}]: {str(data.details or '')[:80]}"
+                )
+            except Exception:
+                pass
         return {"status": "alert_triggered", "incident": inc}
     return {"status": "ok"}
 
