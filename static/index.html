@@ -52,6 +52,111 @@
       } catch (e) {}
     })();
   </script>
+  <script>
+    window.showConciergePortalSafe = function() {
+      try {
+        if (window.authEngine && typeof window.authEngine.showConciergePortal === 'function') {
+          window.authEngine.showConciergePortal();
+          return;
+        }
+      } catch(e) {
+        console.warn("authEngine.showConciergePortal failed, activating safe direct transition:", e);
+      }
+      const splash = document.getElementById('auth-splash-screen');
+      const portal = document.getElementById('access-links-portal');
+      const video = document.getElementById('brand-splash-video');
+      const appContainer = document.getElementById('app-container');
+      if (video) {
+        try { video.pause(); video.currentTime = 0; } catch(e){}
+      }
+      if (splash) {
+        splash.style.setProperty('display', 'none', 'important');
+        splash.style.setProperty('pointer-events', 'none', 'important');
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+      }
+      if (portal) {
+        portal.scrollTop = 0;
+        portal.classList.add('active');
+        portal.style.setProperty('display', 'block', 'important');
+        portal.style.setProperty('visibility', 'visible', 'important');
+        portal.style.setProperty('opacity', '1', 'important');
+        portal.style.setProperty('pointer-events', 'auto', 'important');
+        portal.style.setProperty('z-index', '100000', 'important');
+        const loginView = document.getElementById('portal-view-login');
+        if (loginView) loginView.style.display = 'block';
+      }
+      if (appContainer) {
+        appContainer.style.setProperty('display', 'none', 'important');
+      }
+      if (document.body) {
+        document.body.style.backgroundColor = '#121214';
+        document.body.classList.remove('enterprise-view-mode');
+        document.body.classList.add('customer-view-mode');
+      }
+      try {
+        if (window.aiModelManager && typeof window.aiModelManager.playTinkerbellSound === 'function') {
+          window.aiModelManager.playTinkerbellSound();
+        } else {
+          const chime = new Audio('assets/tinkerbell_chime.mp3');
+          chime.volume = 0.40;
+          chime.play().catch(function(){});
+        }
+      } catch(e){}
+    };
+
+    window.toggleAudioSafe = function() {
+      try {
+        if (window.authEngine && typeof window.authEngine.toggleAudio === 'function') {
+          window.authEngine.toggleAudio();
+          return;
+        }
+      } catch(e) {
+        console.warn("authEngine.toggleAudio failed, activating safe direct audio toggle:", e);
+      }
+      const video = document.getElementById('brand-splash-video');
+      const btn = document.getElementById('toggle-audio-btn');
+      if (video) {
+        video.muted = !video.muted;
+        if (!video.muted) {
+          video.volume = 1.0;
+          try { video.play().catch(function(){}); } catch(e){}
+          try {
+            const chime = new Audio('assets/tinkerbell_chime.mp3');
+            chime.volume = 0.5;
+            chime.play().catch(function(){});
+          } catch(e){}
+        }
+        if (btn) {
+          btn.innerHTML = video.muted ? '🔊 Activar Audio' : '🔇 Silenciar Audio';
+          btn.style.background = video.muted ? 'rgba(212,175,55,0.9)' : 'rgba(74,107,93,0.9)';
+          btn.style.color = video.muted ? '#121214' : '#FFFFFF';
+        }
+      }
+    };
+
+    window.closeConciergePortalSafe = function() {
+      try {
+        if (window.authEngine && typeof window.authEngine.closeConciergePortal === 'function') {
+          window.authEngine.closeConciergePortal();
+          return;
+        }
+      } catch(e){}
+      const portal = document.getElementById('access-links-portal');
+      const splash = document.getElementById('auth-splash-screen');
+      if (portal) {
+        portal.style.setProperty('display', 'none', 'important');
+        portal.style.opacity = '0';
+        portal.style.visibility = 'hidden';
+        portal.classList.remove('active');
+      }
+      if (splash) {
+        splash.style.setProperty('display', 'block', 'important');
+        splash.style.opacity = '1';
+        splash.style.visibility = 'visible';
+      }
+    };
+  </script>
 </head>
 <body class="customer-view-mode">
   <script>
@@ -82,15 +187,15 @@
       </div>
 
       <div style="display:flex; gap:8px; align-items:center; pointer-events:auto; flex-wrap:wrap;">
-        <button type="button" onclick="window.authEngine ? window.authEngine.showConciergePortal() : authEngine.showConciergePortal()" style="background:linear-gradient(135deg, #4A6B5D, #2C4A3E); color:#FFFFFF; border:1.5px solid #D4AF37; font-weight:900; font-size:0.8rem; padding:8px 18px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5);">
+        <button type="button" onclick="window.showConciergePortalSafe()" style="background:linear-gradient(135deg, #4A6B5D, #2C4A3E); color:#FFFFFF; border:1.5px solid #D4AF37; font-weight:900; font-size:0.8rem; padding:8px 18px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5);">
           ✨ Portal Concierge VIP * ➔
         </button>
 
-        <button type="button" id="toggle-audio-btn" onclick="window.authEngine ? window.authEngine.toggleAudio() : authEngine.toggleAudio()" style="background:rgba(212,175,55,0.9); color:#121214; border:none; font-weight:800; font-size:0.75rem; padding:8px 16px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5); transition:all 0.3s ease;">
+        <button type="button" id="toggle-audio-btn" onclick="window.toggleAudioSafe()" style="background:rgba(212,175,55,0.9); color:#121214; border:none; font-weight:800; font-size:0.75rem; padding:8px 16px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5); transition:all 0.3s ease;">
           🔊 Activar Audio
         </button>
 
-        <button type="button" onclick="window.authEngine ? window.authEngine.showConciergePortal() : authEngine.showConciergePortal()" style="background:rgba(44,44,46,0.8); color:#D4AF37; border:1px solid #D4AF37; font-weight:800; font-size:0.75rem; padding:8px 14px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5);">
+        <button type="button" onclick="window.showConciergePortalSafe()" style="background:rgba(44,44,46,0.8); color:#D4AF37; border:1px solid #D4AF37; font-weight:800; font-size:0.75rem; padding:8px 14px; border-radius:20px; cursor:pointer; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5);">
           Saltar Video ➔
         </button>
       </div>
@@ -112,7 +217,7 @@
     <div id="portal-card-container" style="position:relative; width:92%; max-width:580px; text-align:center; margin:auto; padding:40px 32px; background:rgba(44,44,46,0.5); backdrop-filter:blur(24px); border:1.5px solid #D4AF37; border-radius:24px; box-shadow:0 25px 60px rgba(0,0,0,0.7), 0 0 40px rgba(212,175,55,0.15); transition:max-width 0.3s ease;">
       
       <!-- BOTÓN CERRAR CONCIERGE VIP (RETORNAR AL VIDEO / VISTA EXPLORAR) -->
-      <button type="button" onclick="window.authEngine ? window.authEngine.closeConciergePortal() : authEngine.closeConciergePortal()" aria-label="Cerrar Portal Concierge VIP" style="position:absolute; top:18px; right:18px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.12); color:#FFFFFF; border:1.5px solid #D4AF37; font-size:1.15rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4); transition:all 0.2s ease; z-index:10;" onmouseover="this.style.background='rgba(212,175,55,0.4)';" onmouseout="this.style.background='rgba(255,255,255,0.12)';" title="Cerrar Portal Concierge VIP">✕</button>
+      <button type="button" onclick="window.closeConciergePortalSafe()" aria-label="Cerrar Portal Concierge VIP" style="position:absolute; top:18px; right:18px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.12); color:#FFFFFF; border:1.5px solid #D4AF37; font-size:1.15rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4); transition:all 0.2s ease; z-index:10;" onmouseover="this.style.background='rgba(212,175,55,0.4)';" onmouseout="this.style.background='rgba(255,255,255,0.12)';" title="Cerrar Portal Concierge VIP">✕</button>
 
       <div style="font-size:0.78rem; font-weight:800; color:#D4AF37; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px;">
         🏥 Mrs. Pets Maracaibo • RIF J-40120233-0

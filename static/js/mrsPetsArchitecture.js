@@ -1440,8 +1440,6 @@ Hemos cargado su expediente para consentirlo con el protocolo <em>Silent Luxury<
 • También puedes abrir la consola ejecutiva del <strong>Comité Volturi</strong> en la barra superior para interactuar directamente con cada director ejecutivo.<br><br>
 ¿Deseas que prepare una notificación formal para Talibel o Administración en este instante?`;
     }
-¿Deseas que prepare una notificación formal para Talibel o Administración en este instante?`;
-    }
     // 1. Emergency / Triaje
     else if (lower.includes('emergencia') || lower.includes('triaje') || lower.includes('grave') || lower.includes('urgente') || lower.includes('vomit') || lower.includes('sangr') || lower.includes('convulsi')) {
       reply = `🚨 <strong>¡ALERTA DE TRIAJE MÉDICO PRIORITARIO!</strong><br><br>

@@ -198,16 +198,31 @@ class AuthEngine {
     const audioBtn = document.getElementById('toggle-audio-btn');
     if (video) {
       video.muted = !video.muted;
+      if (!video.muted) {
+        video.volume = 1.0;
+        try {
+          const p = video.play();
+          if (p !== undefined) {
+            p.catch(e => console.warn("Audio play gesture catch:", e));
+          }
+        } catch (e) {}
+        try {
+          if (window.aiModelManager && typeof window.aiModelManager.playTinkerbellSound === 'function') {
+            window.aiModelManager.playTinkerbellSound();
+          } else {
+            const chime = new Audio('assets/tinkerbell_chime.mp3');
+            chime.volume = 0.5;
+            chime.play().catch(() => {});
+          }
+        } catch (e) {}
+      }
       if (audioBtn) {
         audioBtn.innerHTML = video.muted ? '🔊 Activar Audio' : '🔇 Silenciar Audio';
         audioBtn.style.background = video.muted ? 'rgba(212,175,55,0.9)' : 'rgba(74,107,93,0.9)';
         audioBtn.style.color = video.muted ? '#121214' : '#FFFFFF';
       }
-      if (!video.muted) {
-        video.play().catch(e => console.warn("Audio play gesture catch:", e));
-      }
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast(video.muted ? '🔇 Video silenciado' : '🔊 Audio activado', 'info');
+        window.app.showToast(video.muted ? '🔇 Video silenciado' : '🔊 Audio activado con éxito', 'info');
       }
     }
   }
@@ -749,6 +764,16 @@ class AuthEngine {
         videoEl.currentTime = 0;
       } catch(e) {}
     }
+
+    try {
+      if (window.aiModelManager && typeof window.aiModelManager.playTinkerbellSound === 'function') {
+        window.aiModelManager.playTinkerbellSound();
+      } else {
+        const chime = new Audio('assets/tinkerbell_chime.mp3');
+        chime.volume = 0.40;
+        chime.play().catch(() => {});
+      }
+    } catch(e) {}
 
     // Revelar Portal Concierge VIP sin dejar ver el fondo blanco del body
     if (portal) {
@@ -2369,7 +2394,6 @@ class AuthEngine {
       this.showSplashError('⚠️ Ocurrió un error inesperado al procesar la autenticación. Por favor intente de nuevo.');
       this.ensurePortalVisible();
     }
-  }
   }
 
   openRegistrationPortalModal(prefillData) {
