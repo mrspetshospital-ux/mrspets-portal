@@ -447,6 +447,32 @@ class CentralitaRouter:
 
         return response_payload
 
+    def record_trace(
+        self,
+        message_id: str,
+        agente_origen: str,
+        agente_destino: str,
+        webhook_utilizado: str,
+        estado: str,
+        respuesta_preview: str,
+        extra: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Registra explícitamente una traza de telemetría o confirmación de enlace."""
+        trace = {
+            "message_id": message_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "agente_origen": agente_origen,
+            "agente_destino": agente_destino,
+            "webhook_utilizado": webhook_utilizado,
+            "estado": estado,
+            "respuesta_preview": (respuesta_preview or "")[:140],
+            "extra": extra or {}
+        }
+        self.traces.append(trace)
+        if len(self.traces) > self.max_traces:
+            self.traces = self.traces[-self.max_traces:]
+        return trace
+
     def get_recent_traces(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Devuelve las trazas recientes para el War Room."""
         return self.traces[-limit:]
