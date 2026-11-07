@@ -520,25 +520,13 @@ class WarRoomEngine:
         
         # Despachar notificación estructurada al Webhook de Make.com
         if target_webhook and target_webhook.startswith("https://hook."):
-            make_payload = {
-                "event": "WAR_ROOM_INCIDENT_REPORTED",
-                "incident_id": incident_id,
-                "service": service,
-                "component_affected": service,
-                "severity": incident["severity"],
-                "title": title,
-                "details": default_details,
-                "affected_nodes": affected,
+            custom_make_payload = default_details.get("make_payload") if isinstance(default_details, dict) else None
+            make_payload = custom_make_payload or {
                 "timestamp": now.isoformat(),
-                "source": "Mrs. Pets PWA — Cuarto de Guerra",
-                "region": "US-2",
-                "status": "INCIDENCIA_ACTIVA",
-                "telemetry": {
-                    "engine": "AntiGravity Resilient Router",
-                    "version": "2.5.0",
-                    "circuit_breaker": "OPEN_WARNING",
-                    "spreadsheet_id": self.node_configs.get("google_sheets_id", "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4")
-                }
+                "source": service,
+                "status": default_details.get("status_code", "500") if isinstance(default_details, dict) else "500",
+                "telemetry": default_details.get("telemetry", title) if isinstance(default_details, dict) else title,
+                "event": "WAR_ROOM_MANUAL_INCIDENT"
             }
             try:
                 req_data = json.dumps(make_payload).encode("utf-8")

@@ -31,8 +31,12 @@
       };
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox' | 'playground'
       this.selectedIncidentService = 'Make.com Webhook Omnichannel';
+      this.savedIssueSource = 'Make.com Webhook Omnichannel';
+      this.savedIssueStatus = '500';
+      this.savedIssueTelemetry = 'Error de conexión HTTP 500 en endpoint /webhook/sync';
       this.savedIssueDesc = '';
       this.savedIssueSeverity = 'CRÍTICA';
+      this.lastManualDispatchResult = null;
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -541,10 +545,18 @@
       }
 
       // Preservar valores de formulario de incidencias antes de cualquier refresco
-      const curService = document.getElementById('wr-new-issue-service')?.value;
+      const curSource = document.getElementById('wr-new-issue-source')?.value || document.getElementById('wr-new-issue-service')?.value;
+      const curStatus = document.getElementById('wr-new-issue-status')?.value;
+      const curTelemetry = document.getElementById('wr-new-issue-telemetry')?.value;
       const curDesc = document.getElementById('wr-new-issue-desc')?.value;
       const curSev = document.getElementById('wr-new-issue-severity')?.value;
-      if (curService) this.selectedIncidentService = curService;
+
+      if (curSource) {
+        this.selectedIncidentService = curSource;
+        this.savedIssueSource = curSource;
+      }
+      if (curStatus !== undefined && curStatus !== null && curStatus !== '') this.savedIssueStatus = curStatus;
+      if (curTelemetry !== undefined && curTelemetry !== null && curTelemetry !== '') this.savedIssueTelemetry = curTelemetry;
       if (curDesc !== undefined && curDesc !== null && curDesc !== '') this.savedIssueDesc = curDesc;
       if (curSev) this.savedIssueSeverity = curSev;
 
@@ -558,17 +570,21 @@
         this.customPlaygroundUrl = curPlaygroundUrl;
       }
 
-      // Si el usuario está escribiendo o interactuando activamente con el formulario o selector, no sobrescribir el DOM
+      // Si el usuario está escribiendo o interactuando activamente con el formulario, editor o selector, no sobrescribir el DOM
       const activeEl = document.activeElement;
       const isInputFocused = activeEl && (
         activeEl.id === 'wr-chat-input' || 
+        activeEl.id === 'wr-new-issue-source' ||
+        activeEl.id === 'wr-new-issue-status' ||
+        activeEl.id === 'wr-new-issue-telemetry' ||
         activeEl.id === 'wr-new-issue-desc' || 
         activeEl.id === 'wr-new-issue-service' ||
         activeEl.id === 'wr-new-issue-severity' ||
         activeEl.id === 'wr-custom-json-input' ||
         activeEl.id === 'wr-playground-url' ||
         activeEl.classList.contains('wr-cfg-input') ||
-        activeEl.classList.contains('wr-service-pill')
+        activeEl.classList.contains('wr-service-pill') ||
+        activeEl.classList.contains('wr-status-pill')
       );
       if (!forceFullRender && (isInputFocused || (this.activeTab === 'playground' && !forceFullRender))) {
         this.renderChatFeedOnly();
@@ -950,6 +966,7 @@
         { id: 'Make.com Webhook Omnichannel', name: 'Make.com', icon: '🔗', desc: 'Webhooks & Omnicanalidad (US-2)', color: '#60A5FA' },
         { id: 'Render Cloud Server', name: 'Render Cloud', icon: '☁️', desc: 'Backend FastAPI & Base de Datos', color: '#38BDF8' },
         { id: 'Q-Vet DICOM PACS', name: 'Q-Vet PACS', icon: '🩺', desc: 'Historia Clínica & Radiología Digital', color: '#34D399' },
+        { id: 'PWA Cuarto de Guerra', name: 'PWA Cuarto de Guerra', icon: '🛡️', desc: 'Frontend PWA & Centro de Control', color: '#10B981' },
         { id: 'IDEXX Analizadores Laboratorio', name: 'IDEXX Lab', icon: '🧪', desc: 'Catalyst One & ProCyte Dx', color: '#A78BFA' },
         { id: 'Leia Concierge & Atencion VIP', name: 'Leia Concierge', icon: '🎀', desc: 'Atención VIP & Lujo Silencioso', color: '#F472B6' },
         { id: 'Teamly / Elias Agentes', name: 'Teamly (Elías)', icon: '🤝', desc: 'Enjambre Agentes Autónomos', color: '#FB923C' },
@@ -959,8 +976,9 @@
         { id: 'Google Sheets Bitacora Inmutable', name: 'Google Sheets', icon: '📊', desc: 'Bitácora Inmutable de Auditoría', color: '#FDE047' }
       ];
 
-      const currentService = this.selectedIncidentService || 'Make.com Webhook Omnichannel';
-      const currentSeverity = this.savedIssueSeverity || 'CRÍTICA';
+      const currentService = this.savedIssueSource || this.selectedIncidentService || 'Make.com Webhook Omnichannel';
+      const currentStatus = this.savedIssueStatus || '500';
+      const currentTelemetry = this.savedIssueTelemetry || `Error de conexión HTTP 500 en endpoint /webhook/sync`;
       const currentDesc = this.savedIssueDesc || '';
       const targetWebhookUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
 
@@ -983,14 +1001,19 @@
         </div>
 
         <div style="background:#111827; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-          <div style="font-size:0.9rem; font-weight:800; color:#FDE047; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
-            <span>🚨</span> Declarar Incidencia o Reportar Anomalía a la Mesa de 5 Nodos
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:0.92rem; font-weight:800; color:#FDE047; display:flex; align-items:center; gap:8px;">
+              <span>🚨</span> Formulario de Incidencias & Reporte Manual (Make.com US-2)
+            </div>
+            <span style="font-size:0.7rem; color:#10B981; font-weight:800; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:3px 9px; border-radius:8px;">
+              WEBHOOK ACTIVO (US-2)
+            </span>
           </div>
 
-          <!-- SELECTOR VISUAL POR ELEMENTOS SELECCIONABLES (PILLS) -->
+          <!-- 1. SELECTOR VISUAL POR ELEMENTOS SELECCIONABLES (PILLS) -->
           <div style="margin-bottom:16px;">
             <div style="font-size:0.75rem; color:#94A3B8; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-              <span>⚡ Alternar Servicio Afectado (Haz clic libremente sobre cualquier componente):</span>
+              <span>⚡ Origen / Microservicio Afectado (Haz clic libremente sobre cualquier componente):</span>
               <span id="wr-service-active-label" style="color:#10B981; font-weight:800; font-size:0.75rem;">Seleccionado: ${this.escapeHtml(currentService)}</span>
             </div>
             <div id="wr-service-pills-container" style="display:flex; flex-wrap:wrap; gap:8px;">
@@ -1006,10 +1029,11 @@
             </div>
           </div>
 
+          <!-- 2. DROPDOWN DE SERVICIO + CAMPO SOURCE EDITABLE -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
             <div>
               <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Menú Desplegable de Microservicio / Infraestructura:</label>
-              <select id="wr-new-issue-service" onchange="window.warRoomEngine.onSelectIncidentService(this.value)" style="width:100%; background:#1F2937; border:1.5px solid #10B981; color:#FFFFFF; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer;">
+              <select id="wr-new-issue-service" onchange="window.warRoomEngine.onSelectIncidentService(this.value)" style="width:100%; box-sizing:border-box; background:#1F2937; border:1.5px solid #10B981; color:#FFFFFF; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer;">
                 ${servicesList.map(s => `
                   <option value="${s.id}" ${s.id === currentService ? 'selected' : ''}>
                     ${s.icon} ${s.name} — ${s.desc}
@@ -1018,50 +1042,87 @@
               </select>
             </div>
             <div>
-              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Nivel de Severidad:</label>
-              <select id="wr-new-issue-severity" onchange="window.warRoomEngine.updateJsonLivePreview()" style="width:100%; background:#1F2937; border:1.5px solid #374151; color:#FFFFFF; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; outline:none; cursor:pointer;">
-                <option value="CRÍTICA" ${currentSeverity === 'CRÍTICA' ? 'selected' : ''}>🚨 CRÍTICA (Interrupción Total del Servicio)</option>
-                <option value="ALTA" ${currentSeverity === 'ALTA' ? 'selected' : ''}>⚠️ ALTA (Degradación de Respuesta / Latencia)</option>
-                <option value="MEDIA" ${currentSeverity === 'MEDIA' ? 'selected' : ''}>⚡ MEDIA (Anomalía No Bloqueante / Reintentos)</option>
-              </select>
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Campo "source" Editable (Nombre del microservicio en el payload):</label>
+              <input type="text" id="wr-new-issue-source" value="${this.escapeHtml(currentService)}" oninput="window.warRoomEngine.onManualSourceInput(this.value)" placeholder="Nombre del microservicio..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.25); color:#F1F5F9; border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; font-family:'JetBrains Mono', monospace; outline:none;" />
             </div>
           </div>
 
-          <!-- VISTA PREVIA DINÁMICA DEL PAYLOAD HACIA MAKE.COM -->
-          <div style="margin-bottom:14px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
+          <!-- 3. CÓDIGO DE ESTATUS (STATUS) EDITABLE CON PILLS RÁPIDOS -->
+          <div style="margin-bottom:14px; background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700;">Código de Estatus ("status") Editable (ej. 200 o 500):</label>
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="font-size:0.7rem; color:#64748B;">Atajos rápidos:</span>
+                <button type="button" class="wr-status-pill" onclick="window.warRoomEngine.onSelectStatusPill('500')" style="background:rgba(239,68,68,0.2); border:1px solid #EF4444; color:#F87171; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                  🔴 500 Error
+                </button>
+                <button type="button" class="wr-status-pill" onclick="window.warRoomEngine.onSelectStatusPill('200')" style="background:rgba(16,185,129,0.2); border:1px solid #10B981; color:#34D399; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                  🟢 200 OK
+                </button>
+                <button type="button" class="wr-status-pill" onclick="window.warRoomEngine.onSelectStatusPill('502')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.2); color:#FBBF24; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                  502 Bad Gateway
+                </button>
+                <button type="button" class="wr-status-pill" onclick="window.warRoomEngine.onSelectStatusPill('504')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.2); color:#F87171; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                  504 Timeout
+                </button>
+                <button type="button" class="wr-status-pill" onclick="window.warRoomEngine.onSelectStatusPill('404')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.2); color:#94A3B8; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                  404 Not Found
+                </button>
+              </div>
+            </div>
+            <input type="text" id="wr-new-issue-status" value="${this.escapeHtml(currentStatus)}" oninput="window.warRoomEngine.updateJsonLivePreview()" placeholder="Escribe el código de estatus (ej: 500 o 200)..." style="width:100%; box-sizing:border-box; background:#050811; border:1px solid rgba(255,255,255,0.25); color:#FDE047; border-radius:10px; padding:10px 14px; font-size:0.85rem; font-weight:800; font-family:'JetBrains Mono', monospace; outline:none;" />
+          </div>
+
+          <!-- 4. CAMPO DE TELEMETRÍA (DIAGNÓSTICO) EDITABLE -->
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Campo "telemetry" Editable (Texto del diagnóstico técnico):</label>
+            <textarea id="wr-new-issue-telemetry" oninput="window.warRoomEngine.updateJsonLivePreview()" rows="2" placeholder="Introduce el texto del diagnóstico técnico que viajará a Make (ej: 'Timeout en conexión con Render')..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#38BDF8; font-family:'JetBrains Mono', monospace; resize:vertical; outline:none;">${this.escapeHtml(currentTelemetry)}</textarea>
+          </div>
+
+          <!-- 5. DESCRIPCIÓN ADICIONAL DEL INCIDENTE -->
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Descripción y Síntomas de la Falla (Notas de apoyo):</label>
+            <textarea id="wr-new-issue-desc" oninput="window.warRoomEngine.updateJsonLivePreview()" rows="2" placeholder="Describe los síntomas y detalles de la falla..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:vertical; outline:none;">${this.escapeHtml(currentDesc)}</textarea>
+          </div>
+
+          <!-- 6. VISTA PREVIA DINÁMICA DEL PAYLOAD EXACTO HACIA MAKE.COM -->
+          <div style="margin-bottom:16px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Telemetría Dinámica para Webhook Make.com (US-2):</span>
+                <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Payload Estructurado hacia Make.com (5 Claves Exactas):</span>
                 <span id="wr-json-service-badge" style="font-size:0.7rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
                 <button type="button" onclick="window.warRoomEngine.loadIncidentJsonIntoPlayground()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38BDF8; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Copia este JSON hacia el editor libre para agregar variables o cambiar valores">
-                  <span>🧪</span> <span>Probar / Editar en Consola JSON</span>
+                  <span>🧪</span> <span>Probar en Consola JSON</span>
                 </button>
                 <button type="button" onclick="window.warRoomEngine.copyLivePreviewJson()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#E2E8F0; font-size:0.72rem; font-weight:700; padding:4px 9px; border-radius:8px; cursor:pointer;" title="Copiar este JSON al portapapeles">
                   <span>📋</span>
                 </button>
               </div>
             </div>
-            <pre id="wr-json-live-preview" style="margin:0; font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:#38BDF8; white-space:pre-wrap; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px;">${JSON.stringify({
-              event: 'WAR_ROOM_INCIDENT_REPORTED',
-              service: currentService,
-              component_affected: currentService,
-              severity: currentSeverity,
-              reported_by: this.getAuthorizedAdminName(),
-              webhook_target: targetWebhookUrl
+            <pre id="wr-json-live-preview" style="margin:0; font-family:'JetBrains Mono', monospace; font-size:0.76rem; color:#38BDF8; white-space:pre-wrap; max-height:140px; overflow-y:auto; background:rgba(0,0,0,0.55); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">${JSON.stringify({
+              timestamp: new Date().toISOString(),
+              source: currentService,
+              status: currentStatus,
+              telemetry: currentTelemetry,
+              event: "WAR_ROOM_MANUAL_INCIDENT"
             }, null, 2)}</pre>
           </div>
 
-          <div style="margin-bottom:14px;">
-            <label style="font-size:0.75rem; color:#94A3B8; font-weight:700; display:block; margin-bottom:6px;">Detalles y Síntomas de la Falla:</label>
-            <textarea id="wr-new-issue-desc" oninput="window.warRoomEngine.updateJsonLivePreview()" rows="3" placeholder="Describe la falla detallada (ej: 'El servidor Render reporta timeout en conexión PostgreSQL', 'El webhook de Make no está entregando telemetría', 'Q-Vet no sincroniza radiografías DICOM')..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:none; outline:none;">${this.escapeHtml(currentDesc)}</textarea>
+          <!-- 7. BOTÓN DE ENVÍO MANUAL -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:0.73rem; color:#94A3B8;">
+              Destino Webhook: <code>https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6</code>
+            </div>
+            <button type="button" id="wr-btn-declare-incident" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.85rem; padding:12px 24px; border-radius:11px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(239,68,68,0.35); transition:transform 0.15s ease;">
+              <span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>
+            </button>
           </div>
 
-          <div style="display:flex; justify-content:flex-end;">
-            <button type="button" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.82rem; padding:11px 22px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(239,68,68,0.35);">
-              <span>🚨 Declarar Falla & Alertar a los 5 Nodos</span>
-            </button>
+          <!-- 8. ÁREA DE CONFIRMACIÓN VISUAL (HTTP 200 OK) -->
+          <div id="wr-manual-dispatch-confirmation-area">
+            ${this.renderManualDispatchConfirmationHtml()}
           </div>
         </div>
       `;
@@ -1069,11 +1130,44 @@
       return activeIncHtml + manualFormHtml;
     }
 
+    renderManualDispatchConfirmationHtml() {
+      const res = this.lastManualDispatchResult;
+      if (!res || !res.success) return '';
+
+      return `
+        <div style="background:linear-gradient(135deg, rgba(16,185,129,0.22), rgba(6,78,59,0.45)); border:2px solid #10B981; border-radius:14px; padding:16px 20px; margin-top:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 8px 24px rgba(16,185,129,0.35); animation:fadeIn 0.3s ease;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:42px; height:42px; border-radius:50%; background:#10B981; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#FFFFFF; font-weight:900; box-shadow:0 0 16px rgba(16,185,129,0.6);">
+              ✓
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <h4 style="margin:0; font-size:0.95rem; font-weight:900; color:#FFFFFF;">Alerta Enviada Exitosamente a Make.com</h4>
+                <span style="background:#10B981; color:#064E3B; font-weight:900; font-size:0.72rem; padding:3px 9px; border-radius:6px; letter-spacing:0.04em;">HTTP 200 OK</span>
+              </div>
+              <p style="margin:4px 0 0 0; font-size:0.78rem; color:#A7F3D0;">
+                El webhook de Make.com (US-2) recibió el payload estructurado para <strong>${this.escapeHtml(res.source)}</strong> con estatus <strong>${this.escapeHtml(res.statusCode)}</strong> en <strong>${res.latency}ms</strong>.
+              </p>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.72rem; color:#6EE7B7; font-family:'JetBrains Mono', monospace; font-weight:700;">EVENT: WAR_ROOM_MANUAL_INCIDENT</span>
+            <div style="font-size:0.7rem; color:#94A3B8; margin-top:2px;">${res.timestamp}</div>
+          </div>
+        </div>
+      `;
+    }
+
     onSelectIncidentService(serviceKey) {
       this.selectedIncidentService = serviceKey;
+      this.savedIssueSource = serviceKey;
       const selectEl = document.getElementById('wr-new-issue-service');
       if (selectEl && selectEl.value !== serviceKey) {
         selectEl.value = serviceKey;
+      }
+      const sourceInput = document.getElementById('wr-new-issue-source');
+      if (sourceInput) {
+        sourceInput.value = serviceKey;
       }
       const badge = document.getElementById('wr-json-service-badge');
       if (badge) badge.innerText = serviceKey;
@@ -1104,134 +1198,185 @@
       this.updateJsonLivePreview();
     }
 
+    onManualSourceInput(value) {
+      this.selectedIncidentService = value;
+      this.savedIssueSource = value;
+      const selectEl = document.getElementById('wr-new-issue-service');
+      if (selectEl) {
+        const exists = Array.from(selectEl.options).some(o => o.value === value);
+        if (exists) selectEl.value = value;
+      }
+      const badge = document.getElementById('wr-json-service-badge');
+      if (badge) badge.innerText = value;
+      const activeLabel = document.getElementById('wr-service-active-label');
+      if (activeLabel) activeLabel.innerText = `Personalizado: ${value}`;
+      this.updateJsonLivePreview();
+    }
+
+    onSelectStatusPill(statusVal) {
+      this.savedIssueStatus = statusVal;
+      const statusInput = document.getElementById('wr-new-issue-status');
+      if (statusInput) {
+        statusInput.value = statusVal;
+      }
+      this.updateJsonLivePreview();
+    }
+
     updateJsonLivePreview() {
       const previewEl = document.getElementById('wr-json-live-preview');
       if (!previewEl) return;
-      const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
-      const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
-      const desc = document.getElementById('wr-new-issue-desc')?.value || '';
-      const adminName = this.getAuthorizedAdminName();
-      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const sourceInput = document.getElementById('wr-new-issue-source');
+      const serviceSelect = document.getElementById('wr-new-issue-service');
+      const statusInput = document.getElementById('wr-new-issue-status');
+      const telemetryInput = document.getElementById('wr-new-issue-telemetry');
+
+      const source = (sourceInput?.value || serviceSelect?.value || this.selectedIncidentService || 'Make.com Webhook Omnichannel').trim();
+      const status = (statusInput?.value || this.savedIssueStatus || '500').trim();
+      const telemetry = (telemetryInput?.value || this.savedIssueTelemetry || `Fallo reportado en ${source}`).trim();
 
       const payloadPreview = {
-        event: 'WAR_ROOM_INCIDENT_REPORTED',
-        service: service,
-        component_affected: service,
-        severity: severity,
-        description: desc ? (desc.slice(0, 80) + (desc.length > 80 ? '...' : '')) : '(Sin descripción aún)',
-        reported_by: adminName,
-        source: 'Mrs. Pets PWA — Cuarto de Guerra',
-        region: 'US-2',
-        status: 'INCIDENCIA_ACTIVA',
-        webhook_target: targetUrl
+        timestamp: new Date().toISOString(),
+        source: source,
+        status: status,
+        telemetry: telemetry,
+        event: 'WAR_ROOM_MANUAL_INCIDENT'
       };
       previewEl.innerText = JSON.stringify(payloadPreview, null, 2);
     }
 
     async declareManualIncident() {
-      const descInput = document.getElementById('wr-new-issue-desc');
+      const sourceInput = document.getElementById('wr-new-issue-source');
       const serviceSelect = document.getElementById('wr-new-issue-service');
-      const severitySelect = document.getElementById('wr-new-issue-severity');
+      const statusInput = document.getElementById('wr-new-issue-status');
+      const telemetryInput = document.getElementById('wr-new-issue-telemetry');
+      const descInput = document.getElementById('wr-new-issue-desc');
+      const confirmationArea = document.getElementById('wr-manual-dispatch-confirmation-area');
+      const btn = document.getElementById('wr-btn-declare-incident');
 
-      const desc = descInput ? descInput.value.trim() : (this.savedIssueDesc || '');
-      if (!desc) {
-        if (descInput) {
-          descInput.style.borderColor = '#EF4444';
-          descInput.focus();
-        }
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast('Por favor describe los síntomas de la falla antes de declarar la incidencia.', 'warning');
-        }
-        return;
-      }
+      const selectedSource = (sourceInput?.value || serviceSelect?.value || this.selectedIncidentService || 'Make.com Webhook Omnichannel').trim();
+      const selectedStatus = (statusInput?.value || this.savedIssueStatus || '500').trim();
+      const telemetryText = (telemetryInput?.value || this.savedIssueTelemetry || `Fallo en ${selectedSource}`).trim();
+      const desc = (descInput?.value || this.savedIssueDesc || '').trim();
 
-      const selectedService = this.selectedIncidentService || serviceSelect?.value || 'Make.com Webhook Omnichannel';
-      const severity = severitySelect ? severitySelect.value : (this.savedIssueSeverity || 'CRÍTICA');
-      const adminName = this.getAuthorizedAdminName();
-      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
-      const incidentId = `INC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
+      const targetUrl = (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6').trim();
+      const nowIso = new Date().toISOString();
 
-      // Determinar nodos afectados dinámicamente según el componente
-      let affectedNodes = ['antigravity', 'volturi'];
-      const sLower = selectedService.toLowerCase();
-      if (sLower.includes('make')) affectedNodes.push('make');
-      else if (sLower.includes('teamly') || sLower.includes('elías') || sLower.includes('elias')) affectedNodes.push('teamly');
-      else if (sLower.includes('leia')) affectedNodes.push('teamly');
-      else if (sLower.includes('render')) affectedNodes.push('make');
-      else if (sLower.includes('q-vet') || sLower.includes('idexx')) affectedNodes.push('make');
-      else affectedNodes.push('make');
-
-      // Objeto JSON estructurado despachado dinámicamente hacia Make.com
-      const makeIncidentPayload = {
-        event: 'WAR_ROOM_INCIDENT_REPORTED',
-        incident_id: incidentId,
-        service: selectedService,
-        component_affected: selectedService,
-        severity: severity,
-        description: desc,
-        reported_by: adminName,
-        source: 'Mrs. Pets PWA — Cuarto de Guerra',
-        region: 'US-2',
-        status: 'INCIDENCIA_ACTIVA',
-        timestamp: new Date().toISOString(),
-        affected_nodes: affectedNodes,
-        telemetry: {
-          engine: 'AntiGravity Resilient Router',
-          version: '2.5.0',
-          selected_service: selectedService,
-          affected_service: selectedService,
-          circuit_breaker: 'OPEN_WARNING',
-          spreadsheet_id: this.nodeConfigs.google_sheets_id || '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4',
-          tab: 'Registro de Interacciones'
-        }
+      // Objeto JSON estructurado exactamente con las 5 claves requeridas
+      const makePayload = {
+        timestamp: nowIso,
+        source: selectedSource,
+        status: selectedStatus,
+        telemetry: telemetryText,
+        event: 'WAR_ROOM_MANUAL_INCIDENT'
       };
 
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> <span>Despachando a Make.com...</span>';
+      }
+
+      let httpOk = false;
+      let latency = 350;
+      let respBody = 'Accepted';
+      const t0 = performance.now();
+
       try {
-        // 1. Envío al backend
+        // 1. Envío al webhook vía backend /api/v1/war-room/dispatch-custom-json
+        const beResp = await fetch('/api/v1/war-room/dispatch-custom-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: targetUrl,
+            payload: makePayload
+          })
+        });
+        const beData = await beResp.json();
+        latency = beData.latency_ms || Math.round(performance.now() - t0);
+
+        if (beData.http_status === 200 || beData.is_success) {
+          httpOk = true;
+          respBody = beData.response_body || 'Accepted';
+        }
+
+        // 2. Disparo complementario directo del navegador
+        if (targetUrl && targetUrl.startsWith('https://hook.')) {
+          fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(makePayload),
+            mode: 'no-cors'
+          }).catch(() => {});
+        }
+
+        // 3. Registrar alerta interna en el estado del War Room
         await fetch('/api/v1/war-room/simulate-alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             signal: 'ALERT',
-            service: selectedService,
-            component_affected: selectedService,
-            title: `Incidencia en ${selectedService}`,
-            error_code: 'MANUAL_REPORTED_FAILURE',
+            service: selectedSource,
+            title: `Incidencia en ${selectedSource} (Status ${selectedStatus})`,
+            error_code: `STATUS_${selectedStatus}`,
             details: {
-              reported_by: adminName,
-              report_description: desc,
-              severity: severity,
-              service: selectedService,
-              component_affected: selectedService,
-              reported_at: new Date().toISOString()
-            },
-            make_payload: makeIncidentPayload,
-            affected_nodes: affectedNodes
+              source: selectedSource,
+              status_code: selectedStatus,
+              telemetry: telemetryText,
+              description: desc,
+              reported_by: this.getAuthorizedAdminName(),
+              make_payload: makePayload
+            }
           })
-        });
+        }).catch(() => {});
 
-        // 2. Disparo directo complementario a Make.com desde el navegador
-        if (targetUrl && targetUrl.startsWith('https://hook.')) {
-          fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(makeIncidentPayload),
-            mode: 'no-cors'
-          }).catch(() => {});
-        }
+        // 4. Confirmación Visual cuando POST devuelve HTTP 200 OK
+        if (httpOk) {
+          this.lastManualDispatchResult = {
+            success: true,
+            status: 200,
+            latency: latency,
+            timestamp: nowIso,
+            source: selectedSource,
+            statusCode: selectedStatus,
+            telemetry: telemetryText,
+            responseBody: respBody
+          };
 
-        // Notificar en el chat del War Room
-        await this.sendChatMessage(`🚨 Reporte Formal de Falla en [${selectedService}]: ${desc}`);
-        if (descInput) descInput.value = '';
-        this.savedIssueDesc = '';
-        this.activeTab = 'chat';
-        await this.fetchStatus();
+          if (confirmationArea) {
+            confirmationArea.innerHTML = this.renderManualDispatchConfirmationHtml();
+          }
 
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast(`🚨 Incidencia en [${selectedService}] reportada. Telemetría despachada a Make.com (US-2).`, 'warning');
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`✅ Alerta enviada exitosamente a Make.com (HTTP 200 OK en ${latency}ms).`, 'success');
+          }
+
+          // Registrar en chat local del War Room
+          await this.sendChatMessage(`🚨 **Alerta Manual Despachada a Make.com (HTTP 200 OK):** [${selectedSource}] &bull; Status: \`${selectedStatus}\` &bull; Telemetría: *"${telemetryText}"*`);
+          await this.fetchStatus();
+        } else {
+          if (confirmationArea) {
+            confirmationArea.innerHTML = `
+              <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px;">
+                <span style="color:#EF4444; font-weight:800;">⚠️ Error al despachar a Make.com. Verifique que el escenario esté encendido.</span>
+              </div>
+            `;
+          }
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
+          }
         }
       } catch (err) {
-        alert(`Incidencia registrada para ${selectedService}.`);
+        if (confirmationArea) {
+          confirmationArea.innerHTML = `
+            <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px; color:#FCA5A5;">
+              Fallo de envío: ${err.message}
+            </div>
+          `;
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>';
+        }
       }
     }
 
