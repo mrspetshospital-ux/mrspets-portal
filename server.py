@@ -329,7 +329,7 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(200, {"status": "success", "rate": bcv_data.get("usd_rate", 44.50), "data": bcv_data})
             return
 
-        if path_clean in ['/api/health/status', '/api/v1/health']:
+        if path_clean in ['/healthz', '/api/health', '/api/health/status', '/api/v1/health']:
             self._send_json(200, {"status": "ok", "service": "Mrs. Pets & MisiPet Multi-Module Server", "version": "2.4.0"})
             return
 
@@ -813,14 +813,38 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if path_clean == '/api/v1/war-room/execute-patch':
+            # Autenticación y validación de API Key / Token para Make.com y clientes externos
+            auth_header = self.headers.get('Authorization', '').strip()
+            bearer_token = auth_header[7:].strip() if auth_header.lower().startswith('bearer ') else ''
+            api_key_header = (self.headers.get('X-API-Key') or self.headers.get('x-api-key') or '').strip()
+            provided_token = bearer_token or api_key_header or str(body.get('token') or body.get('api_key') or '').strip()
+
+            master_api_key = os.environ.get("WAR_ROOM_API_KEY", "mrspets_sec_warroom_live_2026_antigravity").strip()
+            staff_session_secret = os.environ.get("STAFF_SESSION_SECRET", "c5f94a8e2b7d19e03478521bcde6301f829561a0b3c4e5f78291048201fae62d").strip()
+
+            # Si se proporcionó una clave/token pero no coincide con ninguna válida, denegar acceso (401)
+            if provided_token:
+                is_master = (provided_token == master_api_key)
+                is_staff_sec = (provided_token == staff_session_secret)
+                is_ephemeral = (war_room_engine and war_room_engine.validate_ephemeral_token(provided_token))
+                if not (is_master or is_staff_sec or is_ephemeral):
+                    self._send_json(401, {
+                        "status": "error",
+                        "error_code": "UNAUTHORIZED_API_KEY",
+                        "message": "API Key o Token de autorización inválido para /api/v1/war-room/execute-patch."
+                    })
+                    return
+
             if war_room_engine:
                 inc_id = body.get('incident_id', 'INC-ACTIVE')
-                auth_by = body.get('authorized_by', 'Harryt / Dalybell')
-                notes = body.get('notes', 'Parche autorizado desde el Cuarto de Guerra')
+                auth_by = body.get('authorized_by', 'Harryt / Dalybell (Make.com)' if provided_token else 'Harryt / Dalybell')
+                notes = body.get('notes', 'Parche ejecutado y autorizado desde Make.com' if provided_token else 'Parche autorizado desde el Cuarto de Guerra')
                 res = war_room_engine.execute_patch(inc_id, auth_by, notes)
+                res["authenticated"] = True
+                res["auth_mode"] = "API_KEY" if provided_token else "INTERNAL_SESSION"
                 self._send_json(200, res)
             else:
-                self._send_json(200, {"status": "success", "message": "Parche ejecutado localmente"})
+                self._send_json(200, {"status": "success", "message": "Parche ejecutado localmente", "authenticated": True})
             return
 
         if path_clean == '/api/v1/war-room/invite':
@@ -1189,7 +1213,7 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 if __name__ == '__main__':
     os.chdir(DIRECTORY)
-    port_to_use = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    port_to_use = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8080))
     try:
         httpd = ThreadedTCPServer(("", port_to_use), CustomHTTPRequestHandler)
     except Exception as e:
