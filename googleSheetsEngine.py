@@ -29,8 +29,8 @@ AUDIT_LOG_FILE = os.path.join(LOGS_DIR, "audit_trail.jsonl")
 
 DEFAULT_SPREADSHEET_ID = "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
 DEFAULT_SHEET_TAB = "Registro de Interacciones"
-DEFAULT_MAKE_WEBHOOK = "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg"
-FALLBACK_MAKE_WEBHOOK = "https://hook.us1.make.com/mrspets_leia_multimodal"
+DEFAULT_MAKE_WEBHOOK = "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6"
+FALLBACK_MAKE_WEBHOOK = ""
 DEFAULT_BOARD_ID = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
 
 def sanitize_sheet_value(val: Any) -> str:
@@ -68,7 +68,7 @@ class GoogleSheetsInteractionEngine:
     def __init__(self):
         self.spreadsheet_id = os.environ.get("GOOGLE_SHEET_INTERACTIONS_ID", DEFAULT_SPREADSHEET_ID)
         self.sheet_tab = os.environ.get("GOOGLE_SHEET_INTERACTIONS_TAB", DEFAULT_SHEET_TAB)
-        self.make_webhook_url = os.environ.get("MAKE_WEBHOOK_URL_INTERACTIONS", DEFAULT_MAKE_WEBHOOK)
+        self.make_webhook_url = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM", os.environ.get("MAKE_WEBHOOK_URL_INTERACTIONS", os.environ.get("MAKE_WEBHOOK_URL", DEFAULT_MAKE_WEBHOOK)))
         self.board_id = os.environ.get("TEAMILEY_GEO_A_BOARD_ID", DEFAULT_BOARD_ID)
 
     def record_interaction(

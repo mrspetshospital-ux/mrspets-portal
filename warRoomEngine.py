@@ -79,7 +79,10 @@ class WarRoomEngine:
         self.resolved_incidents: List[Dict[str, Any]] = []
         self.ephemeral_tokens: Dict[str, Dict[str, Any]] = {}
         self.node_configs: Dict[str, str] = {
-            "make_webhook_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+            "make_webhook_url": os.environ.get(
+                "MAKE_WEBHOOK_URL_WAR_ROOM",
+                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+            ),
             "make_fallback_url": "",  # Pendiente: Crear Custom Webhook real en Make (hash alfanumérico)
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": "gemini-2.5-flash",
@@ -232,13 +235,13 @@ class WarRoomEngine:
         affected = affected_nodes or ["make", "volturi"]
         
         default_details = {
-            "endpoint": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+            "endpoint": "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6",
             "http_status": 502,
             "latency_ms": 5230,
             "attempt_count": 3,
             "root_cause": "Timeout persistente en gateway de Make.com al procesar la cola de sincronización omnicanal.",
             "impact_assessment": "Pérdida de eventos automáticos de interacción hacia Google Sheets (Hoja 1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4).",
-            "system_trace": f"HTTPError: 502 Bad Gateway at POST https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg [TraceID: {uuid.uuid4().hex[:12]}]"
+            "system_trace": f"HTTPError: 502 Bad Gateway at POST https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6 [TraceID: {uuid.uuid4().hex[:12]}]"
         }
         if details:
             default_details.update(details)

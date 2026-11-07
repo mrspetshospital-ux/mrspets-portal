@@ -143,8 +143,11 @@ class CentralitaRouter:
         # Historial de trazas para auditoría del War Room (FIFO, max 100)
         self.traces: List[Dict[str, Any]] = []
         self.max_traces: int = 100
-        # Webhook oficial verificado de Make
-        self.make_webhook_url: str = "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg"
+        # Webhook oficial verificado de Make (Región US-2)
+        self.make_webhook_url: str = os.environ.get(
+            "MAKE_WEBHOOK_URL_WAR_ROOM",
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+        )
 
     def resolve_target_agent(self, text: str, requested_slug: Optional[str] = None) -> Tuple[str, str]:
         """

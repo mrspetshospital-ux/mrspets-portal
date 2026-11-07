@@ -21,7 +21,7 @@
       this.nodes = {};
       this.chatMessages = [];
       this.nodeConfigs = {
-        make_webhook_url: 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg',
+        make_webhook_url: 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6',
         make_fallback_url: '',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
         gemini_model: 'gemini-2.5-flash',
@@ -537,14 +537,14 @@
                 <span style="font-size:1.3rem;">${item.icon}</span>
                 <span style="font-weight:800; font-size:0.85rem; color:#FFFFFF;">${item.name}</span>
               </div>
-              <span style="font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:12px; background:${isNodeAlert ? '#EF4444' : '#10B981'}; color:#FFFFFF;">
-                ${nodeStatus}
-              </span>
+              <button type="button" class="btn-node-status-ping" onclick="window.warRoomEngine.pingNode('${item.id}', '')" style="border:none; cursor:pointer; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:12px; background:${isNodeAlert ? '#EF4444' : '#10B981'}; color:#FFFFFF; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,0.25);" title="Hacer clic para enviar prueba de telemetría POST JSON">
+                <span>${nodeStatus}</span> <span>⚡</span>
+              </button>
             </div>
             <div style="font-size:0.72rem; color:#CBD5E1; font-weight:600;">${item.role}</div>
             <div style="font-size:0.7rem; color:#94A3B8; font-style:italic;">${stateDesc}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; font-size:0.68rem; color:#64748B; border-top:1px solid rgba(255,255,255,0.06); padding-top:4px;">
-              <span>Latencia: <strong style="color:#D4AF37;">${ping}</strong></span>
+              <span>Latencia: <strong id="wr-card-ping-${item.id}" style="color:#D4AF37;">${ping}</strong></span>
               <span>Telemetría: 60 FPS</span>
             </div>
           </div>
@@ -975,7 +975,7 @@
                 <span id="wr-ping-make-res" style="font-size:0.7rem; color:#FBBF24;">⚠️ Escenario OFF en Make</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('make', document.getElementById('wr-cfg-make').value)" style="background:rgba(96,165,250,0.15); border:1px solid #60A5FA; color:#93C5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -1113,18 +1113,58 @@
     async pingNode(nodeId, url) {
       const resSpan = document.getElementById(`wr-ping-${nodeId}-res`);
       if (resSpan) {
-        resSpan.innerHTML = '<span style="color:#D4AF37;">⏳ Evaluando...</span>';
+        resSpan.innerHTML = '<span style="color:#D4AF37;">⏳ Transmitiendo POST JSON...</span>';
       }
+      const targetUrl = url || (nodeId === 'make' ? (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6') : '');
+
+      const telemetryPayload = {
+        event: 'WAR_ROOM_PING_TEST',
+        source: 'Mrs. Pets PWA — Cuarto de Guerra',
+        node_id: nodeId,
+        status: 'TELEMETRIA_ACTIVA',
+        region: 'US-2',
+        timestamp: new Date().toISOString(),
+        ping_type: 'STATUS_BUTTON_PING',
+        authorized_by: this.getAuthorizedAdminName(),
+        telemetry: {
+          engine: 'AntiGravity Resilient Router',
+          version: '2.5.0',
+          connected_agents: ['leia', 'margaret', 'charlie', 'manolo', 'valeria', 'mike', 'oneil', 'pandora', 'sebastian'],
+          circuit_breaker: 'CLOSED',
+          active_failover: 'gemini-2.5-flash',
+          spreadsheet_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4',
+          tab: 'Registro de Interacciones'
+        }
+      };
+
       try {
+        // Envío mediante backend con método POST y formato JSON
         const res = await fetch('/api/v1/war-room/ping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ node_id: nodeId, url: url || '' })
+          body: JSON.stringify({ 
+            node_id: nodeId, 
+            url: targetUrl,
+            payload: telemetryPayload
+          })
         });
         const data = await res.json();
+
+        // Si es Make, también intentar un dispatch directo complementario desde el navegador
+        if (nodeId === 'make' && targetUrl && targetUrl.startsWith('https://hook.')) {
+          fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telemetryPayload),
+            mode: 'no-cors'
+          }).catch(() => {});
+        }
+
         if (resSpan) {
-          if (data.status === 'configured_scenario_stopped') {
-            resSpan.innerHTML = `<span style="color:#FBBF24; font-weight:800;" title="${data.message}">⚠️ Webhook OK (Escenario OFF en Make)</span>`;
+          if (data.status === 'online') {
+            resSpan.innerHTML = `<span style="color:#10B981; font-weight:800;" title="${data.message}">● Online (${data.ping_ms || 'Nominal'})</span>`;
+          } else if (data.status === 'configured_scenario_stopped') {
+            resSpan.innerHTML = `<span style="color:#FBBF24; font-weight:800;" title="${data.message}">⚠️ ${data.message}</span>`;
           } else if (data.status === 'no_direct_api') {
             resSpan.innerHTML = `<span style="color:#94A3B8; font-weight:700;" title="${data.message}">ℹ️ Asíncrono (Sin API REST)</span>`;
           } else if (data.status === 'unconfigured') {
@@ -1134,6 +1174,18 @@
           } else {
             resSpan.innerHTML = `<span style="color:#10B981; font-weight:800;">● Online (${data.ping_ms || 'Nominal'})</span>`;
           }
+        }
+
+        const cardPing = document.getElementById(`wr-card-ping-${nodeId}`);
+        if (cardPing && data.ping_ms) {
+          cardPing.innerText = data.ping_ms;
+        }
+
+        if (window.app && typeof window.app.showToast === 'function') {
+          const msg = data.status === 'online'
+            ? `⚡ Telemetría enviada por POST JSON a Make.com (${data.ping_ms}). Escenario activo.`
+            : `ℹ️ Solicitud POST JSON emitida a Make.com: ${data.message || 'Evaluación completada'}`;
+          window.app.showToast(msg, data.status === 'online' ? 'success' : 'info');
         }
       } catch (e) {
         if (resSpan) {
@@ -1417,7 +1469,7 @@
             title: 'Fallo de Comunicación en Webhook Make.com (HTTP 502)',
             service: 'Make.com Omnichannel Sync',
             structured_diagnostic: {
-              endpoint: 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg',
+              endpoint: 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6',
               http_status: 502,
               latency_ms: 5020,
               root_cause: 'Timeout persistente en gateway de Make.com al procesar la cola omnicanal.'
