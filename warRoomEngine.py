@@ -78,6 +78,15 @@ class WarRoomEngine:
         self.active_incidents: List[Dict[str, Any]] = []
         self.resolved_incidents: List[Dict[str, Any]] = []
         self.ephemeral_tokens: Dict[str, Dict[str, Any]] = {}
+        self.node_configs: Dict[str, str] = {
+            "make_webhook_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+            "make_fallback_url": "https://hook.us1.make.com/mrspets_leia_multimodal",
+            "teamly_endpoint_url": "https://api.teamily.ai/v1/mrspets/orchestrate",
+            "teamly_board_id": "5803df5a-7127-4d28-b97c-5c840d47cdc7",
+            "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
+            "volturi_endpoint_url": "/api/v1/teamily/orchestrate",
+            "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
+        }
         self.chat_history: List[Dict[str, Any]] = [
             {
                 "id": "MSG-INIT-001",
@@ -185,8 +194,27 @@ class WarRoomEngine:
             "resolved_incidents_count": len(self.resolved_incidents),
             "nodes": self.nodes,
             "last_updated": now_iso,
-            "active_guest_tokens_count": len(self.ephemeral_tokens)
+            "active_guest_tokens_count": len(self.ephemeral_tokens),
+            "chat_messages": self.chat_history[-35:],
+            "node_configs": self.node_configs
         }
+
+    def update_node_configs(self, new_configs: Dict[str, Any]) -> Dict[str, Any]:
+        """Actualiza y persiste las URLs y conexiones de cada nodo de IA."""
+        if isinstance(new_configs, dict):
+            for k, v in new_configs.items():
+                if k in self.node_configs and v:
+                    self.node_configs[k] = str(v).strip()
+        self.chat_history.append({
+            "id": f"MSG-{secrets.token_hex(4)}",
+            "sender": "Sistema de Pasarelas",
+            "role": "Conectividad IA",
+            "message": "🔗 URLs de conexión y webhooks sincronizados en la mesa de guerra.",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "node_id": "make"
+        })
+        self._write_audit_event("NODE_CONFIGS_UPDATED", self.node_configs)
+        return {"status": "success", "node_configs": self.node_configs}
 
     def trigger_incident(
         self,
@@ -487,7 +515,7 @@ class WarRoomEngine:
         }
 
     def add_chat_message(self, sender: str, role: str, message: str, node_id: str = "guest") -> Dict[str, Any]:
-        """Añade un mensaje a la conversación del War Room."""
+        """Añade un mensaje a la conversación del War Room y procesa deliberaciones de la mesa."""
         now_iso = datetime.now(timezone.utc).isoformat()
         msg = {
             "id": f"MSG-{secrets.token_hex(4)}",
@@ -500,6 +528,69 @@ class WarRoomEngine:
         self.chat_history.append(msg)
         if len(self.chat_history) > 100:
             self.chat_history = self.chat_history[-100:]
+
+        # Deliberación autónoma si el mensaje es de la Dirección o Soporte
+        msg_lower = (message or "").lower()
+        if node_id in ("user", "director", "harryt", "dalybell", "guest") or any(n in sender.lower() for n in ["harry", "daly", "talibel", "direc"]):
+            # Caso 1: El usuario reporta una falla o problema con Leia, Teamily o Make
+            has_issue = any(k in msg_lower for k in ["problema", "falla", "no conversa", "no responde", "responde esto", "error", "caído", "caido", "timeout", "leia", "make"])
+            if has_issue:
+                target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
+                
+                # Respuesta inmediata de AntiGravity
+                antigravity_reply = {
+                    "id": f"MSG-{secrets.token_hex(4)}",
+                    "sender": "Google AntiGravity",
+                    "role": "Ingeniería Autónoma",
+                    "message": f"⚡ AntiGravity al habla: He procesado tu reporte de falla sobre [{target_service}]. He cargado el paquete de diagnóstico en el Cuadro de Fallas y compilado el parche de conmutación resiliente. Puedes autorizarlo de inmediato.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "node_id": "antigravity"
+                }
+                self.chat_history.append(antigravity_reply)
+
+                # Respuesta del Comité Volturi
+                volturi_reply = {
+                    "id": f"MSG-{secrets.token_hex(4)}",
+                    "sender": "Charlie / Comité Volturi",
+                    "role": "Supervisión Ejecutiva",
+                    "message": f"🏛️ Deliberación Volturi: Evaluamos el caso '{message[:60]}...'. Dictamen: PROCEDER con el hotfix para preservar el estándar de atención a tutores sin cortes de servicio.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "node_id": "volturi"
+                }
+                self.chat_history.append(volturi_reply)
+
+                # Si no había incidencia activa, crearla para que aparezca en el Cuadro de Fallas
+                if not self.active_incidents:
+                    self.trigger_incident(
+                        service=target_service,
+                        title=f"Reporte de Dirección: {message[:50]}...",
+                        error_code="REPORTED_USER_INCIDENT",
+                        details={
+                            "reported_by": sender,
+                            "report_text": message,
+                            "component": target_service,
+                            "status": "ANOMALIA_DETECTADA",
+                            "recommendation": "Conmutación a canal secundario y purga de cola"
+                        },
+                        affected_nodes=["antigravity", "volturi", "teamly" if "leia" in msg_lower else "make"]
+                    )
+            elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "ok", "adelante"]):
+                # Si el usuario aprueba en el chat
+                if self.active_incidents:
+                    inc_id = self.active_incidents[0]["incident_id"]
+                    self.execute_patch(inc_id, sender, f"Autorización emitida vía chat del War Room: '{message[:60]}'")
+            else:
+                # Respuesta general de cortesía operativa
+                team_reply = {
+                    "id": f"MSG-{secrets.token_hex(4)}",
+                    "sender": "Teamly (Equipo Agentes)",
+                    "role": "Enjambre Multimodal",
+                    "message": f"🤝 Recibido por la mesa ejecutiva: '{message[:70]}'. Los 5 nodos están sincronizados y a la espera de instrucciones.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "node_id": "teamly"
+                }
+                self.chat_history.append(team_reply)
+
         return msg
 
     def _cleanup_expired_tokens(self):

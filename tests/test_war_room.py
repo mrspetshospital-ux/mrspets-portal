@@ -128,5 +128,38 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertFalse(is_authorized_war_room_admin(None))
         self.assertFalse(is_authorized_war_room_admin({}))
 
+    def test_06_war_room_chat_deliberation(self):
+        # 1. Dirección envía reporte de que Leia no está respondiendo
+        msg = war_room_engine.add_chat_message(
+            sender="Harryt Padrón",
+            role="Dirección General",
+            message="Tengo un problema en estos momentos en que Leia no está conversando, no está respondiendo",
+            node_id="harryt"
+        )
+        self.assertEqual(msg["sender"], "Harryt Padrón")
+
+        # 2. Verificar que AntiGravity y Volturi deliberaron y respondieron automáticamente
+        status = war_room_engine.get_status()
+        recent_senders = [m["sender"] for m in status["chat_messages"][-5:]]
+        self.assertIn("Google AntiGravity", recent_senders)
+        self.assertIn("Charlie / Comité Volturi", recent_senders)
+
+        # 3. Verificar que se abrió la incidencia automáticamente en el Cuadro de Fallas
+        self.assertTrue(status["has_active_incidents"])
+        self.assertIn("Leia", status["active_incident"]["service"])
+
+    def test_07_war_room_node_configs_and_urls(self):
+        # Configurar URLs de Make, Teamly, AntiGravity, etc.
+        new_urls = {
+            "make_webhook_url": "https://hook.us2.make.com/custom_test_endpoint",
+            "teamly_endpoint_url": "https://api.teamily.ai/v1/mrspets/custom_orchestrate",
+            "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET"
+        }
+        res = war_room_engine.update_node_configs(new_urls)
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(war_room_engine.node_configs["make_webhook_url"], "https://hook.us2.make.com/custom_test_endpoint")
+        self.assertEqual(war_room_engine.node_configs["teamly_endpoint_url"], "https://api.teamily.ai/v1/mrspets/custom_orchestrate")
+        self.assertEqual(war_room_engine.node_configs["google_sheets_id"], "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET")
+
 if __name__ == "__main__":
     unittest.main()
