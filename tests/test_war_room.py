@@ -149,17 +149,18 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertIn("Leia", status["active_incident"]["service"])
 
     def test_07_war_room_node_configs_and_urls(self):
-        # Configurar URLs de Make, Teamly, AntiGravity, etc.
+        # Configurar URLs reales de Make, Gemini, Sheets, etc.
         new_urls = {
-            "make_webhook_url": "https://hook.us2.make.com/custom_test_endpoint",
-            "teamly_endpoint_url": "https://api.teamily.ai/v1/mrspets/custom_orchestrate",
+            "make_webhook_url": "https://hook.us2.make.com/custom_test_endpoint_12345",
+            "gemini_model": "gemini-2.5-flash",
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET"
         }
         res = war_room_engine.update_node_configs(new_urls)
         self.assertEqual(res["status"], "success")
-        self.assertEqual(war_room_engine.node_configs["make_webhook_url"], "https://hook.us2.make.com/custom_test_endpoint")
-        self.assertEqual(war_room_engine.node_configs["teamly_endpoint_url"], "https://api.teamily.ai/v1/mrspets/custom_orchestrate")
+        self.assertEqual(war_room_engine.node_configs["make_webhook_url"], "https://hook.us2.make.com/custom_test_endpoint_12345")
+        self.assertEqual(war_room_engine.node_configs["gemini_model"], "gemini-2.5-flash")
         self.assertEqual(war_room_engine.node_configs["google_sheets_id"], "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET")
+        self.assertEqual(war_room_engine.node_configs["teamly_status"], "ASINCRONO_SIN_API_PUBLICA")
 
 if __name__ == "__main__":
     unittest.main()

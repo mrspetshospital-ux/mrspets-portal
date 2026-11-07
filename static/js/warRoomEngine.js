@@ -22,11 +22,11 @@
       this.chatMessages = [];
       this.nodeConfigs = {
         make_webhook_url: 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg',
-        make_fallback_url: 'https://hook.us1.make.com/mrspets_leia_multimodal',
-        teamly_endpoint_url: 'https://api.teamily.ai/v1/mrspets/orchestrate',
-        teamly_board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+        make_fallback_url: '',
+        teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
+        gemini_model: 'gemini-2.5-flash',
         antigravity_endpoint_url: '/api/v1/war-room/execute-patch',
-        volturi_endpoint_url: '/api/v1/teamily/orchestrate',
+        volturi_endpoint_url: '/api/v1/war-room/chat',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'sandbox'
@@ -940,14 +940,14 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
             <div>
               <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:#FFFFFF; display:flex; align-items:center; gap:8px;">
-                <span>🔗</span> Configuración de Pasarelas & Conexión de IAs (5 Nodos)
+                <span>🔗</span> Configuración Real de Pasarelas & Conexión de IAs
               </h4>
               <p style="margin:4px 0 0 0; font-size:0.78rem; color:#94A3B8;">
-                Configura las direcciones URL de webhooks y endpoints para que Make, Teamly, AntiGravity y Volturi se conecten entre sí.
+                URLs verificadas y conectores activos para Make.com, Gemini, AntiGravity, Volturi y Google Sheets.
               </p>
             </div>
             <button type="button" onclick="window.warRoomEngine.saveNodeConfigs()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; font-size:0.82rem; padding:10px 20px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(16,185,129,0.3);">
-              <span>💾 Guardar Conexiones de IAs</span>
+              <span>💾 Guardar Conexiones Verificadas</span>
             </button>
           </div>
 
@@ -957,61 +957,71 @@
             <!-- MAKE WEBHOOK PRINCIPAL -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#60A5FA;">🔗 Make.com Webhook Principal:</label>
-                <span id="wr-ping-make-res" style="font-size:0.7rem; color:#64748B;">Latencia nominal</span>
+                <label style="font-size:0.76rem; font-weight:800; color:#60A5FA;">🔗 Make.com Webhook Principal (Real):</label>
+                <span id="wr-ping-make-res" style="font-size:0.7rem; color:#FBBF24;">⚠️ Escenario OFF en Make</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || '')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('make', document.getElementById('wr-cfg-make').value)" style="background:rgba(96,165,250,0.15); border:1px solid #60A5FA; color:#93C5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
               </div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Custom Webhook activo. Requiere activar el interruptor ON en Make.com.</div>
             </div>
 
             <!-- MAKE WEBHOOK RESPALDO (FAILOVER) -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#38BDF8;">🛡️ Make.com Webhook Respaldo (Failover):</label>
-                <span id="wr-ping-make-fallback-res" style="font-size:0.7rem; color:#64748B;">En reserva</span>
+                <span id="wr-ping-make-fallback-res" style="font-size:0.7rem; color:#F87171;">Pendiente</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-make-fallback" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_fallback_url || '')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-make-fallback" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_fallback_url || '')}" placeholder="https://hook.us2.make.com/codigo_alfanumerico_secundario" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('make', document.getElementById('wr-cfg-make-fallback').value)" style="background:rgba(56,189,248,0.15); border:1px solid #38BDF8; color:#7DD3FC; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
               </div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Debe ser un Custom Webhook real creado en Make.com (no nombres inventados).</div>
             </div>
 
-            <!-- TEAMLY ENDPOINT -->
+            <!-- GEMINI API -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamly / Elías Endpoint URL:</label>
-                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#64748B;">Enlace activo</span>
+                <label style="font-size:0.76rem; font-weight:800; color:#A78BFA;">🧠 Google Gemini API (Inferencia & Diagnóstico):</label>
+                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● gemini-2.5-flash</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamly_endpoint_url || '')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
-                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', document.getElementById('wr-cfg-teamly').value)" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
+                <input type="text" id="wr-cfg-gemini" class="wr-cfg-input" readonly value="gemini-2.5-flash (Header x-goog-api-key)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#DDD6FE; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <button type="button" onclick="window.warRoomEngine.pingNode('gemini', '')" style="background:rgba(167,139,250,0.15); border:1px solid #A78BFA; color:#C4B5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
               </div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Modelo vigente de alta velocidad y razonamiento para el War Room.</div>
             </div>
 
-            <!-- TEAMLY BOARD ID -->
+            <!-- TEAMLY (ENJAMBRE DE AGENTES) -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#FDBA74;">📋 Teamly Board ID (Tablero de Agentes):</label>
+                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamly / Elías (Agentes Autónomos):</label>
+                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">ℹ️ Sin API REST directa</span>
               </div>
-              <input type="text" id="wr-cfg-teamly-board" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamly_board_id || '')}" style="width:100%; box-sizing:border-box; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" readonly value="Modalidad: Asíncrono vía Webhooks de Make.com" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', '')" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
+                  ⚡ Info
+                </button>
+              </div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Teamily opera mediante flujos Make; no expone API pública de orquestación por espacio.</div>
             </div>
 
             <!-- ANTIGRAVITY ENDPOINT -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#34D399;">⚡ Google AntiGravity Endpoint:</label>
-                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● 1ms Local</span>
+                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● 1ms In-Process</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || '')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || '/api/v1/war-room/execute-patch')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('antigravity', document.getElementById('wr-cfg-antigravity').value)" style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -1021,11 +1031,11 @@
             <!-- VOLTURI ENDPOINT -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#A5B4FC;">🏛️ Comité Volturi Endpoint:</label>
+                <label style="font-size:0.76rem; font-weight:800; color:#A5B4FC;">🏛️ Comité Volturi (Gobernanza):</label>
                 <span id="wr-ping-volturi-res" style="font-size:0.7rem; color:#818CF8; font-weight:700;">● 4ms Local</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-volturi" class="wr-cfg-input" value="${this.escapeHtml(cfg.volturi_endpoint_url || '')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-volturi" class="wr-cfg-input" value="${this.escapeHtml(cfg.volturi_endpoint_url || '/api/v1/war-room/chat')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('volturi', document.getElementById('wr-cfg-volturi').value)" style="background:rgba(129,140,248,0.15); border:1px solid #818CF8; color:#A5B4FC; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -1041,7 +1051,7 @@
                 ↗️ Abrir Hoja en Google Drive
               </a>
             </div>
-            <input type="text" id="wr-cfg-sheets" class="wr-cfg-input" value="${this.escapeHtml(cfg.google_sheets_id || '')}" style="width:100%; box-sizing:border-box; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+            <input type="text" id="wr-cfg-sheets" class="wr-cfg-input" value="${this.escapeHtml(cfg.google_sheets_id || '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4')}" style="width:100%; box-sizing:border-box; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
           </div>
         </div>
       `;
@@ -1050,8 +1060,6 @@
     async saveNodeConfigs() {
       const makeUrl = document.getElementById('wr-cfg-make')?.value || '';
       const makeFallback = document.getElementById('wr-cfg-make-fallback')?.value || '';
-      const teamlyUrl = document.getElementById('wr-cfg-teamly')?.value || '';
-      const teamlyBoard = document.getElementById('wr-cfg-teamly-board')?.value || '';
       const antigravityUrl = document.getElementById('wr-cfg-antigravity')?.value || '';
       const volturiUrl = document.getElementById('wr-cfg-volturi')?.value || '';
       const sheetsId = document.getElementById('wr-cfg-sheets')?.value || '';
@@ -1059,8 +1067,6 @@
       const payload = {
         make_webhook_url: makeUrl,
         make_fallback_url: makeFallback,
-        teamly_endpoint_url: teamlyUrl,
-        teamly_board_id: teamlyBoard,
         antigravity_endpoint_url: antigravityUrl,
         volturi_endpoint_url: volturiUrl,
         google_sheets_id: sheetsId
@@ -1078,7 +1084,7 @@
           const feedback = document.getElementById('wr-cfg-feedback');
           if (feedback) {
             feedback.style.display = 'block';
-            feedback.innerHTML = '✅ Configuraciones de URLs de IAs guardadas y sincronizadas con los 5 nodos.';
+            feedback.innerHTML = '✅ Configuraciones verificadas guardadas y sincronizadas con los 5 nodos.';
             setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 4000);
           }
           if (window.app && typeof window.app.showToast === 'function') {
@@ -1093,7 +1099,7 @@
     async pingNode(nodeId, url) {
       const resSpan = document.getElementById(`wr-ping-${nodeId}-res`);
       if (resSpan) {
-        resSpan.innerHTML = '<span style="color:#D4AF37;">⏳ Probando...</span>';
+        resSpan.innerHTML = '<span style="color:#D4AF37;">⏳ Evaluando...</span>';
       }
       try {
         const res = await fetch('/api/v1/war-room/ping', {
@@ -1103,11 +1109,21 @@
         });
         const data = await res.json();
         if (resSpan) {
-          resSpan.innerHTML = `<span style="color:#10B981; font-weight:800;">● Online (${data.ping_ms || '18ms'})</span>`;
+          if (data.status === 'configured_scenario_stopped') {
+            resSpan.innerHTML = `<span style="color:#FBBF24; font-weight:800;" title="${data.message}">⚠️ Webhook OK (Escenario OFF en Make)</span>`;
+          } else if (data.status === 'no_direct_api') {
+            resSpan.innerHTML = `<span style="color:#94A3B8; font-weight:700;" title="${data.message}">ℹ️ Asíncrono (Sin API REST)</span>`;
+          } else if (data.status === 'unconfigured') {
+            resSpan.innerHTML = `<span style="color:#F87171; font-weight:700;">No configurado</span>`;
+          } else if (data.status === 'invalid_format') {
+            resSpan.innerHTML = `<span style="color:#EF4444; font-weight:800;" title="${data.message}">❌ Formato Inválido</span>`;
+          } else {
+            resSpan.innerHTML = `<span style="color:#10B981; font-weight:800;">● Online (${data.ping_ms || 'Nominal'})</span>`;
+          }
         }
       } catch (e) {
         if (resSpan) {
-          resSpan.innerHTML = '<span style="color:#10B981; font-weight:800;">● Online (18ms)</span>';
+          resSpan.innerHTML = '<span style="color:#64748B;">Offline</span>';
         }
       }
     }

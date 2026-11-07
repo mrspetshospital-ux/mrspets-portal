@@ -80,11 +80,11 @@ class WarRoomEngine:
         self.ephemeral_tokens: Dict[str, Dict[str, Any]] = {}
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
-            "make_fallback_url": "https://hook.us1.make.com/mrspets_leia_multimodal",
-            "teamly_endpoint_url": "https://api.teamily.ai/v1/mrspets/orchestrate",
-            "teamly_board_id": "5803df5a-7127-4d28-b97c-5c840d47cdc7",
+            "make_fallback_url": "",  # Pendiente: Crear Custom Webhook real en Make (hash alfanumérico)
+            "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
+            "gemini_model": "gemini-2.5-flash",
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
-            "volturi_endpoint_url": "/api/v1/teamily/orchestrate",
+            "volturi_endpoint_url": "/api/v1/war-room/chat",
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
         }
         self.chat_history: List[Dict[str, Any]] = [
