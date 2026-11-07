@@ -1255,18 +1255,21 @@ class MrsPetsArchitectureEngine {
       }, 1000);
     }
 
-    // 4. DESPACHO REAL POR POST HACIA /api/v1/teamily/agent-chat (Margaret / Board ID 5803df5a-7127-4d28-b97c-5c840d47cdc7)
-    // Con registro automático inmutable en Google Sheets y respuesta real de Margaret (fachada Leia)
+    // 4. DESPACHO REAL POR POST HACIA /api/v1/teamily/agent-chat (Leia Concierge / Centralita Router)
+    // Con registro automático inmutable en Google Sheets
+    const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
     const agentPayload = {
+      message_id: messageId,
+      agente_origen: 'user',
       input: cleanText,
-      agent_slug: 'margaret',
-      agent_name: 'Margaret (Atención al Cliente)',
+      agent_slug: 'leia',
+      agent_name: 'Leia Concierge VIP & Asistencia CEO',
       board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
       context: {
         userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
         petName: this.lastActivePetName || (session && session.activePetName) || '',
         userType: (session && session.userType) || 'client',
-        channel: 'Widget Circular (Leia / Margaret)'
+        channel: 'Widget Circular (Leia Concierge)'
       }
     };
 
@@ -1447,11 +1450,11 @@ He escalado de inmediato el caso de tu amado <strong>príncipe</strong> o <stron
     }
     // 2. Pet status inquiry
     else if (petStatusInfo && (lower.includes('estatus') || lower.includes('estado') || lower.includes('dónde está') || lower.includes('donde esta') || lower.includes('como va') || lower.includes('princesa') || lower.includes('rocky') || lower.includes('buddy') || lower.includes('luna') || lower.includes('bruno') || lower.includes('turno'))) {
-      reply = `🎀 <strong>REPORTE EN TIEMPO REAL - MARGARET ATENCIÓN AL CLIENTE</strong><br><br>${petStatusInfo}<br><br>¡Te mantendremos notificado en cada estación de servicio! ✨`;
+      reply = `🎀 <strong>REPORTE EN TIEMPO REAL - LEIA CONCIERGE VIP</strong><br><br>${petStatusInfo}<br><br>¡Te mantendremos notificado en cada estación de servicio! ✨`;
     }
     // 3. Store cart inquiry
     else if (orderStatusInfo && (lower.includes('pedido') || lower.includes('orden') || lower.includes('cesta') || lower.includes('carrito') || lower.includes('compra'))) {
-      reply = `🛍️ <strong>CESTA DE COMPRAS & BOUTIQUE - MARGARET ATENCIÓN AL CLIENTE</strong><br><br>${orderStatusInfo.replace(/\n/g, '<br>')}<br><br>Consentimos a tu <strong>príncipe</strong> o <strong>princesa</strong> con Lujo Silencioso.`;
+      reply = `🛍️ <strong>CESTA DE COMPRAS & BOUTIQUE - LEIA CONCIERGE VIP</strong><br><br>${orderStatusInfo.replace(/\n/g, '<br>')}<br><br>Consentimos a tu <strong>príncipe</strong> o <strong>princesa</strong> con Lujo Silencioso.`;
     }
     // 4. Grooming & Spa / Pulpejos / Curfew
     else if (lower.includes('grooming') || lower.includes('spa') || lower.includes('baño') || lower.includes('bano') || lower.includes('corte') || lower.includes('peluqueria') || lower.includes('pulpejo') || lower.includes('agendar')) {

@@ -29,7 +29,8 @@
         volturi_endpoint_url: '/api/v1/war-room/chat',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
-      this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'sandbox'
+      this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox'
+      this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
       this.pollIntervalMs = 4000;
@@ -354,6 +355,14 @@
           this.nodeConfigs = Object.assign({}, this.nodeConfigs, data.node_configs);
         }
 
+        try {
+          const traceRes = await fetch('/api/v1/war-room/centralita-traces');
+          if (traceRes.ok) {
+            const traceData = await traceRes.json();
+            this.centralitaTraces = traceData.traces || [];
+          }
+        } catch (_) {}
+
         this.applyStatusUI();
         if (this.isModalOpen) {
           this.refreshModalContent();
@@ -546,16 +555,19 @@
       const tabsHtml = `
         <div class="wr-tab-nav">
           <button type="button" class="wr-tab-btn ${this.activeTab === 'chat' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('chat')">
-            <span>📡</span> Sala de Conversación & Chat en Vivo (${this.chatMessages.length})
+            <span>📡</span> Sala de Conversación (${this.chatMessages.length})
+          </button>
+          <button type="button" class="wr-tab-btn ${this.activeTab === 'traces' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('traces')">
+            <span>🧭</span> Trazas Centralita & IAs (${this.centralitaTraces ? this.centralitaTraces.length : 0})
           </button>
           <button type="button" class="wr-tab-btn ${this.activeTab === 'incidents' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('incidents')">
-            <span>🚨</span> Cuadro de Fallas & Diagnóstico ${isAlert ? '<span style="background:#EF4444; color:#FFF; font-size:0.68rem; padding:2px 6px; border-radius:8px; font-weight:900;">ACTIVA</span>' : '<span style="color:#10B981;">●</span>'}
+            <span>🚨</span> Cuadro de Fallas ${isAlert ? '<span style="background:#EF4444; color:#FFF; font-size:0.68rem; padding:2px 6px; border-radius:8px; font-weight:900;">ACTIVA</span>' : '<span style="color:#10B981;">●</span>'}
           </button>
           <button type="button" class="wr-tab-btn ${this.activeTab === 'config' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('config')">
-            <span>🔗</span> Conexión & URLs de las IAs (5 Nodos)
+            <span>🔗</span> URLs de las IAs (5 Nodos)
           </button>
           <button type="button" class="wr-tab-btn ${this.activeTab === 'sandbox' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('sandbox')">
-            <span>🔑</span> Soporte Externo (Token Efímero)
+            <span>🔑</span> Soporte Externo
           </button>
         </div>
       `;
@@ -565,6 +577,8 @@
 
       if (this.activeTab === 'chat') {
         tabContentHtml = this.renderChatTabHtml();
+      } else if (this.activeTab === 'traces') {
+        tabContentHtml = this.renderTracesTabHtml();
       } else if (this.activeTab === 'incidents') {
         tabContentHtml = this.renderIncidentsTabHtml(isAlert);
       } else if (this.activeTab === 'config') {
@@ -1126,6 +1140,133 @@
           resSpan.innerHTML = '<span style="color:#64748B;">Offline</span>';
         }
       }
+    }
+
+    /* ----------------------------------------------------------------------
+       11.b PESTAÑA: TRAZABILIDAD DE CENTRALITA & ENRUTAMIENTO EN VIVO
+       ---------------------------------------------------------------------- */
+    renderTracesTabHtml() {
+      const traces = this.centralitaTraces || [];
+      const totalTraces = traces.length;
+
+      let rowsHtml = '';
+      if (totalTraces === 0) {
+        rowsHtml = `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:36px; color:#64748B; font-size:0.8rem;">
+              No hay trazas registradas en la sesión actual. La Centralita Router está activa a la escucha de mensajes.
+            </td>
+          </tr>
+        `;
+      } else {
+        rowsHtml = traces.slice().reverse().map(t => {
+          const time = t.timestamp ? new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+          const isLeia = t.agente_destino === 'leia';
+          const isMargaret = t.agente_destino === 'margaret';
+          const badgeColor = isLeia ? '#EC4899' : (isMargaret ? '#F472B6' : '#38BDF8');
+          const icon = isLeia ? '🎀' : (isMargaret ? '👩‍💼' : '🤖');
+
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+              <td style="padding:10px 12px; font-family:monospace; font-size:0.73rem; color:#94A3B8;">${time}</td>
+              <td style="padding:10px 12px; font-family:monospace; font-size:0.73rem; color:#FDE047; font-weight:700;">${this.escapeHtml(t.message_id || '-')}</td>
+              <td style="padding:10px 12px; font-size:0.75rem; color:#CBD5E1;">
+                <span style="background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:12px; font-size:0.7rem;">${this.escapeHtml(t.agente_origen || 'user')}</span>
+              </td>
+              <td style="padding:10px 12px; font-size:0.78rem;">
+                <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(236,72,153,0.12); color:${badgeColor}; font-weight:700; padding:2px 8px; border-radius:12px; font-size:0.72rem; border:1px solid ${badgeColor}33;">
+                  <span>${icon}</span> ${this.escapeHtml(t.agente_destino_nombre || t.agente_destino || '-')}
+                </span>
+              </td>
+              <td style="padding:10px 12px; font-size:0.72rem; color:#34D399; font-weight:700;">
+                <span style="background:rgba(16,185,129,0.12); color:#34D399; padding:2px 8px; border-radius:8px; border:1px solid rgba(16,185,129,0.3);">
+                  ● ${this.escapeHtml(t.estado || 'EXITOSO')}
+                </span>
+              </td>
+              <td style="padding:10px 12px; font-size:0.75rem; color:#94A3B8; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${this.escapeHtml(t.respuesta_preview || '')}">
+                ${this.escapeHtml(t.respuesta_preview || '-')}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      return `
+        <div style="background:#111827; border:1px solid rgba(212,175,55,0.25); border-radius:18px; padding:22px;">
+          <!-- CABECERA -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:#FFFFFF; display:flex; align-items:center; gap:8px;">
+                <span>🧭</span> Trazabilidad de Centralita & Enrutamiento en Tiempo Real
+              </h4>
+              <p style="margin:4px 0 0 0; font-size:0.78rem; color:#94A3B8;">
+                Monitoreo estricto por mensaje: identidades aisladas, deduplicación anti-bucle y conmutación Make/Gemini.
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button type="button" onclick="window.warRoomEngine.refreshCentralitaTraces()" style="background:rgba(212,175,55,0.15); border:1px solid #D4AF37; color:#FDE047; font-weight:800; font-size:0.78rem; padding:8px 16px; border-radius:8px; cursor:pointer;">
+                🔄 Refrescar Trazas
+              </button>
+            </div>
+          </div>
+
+          <!-- INDICADORES RESILIENTES DE GOBERNANZA -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:18px;">
+            <div style="background:#0B0F19; border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px;">
+              <div style="font-size:0.7rem; color:#94A3B8; font-weight:700;">FILTRO ANTI-BUCLE</div>
+              <div style="font-size:0.92rem; color:#34D399; font-weight:900; margin-top:3px;">🟢 TTL 90s Activo</div>
+              <div style="font-size:0.68rem; color:#64748B; margin-top:2px;">Deduplica por message_id</div>
+            </div>
+            <div style="background:#0B0F19; border:1px solid rgba(236,72,153,0.3); border-radius:12px; padding:12px;">
+              <div style="font-size:0.7rem; color:#94A3B8; font-weight:700;">IDENTIDAD LEIA & MARGARET</div>
+              <div style="font-size:0.92rem; color:#F472B6; font-weight:900; margin-top:3px;">🎀 👩‍💼 100% Aisladas</div>
+              <div style="font-size:0.68rem; color:#64748B; margin-top:2px;">Cero suplantación de fachada</div>
+            </div>
+            <div style="background:#0B0F19; border:1px solid rgba(96,165,250,0.3); border-radius:12px; padding:12px;">
+              <div style="font-size:0.7rem; color:#94A3B8; font-weight:700;">FAILOVER RESILIENTE</div>
+              <div style="font-size:0.92rem; color:#60A5FA; font-weight:900; margin-top:3px;">⚡ Gemini 2.5 Flash</div>
+              <div style="font-size:0.68rem; color:#64748B; margin-top:2px;">Make.com + In-house Native</div>
+            </div>
+            <div style="background:#0B0F19; border:1px solid rgba(212,175,55,0.3); border-radius:12px; padding:12px;">
+              <div style="font-size:0.7rem; color:#94A3B8; font-weight:700;">BITÁCORA INMUTABLE</div>
+              <div style="font-size:0.92rem; color:#FDE047; font-weight:900; margin-top:3px;">📊 Google Sheets</div>
+              <div style="font-size:0.68rem; color:#64748B; margin-top:2px;">ID 1yfnYyG23Z8J...</div>
+            </div>
+          </div>
+
+          <!-- TABLA DE TRAZAS EN VIVO -->
+          <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; text-align:left;">
+              <thead>
+                <tr style="background:#070A11; border-bottom:1px solid rgba(255,255,255,0.1); color:#94A3B8; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">
+                  <th style="padding:10px 12px;">Hora</th>
+                  <th style="padding:10px 12px;">Message ID</th>
+                  <th style="padding:10px 12px;">Origen</th>
+                  <th style="padding:10px 12px;">Destino</th>
+                  <th style="padding:10px 12px;">Estado</th>
+                  <th style="padding:10px 12px;">Respuesta (Preview)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async refreshCentralitaTraces() {
+      try {
+        const res = await fetch('/api/v1/war-room/centralita-traces');
+        if (res.ok) {
+          const data = await res.json();
+          this.centralitaTraces = data.traces || [];
+          if (this.isModalOpen && this.activeTab === 'traces') {
+            this.refreshModalContent();
+          }
+        }
+      } catch (_) {}
     }
 
     /* ----------------------------------------------------------------------

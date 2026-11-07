@@ -59,6 +59,11 @@ except Exception:
         name = str(u.get("nombre") or u.get("username") or "").lower()
         return role == "admin" and any(p in name for p in ["harry", "daly", "admin", "hp"])
 
+try:
+    from centralitaRouter import centralita_router
+except Exception:
+    centralita_router = None
+
 
 # ---------------------------------------------------------------------
 # Logging — errores claros y consultables
@@ -369,11 +374,13 @@ class LeiaIn(BaseModel):
 
 
 class TeamilyAgentChatIn(BaseModel):
+    message_id: Optional[str] = None
+    agente_origen: Optional[str] = "user"
     input: Optional[str] = None
     query: Optional[str] = None
-    agent_slug: Optional[str] = "margaret"
+    agent_slug: Optional[str] = None
     agent_id: Optional[str] = None
-    agent_name: Optional[str] = "Margaret (Atención al Cliente)"
+    agent_name: Optional[str] = None
     board_id: Optional[str] = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
     thread_mode: Optional[str] = "new"
     thread_id: Optional[str] = None
@@ -396,11 +403,11 @@ class VoiceTtsIn(BaseModel):
 class GoogleSheetRecordIn(BaseModel):
     user_message: str
     agent_reply: str
-    agent_name: Optional[str] = "Margaret (Atención al Cliente)"
-    agent_slug: Optional[str] = "margaret"
+    agent_name: Optional[str] = "Leia Concierge VIP & Asistencia CEO"
+    agent_slug: Optional[str] = "leia"
     user_name: Optional[str] = None
     pet_name: Optional[str] = None
-    channel: Optional[str] = "Widget Web (Leia / Leire)"
+    channel: Optional[str] = "Widget Web (Leia Concierge)"
     status: Optional[str] = "ATENDIDO_EXITOSO"
     extra_context: Optional[dict] = None
 
@@ -1223,169 +1230,26 @@ def cuentas_por_cobrar(request: Request, user=Depends(require_roles("admin", "ge
 
 
 # =====================================================================
-# LEIA & MARGARET AI CONCIERGE & MOTOR COGNITIVO EJECUTIVO
+# CENTRALITA ROUTER & MOTOR COGNITIVO EJECUTIVO (ZERO-USURPATION)
 # =====================================================================
 def synthesize_agent_response(agent_slug: str, agent_name: str, user_input: str, context: dict = None) -> str:
     """
-    Motor cognitivo ejecutivo in-house para los agentes de Mrs. Pets y Comité Volturi.
+    Motor cognitivo ejecutivo in-house conectado a la Centralita pura.
     Garantiza respuestas autoritativas, operacionales y contextualizadas sin dependencia frágil de red externa.
     """
-    slug = (agent_slug or "").lower().replace("@", "")
-    name = (agent_name or "").lower()
-    inp = (user_input or "").strip()
-    inp_lower = inp.lower()
-    
-    bcv_rate = 887.30
-    try:
-        bcv_rate = float(os.environ.get("BCV_OFFICIAL_RATE", os.environ.get("BCV_RATE_OVERRIDE", 887.30)))
-    except Exception:
-        pass
-
-    # 1. MANOLO (Gerencia General & Operaciones de Piso)
-    if "manolo" in slug or "manolo" in name or "9000441148643782" in slug:
-        return (
-            f"👑 **Manolo (Gerente General de Administración y Operaciones):**\n\n"
-            f"Saludos cordiales. Supervisando directamente las 7 estaciones de Grooming Spa en Av. 2 El Milagro:\n"
-            f"• **Regla de Oro Operativa:** Cierre presencial estricto a las **6:00 p.m.** para garantizar el descanso de nuestro staff y la entrega puntual a tutores.\n"
-            f"• **Flujo de Piso:** Estaciones de hidromasaje, corte a tijera y secado silencioso operando en balance nominal.\n"
-            f"• **Protocolo Silent Luxury:** Hidratación de pulpejos y aromaterapia botánica debidamente aplicadas en cada sesión.\n\n"
-            f"He registrado tu instrucción: *\"{inp}\"*. Operaciones y administración bajo control estricto."
-        )
-
-    # 2. VALERIA / VANESSA (Recursos Humanos & Gestión de Talento)
-    if any(k in slug for k in ["valeria", "vanessa", "9000487795593348", "rrhh", "talento"]) or any(k in name for k in ["valeria", "vanessa"]):
-        if any(w in inp_lower for w in ["maría", "maria", "briceño", "briceno", "groomer"]):
-            return (
-                f"💼 **Valeria (RRHH & Talento Mrs. Pets):**\n\n"
-                f"• **Candidata Evaluada:** **María Briceño** (C.I. V-24.891.204 • Tel: `+58 414-6123456`).\n"
-                f"• **Cargo:** Estilista Canino Master • **Residencia:** Av. Bella Vista con Calle 72.\n"
-                f"• **Experiencia Comprobable:** 4 años en tijera pura, cortes asiáticos, stripping y ozonoterapia.\n"
-                f"• **Evaluación Técnica:** Calificación **9.6/10 (Preseleccionada)**. Excelente manejo libre de estrés.\n"
-                f"• **Recomendación:** Convocar a prueba práctica de tijera e hidratación de pulpejos en Estación #2 con Manolo."
-            )
-        if any(w in inp_lower for w in ["leonardo", "morales", "veterinario", "medico", "médico", "doctor"]):
-            return (
-                f"🩺 **Valeria (RRHH & Talento Mrs. Pets):**\n\n"
-                f"• **Candidato:** **Dr. Leonardo Alfonso Morales** (C.I. V-20.155.892 • Tel: `+58 424-6338901`).\n"
-                f"• **Cargo:** Médico Veterinario de Guardia • **Experiencia:** 6 años en medicina interna y anestesiología.\n"
-                f"• **Equipamiento Clínico:** Experiencia comprobada en analizadores IDEXX in-house (Catalyst One, ProCyte).\n"
-                f"• **Dictamen:** **En Revisión Avanzada (9.3/10)**. Programar entrevista técnica presencial."
-            )
-        return (
-            f"💼 **Valeria (RRHH & Gestión de Talento - Mesa Presidencia):**\n\n"
-            f"¡Hola! Confirmada la recepción de tu mensaje: *\"{inp}\"*.\n"
-            f"• **Banco de Talento:** Expedientes de postulantes en la web auditados y clasificados por idoneidad técnica.\n"
-            f"• **Prioridades:** Selección de estilistas caninos de alto nivel y personal de apoyo clínico para Av. 2 El Milagro.\n"
-            f"• **Canalización Teamily:** Vinculada directamente con la Presidencia (@9000487795593348) para contrataciones inmediatas."
-        )
-
-    # 3. CHARLIE (GEO A & Finanzas / Auditoría SENIAT)
-    if any(k in slug for k in ["charlie", "charly", "geo-a", "geo_a", "9000234497383990"]) or any(k in name for k in ["charlie", "charly"]):
-        return (
-            f"⚖️ **Charly (Asistente Ejecutivo del GEO & Auditoría Fiscal):**\n\n"
-            f"Atendiendo requerimiento para Don Harryt Luzardo y Comité Volturi:\n"
-            f"• **Tasa Oficial Única BCV:** **{bcv_rate:.2f} VES/USD** aplicada a todas las listas de precios y facturación POS.\n"
-            f"• **Cumplimiento Tributario SENIAT:** IVA 16.0% desglosado rigurosamente en libro fiscal diario.\n"
-            f"• **Orquestación Teamily:** Canal institucional activo. Directriz procesada: *\"{inp}\"*."
-        )
-
-    # 4. PANDORA (Compras Nacionales & Cadena de Suministro)
-    if "pandora" in slug or "pandora" in name or "9000274735437072" in slug:
-        return (
-            f"📦 **Pandora (Cadena de Suministro & Filtro KillCritic):**\n\n"
-            f"Auditoría de inventario e insumos estratégicos:\n"
-            f"• **Filtro KillCritic:** Toda orden de compra evaluada bajo los umbrales de ROI ≥ 25% y Lead Time ≤ 15 días.\n"
-            f"• **Insumos de Estética:** Stock de champús de ozono, desenredantes botánicos y bálsamos de pulpejos con cobertura para 22 días.\n"
-            f"• **Clínica:** Reactivos IDEXX e insumos quirúrgicos sin alertas críticas de agotamiento.\n\n"
-            f"Solicitud atendida: *\"{inp}\"*. Abastecimiento asegurado."
-        )
-
-    # 5. MIKE (Infraestructura IoT & MisiPet)
-    if "mike" in slug or "mike" in name or "9000215760376233" in slug:
-        return (
-            f"🛠️ **Mike (Gerente de Operaciones & Infraestructura IoT):**\n\n"
-            f"Reporte de telemetría de sede Av. 2 El Milagro:\n"
-            f"• 💧 **Tanques Don Bosco (Tuya IoT):** Batería de 4 tanques en nivel nominal (18,400 Litros almacenados, autonomía ~230h).\n"
-            f"• ⚡ **Planta Cummins 65 kVA:** 210 Litros de diésel con switch de transferencia automática (ATS) en modo listo.\n"
-            f"• 🚗 **MisiPet & Logística:** Unidades de traslado vehicular operativas para servicios a domicilio.\n\n"
-            f"Instrucción procesada: *\"{inp}\"*. Infraestructura 100% resiliente."
-        )
-
-    # 6. O'NEIL (Marketing, Pauta & Telemercadeo)
-    if any(k in slug for k in ["oneal", "o'neal", "9000339468227100", "9000255459464666", "mercadeo"]) or "oneal" in name:
-        return (
-            f"📢 **O'Neil (Director de Marketing & Telemercadeo):**\n\n"
-            f"Estrategia de posicionamiento y captación activa:\n"
-            f"• **Pauta Digital:** Campañas geocercadas en TikTok Spark Ads y Meta Ads para Maracaibo (Av. El Milagro, Bella Vista y 5 de Julio).\n"
-            f"• **Agenda Diaria:** Citas de Grooming Spa promovidas con balance de horarios matutinos y vespertinos.\n"
-            f"• **Telemercadeo VIP:** Recordatorios de WhatsApp a tutores con tasa de respuesta superior al 82%.\n\n"
-            f"Directriz recibida: *\"{inp}\"*. Pauta y conversiones en marcha."
-        )
-
-    # 7. MARGARET / LEIA (Atención al Cliente Concierge VIP - Silent Luxury)
-    if any(k in slug for k in ["margaret", "leia", "9000376919168475", "cliente", "customer"]) or any(k in name for k in ["margaret", "leia"]):
-        urgencia = ["muriendo", "murió", "sangra", "sangrado", "convulsión", "convulsion", "envenen", "atropell", "no respira", "emergencia", "urgente", "grave"]
-        if any(u in inp_lower for u in urgencia):
-            return (
-                "⚠️ **Atención Inmediata:** Esto suena a una emergencia de salud. Por favor trae a tu amado príncipe o princesa de inmediato a nuestra clínica en Av. 2 El Milagro (diagonal a Lago Mall) o contáctanos de urgencia. Nuestro equipo médico y quirófano están en alerta."
-            )
-        
-        ctx = context or {}
-        user_display = ctx.get("userName") or ""
-        tutor_prefix = f"Don {user_display}" if "harry" in user_display.lower() else (user_display if user_display else "estimado tutor")
-
-        if any(w in inp_lower for w in ["harry", "don harry"]):
-            return (
-                f"¡Qué inmenso gusto saludarte, Don Harry! Veo que eres cliente consentido de nuestra casa en **Mrs. Pets** ✨🐾.\n\n"
-                f"¿Cómo está tu amado consentido hoy? ¿Me recuerdas el nombre de tu perrito o gatito para coordinar su expediente de inmediato?\n\n"
-                f"Te confirmo que en nuestras 4 áreas exclusivas (✂️ Grooming Spa con hidratación de pulpejos siempre incluida, 🩺 Clínica IDEXX, 🏨 Hotel VIP 5★ y 🛍️ Boutique) estamos listos para atenderte bajo el más puro estándar de Silent Luxury, o canalizarte con Talibel si requieres algún tema administrativo."
-            )
-
-        if any(w in inp_lower for w in ["reserva", "cita", "agendar", "turno"]):
-            return (
-                f"¡Con el mayor gusto! Para agendar la cita de tu amado príncipe o princesa en **Mrs. Pets** (Av. 2 El Milagro), indícame:\n\n"
-                f"1️⃣ Nombre de tu consentido y servicio deseado (✂️ Grooming Spa, 🩺 Consulta Clínica o 🏨 Hotel VIP 5★).\n"
-                f"2️⃣ Fecha y hora preferida (atención presencial en sucursal hasta las **6:00 p.m.** de forma estricta).\n\n"
-                f"Te recuerdo con orgullo que todos nuestros servicios de estética incluyen la **hidratación de pulpejos** sin recargo alguno."
-            )
-
-        if any(w in inp_lower for w in ["talibel", "administra", "gerencia"]):
-            return (
-                f"👩‍💼 **Margaret (Atención al Cliente):** ¡Por supuesto! Te enlazo de inmediato con **Talibel** y el área de Administración Ejecutiva para atender cualquier requerimiento especial. He registrado tu solicitud prioritaria."
-            )
-
-        return (
-            f"🎀 **Leia (Gerencia de Atención al Cliente - Margaret):**\n\n"
-            f"¡Hola! Soy **Leia 🎀** ✨🐾.\n\n"
-            f"Qué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n"
-            f"¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado **príncipe o princesa**?\n\n"
-            f"Estoy a tu entera disposición para reservas en nuestras 4 áreas de servicio (Grooming Spa con hidratación de pulpejos incluida, Clínica Veterinaria, Hotel VIP 5★, Boutique) o para comunicarte directamente con Talibel y el área de Administración."
-        )
-
-    # 8. SEBASTIAN (Ventas & Membresías)
-    if "sebastian" in slug or "sebastian" in name or "9000074393459175" in slug:
-        return (
-            f"📈 **Sebastian (Gerencia de Ventas & Membresías):**\n\n"
-            f"Monitoreo comercial Mrs. Pets:\n"
-            f"• **Membresías Spa Anuales:** Planes de cuidado preventivo en ritmo positivo de colocación.\n"
-            f"• **Conversión:** Seguimiento telefónico a tutores de primera visita para afiliación al Club Mrs. Pets.\n\n"
-            f"Instrucción procesada: *\"{inp}\"*. Ventas alineadas a metas del mes."
-        )
-
-    # Fallback genérico corporativo
-    display_name = agent_name or agent_slug or "Agente Ejecutivo"
-    return (
-        f"👑 **{display_name}:**\n\n"
-        f"Requerimiento registrado satisfactoriamente: *\"{inp}\"*.\n"
-        f"• **Sede:** Avenida 2 El Milagro, diagonal a Lago Mall, Maracaibo.\n"
-        f"• **Cierre de Sucursal:** 6:00 p.m. estricto.\n"
-        f"• **Atención:** Concierge VIP y Silent Luxury garantizados."
-    )
+    if centralita_router is not None:
+        return centralita_router.synthesize_agent_response(agent_slug, agent_name, user_input, context)
+    return f"🤖 **{agent_name or agent_slug}:** Requerimiento registrado: {user_input}"
 
 
 def _respuesta_leia(msg: str) -> str:
-    """Respuesta humanizada de Leia operada internamente por Margaret."""
-    return synthesize_agent_response("margaret", "Margaret (Atención al Cliente)", msg, {})
+    """Respuesta oficial de Leia (Concierge VIP & Asistencia CEO)."""
+    return synthesize_agent_response("leia", "Leia Concierge VIP & Asistencia CEO", msg, {})
+
+
+def _respuesta_margaret(msg: str) -> str:
+    """Respuesta oficial de Margaret (Gerente de Atención al Cliente)."""
+    return synthesize_agent_response("margaret", "Margaret (Gerente de Atención al Cliente)", msg, {})
 
 
 @app.post("/api/leia/chat")
@@ -1421,20 +1285,20 @@ async def leia_chat(data: LeiaIn, request: Request):
                 google_sheets_engine.record_interaction(
                     user_message=data.mensaje,
                     agent_reply=respuesta,
-                    agent_name="Margaret (Atención al Cliente)",
-                    agent_slug="margaret",
+                    agent_name="Leia Concierge VIP & Asistencia CEO",
+                    agent_slug="leia",
                     user_name=u["nombre"] if u else "",
-                    channel="Widget Web (Leia / Leire)"
+                    channel="Widget Web (Leia Concierge)"
                 )
             except Exception as ge:
                 log.warning("Google sheets log error: %s", ge)
 
         return ok(conversacion_id=conv_id, respuesta=respuesta,
-                  motor="margaret_cognitive", nota="Atención gerencial humanizada Silent Luxury.")
+                  motor="leia_concierge_cognitive", nota="Atención VIP Silent Luxury.")
     except Exception as exc:
         log.error("Error en leia_chat: %s", exc)
         return ok(conversacion_id=data.conversacion_id or 1,
-                  respuesta=synthesize_agent_response("margaret", "Margaret", data.mensaje, {}))
+                  respuesta=synthesize_agent_response("leia", "Leia Concierge VIP", data.mensaje, {}))
 
 
 @app.get("/api/leia/conversaciones/{cid}")
@@ -1447,7 +1311,7 @@ def leia_historial(cid: int, request: Request):
 
 
 # =====================================================================
-# TEAMILEY AI & MARGARET AGENT-CHAT (BOARD ID 5803df5a-7127-4d28-b97c-5c840d47cdc7)
+# CENTRALITA ROUTER & ENRUTAMIENTO TRANSVERSAL DE AGENTES (ZERO-USURPATION)
 # =====================================================================
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
@@ -1462,50 +1326,34 @@ async def teamily_agent_chat(request: Request, data: TeamilyAgentChatIn = None):
             data = TeamilyAgentChatIn(**body_json)
 
         inp = (data.input or data.query or "Hola").strip()
-        agent_slug = str(data.agent_slug or data.agent_id or "margaret").strip().lower()
-        board_id = data.board_id or os.getenv("TEAMILEY_GEO_A_BOARD_ID", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
-        endpoint_override = data.endpoint_override
-        server_key_override = data.server_key_override or os.getenv("TEAMILEY_GEO_A_SERVER_KEY", "tmly_sk_live_-2IXyLuZMZD9UOFDdrm4uUFBWtrow0k44PvCTx8Vac8")
+        mid = data.message_id or request.headers.get("x-message-id") or f"MSG-{secrets.token_hex(6)}"
+        agente_origen = data.agente_origen or "user"
         context_data = data.context or {}
-        agent_name = str(data.agent_name or "Margaret (Atención al Cliente)").strip()
 
-        # Si es Margaret o Leia, fijar el Board ID oficial
-        if "margaret" in agent_slug or "leia" in agent_slug:
-            board_id = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+        # 1. ENRUTADOR PURO (CENTRALITA): Identifica destinatario sin suplantaciones y filtra duplicados
+        if centralita_router:
+            routed = centralita_router.route_message(
+                message_id=mid,
+                user_input=inp,
+                requested_slug=data.agent_slug or data.agent_id,
+                context=context_data,
+                agente_origen=agente_origen
+            )
+            if routed.get("duplicate_filtered"):
+                return JSONResponse(status_code=200, content=routed)
+            target_slug = routed["agent_slug"]
+            target_name = routed["agent_name"]
+            response_text = routed["response_text"]
+            routing_trace = routed.get("routing_trace")
+        else:
+            target_slug = data.agent_slug or "leia"
+            target_name = data.agent_name or "Leia Concierge VIP & Asistencia CEO"
+            response_text = synthesize_agent_response(target_slug, target_name, inp, context_data)
+            routing_trace = None
 
-        response_text = ""
-        upstream_status = None
-        upstream_error = None
-
-        # Intento con cliente Teamily si está disponible
-        if teamily_geo_a_client is not None:
-            try:
-                req = TeamilyGeoARequest(
-                    input=inp,
-                    thread=TeamilyThreadConfig(mode=data.thread_mode or "new", thread_id=data.thread_id),
-                    wait=True,
-                    board_id=board_id
-                )
-                res = teamily_geo_a_client.send_message(
-                    req,
-                    endpoint_override=endpoint_override,
-                    server_key_override=server_key_override
-                )
-                upstream_status = res.status_code
-                upstream_error = res.error
-                if res.success and res.response_text and len(res.response_text.strip()) > 0:
-                    response_text = res.response_text
-            except Exception as te:
-                upstream_error = str(te)
-
-        # Si la API externa no devolvió texto real o falló, activar motor cognitivo in-house
-        if not response_text:
-            response_text = synthesize_agent_response(agent_slug, agent_name, inp, context_data)
-
-        # REGISTRO AUTOMÁTICO EN GOOGLE SHEETS & AUDIT TRAIL
+        # 2. REGISTRO AUTOMÁTICO EN GOOGLE SHEETS CON IDENTIDAD EXACTA
         # Spreadsheet ID: 1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4
         # Pestaña: Registro de Interacciones
-        # Con sanitización estricta de fórmulas rotas
         sheets_record_result = None
         if google_sheets_engine is not None:
             try:
@@ -1514,11 +1362,11 @@ async def teamily_agent_chat(request: Request, data: TeamilyAgentChatIn = None):
                 sheets_record_result = google_sheets_engine.record_interaction(
                     user_message=inp,
                     agent_reply=response_text,
-                    agent_name=agent_name,
-                    agent_slug=agent_slug,
+                    agent_name=target_name,
+                    agent_slug=target_slug,
                     user_name=user_name,
                     pet_name=pet_name,
-                    channel="Widget Web (Leia / Leire)",
+                    channel=context_data.get("channel", "Widget Web (Leia Concierge)"),
                     status="ATENDIDO_EXITOSO",
                     extra_context=context_data
                 )
@@ -1529,35 +1377,34 @@ async def teamily_agent_chat(request: Request, data: TeamilyAgentChatIn = None):
             "status": "success",
             "status_code": 200,
             "success": True,
+            "message_id": mid,
             "response_text": response_text,
             "output": {"text": response_text},
-            "agent_slug": agent_slug,
-            "agent_name": agent_name,
-            "board_id": board_id,
-            "engine_mode": "TEAMILY_DIRECT" if (upstream_status == 200 and response_text) else "EXECUTIVE_COGNITIVE_NATIVE",
+            "agent_slug": target_slug,
+            "agent_name": target_name,
+            "routing_trace": routing_trace,
+            "engine_mode": "CENTRALITA_ROUTER_V2",
             "google_sheets_sync": {
                 "spreadsheet_id": google_sheets_engine.spreadsheet_id if google_sheets_engine else "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4",
                 "tab": google_sheets_engine.sheet_tab if google_sheets_engine else "Registro de Interacciones",
                 "recorded": bool(sheets_record_result and sheets_record_result.get("recorded")),
                 "formula_protection": "ACTIVE_APOSTROPHE_SANITIZATION"
-            },
-            "teamily_upstream": {
-                "status_code": upstream_status or 200,
-                "error": upstream_error
             }
         })
     except Exception as exc:
         log.error("Captura defensiva en agent-chat: %s", exc)
-        fallback_text = synthesize_agent_response("margaret", "Margaret (Atención al Cliente)", str(getattr(data, 'input', 'Hola') if data else 'Hola'), {})
+        # En contingencia extrema, responder como Leia Concierge (nunca Margaret bajo fachada)
+        target_slug = data.agent_slug if data and data.agent_slug in ["margaret", "charlie", "manolo"] else "leia"
+        target_name = "Margaret (Gerente de Atención al Cliente)" if target_slug == "margaret" else "Leia Concierge VIP & Asistencia CEO"
+        fallback_text = synthesize_agent_response(target_slug, target_name, str(getattr(data, 'input', 'Hola') if data else 'Hola'), {})
         return JSONResponse(status_code=200, content={
             "status": "success",
             "status_code": 200,
             "success": True,
             "response_text": fallback_text,
             "output": {"text": fallback_text},
-            "agent_slug": "margaret",
-            "agent_name": "Margaret (Atención al Cliente)",
-            "board_id": "5803df5a-7127-4d28-b97c-5c840d47cdc7",
+            "agent_slug": target_slug,
+            "agent_name": target_name,
             "engine_mode": "SAFETY_FALLBACK_200"
         })
 
@@ -1567,12 +1414,21 @@ def teamily_agent_chat_get():
     return {
         "status": "operational",
         "board_id": "5803df5a-7127-4d28-b97c-5c840d47cdc7",
-        "default_agent": "margaret",
+        "default_agent": "leia",
+        "router": "CentralitaRouterV2",
         "google_sheets_integration": {
             "spreadsheet_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4",
             "tab": "Registro de Interacciones"
         }
     }
+
+
+@app.get("/api/v1/war-room/centralita-traces")
+def war_room_centralita_traces_get():
+    """Retorna las trazas estructuradas recientes de la Centralita Router."""
+    if centralita_router:
+        return {"traces": centralita_router.get_recent_traces(30)}
+    return {"traces": []}
 
 
 # =====================================================================
@@ -1666,7 +1522,7 @@ def teamily_orchestrate_get():
         state="ACTIVO & SINCRONIZADO",
         workspace="ws_mrspets_mbo_01",
         board_id="5803df5a-7127-4d28-b97c-5c840d47cdc7",
-        agentes=["charlie", "manolo", "pandora", "valeria", "mike", "oneil", "margaret"]
+        agentes=["charlie", "manolo", "pandora", "valeria", "mike", "oneil", "margaret", "leia", "sebastian"]
     )
 
 
@@ -1708,6 +1564,10 @@ async def teamily_orchestrate_post(request: Request):
             },
             "margaret": {
                 "customerExperience": "Atención gerencial de príncipes y princesas con estándar de Silent Luxury. Orientación a 4 áreas y canalización hacia Talibel.",
+                "boardSync": "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+            },
+            "leia": {
+                "conciergeExecutive": "Asistencia ejecutiva de nivel CEO, protocolo Silent Luxury y hospitalidad VIP para tutores y consentidos.",
                 "boardSync": "5803df5a-7127-4d28-b97c-5c840d47cdc7"
             }
         }

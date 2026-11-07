@@ -59,20 +59,20 @@ const DEFAULT_VOLTURI_AGENTS = [
     name: 'Margaret — Gerente de Atención al Cliente',
     role: 'GERENCIA DE ATENCIÓN AL CLIENTE',
     icon: '👩‍💼',
-    avatar: 'assets/leia_avatar.jpg',
+    avatar: 'assets/margaret_avatar.svg',
     color: '#EC4899',
     bg: '#250B1B',
     border: '#DB2777',
-    description: 'Gerente de Atención al Cliente de Mrs. Pets bajo la fachada visible de Leia 🎀. Recepción amorosa de príncipes y princesas, citas de spa, clínica y escalamiento directivo.',
+    description: 'Gerente de Atención al Cliente de Mrs. Pets. Recepción amorosa de príncipes y princesas, citas de spa, clínica, seguimiento de satisfacción y escalamiento.',
     teamlyUserId: '9000376919168475',
     teamlySlug: 'margaret',
     teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Atención al cliente con máxima empatía, cordialidad y excelencia Mrs. Pets. Gestión de citas, orientación de servicios y escalamiento si el cliente lo requiere.',
     contextType: 'customer_service',
-    isDefault: true,
+    isDefault: false,
     status: 'ACTIVE',
-    welcomeMessage: '¡Hola! Te atiende **Margaret**, Gerente de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.) bajo la fachada de Leia 🎀. Atiendo a nuestros tutores y a sus amados príncipes y princesas. ¿En qué podemos consentir a tu consentido hoy?'
+    welcomeMessage: '¡Hola! Te atiende **Margaret**, Gerente de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo a nuestros tutores y a sus amados príncipes y princesas con seguimiento personalizado y resolución de casos. ¿En qué podemos apoyarte hoy?'
   },
   {
     id: 'vanessa',
@@ -460,9 +460,10 @@ class TeamilyExecutiveEngine {
               a.role = 'GERENCIA DE ATENCIÓN AL CLIENTE';
               a.teamlySlug = 'margaret';
               a.teamlyEndpoint = 'https://teamily.ai/v1/agents/geo-a/responses';
-              a.avatar = a.avatar || 'assets/leia_avatar.jpg';
-              a.icon = a.icon || '👩‍💼';
-              a.description = 'Gerente de Atención al Cliente de Mrs. Pets bajo la fachada visible de Leia 🎀. Recepción amorosa de príncipes y princesas, citas de spa, clínica y escalamiento directivo.';
+              a.avatar = 'assets/margaret_avatar.svg';
+              a.icon = '👩‍💼';
+              a.isDefault = false;
+              a.description = 'Gerente de Atención al Cliente de Mrs. Pets. Recepción amorosa de príncipes y princesas, citas de spa, clínica, seguimiento de satisfacción y escalamiento.';
             }
           });
 
@@ -1623,13 +1624,20 @@ class TeamilyExecutiveEngine {
         : (agent.teamlySlug || 'geo-a');
 
       const endpointToSend = this.normalizeTeamilyEndpoint(agent.teamlyEndpoint);
+      const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 
       const res = await fetch(this.agentChatEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-message-id': messageId
+        },
         body: JSON.stringify({
+          message_id: messageId,
+          agente_origen: 'user',
           input: formattedInput,
-          agent_slug: slugToSend,
+          agent_slug: agent.id || slugToSend,
+          agent_id: agent.id,
           endpoint_override: endpointToSend,
           board_id: agent.teamlyBoardId,
           agent_name: agent.name,
@@ -2376,10 +2384,14 @@ class TeamilyExecutiveEngine {
       agentId = 'mike';
       domain = 'iot';
       queryText = 'Auditoría de autonomía hídrica en tanques de agua Don Bosco y combustión de Planta Cummins 65 kVA';
-    } else if (t === 'margaret' || t === 'atencion' || t === 'atención' || t === 'concierge' || t === 'leia') {
+    } else if (t === 'margaret' || t === 'atencion' || t === 'atención' || t === 'reclamos' || t === 'quejas') {
       agentId = 'margaret';
       domain = 'customer_service';
-      queryText = 'Atención y bienestar de consentidos (príncipes y princesas), agendamiento de spa/clínica y escalamiento directivo';
+      queryText = 'Atención y bienestar de consentidos (príncipes y princesas), resolución de casos y escalamiento directivo';
+    } else if (t === 'leia' || t === 'concierge' || t === 'vip') {
+      agentId = 'leia';
+      domain = 'vip_concierge';
+      queryText = 'Asistencia ejecutiva de nivel CEO, hospitalidad VIP y protocolo Silent Luxury';
     } else {
       agentId = 'all';
       domain = 'executive';

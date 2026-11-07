@@ -75,11 +75,11 @@ class GoogleSheetsInteractionEngine:
         self,
         user_message: str,
         agent_reply: str,
-        agent_name: str = "Margaret (Atención al Cliente)",
-        agent_slug: str = "margaret",
+        agent_name: str = "Leia Concierge VIP & Asistencia CEO",
+        agent_slug: str = "leia",
         user_name: str = "",
         pet_name: str = "",
-        channel: str = "Widget Web (Leia / Leire)",
+        channel: str = "Widget Web (Leia Concierge)",
         status: str = "ATENDIDO_EXITOSO",
         extra_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:

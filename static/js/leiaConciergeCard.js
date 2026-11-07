@@ -223,19 +223,25 @@
     async processAiResponse(userText) {
       const lower = userText.toLowerCase();
 
-      // Petición real al endpoint oficial con Board ID de Margaret y registro en Sheets
+      // Petición real a la Centralita Router como Leia Concierge VIP y registro en Sheets
       try {
+        const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
         const res = await fetch('/api/v1/teamily/agent-chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-message-id': msgId
+          },
           body: JSON.stringify({
+            message_id: msgId,
+            agente_origen: 'user',
             input: userText,
-            agent_slug: 'margaret',
-            agent_name: 'Margaret (Atención al Cliente)',
+            agent_slug: 'leia',
+            agent_name: 'Leia Concierge VIP & Asistencia CEO',
             board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
             context: {
               userName: 'Cliente VIP',
-              channel: 'Modal Concierge Card (Leia / Margaret)'
+              channel: 'Modal Concierge Card (Leia Concierge)'
             }
           })
         });

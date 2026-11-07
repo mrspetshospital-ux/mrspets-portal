@@ -220,7 +220,7 @@
 
             if (roleBadge) {
                 if (isStaff) {
-                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name}) • Margaret</span>`;
+                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name}) • Leia VIP</span>`;
                 } else {
                     roleBadge.innerHTML = `<span>Atención a Clientes & Search Concierge • Av. 2 El Milagro</span>`;
                 }
@@ -692,8 +692,8 @@
             if (isRequestingTalibel) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `👩‍💼 **Margaret (Atención al Cliente):** ¡Con el mayor gusto! Te comunico de inmediato con **Talibel** del área de administración ejecutiva.\n\nHe registrado tu solicitud de contacto prioritario para que Talibel tome el caso directamente contigo. ¿Deseas que abra la consola administrativa?`,
-                    buttons: ['🏛️ Abrir Consola Volturi', '💬 Continuar con Margaret'],
+                    text: `🎀 **Leia (Concierge VIP):** ¡Con el mayor gusto! Te comunico de inmediato con **Talibel** del área de administración ejecutiva.\n\nHe registrado tu solicitud de contacto prioritario para que Talibel tome el caso directamente contigo. ¿Deseas que abra la consola administrativa?`,
+                    buttons: ['🏛️ Abrir Consola Volturi', '💬 Continuar con Leia'],
                     timestamp: new Date()
                 });
                 return;
@@ -716,7 +716,6 @@
                     const cleanName = (a.name || '').toLowerCase();
                     const cleanSlug = (a.teamlySlug || '').toLowerCase();
                     const cleanId = (a.id || '').toLowerCase();
-                    if (cleanId === 'margaret') return false; // Margaret opera internamente
                     return (cleanName && t.includes(cleanName.split(' ')[0])) || (cleanSlug && t.includes(cleanSlug)) || (cleanId && t.includes(cleanId));
                 });
 
@@ -733,19 +732,25 @@
                 }
             }
 
-            // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE (con motor Margaret)
-            // Petición POST real al backend con Board ID oficial y registro inmutable en Google Sheets
+            // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE VIP & ASISTENCIA CEO
+            // Petición POST real al backend con Centralita Router y registro inmutable en Google Sheets
             try {
                 this.showTypingIndicator(true);
                 const teamilyCtrl = new AbortController();
                 const teamilyTimeout = setTimeout(() => teamilyCtrl.abort(), 12000);
+                const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
                 const res = await fetch('/api/v1/teamily/agent-chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-message-id': messageId
+                    },
                     body: JSON.stringify({
+                        message_id: messageId,
+                        agente_origen: 'user',
                         input: userText,
-                        agent_slug: 'margaret',
-                        agent_name: 'Margaret (Atención al Cliente)',
+                        agent_slug: 'leia',
+                        agent_name: 'Leia Concierge VIP & Asistencia CEO',
                         board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
                         context: {
                             userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
@@ -997,7 +1002,7 @@
                 return;
             }
 
-            // Respuesta por defecto cálida de Leia (Margaret)
+            // Respuesta por defecto cálida de Leia Concierge VIP
             this.addMessage({
                 sender: 'leia',
                 text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre cualquiera de nuestras 4 áreas de servicio: Grooming Spa, Clínica, Hotel, Tienda, o pedirme comunicarte con Talibel y el área de Administración)*.`,
