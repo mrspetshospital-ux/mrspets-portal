@@ -162,5 +162,28 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertEqual(war_room_engine.node_configs["google_sheets_id"], "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET")
         self.assertEqual(war_room_engine.node_configs["teamly_status"], "ASINCRONO_SIN_API_PUBLICA")
 
+    def test_08_dispatch_custom_webhook(self):
+        # Probar despacho con un payload arbitrario y extracción de variables
+        custom_payload = {
+            "event": "VET_APPOINTMENT_TEST",
+            "patient_name": "Kaiser",
+            "species": "Canino",
+            "owner": "Harryt Luzardo",
+            "service": "Grooming Spa & Ozonoterapia",
+            "bcv_rate": 887.30
+        }
+        res = war_room_engine.dispatch_custom_webhook(
+            target_url="https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6",
+            payload=custom_payload
+        )
+        self.assertIn("dispatch_id", res)
+        self.assertIn("keys_detected", res)
+        self.assertIn("patient_name", res["keys_detected"])
+        self.assertIn("species", res["keys_detected"])
+        self.assertIn("bcv_rate", res["keys_detected"])
+        self.assertGreater(res["payload_bytes"], 0)
+        self.assertIn("http_status", res)
+        self.assertIn("latency_ms", res)
+
 if __name__ == "__main__":
     unittest.main()

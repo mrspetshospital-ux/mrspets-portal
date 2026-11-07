@@ -29,7 +29,7 @@
         volturi_endpoint_url: '/api/v1/war-room/chat',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
-      this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox'
+      this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox' | 'playground'
       this.selectedIncidentService = 'Make.com Webhook Omnichannel';
       this.savedIssueDesc = '';
       this.savedIssueSeverity = 'CRÍTICA';
@@ -39,6 +39,34 @@
       this.pollIntervalMs = 4000;
       this.initialized = false;
       this.isSending = false;
+
+      // Variables de la Consola de Pruebas Make (JSON Playground)
+      this.customJsonContent = JSON.stringify({
+        event: "TEST_WEBHOOK_VARIABLE_CHECK",
+        source: "Mrs. Pets PWA — Consola Make JSON",
+        service: "Render Cloud / Q-Vet PACS",
+        cliente: {
+          nombre: "Harryt Luzardo",
+          telefono: "+58 414-6123456",
+          tipo: "VIP"
+        },
+        paciente: {
+          nombre: "Kaiser",
+          especie: "Canino",
+          raza: "Border Collie",
+          motivo_consulta: "Revisión dermatológica y spa"
+        },
+        datos_operativos: {
+          tasa_bcv: 887.30,
+          estacion_spa: "Estación #2 Tijera Pura",
+          responsable: "María Briceño"
+        },
+        timestamp: new Date().toISOString()
+      }, null, 2);
+      this.customPlaygroundUrl = this.nodeConfigs.make_webhook_url;
+      this.lastCustomDispatchResult = null;
+      this.customDispatchHistory = [];
+      this.isDispatchingCustomJson = false;
     }
 
     /* ----------------------------------------------------------------------
@@ -520,6 +548,16 @@
       if (curDesc !== undefined && curDesc !== null && curDesc !== '') this.savedIssueDesc = curDesc;
       if (curSev) this.savedIssueSeverity = curSev;
 
+      // Preservar valores de editor JSON personalizado antes de cualquier refresco
+      const curCustomJson = document.getElementById('wr-custom-json-input')?.value;
+      const curPlaygroundUrl = document.getElementById('wr-playground-url')?.value;
+      if (curCustomJson !== undefined && curCustomJson !== null && curCustomJson !== '') {
+        this.customJsonContent = curCustomJson;
+      }
+      if (curPlaygroundUrl) {
+        this.customPlaygroundUrl = curPlaygroundUrl;
+      }
+
       // Si el usuario está escribiendo o interactuando activamente con el formulario o selector, no sobrescribir el DOM
       const activeEl = document.activeElement;
       const isInputFocused = activeEl && (
@@ -527,10 +565,12 @@
         activeEl.id === 'wr-new-issue-desc' || 
         activeEl.id === 'wr-new-issue-service' ||
         activeEl.id === 'wr-new-issue-severity' ||
+        activeEl.id === 'wr-custom-json-input' ||
+        activeEl.id === 'wr-playground-url' ||
         activeEl.classList.contains('wr-cfg-input') ||
         activeEl.classList.contains('wr-service-pill')
       );
-      if (!forceFullRender && isInputFocused) {
+      if (!forceFullRender && (isInputFocused || (this.activeTab === 'playground' && !forceFullRender))) {
         this.renderChatFeedOnly();
         return;
       }
@@ -584,6 +624,9 @@
           <button type="button" class="wr-tab-btn ${this.activeTab === 'incidents' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('incidents')">
             <span>🚨</span> Cuadro de Fallas ${isAlert ? '<span style="background:#EF4444; color:#FFF; font-size:0.68rem; padding:2px 6px; border-radius:8px; font-weight:900;">ACTIVA</span>' : '<span style="color:#10B981;">●</span>'}
           </button>
+          <button type="button" class="wr-tab-btn ${this.activeTab === 'playground' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('playground')">
+            <span>🧪</span> Consola Make JSON
+          </button>
           <button type="button" class="wr-tab-btn ${this.activeTab === 'config' ? 'active' : ''}" onclick="window.warRoomEngine.switchTab('config')">
             <span>🔗</span> URLs de las IAs (5 Nodos)
           </button>
@@ -602,6 +645,8 @@
         tabContentHtml = this.renderTracesTabHtml();
       } else if (this.activeTab === 'incidents') {
         tabContentHtml = this.renderIncidentsTabHtml(isAlert);
+      } else if (this.activeTab === 'playground') {
+        tabContentHtml = this.renderPlaygroundTabHtml();
       } else if (this.activeTab === 'config') {
         tabContentHtml = this.renderConfigTabHtml();
       } else if (this.activeTab === 'sandbox') {
@@ -860,8 +905,13 @@
 
             <!-- VISUALIZADOR DE PAQUETE JSON ESTRUCTURADO -->
             <div style="margin-bottom:16px;">
-              <div style="font-size:0.76rem; font-weight:800; color:#D4AF37; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">
-                📦 Paquete de Diagnóstico Estructurado (JSON Failure Payload)
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+                <div style="font-size:0.76rem; font-weight:800; color:#D4AF37; text-transform:uppercase; letter-spacing:0.06em;">
+                  📦 Paquete de Diagnóstico Estructurado (JSON Failure Payload)
+                </div>
+                <button type="button" onclick="window.warRoomEngine.loadDiagnosticJsonIntoPlayground()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38BDF8; font-size:0.72rem; font-weight:800; padding:4px 11px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Cargar este paquete de diagnóstico en la Consola Make JSON">
+                  <span>🧪</span> <span>Probar / Editar este JSON en Consola Make</span>
+                </button>
               </div>
               <pre style="background:#090D16; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:14px; font-family:'JetBrains Mono', monospace; font-size:0.78rem; color:#38BDF8; overflow-x:auto; max-height:220px; margin:0;">${JSON.stringify(diag, null, 2)}</pre>
             </div>
@@ -916,6 +966,22 @@
 
       // Formulario para declarar fallas manualmente
       const manualFormHtml = `
+        <!-- CALLOUT DIRECTO A LA CONSOLA DE PRUEBAS JSON PARA MAKE.COM -->
+        <div style="background:linear-gradient(135deg, rgba(37,99,235,0.18), rgba(15,23,42,0.7)); border:1.5px solid rgba(59,130,246,0.35); border-radius:14px; padding:14px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:rgba(37,99,235,0.2); border:1px solid #3B82F6; display:flex; align-items:center; justify-content:center; font-size:1.25rem;">
+              🧪
+            </div>
+            <div>
+              <div style="font-weight:800; font-size:0.86rem; color:#FFFFFF;">¿Deseas probar variables libres o pedirle un JSON a Gemini?</div>
+              <div style="font-size:0.74rem; color:#94A3B8; margin-top:1px;">Usa la nueva <strong>Consola Make JSON</strong> para copiar, pegar y enviar cualquier estructura hacia el webhook sin reprogramar.</div>
+            </div>
+          </div>
+          <button type="button" onclick="window.warRoomEngine.switchTab('playground')" style="background:#2563EB; color:#FFFFFF; font-weight:800; font-size:0.78rem; padding:8px 16px; border-radius:9px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(37,99,235,0.35);">
+            <span>🚀</span> <span>Abrir Consola Make JSON</span>
+          </button>
+        </div>
+
         <div style="background:#111827; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
           <div style="font-size:0.9rem; font-weight:800; color:#FDE047; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
             <span>🚨</span> Declarar Incidencia o Reportar Anomalía a la Mesa de 5 Nodos
@@ -963,9 +1029,19 @@
 
           <!-- VISTA PREVIA DINÁMICA DEL PAYLOAD HACIA MAKE.COM -->
           <div style="margin-bottom:14px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Telemetría Dinámica para Webhook Make.com (US-2):</span>
-              <span id="wr-json-service-badge" style="font-size:0.7rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Telemetría Dinámica para Webhook Make.com (US-2):</span>
+                <span id="wr-json-service-badge" style="font-size:0.7rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button type="button" onclick="window.warRoomEngine.loadIncidentJsonIntoPlayground()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38BDF8; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Copia este JSON hacia el editor libre para agregar variables o cambiar valores">
+                  <span>🧪</span> <span>Probar / Editar en Consola JSON</span>
+                </button>
+                <button type="button" onclick="window.warRoomEngine.copyLivePreviewJson()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#E2E8F0; font-size:0.72rem; font-weight:700; padding:4px 9px; border-radius:8px; cursor:pointer;" title="Copiar este JSON al portapapeles">
+                  <span>📋</span>
+                </button>
+              </div>
             </div>
             <pre id="wr-json-live-preview" style="margin:0; font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:#38BDF8; white-space:pre-wrap; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px;">${JSON.stringify({
               event: 'WAR_ROOM_INCIDENT_REPORTED',
@@ -1156,6 +1232,718 @@
         }
       } catch (err) {
         alert(`Incidencia registrada para ${selectedService}.`);
+      }
+    }
+
+    /* ----------------------------------------------------------------------
+       10.B. PESTAÑA PLAYGROUND: CONSOLA DE PRUEBAS & EDITOR LIBRE DE JSON MAKE
+       Permite copiar, pegar y enviar cualquier JSON libre hacia Make.com
+       para corroborar el mapeo y recepción de variables en tiempo real.
+       ---------------------------------------------------------------------- */
+    renderPlaygroundTabHtml() {
+      const targetUrl = this.customPlaygroundUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const content = this.customJsonContent || JSON.stringify({
+        event: "TEST_WEBHOOK_VARIABLE_CHECK",
+        source: "Mrs. Pets PWA — Consola Make JSON",
+        service: "Render Cloud / Q-Vet PACS",
+        cliente: {
+          nombre: "Harryt Luzardo",
+          telefono: "+58 414-6123456",
+          tipo: "VIP"
+        },
+        paciente: {
+          nombre: "Kaiser",
+          especie: "Canino",
+          raza: "Border Collie",
+          motivo_consulta: "Revisión dermatológica y spa"
+        },
+        datos_operativos: {
+          tasa_bcv: 887.30,
+          estacion_spa: "Estación #2 Tijera Pura",
+          responsable: "María Briceño"
+        },
+        timestamp: new Date().toISOString()
+      }, null, 2);
+
+      let keysDetected = [];
+      let jsonValid = true;
+      let syntaxError = '';
+      try {
+        const parsed = JSON.parse(content);
+        if (typeof parsed === 'object' && parsed !== null) {
+          if (Array.isArray(parsed)) {
+            keysDetected = [`array_items (${parsed.length})`];
+          } else {
+            keysDetected = Object.keys(parsed);
+          }
+        }
+      } catch (e) {
+        jsonValid = false;
+        syntaxError = e.message;
+      }
+
+      const res = this.lastCustomDispatchResult;
+
+      return `
+        <div style="background:#111827; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+          <!-- ENCABEZADO Y TÍTULO -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.4rem;">🧪</span>
+                <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#FFFFFF;">Consola de Pruebas & Editor Libre de JSON para Make.com</h3>
+              </div>
+              <p style="margin:4px 0 0 0; font-size:0.75rem; color:#94A3B8;">
+                Pega cualquier JSON generado por Gemini o escribe tus variables personalizadas para comprobar cómo las recibe Make.com en vivo sin reprogramar código.
+              </p>
+            </div>
+            <span style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-weight:800; font-size:0.72rem; padding:4px 10px; border-radius:10px;">
+              WEBHOOK PLAYGROUND ACTIVO
+            </span>
+          </div>
+
+          <!-- GUÍA TÁCTICA PARA PEDIR JSON A GEMINI -->
+          <div style="background:rgba(30,58,138,0.25); border:1px solid rgba(59,130,246,0.35); border-radius:12px; padding:12px 16px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.3rem;">🤖</span>
+                <div>
+                  <strong style="color:#60A5FA; font-size:0.8rem;">¿Cómo pedirle el JSON a Gemini para probar Make?</strong>
+                  <div style="font-size:0.73rem; color:#CBD5E1; margin-top:2px;">
+                    Haz clic en <strong>"Copiar Prompt para Gemini"</strong>, pégalo en tu chat con Gemini indicándole las variables que necesitas para tu escenario y luego pega aquí el JSON generado.
+                  </div>
+                </div>
+              </div>
+              <button type="button" id="wr-btn-copy-gemini" onclick="window.warRoomEngine.copyGeminiPrompt()" style="background:linear-gradient(135deg, #2563EB, #1D4ED8); color:#FFFFFF; border:none; padding:7px 14px; border-radius:9px; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(37,99,235,0.3);">
+                <span>📋</span> <span>Copiar Prompt para Gemini</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BARRA DE PLANTILLAS RÁPIDAS -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:0.73rem; color:#94A3B8; font-weight:700; margin-bottom:8px;">
+              ⚡ Plantillas Rápidas con 1 Clic (o pega libremente tu propio JSON):
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" onclick="window.warRoomEngine.loadJsonTemplate('incident')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.15); color:#F87171; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>🚨</span> <span>Falla / Incidencia</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.loadJsonTemplate('qvet')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.15); color:#34D399; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>🐾</span> <span>Cita Médica Q-Vet</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.loadJsonTemplate('agent')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.15); color:#F472B6; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>🎀</span> <span>Diálogo Leia VIP</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.loadJsonTemplate('volturi')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.15); color:#FBBF24; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>🏛️</span> <span>Tasa BCV & Volturi</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.loadJsonTemplate('form')" style="background:#1F2937; border:1px solid rgba(255,255,255,0.15); color:#38BDF8; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>📥</span> <span>Cargar del Formulario Superior</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.formatCustomJson()" style="background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.4); color:#FDE047; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin-left:auto;">
+                <span>✨</span> <span>Validar & Formatear</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.clearCustomJson()" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#FCA5A5; font-weight:700; font-size:0.73rem; padding:6px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                <span>🧹</span> <span>Limpiar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- URL DEL WEBHOOK -->
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700;">URL del Webhook de Make.com (US-2):</label>
+              <span style="font-size:0.7rem; color:#10B981; font-weight:800;">REGIONAL ROUTER US-2</span>
+            </div>
+            <input type="text" id="wr-playground-url" value="${this.escapeHtml(targetUrl)}" onchange="window.warRoomEngine.customPlaygroundUrl = this.value" style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:9px 14px; font-size:0.8rem; color:#F1F5F9; font-family:'JetBrains Mono', monospace; outline:none;" />
+          </div>
+
+          <!-- EDITOR DE JSON (TEXTAREA CON VALIDACIÓN EN VIVO) -->
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700;">Editor de JSON (Copia y pega aquí tu payload libre):</label>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span id="wr-json-size-badge" style="font-size:0.7rem; color:#94A3B8;">Bytes: ${new Blob([content]).size} B</span>
+                <span id="wr-json-syntax-badge" style="font-size:0.72rem; font-weight:800; color:${jsonValid ? '#10B981' : '#EF4444'}; background:${jsonValid ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; padding:2px 8px; border-radius:6px; border:1px solid ${jsonValid ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'};">
+                  ${jsonValid ? '🟢 JSON Válido' : '🔴 Error Sintaxis'}
+                </span>
+              </div>
+            </div>
+            <textarea id="wr-custom-json-input" oninput="window.warRoomEngine.onCustomJsonInput()" rows="11" placeholder="Pega o escribe cualquier JSON aquí..." style="width:100%; box-sizing:border-box; background:#050811; border:1.5px solid ${jsonValid ? 'rgba(56,189,248,0.35)' : '#EF4444'}; border-radius:12px; padding:12px 16px; font-family:'JetBrains Mono', monospace; font-size:0.8rem; color:#38BDF8; line-height:1.45; resize:vertical; outline:none;">${this.escapeHtml(content)}</textarea>
+            <div id="wr-json-syntax-error" style="font-size:0.72rem; color:#F87171; margin-top:4px; display:${jsonValid ? 'none' : 'block'}; font-family:monospace;">
+              ${this.escapeHtml(syntaxError)}
+            </div>
+          </div>
+
+          <!-- BADGES DE VARIABLES DETECTADAS -->
+          <div style="margin-bottom:16px; background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#CBD5E1; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🗂️ Variables Detectadas en el Payload (Campos que Make.com organizará):</span>
+              <span id="wr-playground-keys-count" style="color:#D4AF37; font-size:0.7rem;">${keysDetected.length} variables</span>
+            </div>
+            <div id="wr-playground-detected-keys" style="display:flex; flex-wrap:wrap; gap:6px;">
+              ${keysDetected.length > 0 
+                ? keysDetected.map(k => `
+                    <span style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38BDF8; font-family:'JetBrains Mono', monospace; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px;">
+                      ${this.escapeHtml(k)}
+                    </span>
+                  `).join('')
+                : '<span style="color:#64748B; font-size:0.72rem; font-style:italic;">No hay variables detectadas. Pega un JSON válido para ver sus campos.</span>'
+              }
+            </div>
+          </div>
+
+          <!-- BOTÓN DE ENVÍO -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div style="font-size:0.74rem; color:#94A3B8;">
+              ℹ️ Make procesará este JSON vía <code>POST application/json</code> y registrará la traza en la Centralita.
+            </div>
+            <button type="button" id="wr-btn-dispatch-custom-json" onclick="window.warRoomEngine.dispatchCustomJsonToMake()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; font-size:0.85rem; padding:12px 24px; border-radius:11px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(16,185,129,0.35);">
+              <span>🚀</span> <span>Enviar JSON a Make.com (POST)</span>
+            </button>
+          </div>
+
+          <!-- VISOR DE RESPUESTA DE MAKE (RESPONSE INSPECTOR) -->
+          <div id="wr-playground-response-area">
+            ${this.renderResponseInspectorHtml(res)}
+          </div>
+
+          <!-- HISTORIAL DE ENVÍOS RECIENTES -->
+          <div id="wr-playground-history-area" style="margin-top:16px;">
+            ${this.renderDispatchHistoryListHtml()}
+          </div>
+        </div>
+      `;
+    }
+
+    renderResponseInspectorHtml(res) {
+      if (!res) {
+        return `
+          <div style="background:#090D16; border:1px dashed rgba(255,255,255,0.15); border-radius:12px; padding:18px; text-align:center;">
+            <span style="font-size:1.6rem; display:block; margin-bottom:4px;">📡</span>
+            <span style="font-size:0.82rem; color:#E2E8F0; font-weight:700;">Visor de Respuesta en Vivo de Make.com</span>
+            <p style="margin:4px 0 0 0; font-size:0.74rem; color:#64748B;">
+              Presiona <strong>"Enviar JSON a Make.com"</strong> para observar aquí el código de estado HTTP, la latencia exacta y la respuesta devuelta por Make.
+            </p>
+          </div>
+        `;
+      }
+
+      const isOk = res.is_success || res.http_status === 200;
+      const statusColor = isOk ? '#10B981' : '#EF4444';
+      const statusBg = isOk ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+      const statusBorder = isOk ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)';
+      const keys = res.keys_detected || [];
+
+      return `
+        <div style="background:#090D16; border:1.5px solid ${statusBorder}; border-radius:14px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.2rem;">${isOk ? '🟢' : '🔴'}</span>
+              <span style="font-weight:900; font-size:0.88rem; color:#FFFFFF;">
+                Make.com Respondió: HTTP ${res.http_status || 0} (${this.escapeHtml(res.response_body || (isOk ? 'Accepted' : 'Error'))})
+              </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="background:${statusBg}; border:1px solid ${statusBorder}; color:${statusColor}; font-weight:800; font-size:0.72rem; padding:3px 9px; border-radius:8px;">
+                ${isOk ? 'RECEPCIÓN CONFIRMADA' : 'FALLO DE CONEXIÓN'}
+              </span>
+              <span style="color:#D4AF37; font-weight:800; font-size:0.74rem;">⏱️ ${res.latency_ms || 0} ms</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 12px;">
+              <div style="font-size:0.68rem; color:#94A3B8; text-transform:uppercase; font-weight:700;">ID de Despacho:</div>
+              <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#F1F5F9; font-weight:700;">${this.escapeHtml(res.dispatch_id || res.test_id || 'DISPATCH-ACTIVE')}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 12px;">
+              <div style="font-size:0.68rem; color:#94A3B8; text-transform:uppercase; font-weight:700;">Tamaño Payload:</div>
+              <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#38BDF8; font-weight:700;">${res.payload_bytes || 0} bytes &bull; ${keys.length} variables</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <div style="font-size:0.7rem; color:#94A3B8; font-weight:700; margin-bottom:4px;">Cuerpo Textual de la Respuesta de Make:</div>
+            <pre style="margin:0; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; font-family:'JetBrains Mono', monospace; font-size:0.73rem; color:${statusColor}; white-space:pre-wrap;">${this.escapeHtml(res.response_body || 'Accepted')}</pre>
+          </div>
+
+          ${keys.length > 0 ? `
+            <div style="margin-bottom:10px;">
+              <div style="font-size:0.7rem; color:#94A3B8; font-weight:700; margin-bottom:4px;">Variables Confirmadas Recibidas en Make.com:</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                ${keys.map(k => `
+                  <span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34D399; font-family:'JetBrains Mono', monospace; font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:5px;">
+                    ${this.escapeHtml(k)}
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.25); border-radius:8px; padding:10px 12px; font-size:0.73rem; color:#E2E8F0;">
+            <strong style="color:#FDE047;">💡 Consejo Táctico para Organizar Variables en Make.com:</strong>
+            <span style="color:#CBD5E1;"> En Make.com, abre tu módulo <em>Custom Webhook</em> y haz clic en <strong>"Re-determine data structure"</strong> o revisa el historial de ejecuciones. El escenario organizará de inmediato estos campos como variables disponibles para mapear en tus módulos siguientes (Google Sheets, WhatsApp, etc.).</span>
+          </div>
+        </div>
+      `;
+    }
+
+    renderDispatchHistoryListHtml() {
+      if (!this.customDispatchHistory || this.customDispatchHistory.length === 0) {
+        return '';
+      }
+
+      return `
+        <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
+          <div style="font-size:0.73rem; font-weight:800; color:#D4AF37; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <span>📜 Historial de Envíos de esta Sesión (${this.customDispatchHistory.length})</span>
+            <span style="font-size:0.68rem; color:#64748B;">Últimos envíos en vivo</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${this.customDispatchHistory.map((item, idx) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#111827; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 12px; font-size:0.72rem;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:${item.status === 200 ? '#10B981' : '#EF4444'}; font-weight:800;">${item.status === 200 ? '🟢 200' : `🔴 ${item.status}`}</span>
+                  <span style="color:#94A3B8;">${item.timestamp}</span>
+                  <span style="color:#CBD5E1; font-family:'JetBrains Mono', monospace;">${item.keys_count} variables (${item.latency}ms)</span>
+                </div>
+                <button type="button" onclick="window.warRoomEngine.reloadHistoricalJson(${idx})" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#F1F5F9; font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:6px; cursor:pointer;">
+                  Recargar en Editor
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    reloadHistoricalJson(index) {
+      if (!this.customDispatchHistory || !this.customDispatchHistory[index]) return;
+      const item = this.customDispatchHistory[index];
+      this.customJsonContent = item.payload;
+      const textarea = document.getElementById('wr-custom-json-input');
+      if (textarea) textarea.value = item.payload;
+      this.onCustomJsonInput();
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('JSON recargado en el editor.', 'info');
+      }
+    }
+
+    copyGeminiPrompt() {
+      const promptText = `Actúa como arquitecto de integración de Mrs. Pets y Make.com.
+Genera un objeto JSON válido, limpio y sin comentarios, listo para ser enviado vía webhook POST a Make.com.
+Caso de uso: [Describe aquí lo que necesitas, ej: Reporte de falla de servidor, Registro de consulta veterinaria Q-Vet, Mensaje de atención de Leia Concierge, o Alerta de cobro Banplus/Zinli].
+Incluye variables estructuradas con tipos de datos idóneos (strings, números, booleanos y objetos anidados si aplica).
+IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar directamente en la consola de pruebas.`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(promptText).then(() => {
+          this.showGeminiPromptFeedback();
+        }).catch(() => {
+          this.fallbackCopyText(promptText);
+          this.showGeminiPromptFeedback();
+        });
+      } else {
+        this.fallbackCopyText(promptText);
+        this.showGeminiPromptFeedback();
+      }
+    }
+
+    showGeminiPromptFeedback() {
+      const btn = document.getElementById('wr-btn-copy-gemini');
+      if (btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span>✅</span> <span>¡Prompt Copiado!</span>';
+        btn.style.background = '#10B981';
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          btn.style.background = 'linear-gradient(135deg, #2563EB, #1D4ED8)';
+        }, 2200);
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🤖 Prompt para Gemini copiado al portapapeles. Pégalo a Gemini y luego copia el JSON generado aquí.', 'success');
+      }
+    }
+
+    fallbackCopyText(text) {
+      const tempArea = document.createElement('textarea');
+      tempArea.value = text;
+      tempArea.style.position = 'fixed';
+      tempArea.style.opacity = '0';
+      document.body.appendChild(tempArea);
+      tempArea.focus();
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (_) {}
+      document.body.removeChild(tempArea);
+    }
+
+    loadJsonTemplate(type) {
+      let template = {};
+      const targetUrl = this.customPlaygroundUrl || this.nodeConfigs.make_webhook_url;
+
+      if (type === 'incident') {
+        template = {
+          event: "INCIDENT_ALERT",
+          service: "Render Cloud Server",
+          severity: "CRÍTICA",
+          error_code: "POSTGRES_TIMEOUT_504",
+          description: "La base de datos reportó saturación de conexiones en el pool.",
+          reporter: this.getAuthorizedAdminName(),
+          timestamp: new Date().toISOString(),
+          metrics: {
+            latency_ms: 1420,
+            active_connections: 98,
+            max_connections: 100
+          },
+          affected_nodes: ["render", "q-vet"]
+        };
+      } else if (type === 'qvet') {
+        template = {
+          event: "VET_APPOINTMENT_CREATED",
+          patient: {
+            name: "Kaiser",
+            species: "Canino",
+            breed: "Border Collie",
+            age_years: 3,
+            weight_kg: 18.5
+          },
+          owner: {
+            name: "Harryt Luzardo",
+            phone: "+58 414-6123456",
+            email: "contacto@mrspets.com",
+            vip_level: "Presidencia"
+          },
+          service: "Grooming Spa & Ozonoterapia",
+          assigned_groomer: "María Briceño",
+          appointment_date: new Date().toISOString().split('T')[0],
+          appointment_time: "14:00",
+          financial: {
+            bcv_rate: 887.30,
+            price_usd: 45.00,
+            price_ves: 39928.50,
+            payment_gateway: "Banplus API"
+          }
+        };
+      } else if (type === 'agent') {
+        template = {
+          event: "AGENT_CHAT_DISPATCH",
+          channel: "WhatsApp VIP Mrs. Pets",
+          source_agent: "leia_concierge",
+          target_agent: "centralita_router",
+          client_phone: "+58 414-1234567",
+          message: "Buenas tardes, quisiera consultar la disponibilidad de cita para corte a tijera con María Briceño.",
+          nlp_intent: "booking_inquiry",
+          sentiment: "positive",
+          timestamp: new Date().toISOString()
+        };
+      } else if (type === 'volturi') {
+        template = {
+          event: "VOLTURI_GOVERNANCE_TASA_BCV",
+          bcv_official_rate: 887.30,
+          seniat_iva_percent: 16.0,
+          currency: "VES",
+          deliberation_status: "APROBADA",
+          governance_board: "Comité Volturi & Dirección General",
+          authorized_by: "Harryt & Dalybell",
+          timestamp: new Date().toISOString()
+        };
+      } else if (type === 'form') {
+        const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
+        const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
+        const desc = document.getElementById('wr-new-issue-desc')?.value || 'Prueba de telemetría de servicio';
+        template = {
+          event: "WAR_ROOM_INCIDENT_REPORTED",
+          service: service,
+          component_affected: service,
+          severity: severity,
+          description: desc,
+          reported_by: this.getAuthorizedAdminName(),
+          webhook_target: targetUrl,
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      this.customJsonContent = JSON.stringify(template, null, 2);
+      const textarea = document.getElementById('wr-custom-json-input');
+      if (textarea) textarea.value = this.customJsonContent;
+      this.onCustomJsonInput();
+
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`Plantilla cargada en el editor.`, 'info');
+      }
+    }
+
+    formatCustomJson() {
+      const textarea = document.getElementById('wr-custom-json-input');
+      const text = (textarea ? textarea.value : this.customJsonContent || '').trim();
+      if (!text) return;
+
+      try {
+        const parsed = JSON.parse(text);
+        const formatted = JSON.stringify(parsed, null, 2);
+        this.customJsonContent = formatted;
+        if (textarea) textarea.value = formatted;
+        this.onCustomJsonInput();
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('✨ JSON validado y formateado.', 'success');
+        }
+      } catch (err) {
+        alert('Error al validar JSON: ' + err.message);
+      }
+    }
+
+    clearCustomJson() {
+      this.customJsonContent = '{\n  \n}';
+      const textarea = document.getElementById('wr-custom-json-input');
+      if (textarea) textarea.value = this.customJsonContent;
+      this.onCustomJsonInput();
+    }
+
+    onCustomJsonInput() {
+      const textarea = document.getElementById('wr-custom-json-input');
+      if (!textarea) return;
+      const text = textarea.value;
+      this.customJsonContent = text;
+
+      const badge = document.getElementById('wr-json-syntax-badge');
+      const errorDiv = document.getElementById('wr-json-syntax-error');
+      const sizeBadge = document.getElementById('wr-json-size-badge');
+      const keysContainer = document.getElementById('wr-playground-detected-keys');
+      const keysCount = document.getElementById('wr-playground-keys-count');
+
+      if (sizeBadge) {
+        sizeBadge.innerText = `Bytes: ${new Blob([text]).size} B`;
+      }
+
+      try {
+        const parsed = JSON.parse(text);
+        if (badge) {
+          badge.innerText = '🟢 JSON Válido';
+          badge.style.color = '#10B981';
+          badge.style.background = 'rgba(16,185,129,0.1)';
+          badge.style.border = '1px solid rgba(16,185,129,0.3)';
+        }
+        if (errorDiv) errorDiv.style.display = 'none';
+        textarea.style.borderColor = 'rgba(56,189,248,0.35)';
+
+        let keys = [];
+        if (typeof parsed === 'object' && parsed !== null) {
+          if (Array.isArray(parsed)) {
+            keys = [`array_items (${parsed.length})`];
+          } else {
+            keys = Object.keys(parsed);
+          }
+        }
+
+        if (keysCount) keysCount.innerText = `${keys.length} variables`;
+        if (keysContainer) {
+          if (keys.length > 0) {
+            keysContainer.innerHTML = keys.map(k => `
+              <span style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38BDF8; font-family:'JetBrains Mono', monospace; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:6px;">
+                ${this.escapeHtml(k)}
+              </span>
+            `).join('');
+          } else {
+            keysContainer.innerHTML = '<span style="color:#64748B; font-size:0.72rem; font-style:italic;">JSON vacío.</span>';
+          }
+        }
+      } catch (err) {
+        if (badge) {
+          badge.innerText = '🔴 Error Sintaxis';
+          badge.style.color = '#EF4444';
+          badge.style.background = 'rgba(239,68,68,0.1)';
+          badge.style.border = '1px solid rgba(239,68,68,0.3)';
+        }
+        if (errorDiv) {
+          errorDiv.innerText = `Sintaxis inválida: ${err.message}`;
+          errorDiv.style.display = 'block';
+        }
+        textarea.style.borderColor = '#EF4444';
+        if (keysContainer) {
+          keysContainer.innerHTML = '<span style="color:#EF4444; font-size:0.72rem; font-style:italic;">Esperando JSON válido para extraer variables...</span>';
+        }
+      }
+    }
+
+    loadIncidentJsonIntoPlayground() {
+      const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
+      const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
+      const desc = document.getElementById('wr-new-issue-desc')?.value || 'Fallo detectado en infraestructura';
+      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+
+      const payload = {
+        event: 'WAR_ROOM_INCIDENT_REPORTED',
+        service: service,
+        component_affected: service,
+        severity: severity,
+        description: desc,
+        reported_by: this.getAuthorizedAdminName(),
+        webhook_target: targetUrl,
+        timestamp: new Date().toISOString(),
+        metrics: {
+          latency_ms: 450,
+          status_code: 502,
+          retries: 2
+        }
+      };
+
+      this.customJsonContent = JSON.stringify(payload, null, 2);
+      this.activeTab = 'playground';
+      this.refreshModalContent(true);
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('📋 JSON de la incidencia cargado en la Consola Make.', 'info');
+      }
+    }
+
+    loadDiagnosticJsonIntoPlayground() {
+      const diag = (this.activeIncident && this.activeIncident.structured_diagnostic) || {
+        event: "STRUCTURED_DIAGNOSTIC_FAILURE",
+        incident_id: "INC-DIAGNOSTIC",
+        status: "FAILURE_DETECTED",
+        service: "Make.com Webhook Omnichannel",
+        http_status: 502,
+        timestamp: new Date().toISOString()
+      };
+
+      this.customJsonContent = JSON.stringify(diag, null, 2);
+      this.activeTab = 'playground';
+      this.refreshModalContent(true);
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🧪 Paquete de diagnóstico cargado en la Consola Make.', 'info');
+      }
+    }
+
+    copyLivePreviewJson() {
+      const previewEl = document.getElementById('wr-json-live-preview');
+      const text = previewEl ? previewEl.innerText : '';
+      if (!text) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('📋 JSON copiado al portapapeles.', 'success');
+          }
+        });
+      } else {
+        this.fallbackCopyText(text);
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('📋 JSON copiado al portapapeles.', 'success');
+        }
+      }
+    }
+
+    async dispatchCustomJsonToMake() {
+      if (this.isDispatchingCustomJson) return;
+
+      const textarea = document.getElementById('wr-custom-json-input');
+      const urlInput = document.getElementById('wr-playground-url');
+      const rawText = (textarea ? textarea.value : this.customJsonContent || '').trim();
+      const targetUrl = (urlInput ? urlInput.value : this.customPlaygroundUrl || this.nodeConfigs.make_webhook_url).trim();
+
+      if (!rawText) {
+        alert('Por favor ingresa o pega un JSON antes de enviar.');
+        return;
+      }
+
+      let parsedPayload;
+      try {
+        parsedPayload = JSON.parse(rawText);
+      } catch (err) {
+        alert('El texto no es un JSON válido. Revisa la sintaxis o presiona "Validar & Formatear" antes de enviar.\n\nError: ' + err.message);
+        return;
+      }
+
+      this.isDispatchingCustomJson = true;
+      const btn = document.getElementById('wr-btn-dispatch-custom-json');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> <span>Despachando a Make.com...</span>';
+      }
+
+      try {
+        // 1. Envío al backend /api/v1/war-room/dispatch-custom-json
+        const res = await fetch('/api/v1/war-room/dispatch-custom-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: targetUrl,
+            payload: parsedPayload
+          })
+        });
+        const data = await res.json();
+
+        // 2. Disparo complementario directo desde el navegador (no-cors)
+        if (targetUrl && targetUrl.startsWith('https://hook.')) {
+          fetch(targetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: rawText,
+            mode: 'no-cors'
+          }).catch(() => {});
+        }
+
+        this.lastCustomDispatchResult = data;
+        this.customDispatchHistory.unshift({
+          timestamp: new Date().toLocaleTimeString(),
+          status: data.http_status || (data.is_success ? 200 : 500),
+          latency: data.latency_ms || 350,
+          keys_count: (data.keys_detected || []).length,
+          payload_preview: rawText.substring(0, 100) + '...',
+          payload: rawText
+        });
+        if (this.customDispatchHistory.length > 5) {
+          this.customDispatchHistory.pop();
+        }
+
+        // Actualizar el Response Inspector en el DOM directamente sin perder cursor
+        const respArea = document.getElementById('wr-playground-response-area');
+        if (respArea) {
+          respArea.innerHTML = this.renderResponseInspectorHtml(data);
+        }
+
+        // Actualizar historial en el DOM
+        const histArea = document.getElementById('wr-playground-history-area');
+        if (histArea) {
+          histArea.innerHTML = this.renderDispatchHistoryListHtml();
+        }
+
+        if (data.is_success || data.http_status === 200) {
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`✅ JSON entregado a Make.com (HTTP 200 Accepted en ${data.latency_ms}ms).`, 'success');
+          }
+        } else {
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`⚠️ Make.com respondió HTTP ${data.http_status}: ${data.response_body || data.error}`, 'warning');
+          }
+        }
+      } catch (err) {
+        const errorResult = {
+          is_success: false,
+          http_status: 0,
+          latency_ms: 0,
+          response_body: err.message,
+          error: err.message,
+          keys_detected: Object.keys(parsedPayload || {}),
+          timestamp: new Date().toISOString()
+        };
+        this.lastCustomDispatchResult = errorResult;
+        const respArea = document.getElementById('wr-playground-response-area');
+        if (respArea) {
+          respArea.innerHTML = this.renderResponseInspectorHtml(errorResult);
+        }
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`Error al enviar JSON: ${err.message}`, 'error');
+        }
+      } finally {
+        this.isDispatchingCustomJson = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🚀</span> <span>Enviar JSON a Make.com (POST)</span>';
+        }
       }
     }
 
