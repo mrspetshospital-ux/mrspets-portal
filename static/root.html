@@ -1947,14 +1947,19 @@
                 </div>
               </div>
               <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                <span class="badge" style="background:#0284c7; color:white; padding:8px 14px; border-radius:18px; font-weight:800; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px;">
+                <!-- BOTÓN 1: DUAL CHANNEL LIVE -->
+                <button type="button" id="btn-agent-studio-dual-channel" onclick="if(window.agentStudio) { window.agentStudio.setPrimaryEngine('auto'); if(window.app) window.app.showToast('⚡ Canal Dual Activo: Teamily + Make.com sincronizados en vivo.', 'info'); } else if(window.app) { window.app.showToast('⚡ Canal Dual Activo: Teamily + Make.com en línea.', 'info'); }" style="background:#0284c7; color:#FFFFFF !important; border:none; padding:8px 16px; border-radius:18px; font-weight:800; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(2,132,199,0.35);" title="Haz clic para verificar o activar el Canal Dual Teamily + Make.com">
                   <span>⚡ DUAL CHANNEL LIVE</span>
-                </span>
-                <span class="badge" style="background:#10b981; color:white; padding:8px 16px; border-radius:18px; font-weight:800; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px;">
+                </button>
+
+                <!-- BOTÓN 2: FAILOVER RESILIENTE ACTIVO -->
+                <button type="button" id="btn-agent-studio-failover-status" onclick="if(window.warRoomEngine) { window.warRoomEngine.openWarRoomModal(); } else if(window.openWarRoomModal) { window.openWarRoomModal(); }" style="background:#10b981; color:#FFFFFF !important; border:none; padding:8px 16px; border-radius:18px; font-weight:800; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35);" title="Failover Resiliente Activo • Haz clic para abrir el Cuarto de Guerra">
                   <span>🟢 FAILOVER RESILIENTE ACTIVO</span>
-                </span>
-                <button type="button" id="btn-agent-studio-enter-war-room" onclick="if(window.warRoomEngine) window.warRoomEngine.openWarRoomModal();" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; border:1.5px solid #D4AF37; padding:8px 18px; border-radius:18px; font-weight:900; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(16,185,129,0.35); text-decoration:none;" title="Entrar al Cuarto de Guerra (Mesa de 5 Nodos: Harryt, Volturi, AntiGravity, Make, Teamly)">
-                  <span>🛡️</span>
+                </button>
+
+                <!-- BOTÓN 3: ENTRAR AL WAR ROOM -->
+                <button type="button" id="btn-agent-studio-enter-war-room" onclick="if(window.warRoomEngine) { window.warRoomEngine.openWarRoomModal(); } else if(window.openWarRoomModal) { window.openWarRoomModal(); } else { const m = document.getElementById('modal-volturi-war-room'); if(m) { m.style.display = 'flex'; } else { window.location.href = '?warroom=1'; } }" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; border:2px solid #D4AF37; padding:9px 18px; border-radius:18px; font-weight:900; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 18px rgba(16,185,129,0.45); text-decoration:none;" title="Entrar al Cuarto de Guerra (Mesa de 5 Nodos: Harryt, Volturi, AntiGravity, Make, Teamly)">
+                  <span style="font-size:1.1rem;">🛡️</span>
                   <span style="color:#FFFFFF !important; font-weight:900;">Entrar al War Room (Mesa 5 Nodos)</span>
                 </button>
               </div>
@@ -8991,6 +8996,6 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
     });
   </script>
   <script src="js/apiClient.js?v=20261104_PROD_V1"></script>
-  <script src="js/warRoomEngine.js?v=20261106_WAR_ROOM_V1"></script>
+  <script src="js/warRoomEngine.js?v=20261106_WAR_ROOM_V3_REACTIVE"></script>
 </body>
 </html>

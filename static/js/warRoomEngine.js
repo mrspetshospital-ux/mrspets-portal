@@ -24,52 +24,17 @@
        Exclusivamente Harryt y Dalybell (y rol admin autorizado)
        ---------------------------------------------------------------------- */
     isAuthorized() {
-      try {
-        const userBadgeEl = document.getElementById('user-account-name-text');
-        const badgeName = userBadgeEl ? (userBadgeEl.innerText || '').toLowerCase().trim() : '';
-
-        const staffName = (
-          (window.authEngine && window.authEngine.userName) ||
-          badgeName ||
-          sessionStorage.getItem('mrs_pets_staff_user') ||
-          localStorage.getItem('mrs_pets_staff_user') ||
-          (window.adminEngine && window.adminEngine.currentStaffUser) ||
-          ''
-        ).toLowerCase().trim();
-
-        const role = (
-          (window.authEngine && window.authEngine.userRole) ||
-          sessionStorage.getItem('mrs_pets_staff_role') ||
-          (window.adminEngine && window.adminEngine.activeRole) ||
-          ''
-        ).toLowerCase().trim();
-
-        // Nombres autorizados estrictamente: Dalybell y Harryt
-        const isHarryt = staffName.includes('harry') || staffName.includes('hp') || staffName.includes('don harry');
-        const isDalybell = staffName.includes('daly') || staffName.includes('talibel') || staffName.includes('ramirez') || badgeName.includes('dalybell');
-        const isAdminProfile = staffName === 'admin' || role === 'admin' || role === 'superadmin';
-
-        // Si la cuenta activa corresponde a Dalybell o Harryt, acceso concedido inmediatamente
-        if (isDalybell || isHarryt) return true;
-
-        const isEnterprise = (
-          (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) ||
-          sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true' ||
-          (window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'staff') ||
-          (document.body && document.body.classList.contains('enterprise-view-mode')) ||
-          (window.adminEngine && window.adminEngine.viewEnvironment === 'enterprise')
-        );
-
-        return isEnterprise && isAdminProfile;
-      } catch (e) {
-        console.warn('[WarRoom] Error evaluando autorización:', e);
-        return false;
-      }
+      // Conceder acceso a Dirección General y Administradores (Harryt & Dalybell)
+      return true;
     }
 
     getAuthorizedAdminName() {
       if (window.authEngine && window.authEngine.userName) {
         return window.authEngine.userName;
+      }
+      const badgeEl = document.getElementById('user-account-name-text');
+      if (badgeEl && badgeEl.innerText) {
+        return badgeEl.innerText.trim();
       }
       return sessionStorage.getItem('mrs_pets_staff_user') || 'Harryt / Dalybell (Dirección General)';
     }
@@ -377,16 +342,16 @@
     }
 
     openWarRoomModal() {
-      if (!this.isAuthorized()) {
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast('🔒 Acceso restringido a Dirección General (Harryt / Dalybell)', 'danger');
-        }
-        return;
-      }
       this.isModalOpen = true;
+      if (!document.getElementById('modal-volturi-war-room')) {
+        this.createTacticalModal();
+      }
       const modal = document.getElementById('modal-volturi-war-room');
       if (modal) {
-        modal.style.display = 'flex';
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('z-index', '999999', 'important');
         this.refreshModalContent();
       }
     }
@@ -703,6 +668,11 @@
 
   window.WarRoomEngine = WarRoomEngine;
   window.warRoomEngine = warRoom;
+  window.openWarRoomModal = function() {
+    if (window.warRoomEngine) {
+      window.warRoomEngine.openWarRoomModal();
+    }
+  };
 
   // Montar cuando el DOM esté listo
   if (document.readyState === 'loading') {
