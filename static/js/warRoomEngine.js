@@ -77,6 +77,14 @@
       document.addEventListener('click', () => {
         setTimeout(() => this.updateVisibility(), 300);
       });
+
+      // Apertura automática si la URL incluye ?warroom=1
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('warroom') === '1') {
+          setTimeout(() => this.openWarRoomModal(), 400);
+        }
+      } catch (e) {}
     }
 
     /* ----------------------------------------------------------------------
