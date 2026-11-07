@@ -584,13 +584,18 @@ class WarRoomEngine:
         now = datetime.now(timezone.utc)
         target_incident = None
         
-        # Buscar en activas
+        # Buscar en activas por ID exacto
         for idx, inc in enumerate(self.active_incidents):
             if inc.get("incident_id") == incident_id:
                 target_incident = self.active_incidents.pop(idx)
                 break
-                
-        # Si no existía incidencia activa con ese ID, crear una resuelta al vuelo para fines de prueba
+
+        # Si incident_id es comodín o 'INC-ACTIVE', resolver la primera incidencia activa pendiente
+        if not target_incident and self.active_incidents:
+            if incident_id in ("INC-ACTIVE", "latest", "", None, "*") or not incident_id:
+                target_incident = self.active_incidents.pop(0)
+
+        # Si aún no existía incidencia activa, crear una resuelta al vuelo para fines de prueba
         if not target_incident:
             target_incident = {
                 "incident_id": incident_id or f"INC-AUTOPATCH-{secrets.token_hex(3).upper()}",
