@@ -96,11 +96,15 @@ class AuthEngine {
       });
     } catch(e) {}
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSearchTab = urlParams.has('tab') || urlParams.has('warroom') || urlParams.has('chat') || urlParams.has('volturi');
     const rawHash = (window.location.hash || '').replace('#', '').replace('tab-', '').trim();
-    const hasHash = rawHash.length > 0 && rawHash !== 'welcome';
+    const hasHash = (rawHash.length > 0 && rawHash !== 'welcome') || hasSearchTab;
+    const alreadyBypassed = localStorage.getItem('mrs_pets_skip_splash') === 'true' ||
+                            sessionStorage.getItem('mrs_pets_skip_splash') === 'true';
 
-    // 🛡️ Visita a la raíz o bienvenida: Limpiar banderas residuales para garantizar que siempre pase por video y portal de credenciales
-    if (!hasHash || rawHash === 'welcome') {
+    // 🛡️ Solo limpiar banderas si es primera visita genuina sin hash ni parámetros ni bypass previo
+    if (!alreadyBypassed && (!hasHash || rawHash === 'welcome')) {
       sessionStorage.removeItem('mrs_pets_visitor_session');
       localStorage.removeItem('mrs_pets_skip_splash');
       sessionStorage.removeItem('mrs_pets_skip_splash');
@@ -158,8 +162,8 @@ class AuthEngine {
       return;
     }
 
-    // 3. Enlace profundo directo con sesión confirmada
-    if (hasHash && hasSkipped && (isEntSession || isClientSession)) {
+    // 3. Enlace profundo directo con sesión confirmada o bypass previo
+    if ((hasHash || alreadyBypassed || hasSkipped) && (isEntSession || isClientSession || alreadyBypassed)) {
       this.hidePortalAndShowApp();
       return;
     }

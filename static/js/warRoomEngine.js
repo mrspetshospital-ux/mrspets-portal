@@ -527,7 +527,7 @@
     /* ----------------------------------------------------------------------
        5. EJECUCIÓN DEL PARCHE / AUTORIZACIÓN CON ANTIGRAVITY
        ---------------------------------------------------------------------- */
-    async function executeHotfix(incidentId) {
+    async executeHotfix(incidentId) {
       const adminName = this.getAuthorizedAdminName();
 
       if (window.app && typeof window.app.showToast === 'function') {
@@ -576,7 +576,7 @@
     /* ----------------------------------------------------------------------
        6. GENERADOR DE ENLACES DE INVITACIÓN EFÍMEROS (1-2 HORAS)
        ---------------------------------------------------------------------- */
-    async function generateExternalInvite() {
+    async generateExternalInvite() {
       const durationSelect = document.getElementById('wr-invite-duration');
       const serviceSelect = document.getElementById('wr-invite-service');
       const resultBox = document.getElementById('wr-invite-result-box');
@@ -625,7 +625,7 @@
     /* ----------------------------------------------------------------------
        7. ALTERNADOR DE ALERTA PARA PRUEBAS Y DEMOSTRACIÓN TÉCNICA
        ---------------------------------------------------------------------- */
-    async function simulateAlertToggle() {
+    async simulateAlertToggle() {
       try {
         const res = await fetch('/api/v1/war-room/simulate-alert', { method: 'POST' });
         const data = await res.json();
