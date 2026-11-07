@@ -170,6 +170,7 @@
             <span>🔑</span> Confirmación e Ingreso de Usuario y Clave
           </div>
           <form id="splash-auth-form" onsubmit="authEngine.handleSplashLogin(event)" style="text-align:left;">
+            <div id="splash-auth-error-alert" role="alert" style="display:none; margin-bottom:12px; padding:12px 14px; background:rgba(239,68,68,0.18); border:1.5px solid #EF4444; border-radius:12px; color:#FCA5A5; font-size:0.86rem; font-weight:700; line-height:1.45; text-align:left; box-shadow:0 6px 20px rgba(239,68,68,0.25);"></div>
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
               <div>
                 <label style="display:block; font-size:0.75rem; font-weight:700; color:#F4F1EA; margin-bottom:4px;">Usuario, Correo o Identificación VIP *</label>
@@ -6862,6 +6863,8 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
       <div id="enterprise-login-notice" style="background:#FEF3C7; padding:13px 18px; border-radius:12px; border:1.5px solid #F59E0B; margin-bottom:20px; font-size:0.84rem; color:#0F172A !important; line-height:1.45; box-shadow:0 4px 14px rgba(245,158,11,0.25);">
         🏢 <strong style="color:#0F172A !important; font-weight:900;">Acceso a Vista Empresa:</strong> <span style="color:#1E293B !important; font-weight:700;">Seleccione su perfil de personal o ingrese su usuario y clave para ingresar a la consola operativa.</span>
       </div>
+
+      <div id="enterprise-login-error" role="alert" style="display:none; background:rgba(239,68,68,0.2); border:1.5px solid #EF4444; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#FCA5A5; font-size:0.85rem; font-weight:700; line-height:1.45; text-align:left;"></div>
 
       <form onsubmit="adminEngine.submitEnterpriseLogin(event)">
         <div class="form-group" style="margin-bottom:16px;">

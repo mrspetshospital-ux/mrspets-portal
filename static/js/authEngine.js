@@ -2104,8 +2104,88 @@ class AuthEngine {
     }
   }
 
-  handleSplashLogin(event) {
+  showSplashError(message) {
+    try {
+      let alertEl = document.getElementById('splash-auth-error-alert');
+      if (!alertEl) {
+        const form = document.getElementById('splash-auth-form');
+        if (form) {
+          alertEl = document.createElement('div');
+          alertEl.id = 'splash-auth-error-alert';
+          alertEl.setAttribute('role', 'alert');
+          alertEl.style.cssText = 'margin-bottom:12px; padding:12px 16px; background:rgba(239,68,68,0.18); border:1.5px solid #EF4444; border-radius:12px; color:#FCA5A5; font-size:0.86rem; font-weight:700; line-height:1.45; text-align:left; box-shadow:0 6px 20px rgba(239,68,68,0.25); display:block;';
+          form.insertBefore(alertEl, form.firstChild);
+        }
+      }
+      if (alertEl) {
+        alertEl.innerHTML = `
+          <div style="display:flex; align-items:flex-start; gap:10px;">
+            <span style="font-size:1.15rem; flex-shrink:0;">🚨</span>
+            <div>
+              <div style="font-weight:900; color:#F87171; margin-bottom:2px;">Fallo de Autenticación</div>
+              <div style="color:#FEE2E2;">${message}</div>
+            </div>
+          </div>
+        `;
+        alertEl.style.display = 'block';
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(message, 'danger');
+      }
+      this.ensurePortalVisible();
+    } catch (e) {
+      console.warn("[AuthEngine] showSplashError exception:", e);
+    }
+  }
+
+  hideSplashError() {
+    try {
+      const alertEl = document.getElementById('splash-auth-error-alert');
+      if (alertEl) {
+        alertEl.style.display = 'none';
+        alertEl.innerHTML = '';
+      }
+    } catch (e) {}
+  }
+
+  ensurePortalVisible() {
+    try {
+      if (typeof document !== 'undefined') {
+        if (document.body) {
+          document.body.style.backgroundColor = '#121214';
+        }
+        if (document.documentElement && document.documentElement.classList) {
+          document.documentElement.classList.remove('splash-bypassed');
+        }
+        const portal = document.getElementById('access-links-portal');
+        if (portal) {
+          portal.classList.add('active');
+          portal.style.setProperty('display', 'block', 'important');
+          portal.style.setProperty('visibility', 'visible', 'important');
+          portal.style.setProperty('opacity', '1', 'important');
+          portal.style.setProperty('pointer-events', 'auto', 'important');
+          portal.style.setProperty('z-index', '100000', 'important');
+        }
+        const splash = document.getElementById('auth-splash-screen');
+        if (splash) {
+          splash.style.setProperty('display', 'none', 'important');
+          splash.style.setProperty('pointer-events', 'none', 'important');
+        }
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+          appContainer.style.setProperty('display', 'none', 'important');
+        }
+      }
+    } catch (e) {
+      console.warn("[AuthEngine] ensurePortalVisible error:", e);
+    }
+  }
+
+  async handleSplashLogin(event) {
     if (event) event.preventDefault();
+    this.hideSplashError();
+
     const userInput = document.getElementById('splash-user-input');
     const passInput = document.getElementById('splash-pass-input');
 
@@ -2113,17 +2193,13 @@ class AuthEngine {
     const pass = passInput ? passInput.value.trim() : '';
 
     if (!user) {
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('⚠️ Por favor ingrese su usuario o nombre.', 'warning');
-      }
+      this.showSplashError('⚠️ Por favor ingrese su usuario o nombre.');
       if (userInput) userInput.focus();
       return;
     }
 
     if (!pass) {
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('🔒 Clave requerida: Nadie puede ingresar a Mrs. Pets sin su clave personal.', 'warning');
-      }
+      this.showSplashError('🔒 Clave requerida: Nadie puede ingresar a Mrs. Pets sin su clave personal.');
       if (passInput) {
         passInput.style.borderColor = '#EF4444';
         passInput.classList.add('shake-anim');
@@ -2133,143 +2209,167 @@ class AuthEngine {
       return;
     }
 
-    // Normalizar usuario ingresado (sin arroba, minúsculas y caracteres limpios)
-    const rawUser = user.trim();
-    const cleanUser = rawUser.toLowerCase().replace(/^@/, '');
-    const cleanId = cleanUser.replace(/[^a-z0-9]/g, '');
-
-    // 1. Sincronizar perfiles de Staff (memoria + localStorage)
-    if (window.adminEngine && typeof window.adminEngine.loadStaffFromStorage === 'function') {
-      window.adminEngine.loadStaffFromStorage();
-    }
-    let staffProfiles = [];
-    if (window.adminEngine && Array.isArray(window.adminEngine.staffProfiles)) {
-      staffProfiles = [...window.adminEngine.staffProfiles];
-    }
     try {
-      const savedStaff = localStorage.getItem('mrs_pets_staff_profiles');
-      if (savedStaff) {
-        const parsedStaff = JSON.parse(savedStaff);
-        if (Array.isArray(parsedStaff)) {
-          parsedStaff.forEach(p => {
-            const idx = staffProfiles.findIndex(s => s.id === p.id || ((s.username || '').toLowerCase() === (p.username || '').toLowerCase()));
-            if (idx >= 0) {
-              staffProfiles[idx] = { ...staffProfiles[idx], ...p };
-            } else {
-              staffProfiles.push(p);
-            }
-          });
-        }
+      // Normalizar usuario ingresado (sin arroba, minúsculas y caracteres limpios)
+      const rawUser = user.trim();
+      const cleanUser = rawUser.toLowerCase().replace(/^@/, '');
+      const cleanId = cleanUser.replace(/[^a-z0-9]/g, '');
+
+      // 1. Sincronizar perfiles de Staff (memoria + localStorage)
+      if (window.adminEngine && typeof window.adminEngine.loadStaffFromStorage === 'function') {
+        try { window.adminEngine.loadStaffFromStorage(); } catch (e) {}
       }
-    } catch(e) {}
-
-    // 2. Comprobar si coincide con un perfil Staff (por username, id, nombre o roles clave)
-    const staffMatch = staffProfiles.find(s => {
-      const u = (s.username || '').toLowerCase().trim().replace(/^@/, '');
-      const id = (s.id || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-      const name = (s.name || '').toLowerCase().trim();
-      const nombre = (s.nombre || '').toLowerCase().trim();
-      const apellido = (s.apellido || '').toLowerCase().trim();
-
-      return u === cleanUser ||
-             id === cleanId ||
-             (cleanUser === 'hp' && (u === 'hp' || id.includes('07') || name.includes('hp') || nombre.includes('hp'))) ||
-             name === cleanUser ||
-             nombre === cleanUser ||
-             apellido === cleanUser ||
-             (u && (u === cleanUser || (cleanUser.length > 3 && u.includes(cleanUser))));
-    });
-
-    if (staffMatch || cleanUser === 'admin' || cleanUser === 'staff' || cleanUser === 'empleado' || cleanUser === 'dr.morales' || cleanUser === 'hp') {
-      const staffUsername = staffMatch ? (staffMatch.username || cleanUser) : cleanUser;
-      fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: staffUsername, password: pass })
-      }).then(r => r.json()).then(data => {
-        if (data.status === 'success') {
-          const authRole = data.role || (data.user && data.user.role) || 'admin';
-          if (window.adminEngine) {
-            window.adminEngine.isEnterpriseAuthenticated = true;
-            window.adminEngine.activeRole = authRole;
-            window.adminEngine.viewEnvironment = 'enterprise';
-            try { 
-              sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
-              sessionStorage.setItem('mrs_pets_staff_role', authRole);
-            } catch(e){}
+      let staffProfiles = [];
+      if (window.adminEngine && Array.isArray(window.adminEngine.staffProfiles)) {
+        staffProfiles = [...window.adminEngine.staffProfiles];
+      }
+      try {
+        const savedStaff = localStorage.getItem('mrs_pets_staff_profiles');
+        if (savedStaff) {
+          const parsedStaff = JSON.parse(savedStaff);
+          if (Array.isArray(parsedStaff)) {
+            parsedStaff.forEach(p => {
+              const idx = staffProfiles.findIndex(s => s.id === p.id || ((s.username || '').toLowerCase() === (p.username || '').toLowerCase()));
+              if (idx >= 0) {
+                staffProfiles[idx] = { ...staffProfiles[idx], ...p };
+              } else {
+                staffProfiles.push(p);
+              }
+            });
           }
-          this.isAuthenticated = true;
-          this.userRole = 'staff';
-          this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : (data.username || staffUsername);
-          localStorage.setItem('mrs_pets_skip_splash', 'true');
-          this.loginSuccess('staff', this.userName);
-        } else {
-          if (window.app && typeof window.app.showToast === 'function') {
-            window.app.showToast(data.message || `❌ Credenciales inválidas para "${user}".`, 'danger');
-          }
+        }
+      } catch(e) {}
+
+      // 2. Comprobar si coincide con un perfil Staff (por username, id, nombre o roles clave)
+      const staffMatch = staffProfiles.find(s => {
+        const u = (s.username || '').toLowerCase().trim().replace(/^@/, '');
+        const id = (s.id || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        const name = (s.name || '').toLowerCase().trim();
+        const nombre = (s.nombre || '').toLowerCase().trim();
+        const apellido = (s.apellido || '').toLowerCase().trim();
+
+        return u === cleanUser ||
+               id === cleanId ||
+               (cleanUser === 'hp' && (u === 'hp' || id.includes('07') || name.includes('hp') || nombre.includes('hp'))) ||
+               name === cleanUser ||
+               nombre === cleanUser ||
+               apellido === cleanUser ||
+               (u && (u === cleanUser || (cleanUser.length > 3 && u.includes(cleanUser))));
+      });
+
+      if (staffMatch || cleanUser === 'admin' || cleanUser === 'staff' || cleanUser === 'empleado' || cleanUser === 'dr.morales' || cleanUser === 'hp') {
+        const staffUsername = staffMatch ? (staffMatch.username || cleanUser) : cleanUser;
+        let res;
+        try {
+          res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: staffUsername, password: pass })
+          });
+        } catch (netErr) {
+          console.error("[AuthEngine] Network error on /api/auth/login:", netErr);
+          this.showSplashError('⚠️ No se pudo comunicar con el servidor de autenticación. Verifique su conexión de red.');
+          this.ensurePortalVisible();
+          return;
+        }
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          console.warn("[AuthEngine] Response was not valid JSON:", jsonErr);
+        }
+
+        if (res.status === 401 || !res.ok || (data && data.status !== 'success')) {
+          const errMsg = (data && data.message)
+            ? data.message
+            : (res.status === 401
+                ? `🔒 Acceso no autorizado (HTTP 401): Clave o usuario incorrectos para "${user}".`
+                : `⚠️ Error de autenticación (HTTP ${res.status}).`);
+          this.showSplashError(errMsg);
           if (passInput) {
             passInput.style.borderColor = '#EF4444';
             passInput.classList.add('shake-anim');
             setTimeout(() => passInput.classList.remove('shake-anim'), 400);
             passInput.select();
           }
+          this.ensurePortalVisible();
+          return;
         }
-      }).catch(() => {
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast('⚠️ No se pudo comunicar con el servidor de autenticación.', 'warning');
-        }
-      });
-      return;
-    }
 
-    // 3. Base de datos de Clientes Registrados ("Soy un Chico Mrs. Pets")
-    const patients = this.getPatientsList();
-    const normUser = this.normalizeSearchStr(cleanUser);
-
-    const matched = patients.find(p => {
-      const owner = this.normalizeSearchStr(p.owner || p.ownerName || '');
-      const pet = this.normalizeSearchStr(p.name || p.petName || '');
-      const rif = this.normalizeSearchStr(p.rif || '');
-      const phone = this.normalizeSearchStr(p.ownerPhone || p.phone || '');
-      const email = this.normalizeSearchStr(p.email || '');
-
-      return (
-        owner.includes(normUser) ||
-        normUser.includes(owner) ||
-        pet.includes(normUser) ||
-        normUser.includes(pet) ||
-        rif.includes(normUser) ||
-        phone.includes(normUser) ||
-        email.includes(normUser)
-      );
-    });
-
-    if (matched) {
-      const expectedPin = (matched.pin ? String(matched.pin).trim() : '1234');
-      if (pass === expectedPin) {
-        this.setProfilePinAuthenticated(matched.id, true);
-        this.selectVipProfileVerified(matched.id);
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast(`✨ ¡Bienvenido ${matched.owner || user}! Clave personal validada con éxito.`, 'success');
+        // Login exitoso
+        const authRole = data.role || (data.user && data.user.role) || 'admin';
+        if (window.adminEngine) {
+          window.adminEngine.isEnterpriseAuthenticated = true;
+          window.adminEngine.activeRole = authRole;
+          window.adminEngine.viewEnvironment = 'enterprise';
+          try { 
+            sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
+            sessionStorage.setItem('mrs_pets_staff_role', authRole);
+          } catch(e){}
         }
-      } else {
-        if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast(`❌ Clave personal incorrecta para ${matched.owner || user}. Acceso denegado.`, 'danger');
-        }
-        if (passInput) {
-          passInput.style.borderColor = '#EF4444';
-          passInput.classList.add('shake-anim');
-          setTimeout(() => passInput.classList.remove('shake-anim'), 400);
-          passInput.select();
-        }
+
+        this.isAuthenticated = true;
+        this.userRole = 'staff';
+        this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : (data.username || staffUsername);
+        localStorage.setItem('mrs_pets_skip_splash', 'true');
+        this.loginSuccess('staff', this.userName);
+        return;
       }
-      return;
-    }
 
-    // 4. Si el usuario no fue encontrado
-    if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast(`⚠️ Usuario "${user}" no registrado. Por favor elija "Soy un Chico Mrs Pets" o "Deseo ser un Chico Mrs. Pets".`, 'warning');
+      // 3. Base de datos de Clientes Registrados ("Soy un Chico Mrs. Pets")
+      const patients = this.getPatientsList();
+      const normUser = this.normalizeSearchStr(cleanUser);
+
+      const matched = patients.find(p => {
+        const owner = this.normalizeSearchStr(p.owner || p.ownerName || '');
+        const pet = this.normalizeSearchStr(p.name || p.petName || '');
+        const rif = this.normalizeSearchStr(p.rif || '');
+        const phone = this.normalizeSearchStr(p.ownerPhone || p.phone || '');
+        const email = this.normalizeSearchStr(p.email || '');
+
+        return (
+          owner.includes(normUser) ||
+          normUser.includes(owner) ||
+          pet.includes(normUser) ||
+          normUser.includes(pet) ||
+          rif.includes(normUser) ||
+          phone.includes(normUser) ||
+          email.includes(normUser)
+        );
+      });
+
+      if (matched) {
+        const expectedPin = (matched.pin ? String(matched.pin).trim() : '1234');
+        if (pass === expectedPin) {
+          this.setProfilePinAuthenticated(matched.id, true);
+          this.selectVipProfileVerified(matched.id);
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(`✨ ¡Bienvenido ${matched.owner || user}! Clave personal validada con éxito.`, 'success');
+          }
+        } else {
+          this.showSplashError(`❌ Clave personal incorrecta para ${matched.owner || user}. Acceso denegado.`);
+          if (passInput) {
+            passInput.style.borderColor = '#EF4444';
+            passInput.classList.add('shake-anim');
+            setTimeout(() => passInput.classList.remove('shake-anim'), 400);
+            passInput.select();
+          }
+          this.ensurePortalVisible();
+        }
+        return;
+      }
+
+      // 4. Si el usuario no fue encontrado
+      this.showSplashError(`⚠️ Usuario "${user}" no registrado. Por favor elija "Soy un Chico Mrs Pets" o "Deseo ser un Chico Mrs. Pets".`);
+      this.ensurePortalVisible();
+
+    } catch (err) {
+      console.error("[AuthEngine] Error crítico no manejado en handleSplashLogin:", err);
+      this.showSplashError('⚠️ Ocurrió un error inesperado al procesar la autenticación. Por favor intente de nuevo.');
+      this.ensurePortalVisible();
     }
+  }
   }
 
   openRegistrationPortalModal(prefillData) {

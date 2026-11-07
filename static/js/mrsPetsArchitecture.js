@@ -85,6 +85,9 @@ class MrsPetsArchitectureEngine {
       this.tinkerbellAudio = new Audio('assets/tinkerbell_chime.mp3');
       this.tinkerbellAudio.preload = 'auto';
       this.tinkerbellAudio.volume = 0.40; // Nivel Silent Luxury claro y distinguido
+      this.tinkerbellAudio.addEventListener('error', (e) => {
+        console.warn('[LEIA MAGIC] Audio asset notice (fallback Web Audio activo silenciosamente):', e);
+      });
     } catch (e) {
       console.warn('[LEIA MAGIC] Audio preload diferido:', e);
     }
@@ -95,13 +98,16 @@ class MrsPetsArchitectureEngine {
       if (!this.tinkerbellAudio) {
         this.tinkerbellAudio = new Audio('assets/tinkerbell_chime.mp3');
         this.tinkerbellAudio.preload = 'auto';
+        this.tinkerbellAudio.addEventListener('error', (e) => {
+          console.warn('[LEIA MAGIC] Audio asset error caught, activando sintetizador Web Audio:', e);
+        });
       }
       this.tinkerbellAudio.volume = 0.40;
       this.tinkerbellAudio.currentTime = 0;
       const playPromise = this.tinkerbellAudio.play();
       if (playPromise !== undefined) {
         playPromise.catch(err => {
-          // Si el archivo de audio es bloqueado por políticas del navegador, activar Web Audio API fallback
+          // Si el archivo de audio es bloqueado o no se puede decodificar, activar Web Audio API fallback
           this.playWebAudioTinkerbellFallback();
         });
       }

@@ -1470,27 +1470,68 @@ class AdminEngine {
     }
   }
 
+  showEnterpriseLoginError(message) {
+    try {
+      let alertEl = document.getElementById('enterprise-login-error');
+      if (!alertEl) {
+        const modal = document.getElementById('enterprise-login-modal');
+        const form = modal ? modal.querySelector('form') : null;
+        if (form) {
+          alertEl = document.createElement('div');
+          alertEl.id = 'enterprise-login-error';
+          alertEl.setAttribute('role', 'alert');
+          alertEl.style.cssText = 'margin-bottom:16px; padding:12px 16px; background:rgba(239,68,68,0.2); border:1.5px solid #EF4444; border-radius:12px; color:#FCA5A5; font-size:0.85rem; font-weight:700; line-height:1.45; text-align:left;';
+          form.parentNode.insertBefore(alertEl, form);
+        }
+      }
+      if (alertEl) {
+        alertEl.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.1rem;">🚨</span>
+            <span>${message}</span>
+          </div>
+        `;
+        alertEl.style.display = 'block';
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(message, 'danger');
+      }
+    } catch (e) {
+      console.warn("[AdminEngine] showEnterpriseLoginError error:", e);
+    }
+  }
+
+  hideEnterpriseLoginError() {
+    try {
+      const alertEl = document.getElementById('enterprise-login-error');
+      if (alertEl) {
+        alertEl.style.display = 'none';
+        alertEl.innerHTML = '';
+      }
+    } catch (e) {}
+  }
+
   async submitEnterpriseLogin(event) {
     if (event && event.preventDefault) event.preventDefault();
+    this.hideEnterpriseLoginError();
+
     const userValInput = document.getElementById('login-staff-user');
     const passValInput = document.getElementById('login-staff-pass');
     const userVal = userValInput ? userValInput.value.trim().toLowerCase() : '';
     const passVal = passValInput ? passValInput.value.trim() : '';
 
     if (!userVal) {
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('⚠️ Por favor seleccione o escriba su usuario de Staff.', 'warning');
-      }
+      this.showEnterpriseLoginError('⚠️ Por favor seleccione o escriba su usuario de Staff.');
       if (userValInput) userValInput.focus();
       return;
     }
 
     if (!passVal) {
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('🔒 Clave de acceso requerida: Ingrese su contraseña para ingresar.', 'warning');
-      }
+      this.showEnterpriseLoginError('🔒 Clave de acceso requerida: Ingrese su contraseña para ingresar.');
       if (passValInput) {
         passValInput.style.borderColor = '#EF4444';
+        passValInput.classList.add('shake-anim');
+        setTimeout(() => passValInput.classList.remove('shake-anim'), 400);
         passValInput.focus();
       }
       return;
@@ -1507,16 +1548,27 @@ class AdminEngine {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: userVal, password: passVal })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === 'success') {
-          authOk = true;
-          srvUser = data.username;
-          srvRole = data.role;
-        }
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {}
+
+      if (res.status === 401 || !res.ok || (data && data.status !== 'success')) {
+        authOk = false;
+        const msg = (data && data.message)
+          ? data.message
+          : (res.status === 401
+              ? `🔒 Acceso no autorizado (HTTP 401): Credenciales incorrectas para "${userVal}".`
+              : `⚠️ Error en la autenticación (HTTP ${res.status}).`);
+        this.showEnterpriseLoginError(msg);
+      } else if (data && data.status === 'success') {
+        authOk = true;
+        srvUser = data.username;
+        srvRole = data.role;
       }
     } catch(err) {
       console.warn("Fallo de red en /api/auth/login:", err);
+      this.showEnterpriseLoginError('⚠️ No se pudo comunicar con el servidor de autenticación.');
     }
 
     if (authOk) {

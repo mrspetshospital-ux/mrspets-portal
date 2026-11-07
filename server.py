@@ -11,6 +11,7 @@ import ssl
 import time
 import http.server
 import socketserver
+import hashlib
 from misipetEngine import misipet_engine
 from teamilyClient import teamily_geo_a_client, TeamilyGeoARequest, TeamilyThreadConfig, normalize_teamily_endpoint
 from elevenlabsEngine import elevenlabs_engine
@@ -30,6 +31,39 @@ PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(DIRECTORY, "data")
 COMPANIES_FILE = os.path.join(DATA_DIR, "transport_companies.json")
+
+def verify_staff_password(username: str, password: str):
+    """Verifica credenciales del personal contra data/staff_users.json usando PBKDF2."""
+    username = (username or "").strip().lower()
+    if not username or not password:
+        return False, None
+    users_file = os.path.join(DATA_DIR, 'staff_users.json')
+    if not os.path.exists(users_file):
+        return False, None
+    try:
+        with open(users_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            users = data.get("users", [])
+            user = next((u for u in users if u.get("username", "").lower() == username), None)
+            if not user:
+                return False, None
+            salt = user.get("salt")
+            expected_hash = user.get("password_hash")
+            iters = user.get("iterations", 100000)
+            if not salt or not expected_hash:
+                return False, None
+            calc_key = hashlib.pbkdf2_hmac(
+                'sha256',
+                password.encode('utf-8'),
+                bytes.fromhex(salt),
+                iters
+            )
+            if calc_key.hex() == expected_hash:
+                return True, user
+            return False, None
+    except Exception as e:
+        print(f"Error al validar credenciales de staff: {e}")
+        return False, None
 
 def synthesize_agent_response(agent_slug: str, agent_name: str, user_input: str, context: dict = None) -> str:
     """
@@ -230,6 +264,10 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         """Soporte nativo para clientes (Make.com u otros) que invocan endpoints usando el método HTTP PATCH."""
         return self.do_POST()
 
+    def do_HEAD(self):
+        """Soporte nativo para verificaciones HEAD de clientes y navegadores."""
+        return self.do_GET()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path_clean = parsed.path
@@ -327,7 +365,7 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_json(200, res)
             return
 
-        if path_clean == '/api/v1/bcv/rate':
+        if path_clean in ['/api/v1/bcv/rate', '/api/v1/bcb/rate', '/bcv/rate', '/bcb/rate']:
             bcv_file = os.path.join(DATA_DIR, "bcv_history.json")
             bcv_data = misipet_engine._read_json(bcv_file, {"usd_rate": 44.50, "date": "2026-11-02"})
             self._send_json(200, {"status": "success", "rate": bcv_data.get("usd_rate", 44.50), "data": bcv_data})
@@ -416,11 +454,30 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 return
 
         # -----------------------------
-        # ARCHIVOS ESTÁTICOS FALLBACK
+        # ARCHIVOS ESTÁTICOS FALLBACK & MEDIA ALIASES
         # -----------------------------
-        rel_path = path_clean.lstrip('/')
+        unquoted_path = urllib.parse.unquote(path_clean)
+        rel_path = unquoted_path.lstrip('/')
         if not rel_path:
             rel_path = 'index.html'
+
+        # Audio chime mapping
+        if rel_path in ['assets/ticker bell chime.mp3', 'assets/ticker_bell_chime.mp3', 'ticker bell chime.mp3', 'ticker_bell_chime.mp3', 'assets/tinkerbell_chime.mp3', 'tinkerbell_chime.mp3'] or rel_path.endswith('ticker bell chime.mp3') or rel_path.endswith('ticker_bell_chime.mp3'):
+            for cand in [os.path.join(DIRECTORY, 'assets', 'tinkerbell_chime.mp3'),
+                         os.path.join(DIRECTORY, 'assets', 'ticker_bell_chime.mp3'),
+                         os.path.join(DIRECTORY, 'ticker_bell_chime.mp3')]:
+                if os.path.exists(cand):
+                    rel_path = os.path.relpath(cand, DIRECTORY)
+                    break
+
+        # Video concierge mapping
+        if rel_path in ['assets/concierge_video.mp4', 'concierge_video.mp4', 'concierge_video', 'assets/concierge_video']:
+            for cand in [os.path.join(DIRECTORY, 'assets', 'video.mp4'),
+                         os.path.join(DIRECTORY, 'video.mp4'),
+                         os.path.join(DIRECTORY, 'assets', 'concierge_video.mp4')]:
+                if os.path.exists(cand):
+                    rel_path = os.path.relpath(cand, DIRECTORY)
+                    break
 
         full_path = os.path.join(DIRECTORY, rel_path)
 
@@ -451,6 +508,41 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path_clean = parsed.path
         body = self._read_body_json()
+
+        # -----------------------------
+        # API: AUTHENTICATION & LOGIN (POST)
+        # -----------------------------
+        if path_clean == '/api/auth/login':
+            username = body.get('username', '').strip().lower()
+            password = body.get('password', '')
+            if not username or not password:
+                self._send_json(400, {
+                    "status": "error",
+                    "message": "Usuario y contraseña requeridos."
+                })
+                return
+
+            valid, user_data = verify_staff_password(username, password)
+            if valid and user_data:
+                self._send_json(200, {
+                    "status": "success",
+                    "message": "Autenticación exitosa",
+                    "username": user_data.get("username", username),
+                    "role": user_data.get("role", "staff")
+                })
+            else:
+                self._send_json(401, {
+                    "status": "error",
+                    "message": "Credenciales inválidas. Verifique su usuario y contraseña."
+                })
+            return
+
+        if path_clean == '/api/auth/logout':
+            self._send_json(200, {
+                "status": "success",
+                "message": "Sesión finalizada exitosamente."
+            })
+            return
 
         # -----------------------------
         # API: CHOFERES & GPS TELEMETRÍA (POST)

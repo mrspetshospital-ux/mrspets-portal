@@ -1,0 +1,71 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "role": "admin",
+      "salt": "3181f7f38221fee2912545a722c2207d",
+      "password_hash": "53a134e29c5aca376103c1cdda3237d7a97bd454ca8610d412d681ed6fe6f463",
+      "iterations": 100000
+    },
+    {
+      "username": "dr.morales",
+      "role": "staff",
+      "salt": "b27d1d079d024af01bf4b6cb2bd016fe",
+      "password_hash": "32b68ac159f7d7bfea4300876504d59ac3018798b43395f20d6ada6f1b6614a7",
+      "iterations": 100000
+    },
+    {
+      "username": "dra.silva",
+      "role": "staff",
+      "salt": "de1e939c7ef2e64098b0dce4c71c097c",
+      "password_hash": "d792935fcaf21990c52c165fc609565bfb213bf0c746557c9ef5204a465c8c72",
+      "iterations": 100000
+    },
+    {
+      "username": "grooming.staff",
+      "role": "staff",
+      "salt": "5df953eb11abbe417b7a9c9fd399c623",
+      "password_hash": "eeeeb8c3d30534b87e5b54896c6eb1ecc9d456e192dc4cf0b17a72f2c381febb",
+      "iterations": 100000
+    },
+    {
+      "username": "recepcion",
+      "role": "staff",
+      "salt": "8525a7c2ad0981c32247feb760a78b31",
+      "password_hash": "03f9a644819da81435544259d04de89cf5c3711fae396bb9787fe176ce864436",
+      "iterations": 100000
+    },
+    {
+      "username": "carlos",
+      "role": "admin",
+      "salt": "56c9b4e12b0e067671203533b188e0b7",
+      "password_hash": "b51c9169ec00d3bb81fd9ff3aa7e0100c710cb735f4b189fbfd9a5784a7daf78",
+      "iterations": 100000
+    },
+    {
+      "username": "hp",
+      "role": "admin",
+      "salt": "142ac41416c8a58596f50f9fb8d707ef",
+      "password_hash": "18582bf5101c91470481c09b2022906c88a4b8fee1299d8d475cdae10414479b",
+      "iterations": 100000
+    },
+    {
+      "username": "andrea.colina",
+      "role": "staff",
+      "salt": "7c97819d873098e3f99c092f2e1aec85",
+      "password_hash": "08cc5264cf0b63a602479fb0de1f6788efa3a765f7922d862a7d74eeb8586d54",
+      "iterations": 100000,
+      "created_at": "2026-10-31T18:05:52.533960",
+      "updated_at": "2026-10-31T18:05:52.533960"
+    },
+    {
+      "username": "supervisor",
+      "role": "supervisor",
+      "salt": "3181f7f38221fee2912545a722c2207d",
+      "password_hash": "53a134e29c5aca376103c1cdda3237d7a97bd454ca8610d412d681ed6fe6f463",
+      "iterations": 100000,
+      "created_at": "2026-11-02T01:00:00.000000",
+      "updated_at": "2026-11-02T01:00:00.000000"
+    }
+  ]
+}
