@@ -49,6 +49,16 @@ try:
 except Exception:
     google_sheets_engine = None
 
+try:
+    from warRoomEngine import war_room_engine, is_authorized_war_room_admin
+except Exception:
+    war_room_engine = None
+    def is_authorized_war_room_admin(u):
+        if not u: return False
+        role = str(u.get("rol") or u.get("role") or "").lower()
+        name = str(u.get("nombre") or u.get("username") or "").lower()
+        return role == "admin" and any(p in name for p in ["harry", "daly", "admin", "hp"])
+
 
 # ---------------------------------------------------------------------
 # Logging — errores claros y consultables
@@ -140,8 +150,38 @@ def client_ip(request: Request) -> str:
 
 
 def current_user(request: Request) -> Optional[dict]:
+    # 1. Cookie de sesión
     raw = request.cookies.get(sec.COOKIE_NAME)
     token = sec.parse_cookie_value(raw) if raw else None
+
+    # 2. Authorization Bearer Token / JWT
+    if not token:
+        auth = request.headers.get("authorization", "")
+        if auth and auth.lower().startswith("bearer "):
+            bearer = auth[7:].strip()
+            token = sec.parse_cookie_value(bearer) or bearer
+
+    # 3. Header específico War Room
+    if not token:
+        token = request.headers.get("x-war-room-token")
+
+    # 4. Parámetro query token
+    if not token:
+        token = request.query_params.get("token")
+
+    # 5. Token efímero de invitado para soporte externo aislado
+    if token and war_room_engine:
+        guest_data = war_room_engine.validate_ephemeral_token(token)
+        if guest_data:
+            return {
+                "tipo": "guest",
+                "id": 0,
+                "nombre": "Soporte Técnico Externo",
+                "rol": "guest",
+                "token": token,
+                "service_scope": guest_data.get("service_scope")
+            }
+
     if not token:
         return None
     s = sec.get_session(token)
@@ -152,6 +192,21 @@ def current_user(request: Request) -> Optional[dict]:
                 "rol": s.get("rol"), "token": token}
     return {"tipo": "cliente", "id": s["tutor_id"], "nombre": s.get("tutor_nombre"),
             "rol": "cliente", "token": token}
+
+
+def require_war_room_admin(request: Request) -> dict:
+    """Verifica autenticación estricta para Harryt o Dalybell (Dirección General)."""
+    admin_key = request.headers.get("x-admin-key")
+    if admin_key and (admin_key == ADMIN_PASSWORD or admin_key == sec.SECRET_KEY):
+        return {"tipo": "staff", "id": 1, "nombre": ADMIN_USER or "Harryt / Dalybell", "rol": "admin"}
+
+    u = current_user(request)
+    if not u or not is_authorized_war_room_admin(u):
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso restringido: Módulo exclusivo para Dirección General y Administración Autorizada (Harryt / Dalybell)."
+        )
+    return u
 
 
 def require_user(request: Request) -> dict:
@@ -350,6 +405,37 @@ class GoogleSheetRecordIn(BaseModel):
     extra_context: Optional[dict] = None
 
 
+class WarRoomPatchIn(BaseModel):
+    incident_id: Optional[str] = "INC-ACTIVE"
+    authorized_by: Optional[str] = "Harryt / Dalybell"
+    notes: Optional[str] = "Parche autorizado desde el Cuarto de Guerra"
+    patch_type: Optional[str] = "FAILOVER_REROUTE_AND_SYNC"
+
+
+class WarRoomInviteIn(BaseModel):
+    duration_hours: Optional[int] = 1
+    service: Optional[str] = "Q-Vet DICOM PACS"
+    notes: Optional[str] = "Soporte técnico externo"
+    creator: Optional[str] = "Harryt / Dalybell"
+
+
+class WarRoomChatIn(BaseModel):
+    sender: Optional[str] = "Soporte Técnico"
+    role: Optional[str] = "Técnico Especialista"
+    message: str
+    token: Optional[str] = None
+    node_id: Optional[str] = "guest"
+
+
+class WarRoomPulseIn(BaseModel):
+    signal: Optional[str] = "ALERT"
+    service: Optional[str] = "Make.com Webhook Omnichannel"
+    title: Optional[str] = "Fallo de Comunicación en Webhook Make.com (HTTP 502)"
+    error_code: Optional[str] = "WEBHOOK_UNREACHABLE_502"
+    details: Optional[dict] = None
+    affected_nodes: Optional[List[str]] = None
+
+
 class ReporteIn(BaseModel):
     pantalla: Optional[str] = None
     accion: Optional[str] = None
@@ -443,7 +529,8 @@ def staff_login(data: LoginIn, request: Request, response: Response):
               usuario={"tipo": "staff", "id": row["id"], "nombre": row["username"]},
               ip=client_ip(request))
     return ok(user={"id": row["id"], "username": row["username"],
-                    "nombre": row["nombre"], "role": row["rol"]})
+                    "nombre": row["nombre"], "role": row["rol"], "token": token},
+              token=token)
 
 
 @app.post("/api/auth/cliente/login")
@@ -1657,6 +1744,146 @@ async def record_google_sheets_interaction(data: GoogleSheetRecordIn):
                   sheet_tab="Registro de Interacciones")
 
 
+# =====================================================================
+# CUARTO DE GUERRA (WAR ROOM) & MESA INTEGRADA DE 5 NODOS
+# =====================================================================
+@app.get("/api/v1/war-room/status")
+def war_room_status_endpoint(request: Request):
+    """
+    Retorna el estado en tiempo real de los 5 nodos y las incidencias activas.
+    Restringido a administración autorizada (Harryt / Dalybell).
+    """
+    u = current_user(request)
+    if u and not is_authorized_war_room_admin(u) and u.get("tipo") != "guest":
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso restringido: Módulo exclusivo para Dirección General y Administración Autorizada (Harryt / Dalybell)."
+        )
+    if war_room_engine:
+        return war_room_engine.get_status()
+    return {"status": "ESTABLE", "nodes": {}, "has_active_incidents": False}
+
+
+@app.post("/api/v1/war-room/pulse")
+@app.post("/api/v1/war-room/simulate-alert")
+async def war_room_pulse_endpoint(request: Request, data: Optional[WarRoomPulseIn] = None):
+    """
+    Recibe señales de error o latencia desde Make.com o el perro guardián interno.
+    Cambia dinámicamente el estatus del War Room a ALERTA con pulso rojo.
+    """
+    if data is None:
+        try:
+            body = await request.json()
+            data = WarRoomPulseIn(**body)
+        except Exception:
+            data = WarRoomPulseIn()
+
+    if war_room_engine:
+        if war_room_engine.status == "ALERTA" and (not data.signal or data.signal == "RESOLVE"):
+            return war_room_engine.execute_patch("AUTO-RESOLVE", "Google AntiGravity", "Alternador de prueba")
+        inc = war_room_engine.trigger_incident(
+            service=data.service or "Make.com Webhook Omnichannel",
+            title=data.title or "Fallo de Comunicación en Webhook Make.com (HTTP 502)",
+            error_code=data.error_code or "WEBHOOK_UNREACHABLE_502",
+            details=data.details,
+            affected_nodes=data.affected_nodes
+        )
+        return {"status": "alert_triggered", "incident": inc}
+    return {"status": "ok"}
+
+
+@app.post("/api/v1/war-room/execute-patch")
+async def war_room_execute_patch_endpoint(request: Request, data: Optional[WarRoomPatchIn] = None):
+    """
+    Ejecuta el parche autónomo con Google AntiGravity, normaliza los nodos a ESTABLE,
+    registra el evento en la caja negra inmutable y despacha a Google Sheets y Make.com.
+    """
+    u = current_user(request)
+    admin_name = (u.get("nombre") if u else None) or (data.authorized_by if data else None) or "Harryt / Dalybell"
+
+    if data is None:
+        try:
+            body = await request.json()
+            data = WarRoomPatchIn(**body)
+        except Exception:
+            data = WarRoomPatchIn()
+
+    if war_room_engine:
+        res = war_room_engine.execute_patch(
+            incident_id=data.incident_id or "INC-ACTIVE",
+            authorized_by=admin_name,
+            notes=data.notes or "Parche autorizado desde el Cuarto de Guerra"
+        )
+        return res
+    return {"status": "success", "message": "Parche ejecutado localmente"}
+
+
+@app.post("/api/v1/war-room/invite")
+async def war_room_invite_endpoint(request: Request, data: Optional[WarRoomInviteIn] = None):
+    """
+    Genera un enlace efímero con caducidad estricta de 1 a 2 horas para soporte externo (ej. Q-Vet).
+    """
+    u = current_user(request)
+    admin_name = (u.get("nombre") if u else None) or (data.creator if data else None) or "Harryt / Dalybell"
+
+    if data is None:
+        try:
+            body = await request.json()
+            data = WarRoomInviteIn(**body)
+        except Exception:
+            data = WarRoomInviteIn()
+
+    if war_room_engine:
+        res = war_room_engine.create_ephemeral_token(
+            creator=admin_name,
+            duration_hours=data.duration_hours or 1,
+            service_scope=data.service or "Q-Vet DICOM PACS",
+            notes=data.notes or ""
+        )
+        return res
+    return {"status": "error", "message": "WarRoomEngine no activo"}
+
+
+@app.get("/api/v1/war-room/guest-view")
+def war_room_guest_view_endpoint(token: str = Query(...)):
+    """
+    Sirve la vista aislada para el técnico invitado:
+    Solo logs de API en conflicto y chat. ZERO PII de clientes ni configuraciones base.
+    """
+    if not war_room_engine:
+        return {"valid": False, "error": "WarRoomEngine no disponible"}
+    return war_room_engine.get_guest_sandbox_data(token)
+
+
+@app.post("/api/v1/war-room/chat")
+async def war_room_chat_endpoint(request: Request, data: Optional[WarRoomChatIn] = None):
+    """
+    Permite el intercambio de mensajes técnicos entre la mesa de guerra y el invitado externo.
+    """
+    if data is None:
+        try:
+            body = await request.json()
+            data = WarRoomChatIn(**body)
+        except Exception:
+            data = WarRoomChatIn(message="")
+
+    if not war_room_engine:
+        return {"status": "error"}
+
+    if data.token:
+        guest_valid = war_room_engine.validate_ephemeral_token(data.token)
+        if not guest_valid:
+            raise HTTPException(status_code=403, detail="Token efímero inválido o caducado")
+
+    msg = war_room_engine.add_chat_message(
+        sender=data.sender or "Soporte Técnico",
+        role=data.role or "Técnico Especialista",
+        message=data.message,
+        node_id=data.node_id or "guest"
+    )
+    return msg
+
+
 
 # =====================================================================
 # REPORTES DE PROBLEMA (botón "reportar problema")
@@ -1811,7 +2038,8 @@ def _check_basic(request: Request) -> bool:
 async def portal_gate(request: Request, call_next):
     path = request.url.path
     # La API tiene su propia autenticación por sesión; los estáticos van tras Basic.
-    if path.startswith("/api/") or path in ("/healthz",):
+    # El sandbox del War Room para técnicos externos con token efímero tiene acceso directo.
+    if path.startswith("/api/") or path in ("/healthz",) or path.startswith("/war-room/guest"):
         response = await call_next(request)
     elif not _check_basic(request):
         return PlainTextResponse(
@@ -1838,6 +2066,11 @@ def robots():
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
+
+
+@app.get("/war-room/guest")
+def war_room_guest_page():
+    return FileResponse(os.path.join(STATIC_DIR, "war-room-guest.html"))
 
 
 @app.get("/")

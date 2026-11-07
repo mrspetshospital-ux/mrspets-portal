@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mrs. Pets — Sandbox de Diagnóstico Técnico Externo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B0F19;
+      --card-bg: #111827;
+      --card-border: rgba(212, 175, 55, 0.35);
+      --accent-gold: #D4AF37;
+      --accent-emerald: #10B981;
+      --accent-crimson: #EF4444;
+      --text-main: #F3F4F6;
+      --text-muted: #9CA3AF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.01em;
+    }
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .timer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1.5px solid var(--accent-emerald);
+      color: var(--accent-emerald);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .timer-pill.urgent {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--accent-crimson);
+      color: var(--accent-crimson);
+      animation: pulse-urgent 1s infinite alternate;
+    }
+    @keyframes pulse-urgent {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); }
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal {
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .log-line {
+      line-height: 1.5;
+      word-break: break-all;
+    }
+    .log-warn { color: #FBBF24; }
+    .log-error { color: #F87171; }
+    .log-info { color: #60A5FA; }
+    .chat-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      max-height: 480px;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .chat-msg {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .chat-msg-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--accent-gold);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .chat-msg-body {
+      font-size: 0.85rem;
+      color: #F3F4F6;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #FFFFFF;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .chat-input:focus {
+      border-color: var(--accent-gold);
+    }
+    .btn-send {
+      background: var(--accent-gold);
+      color: #0B0F19;
+      font-weight: 800;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .disclaimer {
+      margin-top: 20px;
+      padding: 12px 18px;
+      background: rgba(212, 175, 55, 0.08);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 12px;
+      font-size: 0.78rem;
+      color: #CBD5E1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="brand">
+      <div style="font-size: 1.8rem;">🛡️</div>
+      <div>
+        <div class="brand-title">Mrs. Pets — Sandbox de Diagnóstico Externo</div>
+        <div class="brand-subtitle" id="scope-badge">Soporte Técnico Especializado</div>
+      </div>
+    </div>
+    <div class="timer-pill" id="timer-badge">
+      <span>⏳ Vigencia:</span>
+      <span id="countdown-text">--:--</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- PANEL 1: LOGS DE LA API EN CONFLICTO (STRICTLY NO PII) -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">📡 Logs Técnicos de API (Entorno Aislado)</h2>
+        <span style="font-size:0.75rem; color:#10B981; font-weight:700;">● TIEMPO REAL</span>
+      </div>
+      <div class="terminal" id="terminal-logs">
+        <div class="log-line log-info">[INFO] Cargando registros técnicos del canal aislado...</div>
+      </div>
+    </section>
+
+    <!-- PANEL 2: CHAT CON LA MESA DE GUERRA -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">💬 Canal con Mesa de Guerra (5 Nodos)</h2>
+        <span style="font-size:0.75rem; color:#D4AF37; font-weight:700;">ENLACE ACTIVO</span>
+      </div>
+      <div class="chat-box">
+        <div class="chat-messages" id="chat-stream">
+          <!-- Mensajes dinámicos -->
+        </div>
+        <form class="chat-input-row" id="chat-form" onsubmit="handleSendChat(event)">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Escribe un mensaje técnico para la mesa de guerra..." required autocomplete="off">
+          <button type="submit" class="btn-send">Enviar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="disclaimer">
+    <span style="font-size:1.2rem;">🔒</span>
+    <span><strong>Sandbox de Aislamiento Estricto:</strong> Este enlace efímero expone únicamente trazas técnicas de API y telemetría de fallos. El acceso a bases de datos de clientes, finanzas, fichas clínicas y llaves maestras está restringido bajo el estándar Zero-Trust de Mrs. Pets.</span>
+  </footer>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token') || '';
+    let remainingSeconds = 3600;
+
+    async function loadGuestData() {
+      if (!token) {
+        document.body.innerHTML = '<div style="text-align:center; padding:50px; color:#EF4444; font-family:sans-serif;"><h2>❌ Token no proporcionado</h2><p>El enlace de invitación efímero requiere un token válido.</p></div>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/war-room/guest-view?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!data.valid) {
+          document.body.innerHTML = `<div style="text-align:center; padding:50px; color:#EF4444; font-family:sans-serif;"><h2>❌ Acceso Denegado o Caducado</h2><p>${data.error || 'El enlace de diagnóstico ha expirado.'}</p></div>`;
+          return;
+        }
+
+        document.getElementById('scope-badge').innerText = `Área: ${data.service_scope || 'Soporte Técnico'}`;
+        remainingSeconds = data.remaining_seconds || 3600;
+        renderLogs(data.isolated_logs || []);
+        renderChat(data.chat_messages || []);
+      } catch (err) {
+        console.error("Error al cargar sandbox:", err);
+      }
+    }
+
+    function renderLogs(logs) {
+      const container = document.getElementById('terminal-logs');
+      if (!logs.length) {
+        container.innerHTML = '<div class="log-line log-info">Sin incidencias activas en este microservicio.</div>';
+        return;
+      }
+      container.innerHTML = logs.map(l => {
+        let cls = 'log-info';
+        if (l.level === 'WARN') cls = 'log-warn';
+        if (l.level === 'ERROR') cls = 'log-error';
+        return `<div class="log-line ${cls}">[${l.timestamp}] [${l.level}] ${l.endpoint} (Status: ${l.status}) &bull; ${l.message} <span style="opacity:0.6;">[${l.trace_id}]</span></div>`;
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function renderChat(messages) {
+      const stream = document.getElementById('chat-stream');
+      stream.innerHTML = messages.map(m => `
+        <div class="chat-msg">
+          <div class="chat-msg-header">
+            <span>${m.sender} (${m.role || 'Mesa'})</span>
+            <span>${new Date(m.timestamp).toLocaleTimeString()}</span>
+          </div>
+          <div class="chat-msg-body">${m.message}</div>
+        </div>
+      `).join('');
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    async function handleSendChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = (input.value || '').trim();
+      if (!text) return;
+
+      try {
+        const res = await fetch('/api/v1/war-room/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: 'Soporte Técnico Externo (Q-Vet)',
+            role: 'Técnico Especialista',
+            message: text,
+            token: token
+          })
+        });
+        const msg = await res.json();
+        input.value = '';
+        loadGuestData();
+      } catch (err) {
+        alert('Error al enviar mensaje');
+      }
+    }
+
+    // Cronómetro de cuenta regresiva
+    setInterval(() => {
+      if (remainingSeconds > 0) {
+        remainingSeconds--;
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        const text = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        const badge = document.getElementById('countdown-text');
+        if (badge) badge.innerText = text;
+        const pill = document.getElementById('timer-badge');
+        if (pill && remainingSeconds < 300) {
+          pill.classList.add('urgent');
+        }
+      } else {
+        const badge = document.getElementById('countdown-text');
+        if (badge) badge.innerText = '00:00 (Caducado)';
+      }
+    }, 1000);
+
+    // Carga inicial y sondeo periódico cada 10 segundos
+    loadGuestData();
+    setInterval(loadGuestData, 10000);
+  </script>
+</body>
+</html>

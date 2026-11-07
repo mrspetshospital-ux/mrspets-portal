@@ -4,3 +4,5 @@ __pycache__/
 mrspets_local.db
 mrspets_local.db-wal
 mrspets_local.db-shm
+logs/
+*.jsonl
