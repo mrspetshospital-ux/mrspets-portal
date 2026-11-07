@@ -1281,31 +1281,45 @@
       const t0 = performance.now();
 
       try {
-        // 1. Envío al webhook vía backend /api/v1/war-room/dispatch-custom-json
-        const beResp = await fetch('/api/v1/war-room/dispatch-custom-json', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: targetUrl,
-            payload: makePayload
-          })
-        });
-        const beData = await beResp.json();
-        latency = beData.latency_ms || Math.round(performance.now() - t0);
-
-        if (beData.http_status === 200 || beData.is_success) {
-          httpOk = true;
-          respBody = beData.response_body || 'Accepted';
+        // 1. Envío directo al webhook de Make.com desde el cliente (Make soporta Access-Control-Allow-Origin: *)
+        if (targetUrl && targetUrl.startsWith('https://hook.')) {
+          try {
+            const clientResp = await fetch(targetUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(makePayload)
+            });
+            latency = Math.round(performance.now() - t0);
+            if (clientResp.ok || clientResp.status === 200) {
+              httpOk = true;
+              try { respBody = await clientResp.text(); } catch (e) { respBody = 'Accepted'; }
+            }
+          } catch (cErr) {
+            console.warn('Direct browser fetch to Make had issue, trying backend bridge:', cErr);
+          }
         }
 
-        // 2. Disparo complementario directo del navegador
-        if (targetUrl && targetUrl.startsWith('https://hook.')) {
-          fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(makePayload),
-            mode: 'no-cors'
-          }).catch(() => {});
+        // 2. Si no fue confirmado por cliente, intentar vía backend bridge
+        if (!httpOk) {
+          try {
+            const beResp = await fetch('/api/v1/war-room/dispatch-custom-json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: targetUrl,
+                payload: makePayload
+              })
+            });
+            const beData = await beResp.json();
+            latency = beData.latency_ms || Math.round(performance.now() - t0);
+
+            if (beData.http_status === 200 || beData.is_success) {
+              httpOk = true;
+              respBody = beData.response_body || 'Accepted';
+            }
+          } catch (bErr) {
+            console.error('Backend bridge error:', bErr);
+          }
         }
 
         // 3. Registrar alerta interna en el estado del War Room
@@ -2306,26 +2320,47 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       };
 
       try {
-        // 1. Envío al backend /api/v1/war-room/test-make-link
-        const res = await fetch('/api/v1/war-room/test-make-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: targetUrl, payload: testPayload })
-        });
-        const data = await res.json();
+        let isOk = false;
+        let latency = 350;
+        let respBody = 'Accepted';
+        const t0 = performance.now();
 
-        // 2. Disparo complementario directo del navegador
+        // 1. Envío directo al webhook desde el navegador (Make soporta Access-Control-Allow-Origin: *)
         if (targetUrl && targetUrl.startsWith('https://hook.')) {
-          fetch(targetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(testPayload),
-            mode: 'no-cors'
-          }).catch(() => {});
+          try {
+            const clientResp = await fetch(targetUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(testPayload)
+            });
+            latency = Math.round(performance.now() - t0);
+            if (clientResp.ok || clientResp.status === 200) {
+              isOk = true;
+              try { respBody = await clientResp.text(); } catch (e) { respBody = 'Accepted'; }
+            }
+          } catch (cErr) {
+            console.warn('Direct link test via browser had issue, trying backend:', cErr);
+          }
         }
 
-        const isOk = data.status === 'success' || data.link_verified === true || data.http_status === 200;
-        const latency = data.latency_ms || 350;
+        // 2. Si no fue confirmado por cliente, intentar vía backend
+        if (!isOk) {
+          try {
+            const res = await fetch('/api/v1/war-room/test-make-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: targetUrl, payload: testPayload })
+            });
+            const data = await res.json();
+            latency = data.latency_ms || Math.round(performance.now() - t0);
+            if (data.status === 'success' || data.link_verified === true || data.http_status === 200) {
+              isOk = true;
+              respBody = data.response_body || 'Accepted';
+            }
+          } catch (bErr) {
+            console.error('Backend link test error:', bErr);
+          }
+        }
 
         if (isOk) {
           if (bannerBadge) {
