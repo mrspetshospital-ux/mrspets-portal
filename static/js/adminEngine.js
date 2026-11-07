@@ -1581,11 +1581,20 @@ class AdminEngine {
         active: true
       };
 
+      // Establecer autenticación ANTES de cerrar modales para que closeModal no reactive showConciergePortal
       this.isEnterpriseAuthenticated = true;
       this.currentStaffUser = userMatch;
       this.activeRole = srvRole;
       this.permissionMode = 'edit';
       this.viewEnvironment = 'enterprise';
+
+      if (window.authEngine) {
+        window.authEngine.userRole = 'staff';
+        window.authEngine.isAuthenticated = true;
+        window.authEngine.userName = userMatch.name || srvUser;
+        window.authEngine.isVideoFinished = true;
+      }
+
       sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
       sessionStorage.setItem('mrs_pets_staff_role', srvRole);
       localStorage.setItem('mrs_pets_auth_role', 'staff');
@@ -1628,35 +1637,28 @@ class AdminEngine {
         appContainer.style.setProperty('pointer-events', 'auto', 'important');
       }
 
-      if (window.authEngine) {
-        window.authEngine.userRole = 'staff';
-        window.authEngine.isAuthenticated = true;
-        window.authEngine.userName = userMatch.name || srvUser;
-        window.authEngine.isVideoFinished = true;
-      }
-
       document.body.classList.add('enterprise-view-mode');
       document.body.classList.remove('customer-view-mode');
 
-      this.setEnvironment('enterprise');
+      try { this.setEnvironment('enterprise'); } catch(e) { console.warn(e); }
 
       if (window.app && typeof window.app.switchTab === 'function') {
-        window.app.switchTab('admin', true);
+        try { window.app.switchTab('admin', true); } catch(e) { console.warn(e); }
       }
 
-      this.refreshAllOperationalViews();
-      this.renderStaffProfilesManager();
-      this.renderRoleSelector();
-      this.renderPermissionToggle();
-      this.renderClientDatabaseManager();
-      this.renderEnvironmentToggle();
-      this.updateHeaderAccountDisplay();
+      try { this.refreshAllOperationalViews(); } catch(e) { console.warn(e); }
+      try { this.renderStaffProfilesManager(); } catch(e) { console.warn(e); }
+      try { this.renderRoleSelector(); } catch(e) { console.warn(e); }
+      try { this.renderPermissionToggle(); } catch(e) { console.warn(e); }
+      try { this.renderClientDatabaseManager(); } catch(e) { console.warn(e); }
+      try { this.renderEnvironmentToggle(); } catch(e) { console.warn(e); }
+      try { this.updateHeaderAccountDisplay(); } catch(e) { console.warn(e); }
 
       if (window.clinicaEngine && typeof window.clinicaEngine.refreshPendingApprovalsNotifications === 'function') {
-        window.clinicaEngine.refreshPendingApprovalsNotifications();
+        try { window.clinicaEngine.refreshPendingApprovalsNotifications(); } catch(e) {}
       }
       if (window.RBACMiddleware && typeof window.RBACMiddleware.updateSidebarVisibility === 'function') {
-        window.RBACMiddleware.updateSidebarVisibility();
+        try { window.RBACMiddleware.updateSidebarVisibility(); } catch(e) {}
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });

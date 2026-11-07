@@ -610,6 +610,12 @@ class App {
   openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+      if (modalId === 'enterprise-login-modal' || modalId === 'vip-client-lookup-modal' || modalId === 'registration-modal' || modalId === 'client-profile-pin-modal') {
+        if (modal.parentElement !== document.body) {
+          document.body.appendChild(modal);
+        }
+        modal.style.setProperty('z-index', '2000000', 'important');
+      }
       modal.classList.add('active');
       modal.style.removeProperty('display');
       modal.style.setProperty('display', 'flex', 'important');
@@ -709,6 +715,16 @@ class App {
         localStorage.removeItem('mrs_pets_skip_splash');
         if (window.authEngine && typeof window.authEngine.showConciergePortal === 'function') {
           window.authEngine.showConciergePortal();
+        } else {
+          const portal = document.getElementById('access-links-portal');
+          if (portal) {
+            portal.classList.add('active');
+            portal.style.removeProperty('display');
+            portal.style.setProperty('display', 'block', 'important');
+            portal.style.setProperty('opacity', '1', 'important');
+            portal.style.setProperty('visibility', 'visible', 'important');
+            portal.style.setProperty('pointer-events', 'auto', 'important');
+          }
         }
       }
     }

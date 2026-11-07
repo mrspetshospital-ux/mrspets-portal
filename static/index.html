@@ -156,6 +156,35 @@
         splash.style.visibility = 'visible';
       }
     };
+
+    window.quickStaffLoginSafe = function(bypassPrompt, targetStaffUser) {
+      try {
+        if (window.authEngine && typeof window.authEngine.quickStaffLogin === 'function') {
+          return window.authEngine.quickStaffLogin(bypassPrompt, targetStaffUser);
+        }
+      } catch(e) {
+        console.warn("authEngine.quickStaffLogin fallback triggered:", e);
+      }
+      var modal = document.getElementById('enterprise-login-modal');
+      if (modal) {
+        if (modal.parentElement !== document.body) {
+          document.body.appendChild(modal);
+        }
+        modal.classList.add('active');
+        modal.style.removeProperty('display');
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('pointer-events', 'auto', 'important');
+        modal.style.setProperty('z-index', '2000000', 'important');
+        var passInput = document.getElementById('login-staff-pass');
+        if (passInput) {
+          passInput.value = '';
+          passInput.style.borderColor = '#475569';
+          setTimeout(function() { try { passInput.focus(); } catch(e){} }, 100);
+        }
+      }
+    };
   </script>
 </head>
 <body class="customer-view-mode">
@@ -247,7 +276,7 @@
           </button>
 
           <!-- 4. ACCESO STAFF / EMPRESA -->
-          <button class="btn" onclick="window.authEngine ? window.authEngine.quickStaffLogin() : authEngine.quickStaffLogin()" style="padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:linear-gradient(135deg, #d97706, #b45309); color:#FFFFFF; border:1.5px solid #fbbf24; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+          <button class="btn" onclick="window.quickStaffLoginSafe ? window.quickStaffLoginSafe() : (window.authEngine ? window.authEngine.quickStaffLogin() : null)" style="padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:linear-gradient(135deg, #d97706, #b45309); color:#FFFFFF; border:1.5px solid #fbbf24; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
             💼 <span>Staff / Vista Empresa</span> ➔
           </button>
 
@@ -567,6 +596,75 @@
 
     </div>
 
+  </div>
+
+  <!-- MODAL: LOGIN DE AUTENTICACIÓN PARA VISTA EMPRESA (STAFF) -->
+  <div class="modal-overlay" id="enterprise-login-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; z-index:2000000;">
+    <div class="modal-card modal-dark" style="max-width:480px; width:92%; max-height:92vh; overflow-y:auto; padding:32px; border-radius:24px; border:1.5px solid #fbbf24; background:linear-gradient(145deg, #070a11, #1e293b) !important; color:#FFFFFF !important; box-shadow:0 20px 50px rgba(0,0,0,0.85);">
+      
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(251,191,36,0.3);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="background:#d97706; padding:10px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="lock" style="width:24px; height:24px; color:white;"></i>
+          </div>
+          <div>
+            <h3 style="font-size:1.25rem; font-weight:900; color:#FFFFFF !important; margin:0;">¿Quién es usted?</h3>
+            <p style="font-size:0.78rem; color:#E2E8F0 !important; margin:2px 0 0 0;">Identificación & Autenticación de Personal Operativo</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('enterprise-login-modal')" style="background:rgba(255,255,255,0.18) !important; color:#FFFFFF !important; border:1px solid rgba(255,255,255,0.3) !important; border-radius:8px; font-weight:900; font-size:1rem; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Cerrar modal">✕</button>
+      </div>
+
+      <div id="enterprise-login-notice" style="background:#FEF3C7; padding:13px 18px; border-radius:12px; border:1.5px solid #F59E0B; margin-bottom:20px; font-size:0.84rem; color:#0F172A !important; line-height:1.45; box-shadow:0 4px 14px rgba(245,158,11,0.25);">
+        🏢 <strong style="color:#0F172A !important; font-weight:900;">Acceso a Vista Empresa:</strong> <span style="color:#1E293B !important; font-weight:700;">Seleccione su perfil de personal o ingrese su usuario y clave para ingresar a la consola operativa.</span>
+      </div>
+
+      <div id="enterprise-login-error" role="alert" style="display:none; background:rgba(239,68,68,0.2); border:1.5px solid #EF4444; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#FCA5A5; font-size:0.85rem; font-weight:700; line-height:1.45; text-align:left;"></div>
+
+      <form onsubmit="adminEngine.submitEnterpriseLogin(event)">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Seleccione o escriba su Usuario *</label>
+          <select id="login-staff-select" class="form-select" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; margin-bottom:8px; font-weight:700; font-size:0.85rem; padding:10px;" onchange="if(this.value){ document.getElementById('login-staff-user').value = this.value; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); } }">
+            <option value="">-- ¿Quién es usted? Seleccione su perfil --</option>
+            <option value="dr.morales">🩺 Dr. Alejandro Morales (Médico Veterinario Jefe)</option>
+            <option value="grooming.staff">✂️ Mariana Colina (Grooming Lead)</option>
+            <option value="admin">🛡️ Administrador General (Dalybell Ramírez)</option>
+            <option value="recepcion">🏨 Asistente de Recepción (Atención al Cliente)</option>
+            <option value="andrea.colina">✂️ Andrea Colina (Grooming Specialist)</option>
+            <option value="supervisor">🛡️ Carlos Pérez (Supervisor de Operaciones LAN)</option>
+          </select>
+
+          <input type="text" class="form-input" id="login-staff-user" placeholder="O ingrese usuario (Ej: admin, dr.morales)" required style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Contraseña de Acceso * (Obligatoria)</label>
+          <input type="password" class="form-input" id="login-staff-pass" placeholder="Ingrese su clave personal *" required autocomplete="new-password" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <div style="font-size:0.78rem; color:#E2E8F0 !important; font-weight:700; margin-bottom:8px;">⚡ Selección rápida de perfil (Elegir usuario y luego ingresar clave):</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" onclick="document.getElementById('login-staff-user').value='dr.morales'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(56,189,248,0.25); border:1.5px solid #38bdf8; color:#7dd3fc !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              🩺 Dr. Alejandro Morales
+            </button>
+            <button type="button" onclick="document.getElementById('login-staff-user').value='admin'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(251,191,36,0.25); border:1.5px solid #fbbf24; color:#fde68a !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              🛡️ Admin General
+            </button>
+            <button type="button" onclick="document.getElementById('login-staff-user').value='grooming.staff'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(245,158,11,0.25); border:1.5px solid #f59e0b; color:#fcd34d !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              ✂️ Groomer Mariana
+            </button>
+            <button type="button" onclick="document.getElementById('login-staff-user').value='recepcion'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(16,185,129,0.25); border:1.5px solid #10b981; color:#6ee7b7 !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              🏨 Recepción
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-enterprise-auth-submit" class="btn" style="width:100%; padding:14px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #FBBF24, #F59E0B) !important; color:#0F172A !important; border:1px solid #D97706; font-size:0.98rem; box-shadow:0 6px 18px rgba(245,158,11,0.45); cursor:pointer;">
+          <span style="color:#0F172A !important; font-weight:900 !important;">🔓 Autenticar & Entrar a Vista Empresa ➔</span>
+        </button>
+      </form>
+    </div>
   </div>
 
   <div id="app-container" style="display:none; opacity:1; visibility:visible; min-height:100vh; background:#FBFBFD;">
@@ -920,7 +1018,7 @@
                   </div>
 
                   <!-- OPCIÓN 3: EMPLEADOS -->
-                  <div class="welcome-access-card" onclick="authEngine.quickStaffLogin()" style="background: rgba(74, 107, 93, 0.08); border: 1.5px solid #2C2C2E;">
+                  <div class="welcome-access-card" onclick="window.quickStaffLoginSafe ? window.quickStaffLoginSafe() : (window.authEngine ? window.authEngine.quickStaffLogin() : null)" style="background: rgba(74, 107, 93, 0.08); border: 1.5px solid #2C2C2E;">
                     <div style="font-size: 1.6rem; margin-bottom: 6px;">💼</div>
                     <div style="font-weight: 900; font-size: 0.95rem; color: #2C2C2E;">Empleados</div>
                     <div style="font-size: 0.75rem; color: #555558; margin-top: 4px; line-height: 1.3;">Acceso restringido por clave, tableros staff, Make/Meta/WA/Drive y cierre 6:00 p.m.</div>
@@ -6948,74 +7046,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
     </div>
   </div>
 
-  <!-- MODAL: LOGIN DE AUTENTICACIÓN PARA VISTA EMPRESA (STAFF) -->
-  <div class="modal-overlay" id="enterprise-login-modal">
-    <div class="modal-card modal-dark" style="max-width:480px; padding:32px; border-radius:24px; border:1.5px solid #fbbf24; background:linear-gradient(145deg, #070a11, #1e293b) !important; color:#FFFFFF !important; box-shadow:0 20px 50px rgba(0,0,0,0.85);">
-      
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(251,191,36,0.3);">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div style="background:#d97706; padding:10px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-            <i data-lucide="lock" style="width:24px; height:24px; color:white;"></i>
-          </div>
-          <div>
-            <h3 style="font-size:1.25rem; font-weight:900; color:#FFFFFF !important; margin:0;">¿Quién es usted?</h3>
-            <p style="font-size:0.78rem; color:#E2E8F0 !important; margin:2px 0 0 0;">Identificación & Autenticación de Personal Operativo</p>
-          </div>
-        </div>
-        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('enterprise-login-modal')" style="background:rgba(255,255,255,0.18) !important; color:#FFFFFF !important; border:1px solid rgba(255,255,255,0.3) !important; border-radius:8px; font-weight:900; font-size:1rem; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Cerrar modal">✕</button>
-      </div>
-
-      <div id="enterprise-login-notice" style="background:#FEF3C7; padding:13px 18px; border-radius:12px; border:1.5px solid #F59E0B; margin-bottom:20px; font-size:0.84rem; color:#0F172A !important; line-height:1.45; box-shadow:0 4px 14px rgba(245,158,11,0.25);">
-        🏢 <strong style="color:#0F172A !important; font-weight:900;">Acceso a Vista Empresa:</strong> <span style="color:#1E293B !important; font-weight:700;">Seleccione su perfil de personal o ingrese su usuario y clave para ingresar a la consola operativa.</span>
-      </div>
-
-      <div id="enterprise-login-error" role="alert" style="display:none; background:rgba(239,68,68,0.2); border:1.5px solid #EF4444; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#FCA5A5; font-size:0.85rem; font-weight:700; line-height:1.45; text-align:left;"></div>
-
-      <form onsubmit="adminEngine.submitEnterpriseLogin(event)">
-        <div class="form-group" style="margin-bottom:16px;">
-          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Seleccione o escriba su Usuario *</label>
-          <select id="login-staff-select" class="form-select" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; margin-bottom:8px; font-weight:700; font-size:0.85rem; padding:10px;" onchange="if(this.value){ document.getElementById('login-staff-user').value = this.value; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); } }">
-            <option value="">-- ¿Quién es usted? Seleccione su perfil --</option>
-            <option value="dr.morales">🩺 Dr. Alejandro Morales (Médico Veterinario Jefe)</option>
-            <option value="grooming.staff">✂️ Mariana Colina (Grooming Lead)</option>
-            <option value="admin">🛡️ Administrador General (Dalybell Ramírez)</option>
-            <option value="recepcion">🏨 Asistente de Recepción (Atención al Cliente)</option>
-            <option value="andrea.colina">✂️ Andrea Colina (Grooming Specialist)</option>
-            <option value="supervisor">🛡️ Carlos Pérez (Supervisor de Operaciones LAN)</option>
-          </select>
-
-          <input type="text" class="form-input" id="login-staff-user" placeholder="O ingrese usuario (Ej: admin, dr.morales)" required style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
-        </div>
-
-        <div class="form-group" style="margin-bottom:20px;">
-          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Contraseña de Acceso * (Obligatoria)</label>
-          <input type="password" class="form-input" id="login-staff-pass" placeholder="Ingrese su clave personal *" required autocomplete="new-password" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <div style="font-size:0.78rem; color:#E2E8F0 !important; font-weight:700; margin-bottom:8px;">⚡ Selección rápida de perfil (Elegir usuario y luego ingresar clave):</div>
-          <div style="display:flex; flex-wrap:wrap; gap:6px;">
-            <button type="button" onclick="document.getElementById('login-staff-user').value='dr.morales'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(56,189,248,0.25); border:1.5px solid #38bdf8; color:#7dd3fc !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
-              🩺 Dr. Alejandro Morales
-            </button>
-            <button type="button" onclick="document.getElementById('login-staff-user').value='admin'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(251,191,36,0.25); border:1.5px solid #fbbf24; color:#fde68a !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
-              🛡️ Admin General
-            </button>
-            <button type="button" onclick="document.getElementById('login-staff-user').value='grooming.staff'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(245,158,11,0.25); border:1.5px solid #f59e0b; color:#fcd34d !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
-              ✂️ Groomer Mariana
-            </button>
-            <button type="button" onclick="document.getElementById('login-staff-user').value='recepcion'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(16,185,129,0.25); border:1.5px solid #10b981; color:#6ee7b7 !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
-              🏨 Recepción
-            </button>
-          </div>
-        </div>
-
-        <button type="submit" id="btn-enterprise-auth-submit" class="btn" style="width:100%; padding:14px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #FBBF24, #F59E0B) !important; color:#0F172A !important; border:1px solid #D97706; font-size:0.98rem; box-shadow:0 6px 18px rgba(245,158,11,0.45); cursor:pointer;">
-          <span style="color:#0F172A !important; font-weight:900 !important;">🔓 Autenticar & Entrar a Vista Empresa ➔</span>
-        </button>
-      </form>
-    </div>
-  </div>
+  <!-- MODAL ENTERPRISE MOVED TO BODY LEVEL -->
 
   <!-- MODAL GENERAL DINÁMICO UNIVERSAL (MRS. PETS) -->
   <div class="modal-overlay" id="general-modal" style="z-index: 2147483647 !important; display: none;">

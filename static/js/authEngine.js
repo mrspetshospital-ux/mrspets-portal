@@ -1883,6 +1883,20 @@ class AuthEngine {
 
     // 2. Si se encuentra en el portal o no está autenticado, solicitar la clave obligatoriamente
     // NUNCA ocultar el portal ni mostrar el appContainer antes de autenticar en el servidor
+    let modal = document.getElementById('enterprise-login-modal');
+    if (modal) {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.classList.add('active');
+      modal.style.removeProperty('display');
+      modal.style.setProperty('display', 'flex', 'important');
+      modal.style.setProperty('opacity', '1', 'important');
+      modal.style.setProperty('visibility', 'visible', 'important');
+      modal.style.setProperty('pointer-events', 'auto', 'important');
+      modal.style.setProperty('z-index', '2000000', 'important');
+    }
+
     const passInput = document.getElementById('login-staff-pass');
     if (passInput) {
       passInput.value = '';
@@ -1898,15 +1912,6 @@ class AuthEngine {
 
     if (window.app && typeof window.app.openModal === 'function') {
       window.app.openModal('enterprise-login-modal');
-    } else {
-      const modal = document.getElementById('enterprise-login-modal');
-      if (modal) {
-        modal.classList.add('active');
-        modal.style.setProperty('display', 'flex', 'important');
-        modal.style.setProperty('opacity', '1', 'important');
-        modal.style.setProperty('visibility', 'visible', 'important');
-        modal.style.setProperty('pointer-events', 'auto', 'important');
-      }
     }
 
     // Enfocar el campo de clave o de selección de usuario
@@ -2413,4 +2418,24 @@ class AuthEngine {
 
 const authEngine = new AuthEngine();
 window.authEngine = authEngine;
+if (typeof window !== 'undefined') {
+  window.quickStaffLoginSafe = function(bypassPrompt, targetStaffUser) {
+    if (window.authEngine && typeof window.authEngine.quickStaffLogin === 'function') {
+      return window.authEngine.quickStaffLogin(bypassPrompt, targetStaffUser);
+    }
+    const modal = document.getElementById('enterprise-login-modal');
+    if (modal) {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.classList.add('active');
+      modal.style.removeProperty('display');
+      modal.style.setProperty('display', 'flex', 'important');
+      modal.style.setProperty('opacity', '1', 'important');
+      modal.style.setProperty('visibility', 'visible', 'important');
+      modal.style.setProperty('pointer-events', 'auto', 'important');
+      modal.style.setProperty('z-index', '2000000', 'important');
+    }
+  };
+}
 document.addEventListener('DOMContentLoaded', () => authEngine.init());
