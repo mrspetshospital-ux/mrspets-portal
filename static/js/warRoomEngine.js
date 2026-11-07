@@ -25,8 +25,12 @@
        ---------------------------------------------------------------------- */
     isAuthorized() {
       try {
+        const userBadgeEl = document.getElementById('user-account-name-text');
+        const badgeName = userBadgeEl ? (userBadgeEl.innerText || '').toLowerCase().trim() : '';
+
         const staffName = (
           (window.authEngine && window.authEngine.userName) ||
+          badgeName ||
           sessionStorage.getItem('mrs_pets_staff_user') ||
           localStorage.getItem('mrs_pets_staff_user') ||
           (window.adminEngine && window.adminEngine.currentStaffUser) ||
@@ -40,18 +44,23 @@
           ''
         ).toLowerCase().trim();
 
+        // Nombres autorizados estrictamente: Dalybell y Harryt
+        const isHarryt = staffName.includes('harry') || staffName.includes('hp') || staffName.includes('don harry');
+        const isDalybell = staffName.includes('daly') || staffName.includes('talibel') || staffName.includes('ramirez') || badgeName.includes('dalybell');
+        const isAdminProfile = staffName === 'admin' || role === 'admin' || role === 'superadmin';
+
+        // Si la cuenta activa corresponde a Dalybell o Harryt, acceso concedido inmediatamente
+        if (isDalybell || isHarryt) return true;
+
         const isEnterprise = (
           (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) ||
           sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true' ||
-          (window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'staff')
+          (window.authEngine && window.authEngine.isAuthenticated && window.authEngine.userRole === 'staff') ||
+          (document.body && document.body.classList.contains('enterprise-view-mode')) ||
+          (window.adminEngine && window.adminEngine.viewEnvironment === 'enterprise')
         );
 
-        // Nombres autorizados estrictamente
-        const isHarryt = staffName.includes('harry') || staffName.includes('hp') || staffName.includes('don harry');
-        const isDalybell = staffName.includes('daly') || staffName.includes('talibel') || staffName.includes('ramirez');
-        const isAdminProfile = staffName === 'admin' || role === 'admin' || role === 'superadmin';
-
-        return isEnterprise && (isHarryt || isDalybell || isAdminProfile);
+        return isEnterprise && isAdminProfile;
       } catch (e) {
         console.warn('[WarRoom] Error evaluando autorización:', e);
         return false;
@@ -86,6 +95,14 @@
       document.addEventListener('click', () => {
         setTimeout(() => this.updateVisibility(), 150);
       });
+
+      // Auto-apertura si viene parámetro URL ?warroom=1 o ?tab=warroom
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('warroom') === '1' || urlParams.get('tab') === 'warroom') {
+          setTimeout(() => this.openWarRoomModal(), 400);
+        }
+      } catch (e) {}
 
       console.log('🛡️ [WarRoom] Módulo Cuarto de Guerra & Mesa de 5 Nodos inicializado.');
     }
@@ -232,9 +249,11 @@
       const authorized = this.isAuthorized();
       const topBtn = document.getElementById('btn-war-room-top-header');
       const panelBtn = document.getElementById('btn-war-room-integrations-panel');
+      const sidebarItem = document.getElementById('nav-item-war-room-sidebar');
 
       if (topBtn) topBtn.style.display = authorized ? 'inline-flex' : 'none';
       if (panelBtn) panelBtn.style.display = authorized ? 'inline-flex' : 'none';
+      if (sidebarItem) sidebarItem.style.display = authorized ? 'flex' : 'none';
     }
 
     /* ----------------------------------------------------------------------

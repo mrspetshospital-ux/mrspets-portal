@@ -628,6 +628,13 @@
               <span class="nav-badge" style="background:linear-gradient(135deg, #7E22CE, #4F46E5); color:#FFFFFF; font-size:0.65rem;">VERTEX AI</span>
             </a>
 
+            <!-- ACCESO DIRECTO AL CUARTO DE GUERRA (WAR ROOM) EN SIDEBAR -->
+            <a class="nav-item staff-only-control admin-only-btn" id="nav-item-war-room-sidebar" onclick="if(window.warRoomEngine) window.warRoomEngine.openWarRoomModal();" style="cursor:pointer; border-left:3px solid #10B981; background:rgba(16,185,129,0.08); margin-top:4px;" title="Cuarto de Guerra & Mesa de 5 Nodos (Exclusivo Harryt & Dalybell)">
+              <span class="icon" style="color:#10B981;"><i data-lucide="shield-alert"></i></span>
+              <span style="font-weight:800; color:#ECFDF5;">🛡️ Cuarto de Guerra</span>
+              <span class="nav-badge" id="badge-sidebar-war-room" style="background:#10B981; color:#FFFFFF; font-size:0.65rem;">5 NODOS</span>
+            </a>
+
             <a class="nav-item" data-tab="call-logs" onclick="app.switchTab('call-logs')">
               <span class="icon"><i data-lucide="phone-call"></i></span>
               <span>Historial & Inbox</span>
