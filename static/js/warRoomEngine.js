@@ -22,6 +22,7 @@
       this.chatMessages = [];
       this.nodeConfigs = {
         make_webhook_url: 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6',
+        make_api_key: '',
         make_fallback_url: '',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
         gemini_model: 'gemini-2.5-flash',
@@ -1282,15 +1283,22 @@
 
       try {
         // 1. Envío directo al webhook de Make.com desde el cliente (Make soporta Access-Control-Allow-Origin: *)
-        if (targetUrl && targetUrl.startsWith('https://hook.')) {
+        if (targetUrl && (targetUrl.startsWith('https://hook.') || targetUrl.startsWith('http'))) {
           try {
+            const makeKey = (this.nodeConfigs.make_api_key || '').trim();
+            const clientHeaders = { 'Content-Type': 'application/json' };
+            if (makeKey) {
+              clientHeaders['x-make-apikey'] = makeKey;
+              clientHeaders['x-make-api-key'] = makeKey;
+              clientHeaders['Authorization'] = `Bearer ${makeKey}`;
+            }
             const clientResp = await fetch(targetUrl, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: clientHeaders,
               body: JSON.stringify(makePayload)
             });
             latency = Math.round(performance.now() - t0);
-            if (clientResp.ok || clientResp.status === 200) {
+            if (clientResp.ok || clientResp.status === 200 || clientResp.status === 201 || clientResp.status === 202) {
               httpOk = true;
               try { respBody = await clientResp.text(); } catch (e) { respBody = 'Accepted'; }
             }
@@ -2164,6 +2172,18 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Debe ser un Custom Webhook real creado en Make.com (no nombres inventados).</div>
             </div>
 
+            <!-- MAKE API KEY / TOKEN DE AUTORIZACIÓN -->
+            <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label style="font-size:0.76rem; font-weight:800; color:#F59E0B;">🔑 Make.com Webhook API Key / Token (Opcional):</label>
+                <span style="font-size:0.7rem; color:#FBBF24;">Header x-make-apikey</span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="wr-cfg-make-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_api_key || '')}" placeholder="Pegar token si el webhook en Make tiene clave" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+              </div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Se envía automáticamente en 'x-make-apikey' y 'Authorization: Bearer'.</div>
+            </div>
+
             <!-- GEMINI API -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -2240,6 +2260,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
     async saveNodeConfigs() {
       const makeUrl = document.getElementById('wr-cfg-make')?.value || '';
       const makeFallback = document.getElementById('wr-cfg-make-fallback')?.value || '';
+      const makeKey = document.getElementById('wr-cfg-make-key')?.value || '';
       const antigravityUrl = document.getElementById('wr-cfg-antigravity')?.value || '';
       const volturiUrl = document.getElementById('wr-cfg-volturi')?.value || '';
       const sheetsId = document.getElementById('wr-cfg-sheets')?.value || '';
@@ -2247,6 +2268,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const payload = {
         make_webhook_url: makeUrl,
         make_fallback_url: makeFallback,
+        make_api_key: makeKey,
         antigravity_endpoint_url: antigravityUrl,
         volturi_endpoint_url: volturiUrl,
         google_sheets_id: sheetsId

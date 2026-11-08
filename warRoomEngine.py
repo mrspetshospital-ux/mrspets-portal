@@ -87,6 +87,7 @@ class WarRoomEngine:
                 "MAKE_WEBHOOK_URL_WAR_ROOM",
                 os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
             ),
+            "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "",  # Pendiente: Crear Custom Webhook real en Make (hash alfanumérico)
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": "gemini-2.5-flash",
@@ -246,13 +247,21 @@ class WarRoomEngine:
 
         try:
             req_data = json.dumps(telemetry_payload).encode("utf-8")
+            make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "Accept": "application/json, text/plain, */*",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            if make_key:
+                headers["x-make-apikey"] = make_key
+                headers["x-make-api-key"] = make_key
+                headers["Authorization"] = f"Bearer {make_key}"
+
             req = urllib.request.Request(
                 url,
                 data=req_data,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                },
+                headers=headers,
                 method="POST"
             )
             ctx_ssl = ssl.create_default_context()
@@ -375,13 +384,21 @@ class WarRoomEngine:
         error_msg = None
 
         try:
+            make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "Accept": "application/json, text/plain, */*",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            if make_key:
+                headers["x-make-apikey"] = make_key
+                headers["x-make-api-key"] = make_key
+                headers["Authorization"] = f"Bearer {make_key}"
+
             req = urllib.request.Request(
                 url,
                 data=req_data,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                },
+                headers=headers,
                 method="POST"
             )
             ctx_ssl = ssl.create_default_context()
@@ -533,14 +550,21 @@ class WarRoomEngine:
             try:
                 # Serialización limpia en formato JSON estricto UTF-8
                 req_data = json.dumps(make_payload, ensure_ascii=False).encode("utf-8")
+                make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+                headers = {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Accept": "application/json, text/plain, */*",
+                    "User-Agent": "MrsPets-WarRoom-Monitor/2.5.0 (Make.com Integration)"
+                }
+                if make_key:
+                    headers["x-make-apikey"] = make_key
+                    headers["x-make-api-key"] = make_key
+                    headers["Authorization"] = f"Bearer {make_key}"
+
                 req = urllib.request.Request(
                     target_webhook,
                     data=req_data,
-                    headers={
-                        "Content-Type": "application/json; charset=utf-8",
-                        "Accept": "application/json, text/plain, */*",
-                        "User-Agent": "MrsPets-WarRoom-Monitor/2.5.0 (Make.com Integration)"
-                    },
+                    headers=headers,
                     method="POST"
                 )
                 ctx_ssl = ssl.create_default_context()

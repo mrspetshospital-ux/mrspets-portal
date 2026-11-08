@@ -1562,15 +1562,30 @@ def war_room_guest():
 
 
 @app.get("/api/v1/war-room/config")
-@app.post("/api/v1/war-room/config")
-def war_room_config():
+def war_room_get_config():
+    if war_room_engine:
+        return war_room_engine.node_configs
     return {
-        "status": "success",
-        "war_room_key_configured": bool(WAR_ROOM_API_KEY),
-        "render_deploy_hook_configured": bool(RENDER_DEPLOY_HOOK),
-        "database": "postgres" if db.IS_POSTGRES else "sqlite",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "make_webhook_url": os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6"),
+        "make_api_key": os.environ.get("MAKE_API_KEY", ""),
+        "make_fallback_url": "",
+        "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
+        "volturi_endpoint_url": "/api/v1/war-room/chat",
+        "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
     }
+
+
+@app.post("/api/v1/war-room/config")
+async def war_room_save_config(request: Request):
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if war_room_engine:
+        res = war_room_engine.update_node_configs(body)
+        return res
+    return {"status": "success", "node_configs": body}
 
 
 @app.post("/api/v1/war-room/pulse")
