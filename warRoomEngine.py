@@ -518,34 +518,40 @@ class WarRoomEngine:
             "status": "ACTIVA"
         }
         
-        # Despachar notificación estructurada al Webhook de Make.com
-        if target_webhook and target_webhook.startswith("https://hook."):
+        # Despachar notificación estructurada al Webhook de Make.com mediante HTTP POST estricto
+        if target_webhook and target_webhook.startswith(("https://", "http://")):
             custom_make_payload = default_details.get("make_payload") if isinstance(default_details, dict) else None
             make_payload = custom_make_payload or {
                 "timestamp": now.isoformat(),
                 "source": service,
-                "status": default_details.get("status_code", "500") if isinstance(default_details, dict) else "500",
+                "status": str(default_details.get("status_code", "500") if isinstance(default_details, dict) else "500"),
                 "telemetry": default_details.get("telemetry", title) if isinstance(default_details, dict) else title,
-                "event": "WAR_ROOM_MANUAL_INCIDENT"
+                "event": "WAR_ROOM_MANUAL_INCIDENT",
+                "incident_id": incident_id,
+                "severity": incident.get("severity", "CRITICA")
             }
             try:
-                req_data = json.dumps(make_payload).encode("utf-8")
+                # Serialización limpia en formato JSON estricto UTF-8
+                req_data = json.dumps(make_payload, ensure_ascii=False).encode("utf-8")
                 req = urllib.request.Request(
                     target_webhook,
                     data=req_data,
                     headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Accept": "application/json, text/plain, */*",
+                        "User-Agent": "MrsPets-WarRoom-Monitor/2.5.0 (Make.com Integration)"
                     },
                     method="POST"
                 )
                 ctx_ssl = ssl.create_default_context()
                 ctx_ssl.check_hostname = False
                 ctx_ssl.verify_mode = ssl.CERT_NONE
-                with urllib.request.urlopen(req, timeout=4.0, context=ctx_ssl) as r:
+                with urllib.request.urlopen(req, timeout=5.0, context=ctx_ssl) as r:
                     incident["make_dispatch_status"] = r.status
+                    incident["make_dispatch_method"] = "POST"
             except Exception as ex:
                 incident["make_dispatch_error"] = str(ex)
+                incident["make_dispatch_method"] = "POST"
         
         # Actualizar estatus global y de los nodos involucrados
         self.status = "ALERTA"

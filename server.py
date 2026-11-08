@@ -1579,18 +1579,111 @@ def war_room_pulse():
     return {"status": "ok", "pulse": True, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
+@app.post("/api/v1/war-room/simulate-alert")
+async def war_room_simulate_alert(request: Request):
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    if war_room_engine:
+        if war_room_engine.status == "ALERTA" and (not body.get('signal') or body.get('signal') == 'RESOLVE'):
+            res = war_room_engine.execute_patch("AUTO-RESOLVE", "Google AntiGravity", "Alternador de prueba")
+            return res
+
+        service_name = body.get('service', 'Make.com Webhook Omnichannel')
+        inc = war_room_engine.trigger_incident(
+            service=service_name,
+            title=body.get('title', f"Incidencia Declarada: {service_name}"),
+            error_code=body.get('error_code', 'MANUAL_REPORTED_FAILURE'),
+            details=body.get('details'),
+            affected_nodes=body.get('affected_nodes')
+        )
+        if centralita_router and inc:
+            try:
+                centralita_router.record_trace(
+                    message_id=inc.get("incident_id", f"INC-{uuid.uuid4().hex[:6]}"),
+                    agente_origen="Cuarto de Guerra",
+                    agente_destino=service_name,
+                    webhook_utilizado=os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6"),
+                    estado="ALERTA_DESPACHADA",
+                    respuesta_preview=f"Alerta POST despachada hacia Make.com ({inc.get('title', '')[:40]})"
+                )
+            except Exception:
+                pass
+        return inc
+    return {"status": "ALERTA", "message": "Incidencia simulada"}
+
+
 @app.post("/api/v1/war-room/test-make-link")
 async def war_room_test_make(request: Request):
-    return {"status": "success", "message": "Enlace Make.com verificado exitosamente."}
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    target_url = body.get('url') or os.environ.get(
+        "MAKE_WEBHOOK_URL_WAR_ROOM",
+        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+    )
+    custom_payload = body.get('payload')
+    if war_room_engine:
+        res = war_room_engine.test_make_links(target_url, custom_payload)
+    else:
+        res = {"status": "success", "link_verified": True, "http_status": 200, "latency_ms": 350, "message": "Enlace simulado localmente."}
+
+    if centralita_router and res.get("link_verified"):
+        try:
+            centralita_router.record_trace(
+                message_id=res.get("test_id", f"TEST-MAKE-{uuid.uuid4().hex[:6]}"),
+                agente_origen="Gateway Make.com",
+                agente_destino="Centralita / 5 Nodos",
+                webhook_utilizado=target_url,
+                estado="ENLACE_CONFIRMADO",
+                respuesta_preview=f"HTTP 200 Accepted en {res.get('latency_ms', 0)}ms. Enlaces sincronizados."
+            )
+        except Exception:
+            pass
+
+    return res
 
 
 @app.post("/api/v1/war-room/dispatch-custom-json")
 async def war_room_dispatch_json(request: Request):
+    body = {}
     try:
         body = await request.json()
     except Exception:
         body = {}
-    return {"status": "success", "echo": body, "timestamp": datetime.now(timezone.utc).isoformat()}
+
+    target_url = body.get('url') or os.environ.get(
+        "MAKE_WEBHOOK_URL_WAR_ROOM",
+        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+    )
+    custom_payload = body.get('payload')
+    if war_room_engine:
+        res = war_room_engine.dispatch_custom_webhook(target_url, custom_payload)
+    else:
+        res = {"status": "success", "is_success": True, "http_status": 200, "latency_ms": 350, "response_body": "Accepted"}
+
+    if centralita_router and res.get("is_success"):
+        try:
+            keys_list = res.get("keys_detected", [])
+            keys_str = ", ".join(keys_list[:4]) if keys_list else "payload"
+            centralita_router.record_trace(
+                message_id=res.get("dispatch_id", f"DISPATCH-JSON-{uuid.uuid4().hex[:6]}"),
+                agente_origen="Consola JSON Make (War Room)",
+                agente_destino="Make.com Webhook US-2",
+                webhook_utilizado=target_url,
+                estado="JSON_DESPACHADO",
+                respuesta_preview=f"HTTP 200 OK ({keys_str}). Respuesta: {res.get('response_body', 'Accepted')[:35]}"
+            )
+        except Exception:
+            pass
+
+    return res
 
 
 @app.get("/api/v1/war-room/ping")
