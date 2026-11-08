@@ -43,6 +43,8 @@
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
+      this.isTabActive = false;
+      this.targetContainerId = 'tab-war-room-container';
       this.pollIntervalMs = 4000;
       this.initialized = false;
       this.isSending = false;
@@ -121,7 +123,21 @@
       try {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('warroom') === '1') {
-          setTimeout(() => this.openWarRoomModal(), 400);
+          setTimeout(() => {
+            if (window.app && typeof window.app.switchTab === 'function') {
+              window.app.switchTab('war-room');
+            } else {
+              this.openWarRoomModal();
+            }
+          }, 350);
+        }
+      } catch (e) {}
+
+      // Si la pestaña tab-war-room ya está visible en el DOM al iniciar
+      try {
+        const tabSection = document.getElementById('tab-war-room');
+        if (tabSection && tabSection.classList.contains('active')) {
+          setTimeout(() => this.renderIntoView('tab-war-room-container'), 100);
         }
       } catch (e) {}
     }
@@ -402,7 +418,7 @@
         } catch (_) {}
 
         this.applyStatusUI();
-        if (this.isModalOpen) {
+        if (this.isModalOpen || this.isTabActive || document.getElementById('tab-war-room')?.classList.contains('active')) {
           this.refreshModalContent();
         }
       } catch (err) {
@@ -434,6 +450,24 @@
 
       applyToBtn(topBtn);
       applyToBtn(panelBtn);
+
+      const sidebarBadge = document.getElementById('badge-sidebar-war-room');
+      if (sidebarBadge) {
+        if (isAlert) {
+          sidebarBadge.innerText = '🚨 ALERTA';
+          sidebarBadge.style.background = '#EF4444';
+        } else {
+          sidebarBadge.innerText = '5 NODOS';
+          sidebarBadge.style.background = '#10B981';
+        }
+      }
+
+      const tabBadge = document.getElementById('wr-tab-global-badge');
+      if (tabBadge) {
+        tabBadge.innerText = isAlert ? '🚨 INCIDENCIA ACTIVA' : 'ESTABLE';
+        tabBadge.style.background = isAlert ? '#EF4444' : '#10B981';
+      }
+
       this.updateVisibility();
     }
 
@@ -504,7 +538,17 @@
       document.body.appendChild(modal);
     }
 
+    renderIntoView(containerId = 'tab-war-room-container') {
+      this.isTabActive = true;
+      this.targetContainerId = containerId;
+      this.refreshModalContent(true);
+    }
+
     openWarRoomModal() {
+      if (window.app && typeof window.app.switchTab === 'function') {
+        window.app.switchTab('war-room');
+        return;
+      }
       this.isModalOpen = true;
       if (!document.getElementById('modal-volturi-war-room')) {
         this.createTacticalModal();
@@ -515,7 +559,7 @@
         modal.style.setProperty('visibility', 'visible', 'important');
         modal.style.setProperty('opacity', '1', 'important');
         modal.style.setProperty('z-index', '999999', 'important');
-        this.refreshModalContent();
+        this.refreshModalContent(true);
       }
     }
 
@@ -534,18 +578,37 @@
     }
 
     /* ----------------------------------------------------------------------
-       8. RENDERIZADO DEL CONTENIDO DINÁMICO DEL MODAL
+       8. RENDERIZADO DEL CONTENIDO DINÁMICO DEL MODAL O TAB
        ---------------------------------------------------------------------- */
     refreshModalContent(forceFullRender = false) {
-      const container = document.getElementById('wr-modal-body');
-      const badge = document.getElementById('wr-modal-global-badge');
+      const tabSection = document.getElementById('tab-war-room');
+      const isTabVisible = tabSection && tabSection.classList.contains('active');
+      const tabContainer = document.getElementById(this.targetContainerId || 'tab-war-room-container') || document.getElementById('tab-war-room-container');
+      const modalContainer = document.getElementById('wr-modal-body');
+
+      let container = null;
+      if (isTabVisible && tabContainer) {
+        container = tabContainer;
+        this.isTabActive = true;
+      } else if (this.isModalOpen && modalContainer) {
+        container = modalContainer;
+      } else if (tabContainer) {
+        container = tabContainer;
+      } else {
+        container = modalContainer;
+      }
+
       if (!container) return;
 
       const isAlert = this.status === 'ALERTA' || this.hasActiveIncident;
-      if (badge) {
-        badge.innerText = isAlert ? '🚨 INCIDENCIA ACTIVA' : 'ESTABLE';
-        badge.style.background = isAlert ? '#EF4444' : '#10B981';
-      }
+      const modalBadge = document.getElementById('wr-modal-global-badge');
+      const tabBadge = document.getElementById('wr-tab-global-badge');
+      [modalBadge, tabBadge].forEach(b => {
+        if (b) {
+          b.innerText = isAlert ? '🚨 INCIDENCIA ACTIVA' : 'ESTABLE';
+          b.style.background = isAlert ? '#EF4444' : '#10B981';
+        }
+      });
 
       // Preservar valores de formulario de incidencias antes de cualquier refresco
       const curSource = document.getElementById('wr-new-issue-source')?.value || document.getElementById('wr-new-issue-service')?.value;
@@ -2727,7 +2790,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
         if (res.ok) {
           const data = await res.json();
           this.centralitaTraces = data.traces || [];
-          if (this.isModalOpen && this.activeTab === 'traces') {
+          if ((this.isModalOpen || this.isTabActive || document.getElementById('tab-war-room')?.classList.contains('active')) && this.activeTab === 'traces') {
             this.refreshModalContent();
           }
         }
@@ -2926,11 +2989,14 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
   warRoom.saveNodeConfigs = warRoom.saveNodeConfigs.bind(warRoom);
   warRoom.pingNode = warRoom.pingNode.bind(warRoom);
   warRoom.testMakeLinksReception = warRoom.testMakeLinksReception.bind(warRoom);
+  warRoom.renderIntoView = warRoom.renderIntoView.bind(warRoom);
 
   window.WarRoomEngine = WarRoomEngine;
   window.warRoomEngine = warRoom;
   window.openWarRoomModal = function() {
-    if (window.warRoomEngine) {
+    if (window.app && typeof window.app.switchTab === 'function') {
+      window.app.switchTab('war-room');
+    } else if (window.warRoomEngine) {
       window.warRoomEngine.openWarRoomModal();
     }
   };

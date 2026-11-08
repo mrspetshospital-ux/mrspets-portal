@@ -900,7 +900,7 @@
             </a>
 
             <!-- ACCESO DIRECTO AL CUARTO DE GUERRA (WAR ROOM) EN SIDEBAR -->
-            <a class="nav-item staff-only-control admin-only-btn" id="nav-item-war-room-sidebar" onclick="if(window.warRoomEngine) window.warRoomEngine.openWarRoomModal();" style="cursor:pointer; border-left:3px solid #10B981; background:rgba(16,185,129,0.08); margin-top:4px;" title="Cuarto de Guerra & Mesa de 5 Nodos (Exclusivo Harryt & Dalybell)">
+            <a class="nav-item staff-only-control admin-only-btn" id="nav-item-war-room-sidebar" data-tab="war-room" onclick="app.switchTab('war-room')" style="cursor:pointer; border-left:3px solid #10B981; background:rgba(16,185,129,0.08); margin-top:4px;" title="Cuarto de Guerra & Mesa de 5 Nodos (Exclusivo Harryt & Dalybell)">
               <span class="icon" style="color:#10B981;"><i data-lucide="shield-alert"></i></span>
               <span style="font-weight:800; color:#ECFDF5;">🛡️ Cuarto de Guerra</span>
               <span class="nav-badge" id="badge-sidebar-war-room" style="background:#10B981; color:#FFFFFF; font-size:0.65rem;">5 NODOS</span>
@@ -2230,12 +2230,12 @@
                 </button>
 
                 <!-- BOTÓN 2: FAILOVER RESILIENTE ACTIVO -->
-                <button type="button" id="btn-agent-studio-failover-status" onclick="if(window.warRoomEngine) { window.warRoomEngine.openWarRoomModal(); } else if(window.openWarRoomModal) { window.openWarRoomModal(); }" style="background:#10b981; color:#FFFFFF !important; border:none; padding:8px 16px; border-radius:18px; font-weight:800; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35);" title="Failover Resiliente Activo • Haz clic para abrir el Cuarto de Guerra">
+                <button type="button" id="btn-agent-studio-failover-status" onclick="app.switchTab('war-room')" style="background:#10b981; color:#FFFFFF !important; border:none; padding:8px 16px; border-radius:18px; font-weight:800; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35);" title="Failover Resiliente Activo • Haz clic para abrir el Cuarto de Guerra">
                   <span>🟢 FAILOVER RESILIENTE ACTIVO</span>
                 </button>
 
                 <!-- BOTÓN 3: ENTRAR AL WAR ROOM -->
-                <button type="button" id="btn-agent-studio-enter-war-room" onclick="if(window.warRoomEngine) { window.warRoomEngine.openWarRoomModal(); } else if(window.openWarRoomModal) { window.openWarRoomModal(); } else { const m = document.getElementById('modal-volturi-war-room'); if(m) { m.style.display = 'flex'; } else { window.location.href = '?warroom=1'; } }" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; border:2px solid #D4AF37; padding:9px 18px; border-radius:18px; font-weight:900; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 18px rgba(16,185,129,0.45); text-decoration:none;" title="Entrar al Cuarto de Guerra (Mesa de 5 Nodos: Harryt, Volturi, AntiGravity, Make, Teamly)">
+                <button type="button" id="btn-agent-studio-enter-war-room" onclick="app.switchTab('war-room')" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; border:2px solid #D4AF37; padding:9px 18px; border-radius:18px; font-weight:900; font-size:0.85rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 18px rgba(16,185,129,0.45); text-decoration:none;" title="Entrar al Cuarto de Guerra (Mesa de 5 Nodos: Harryt, Volturi, AntiGravity, Make, Teamly)">
                   <span style="font-size:1.1rem;">🛡️</span>
                   <span style="color:#FFFFFF !important; font-weight:900;">Entrar al War Room (Mesa 5 Nodos)</span>
                 </button>
@@ -2823,6 +2823,39 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
             </form>
           </div>
         </section>
+
+        <!-- ==================== TAB CUARTO DE GUERRA (WAR ROOM & MESA 5 NODOS) ==================== -->
+        <section id="tab-war-room" class="tab-view">
+          <div style="background:#0F172A; border:1.5px solid #D4AF37; border-radius:24px; width:100%; max-width:1200px; margin:0 auto; display:flex; flex-direction:column; box-shadow:0 30px 70px rgba(0,0,0,0.7); overflow:hidden;">
+            <!-- HEADER DEL CUARTO DE GUERRA EN TAB DEDICADO -->
+            <div style="padding:22px 28px; background:linear-gradient(135deg, #1E293B, #0F172A); border-bottom:1.5px solid rgba(212,175,55,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div style="font-size:2.4rem;">🛡️</div>
+                <div>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 style="font-size:1.4rem; font-weight:900; color:#FFFFFF; margin:0; letter-spacing:-0.02em;">Mrs. Pets — Cuarto de Guerra & Mesa de 5 Nodos</h2>
+                    <span id="wr-tab-global-badge" class="badge" style="background:#10B981; color:#FFFFFF; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:20px;">ESTABLE</span>
+                  </div>
+                  <p style="font-size:0.82rem; color:#94A3B8; margin:4px 0 0 0;">Supervisión ejecutiva, resiliencia autónoma con AntiGravity y caja negra inmutable.</p>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <button type="button" id="btn-wr-tab-test-make" onclick="window.warRoomEngine.testMakeLinksReception()" style="background:linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3)); border:1.5px solid #10B981; color:#34D399; border-radius:10px; padding:8px 16px; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(16,185,129,0.25);" title="Confirmar que los enlaces están recibiendo la información de Make">
+                  <span>🧪 Probar Enlace Make</span>
+                </button>
+                <button type="button" onclick="window.warRoomEngine.simulateAlertToggle()" style="background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#F87171; border-radius:10px; padding:8px 16px; font-weight:800; font-size:0.75rem; cursor:pointer;" title="Simular o alternar señal de incidencia para pruebas">
+                  ⚡ Alternar Alerta de Prueba
+                </button>
+              </div>
+            </div>
+
+            <!-- CUERPO DEL CUARTO DE GUERRA EN TAB -->
+            <div id="tab-war-room-container" style="padding:22px 28px; display:flex; flex-direction:column; gap:20px; color:#F1F5F9; min-height:600px;">
+              <!-- Se monta dinámicamente mediante warRoomEngine.renderIntoView() -->
+            </div>
+          </div>
+        </section>
+
         <!-- ==================== TAB INTEGRACIONES & ENDPOINTS API ==================== -->
         <section id="tab-integrations" class="tab-view">
           <!-- BANNER ENCABEZADO INTEGRACIONES -->
@@ -8484,11 +8517,11 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/parametricMatrixEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/sixSigmaTelemetry.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/smartContrastEngine.js?v=20261031_ZERO_JITTER_V7"></script>
-  <script src="js/app.js?v=20261102_DOCTOR_SYNC_V1"></script>
+  <script src="js/app.js?v=20261108_WAR_ROOM_TAB_V7"></script>
   <script src="js/globalSearchEngine.js?v=20261103_HIGIENE_CUIDADO_V1"></script>
   <script src="js/financialEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/hrRecruitmentEngine.js?v=20261031_ZERO_JITTER_V7"></script>
-  <script src="js/rbacMiddleware.js?v=20261031_ZERO_JITTER_V7"></script>
+  <script src="js/rbacMiddleware.js?v=20261108_WAR_ROOM_TAB_V7"></script>
   <script src="js/teamlyEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/teamilyExecutiveEngine.js?v=20261104_COGNITIVE_FALLBACK_V1"></script>
   <script src="js/leiaChatEngine.js?v=20261104_SILENT_LUXURY_V1"></script>
@@ -8500,7 +8533,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/limusinaVipEngine.js?v=20261102_DRIVER_GPS_ETA_V1"></script>
   <script src="js/marketingCommandCenterEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/misipetCommandEngine.js?v=20261102_CCTV_CONFIG_V1"></script>
-  <script src="js/warRoomEngine.js?v=20261108_WAR_ROOM_V6_OPERATIONAL"></script>
+  <script src="js/warRoomEngine.js?v=20261108_WAR_ROOM_TAB_V7"></script>
 
   <!-- ==================== SCRIPT ÚNICO LEAFLET CARTO (ESTABILIZADO 10X) ==================== -->
   <script>

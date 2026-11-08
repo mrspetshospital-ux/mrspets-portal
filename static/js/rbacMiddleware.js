@@ -60,7 +60,7 @@
          * Retorna true si tiene permiso, false si fue denegado y redirigido
          */
         enforceRouteGuard(targetTab) {
-            const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'misipet'];
+            const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'misipet', 'war-room'];
             if (protectedTabs.includes(targetTab)) {
                 if (targetTab === 'misipet') {
                     // Acceso concedido al Centro de Comando MISIPET (Supervisor LAN y Admin GEO)

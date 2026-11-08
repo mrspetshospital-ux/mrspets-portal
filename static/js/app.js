@@ -76,7 +76,7 @@ class App {
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '').replace('tab-', '').trim();
       if (hash) {
-        const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command'];
+        const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'war-room'];
         if (!protectedTabs.includes(hash) || isUserStaffOrAdmin()) {
           if (window.authEngine && typeof window.authEngine.hidePortalAndShowApp === 'function') {
             window.authEngine.hidePortalAndShowApp();
@@ -266,7 +266,7 @@ class App {
       }
     }
 
-    const isStaffTab = (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'health-dashboard' || tabName === 'analytics');
+    const isStaffTab = (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'health-dashboard' || tabName === 'analytics' || tabName === 'war-room');
 
     if (isStaffTab && !bypassAuthCheck) {
       const isEntAuth = (typeof adminEngine !== 'undefined' && adminEngine.isEnterpriseAuthenticated);
@@ -304,7 +304,7 @@ class App {
     this.currentTab = tabName;
 
     if (typeof adminEngine !== 'undefined') {
-      if (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'analytics' || tabName === 'marketing-command') {
+      if (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'analytics' || tabName === 'marketing-command' || tabName === 'war-room') {
         adminEngine.viewEnvironment = 'enterprise';
         document.body.classList.add('enterprise-view-mode');
         document.body.classList.remove('customer-view-mode');
@@ -411,13 +411,28 @@ class App {
       'integrations': 'Integraciones API Meta & Twilio',
       'health-dashboard': 'Salud de Conexiones Omnicanal - Mrs Pets',
       'call-logs': 'Historial de Llamadas e Inbox',
-      'analytics': 'Métricas y Analíticas'
+      'analytics': 'Métricas y Analíticas',
+      'war-room': 'Mrs. Pets — Cuarto de Guerra & Mesa de 5 Nodos'
     };
     const heading = document.getElementById('page-heading');
     if (heading) heading.innerText = titles[tabName] || 'Mrs Pets Maracaibo';
 
     const deferRender = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb) => cb();
     deferRender(() => {
+      // Trigger War Room Render if switching to war-room
+      if (tabName === 'war-room') {
+        const tryRenderWarRoom = () => {
+          if (window.warRoomEngine && typeof window.warRoomEngine.renderIntoView === 'function') {
+            window.warRoomEngine.renderIntoView('tab-war-room-container');
+          } else if (window.warRoomEngine && typeof window.warRoomEngine.refreshModalContent === 'function') {
+            window.warRoomEngine.refreshModalContent(true);
+          } else {
+            setTimeout(tryRenderWarRoom, 80);
+          }
+        };
+        tryRenderWarRoom();
+      }
+
       // Trigger Admin Renders if switching to admin
       if (tabName === 'admin') {
         if (typeof adminEngine !== 'undefined') {
