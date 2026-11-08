@@ -673,6 +673,11 @@
       if (curPlaygroundUrl) {
         this.customPlaygroundUrl = curPlaygroundUrl;
       }
+      const curManualWebhook = document.getElementById('wr-manual-webhook-url')?.value;
+      if (curManualWebhook) {
+        this.savedManualWebhookUrl = curManualWebhook;
+        this.nodeConfigs.make_webhook_url = curManualWebhook;
+      }
 
       // Si el usuario está escribiendo o interactuando activamente con el formulario, editor o selector, no sobrescribir el DOM
       const activeEl = document.activeElement;
@@ -687,6 +692,7 @@
         activeEl.id === 'wr-json-live-preview' ||
         activeEl.id === 'wr-custom-json-input' ||
         activeEl.id === 'wr-playground-url' ||
+        activeEl.id === 'wr-manual-webhook-url' ||
         activeEl.classList.contains('wr-cfg-input') ||
         activeEl.classList.contains('wr-service-pill') ||
         activeEl.classList.contains('wr-status-pill')
@@ -1087,7 +1093,7 @@
       const currentStatus = this.savedIssueStatus || '500';
       const currentTelemetry = this.savedIssueTelemetry || `Error de conexión HTTP 500 en endpoint /webhook/sync`;
       const currentDesc = this.savedIssueDesc || '';
-      const targetWebhookUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
+      const targetWebhookUrl = this.savedManualWebhookUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
 
       // Formulario para declarar fallas manualmente
       const manualFormHtml = `
@@ -1218,11 +1224,19 @@
             <textarea id="wr-json-live-preview" oninput="window.warRoomEngine.onManualJsonEdited(this.value)" rows="10" placeholder="Escribe o pega aquí tu JSON estructurado para Make.com..." style="width:100%; box-sizing:border-box; margin:0; font-family:'JetBrains Mono', Consolas, monospace; font-size:0.8rem; color:#38BDF8; line-height:1.45; background:rgba(0,0,0,0.75); padding:12px 14px; border-radius:8px; border:1.5px solid rgba(16,185,129,0.35); outline:none; resize:vertical; min-height:190px; pointer-events:auto !important; -webkit-user-select:text !important; user-select:text !important;" spellcheck="false" autocomplete="off">${this.getOrInitManualJson(currentService, currentStatus, currentTelemetry)}</textarea>
           </div>
 
-          <!-- 7. BOTÓN DE ENVÍO MANUAL -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div style="font-size:0.73rem; color:#94A3B8;">
-              Destino Webhook: <code>https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4</code>
+          <!-- 7. DESTINO DEL WEBHOOK Y BOTÓN DE ENVÍO MANUAL -->
+          <div style="margin-bottom:14px; background:#0B0F19; border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="font-size:0.75rem; color:#94A3B8; font-weight:700;">URL del Webhook de Make.com (US-2) para este despacho:</label>
+              <span id="wr-manual-webhook-badge" style="font-size:0.7rem; color:#10B981; font-weight:800;">ENDPOINT DESTINO</span>
             </div>
+            <input type="text" id="wr-manual-webhook-url" value="${this.escapeHtml(targetWebhookUrl)}" oninput="window.warRoomEngine.nodeConfigs.make_webhook_url = this.value; window.warRoomEngine.savedManualWebhookUrl = this.value;" placeholder="https://hook.us2.make.com/..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:9px 14px; font-size:0.8rem; color:#F1F5F9; font-family:'JetBrains Mono', monospace; outline:none; pointer-events:auto !important; user-select:text !important;" />
+            <div style="font-size:0.7rem; color:#64748B; margin-top:4px;">
+              💡 <em>Si creaste o modificaste el webhook en Make y te asignó una URL nueva, pégala aquí directamente para despacharle sin bloqueos.</em>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:14px;">
             <button type="button" id="wr-btn-declare-incident" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.85rem; padding:12px 24px; border-radius:11px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(239,68,68,0.35); transition:transform 0.15s ease;">
               <span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>
             </button>
@@ -1448,11 +1462,13 @@
       const telemetryText = (telemetryInput?.value || this.savedIssueTelemetry || `Error de conexión HTTP 500`).trim();
       const desc = (descInput?.value || this.savedIssueDesc || '').trim();
 
-      let targetUrl = (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4').trim();
+      const manualUrlInput = document.getElementById('wr-manual-webhook-url');
+      let targetUrl = (manualUrlInput ? manualUrlInput.value : this.savedManualWebhookUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4').trim();
       if (targetUrl.includes('p8netq49') || !targetUrl.startsWith('https://hook.')) {
         targetUrl = 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
-        this.nodeConfigs.make_webhook_url = targetUrl;
       }
+      this.nodeConfigs.make_webhook_url = targetUrl;
+      this.savedManualWebhookUrl = targetUrl;
 
       const nowIso = new Date().toISOString();
 
@@ -1516,6 +1532,8 @@
           if (beData.http_status === 200 || beData.is_success) {
             httpOk = true;
             respBody = beData.response_body || 'Accepted';
+          } else {
+            respBody = beData.response_body || beData.message || (beData.http_status ? `HTTP ${beData.http_status}` : 'Error de respuesta');
           }
         } catch (bErr) {
           console.warn('Backend bridge fetch warning:', bErr);
@@ -1587,14 +1605,24 @@
           await this.fetchStatus();
         } else {
           if (confirmationArea) {
+            const is401 = String(respBody).includes('401') || String(respBody).includes('Unauthorized');
             confirmationArea.innerHTML = `
               <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px;">
-                <span style="color:#EF4444; font-weight:800;">⚠️ Error al despachar a Make.com. Verifique que el escenario esté encendido en Make.</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:1.2rem;">⚠️</span>
+                  <span style="color:#EF4444; font-weight:800; font-size:0.85rem;">Make.com no confirmó la recepción (${this.escapeHtml(respBody)}).</span>
+                </div>
+                <div style="color:#FCA5A5; font-size:0.75rem; margin-top:6px; line-height:1.4;">
+                  ${is401 ? 
+                    '<strong>Causa:</strong> Make.com respondió <strong>HTTP 401 Unauthorized</strong>. Esto ocurre cuando se modificó o recreó el webhook en Make y se generó una <strong>URL nueva</strong>, o cuando Make tiene activada una API Key/Restricción. Copia la URL exacta que Make muestra como "Listening" y pégala en el campo de URL arriba.' :
+                    'Verifique que el escenario esté encendido o en modo "Run once" / "Listening" en Make.com.'}
+                </div>
               </div>
             `;
           }
           if (window.app && typeof window.app.showToast === 'function') {
-            window.app.showToast('⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
+            const is401 = String(respBody).includes('401') || String(respBody).includes('Unauthorized');
+            window.app.showToast(is401 ? '⚠️ Make respondió HTTP 401 Unauthorized (Webhook nuevo o desvinculado).' : '⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
           }
         }
       } catch (err) {
