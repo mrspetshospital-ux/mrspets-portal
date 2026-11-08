@@ -1520,7 +1520,7 @@ async def war_room_execute_patch(request: Request):
 
         if war_room_engine:
             try:
-                war_room_engine.resolve_incident(incident_id, operator)
+                war_room_engine.execute_patch(incident_id, operator)
             except Exception:
                 pass
 
