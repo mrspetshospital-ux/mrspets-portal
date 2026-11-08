@@ -12,6 +12,8 @@ import time
 import http.server
 import socketserver
 import hashlib
+import subprocess
+import re
 from misipetEngine import misipet_engine
 from teamilyClient import teamily_geo_a_client, TeamilyGeoARequest, TeamilyThreadConfig, normalize_teamily_endpoint
 from elevenlabsEngine import elevenlabs_engine
@@ -482,6 +484,36 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return
 
         # -----------------------------
+        # API: DESPLIEGUE COMPLETO AUTOMÁTICO (BOTÓN HARRYT 1-CLIC)
+        # -----------------------------
+        if path_clean in ['/api/v1/system/auto-deploy', '/api/v1/war-room/system-auto-deploy']:
+            try:
+                deploy_script = "/Users/dalybellramirezmontilla/.gemini/antigravity/scratch/deploy_auto.sh"
+                cmd_proc = subprocess.run([deploy_script, "fix(auto): despliegue solicitado por Don Harryt desde la web"], capture_output=True, text=True, timeout=35)
+                out = cmd_proc.stdout + "\n" + cmd_proc.stderr
+                deploy_id = "dep-ok"
+                match_id = re.search(r'"id":\s*"(dep-[^"]+)"', out)
+                if match_id:
+                    deploy_id = match_id.group(1)
+                if cmd_proc.returncode == 0:
+                    self._send_json(200, {
+                        "status": "success",
+                        "message": "Despliegue completo ejecutado con éxito",
+                        "deploy_id": deploy_id,
+                        "output": out,
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    })
+                else:
+                    self._send_json(500, {
+                        "status": "error",
+                        "message": "Error al ejecutar git push o deploy hook",
+                        "error_details": out
+                    })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"Excepción en auto-deploy: {str(e)}"})
+            return
+
+        # -----------------------------
         # API: TEAMILEY GEO A (LEIA)
         # -----------------------------
         if path_clean in ['/api/v1/teamily/geo-a/status', '/api/v1/teamily/geo-a/config']:
@@ -636,6 +668,36 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     })
             except Exception as e:
                 self._send_json(500, {"status": "error", "message": f"Error al disparar Render Deploy Hook: {str(e)}"})
+            return
+
+        # -----------------------------
+        # API: DESPLIEGUE COMPLETO AUTOMÁTICO (BOTÓN HARRYT 1-CLIC POST)
+        # -----------------------------
+        if path_clean in ['/api/v1/system/auto-deploy', '/api/v1/war-room/system-auto-deploy']:
+            try:
+                deploy_script = "/Users/dalybellramirezmontilla/.gemini/antigravity/scratch/deploy_auto.sh"
+                cmd_proc = subprocess.run([deploy_script, "fix(auto): despliegue solicitado por Don Harryt desde la web"], capture_output=True, text=True, timeout=35)
+                out = cmd_proc.stdout + "\n" + cmd_proc.stderr
+                deploy_id = "dep-ok"
+                match_id = re.search(r'"id":\s*"(dep-[^"]+)"', out)
+                if match_id:
+                    deploy_id = match_id.group(1)
+                if cmd_proc.returncode == 0:
+                    self._send_json(200, {
+                        "status": "success",
+                        "message": "Despliegue completo ejecutado con éxito",
+                        "deploy_id": deploy_id,
+                        "output": out,
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    })
+                else:
+                    self._send_json(500, {
+                        "status": "error",
+                        "message": "Error al ejecutar git push o deploy hook",
+                        "error_details": out
+                    })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"Excepción en auto-deploy: {str(e)}"})
             return
 
         # -----------------------------

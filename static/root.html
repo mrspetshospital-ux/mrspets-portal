@@ -157,6 +157,66 @@
       }
     };
 
+    
+    window.triggerSystemAutoDeploy = function(btn) {
+      var origText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = '⏳ <span>Actualizando Ecosistema...</span>';
+        btn.disabled = true;
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🚀 Iniciando despliegue hacia GitHub y Render...', 'info');
+      }
+
+      fetch('/api/v1/system/auto-deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'Harryt Web Button', timestamp: new Date().toISOString() })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.status === 'success') {
+          var depId = data.deploy_id || 'OK';
+          var msg = '🎉 ¡Página actualizada con éxito en GitHub y Render! (Deploy ID: ' + depId + ')';
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(msg, 'success');
+          }
+          try {
+            if (window.app && typeof window.app.playSuccessChime === 'function') window.app.playSuccessChime();
+          } catch(e){}
+          alert(msg + '\n\nRender está compilando la última versión en vivo en https://mrspets-portal.onrender.com');
+          if (btn) {
+            btn.innerHTML = '✅ <span>¡Actualizado en Render!</span>';
+            setTimeout(function() {
+              btn.innerHTML = origText;
+              btn.disabled = false;
+            }, 5000);
+          }
+        } else {
+          var errMsg = '⚠️ Error en el despliegue: ' + (data.message || 'Fallo desconocido');
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(errMsg, 'danger');
+          }
+          alert(errMsg);
+          if (btn) {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+          }
+        }
+      })
+      .catch(function(err) {
+        var netErr = '⚠️ Error al comunicar con el servidor: ' + err;
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(netErr, 'danger');
+        }
+        alert(netErr);
+        if (btn) {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
+      });
+    };
+
     window.quickStaffLoginSafe = function(bypassPrompt, targetStaffUser) {
       try {
         if (window.authEngine && typeof window.authEngine.quickStaffLogin === 'function') {
@@ -591,6 +651,9 @@
       <!-- PIE DE ESTATUS INFERIOR -->
       <div style="border-top:1px solid rgba(212,175,55,0.2); margin-top:20px; padding-top:12px; font-size:0.75rem; color:#D4AF37; display:flex; justify-content:space-between; align-items:center;">
         <span>🔒 Cifrado SSL 256-Bit • Cerebro QA</span>
+                <button type="button" id="btn-portal-auto-deploy" onclick="window.triggerSystemAutoDeploy(this)" style="background:rgba(16,185,129,0.22); color:#34D399; border:1.5px solid #10B981; padding:6px 14px; border-radius:10px; font-weight:900; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          🚀 <span>Actualizar Web en Render</span>
+        </button>
         <span>⏳ Ventana Operativa: Cierre Estricto 6:00 PM</span>
       </div>
 
@@ -921,6 +984,12 @@
           </div>
 
           <!-- BOTÓN DE CONEXIÓN CON APIS (STATUS EN TIEMPO REAL & MONITOR - EXCLUSIVO STAFF) -->
+                    <!-- BOTÓN MAESTRO DE ACTUALIZACIÓN EN VIVO (HARRYT 1-CLICK DEPLOY) -->
+          <button type="button" class="btn btn-sm" id="btn-master-auto-deploy" onclick="window.triggerSystemAutoDeploy(this)" style="background:linear-gradient(135deg, #10B981, #047857); color:#FFFFFF !important; border:1.5px solid #34D399; font-weight:900; border-radius:12px; padding:6px 14px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.8rem; box-shadow:0 3px 12px rgba(16,185,129,0.35); flex-shrink:0; white-space:nowrap;" title="Actualizar la Página Web en GitHub y Render (1 Clic)">
+            <span style="font-size:1rem; line-height:1;">🚀</span>
+            <span id="btn-master-auto-deploy-text" style="color:#FFFFFF !important; font-weight:900;">Actualizar Web (Render)</span>
+          </button>
+
           <button type="button" class="btn btn-sm staff-only-control" id="btn-header-api-status" onclick="app.switchTab('integrations')" style="background:rgba(16,185,129,0.12); color:#047857; border:1.5px solid #10b981; font-weight:800; border-radius:12px; padding:6px 14px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.8rem; box-shadow:0 2px 6px rgba(16,185,129,0.12); flex-shrink:0; white-space:nowrap;" title="Estado de Conexión de APIs: Make.com, IDEXX, QVET, BCV">
             <span id="api-status-dot" style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 8px #10b981;"></span>
             <span id="api-status-text">⚡ Conexión APIs: En Línea</span>
