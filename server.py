@@ -1497,6 +1497,7 @@ def war_room_traces(limit: int = 30):
     return {"traces": []}
 
 
+@app.get("/api/v1/war-room/execute-patch")
 @app.post("/api/v1/war-room/execute-patch")
 @app.patch("/api/v1/war-room/execute-patch")
 async def war_room_execute_patch(request: Request):
@@ -1510,13 +1511,14 @@ async def war_room_execute_patch(request: Request):
     except Exception:
         pass
 
-    provided_token = bearer_token or api_key_header or str(body.get("token") or body.get("api_key") or "").strip()
+    qp_token = str(request.query_params.get("api_key") or request.query_params.get("token") or "").strip()
+    provided_token = bearer_token or api_key_header or qp_token or str(body.get("token") or body.get("api_key") or "").strip()
     is_valid = bool(provided_token and (provided_token == WAR_ROOM_API_KEY or provided_token == "mrspets_warroom_admin_key_2026"))
 
     if is_valid:
         now_iso = datetime.now(timezone.utc).isoformat()
-        incident_id = body.get("incident_id", "INC-ACTIVE")
-        operator = body.get("operator", "Harryt / Dalybell (Make.com)")
+        incident_id = str(request.query_params.get("incident_id") or body.get("incident_id") or "INC-ACTIVE").strip()
+        operator = str(request.query_params.get("operator") or body.get("operator") or "Harryt / Dalybell (Make.com)").strip()
 
         if war_room_engine:
             try:
