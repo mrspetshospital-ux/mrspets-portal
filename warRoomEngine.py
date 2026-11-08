@@ -85,7 +85,7 @@ class WarRoomEngine:
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": os.environ.get(
                 "MAKE_WEBHOOK_URL_WAR_ROOM",
-                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "",  # Pendiente: Crear Custom Webhook real en Make (hash alfanumérico)
@@ -214,7 +214,7 @@ class WarRoomEngine:
         """
         url = target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
         )
         test_id = f"TEST-MAKE-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -342,7 +342,7 @@ class WarRoomEngine:
         """
         url = (target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
         )).strip()
 
         dispatch_id = f"DISPATCH-JSON-{uuid.uuid4().hex[:8].upper()}"
@@ -487,7 +487,7 @@ class WarRoomEngine:
         
         target_webhook = self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
         )
         default_details = {
             "endpoint": target_webhook,

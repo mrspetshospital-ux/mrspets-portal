@@ -21,7 +21,7 @@
       this.nodes = {};
       this.chatMessages = [];
       this.nodeConfigs = {
-        make_webhook_url: 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6',
+        make_webhook_url: 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg',
         make_api_key: '',
         make_fallback_url: '',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
@@ -981,7 +981,7 @@
       const currentStatus = this.savedIssueStatus || '500';
       const currentTelemetry = this.savedIssueTelemetry || `Error de conexión HTTP 500 en endpoint /webhook/sync`;
       const currentDesc = this.savedIssueDesc || '';
-      const targetWebhookUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const targetWebhookUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
 
       // Formulario para declarar fallas manualmente
       const manualFormHtml = `
@@ -1114,7 +1114,7 @@
           <!-- 7. BOTÓN DE ENVÍO MANUAL -->
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div style="font-size:0.73rem; color:#94A3B8;">
-              Destino Webhook: <code>https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6</code>
+              Destino Webhook: <code>https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg</code>
             </div>
             <button type="button" id="wr-btn-declare-incident" onclick="window.warRoomEngine.declareManualIncident()" style="background:linear-gradient(135deg, #EF4444, #B91C1C); color:#FFFFFF; font-weight:900; font-size:0.85rem; padding:12px 24px; border-radius:11px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(239,68,68,0.35); transition:transform 0.15s ease;">
               <span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>
@@ -1259,7 +1259,7 @@
       const telemetryText = (telemetryInput?.value || this.savedIssueTelemetry || `Fallo en ${selectedSource}`).trim();
       const desc = (descInput?.value || this.savedIssueDesc || '').trim();
 
-      const targetUrl = (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6').trim();
+      const targetUrl = (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg').trim();
       const nowIso = new Date().toISOString();
 
       // Objeto JSON estructurado exactamente con las 5 claves requeridas
@@ -1408,7 +1408,7 @@
        para corroborar el mapeo y recepción de variables en tiempo real.
        ---------------------------------------------------------------------- */
     renderPlaygroundTabHtml() {
-      const targetUrl = this.customPlaygroundUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const targetUrl = this.customPlaygroundUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
       const content = this.customJsonContent || JSON.stringify({
         event: "TEST_WEBHOOK_VARIABLE_CHECK",
         source: "Mrs. Pets PWA — Consola Make JSON",
@@ -1940,7 +1940,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
       const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
       const desc = document.getElementById('wr-new-issue-desc')?.value || 'Fallo detectado en infraestructura';
-      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
 
       const payload = {
         event: 'WAR_ROOM_INCIDENT_REPORTED',
@@ -2146,7 +2146,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span id="wr-ping-make-res" style="font-size:0.7rem; color:#FBBF24;">⚠️ Escenario OFF en Make</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-make" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('make', document.getElementById('wr-cfg-make').value)" style="background:rgba(96,165,250,0.15); border:1px solid #60A5FA; color:#93C5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -2304,7 +2304,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const headerBtn = document.getElementById('btn-wr-header-test-make');
       const bannerBtn = document.getElementById('btn-wr-test-make-banner');
 
-      const targetUrl = customUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6';
+      const targetUrl = customUrl || this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
 
       if (bannerBadge) {
         bannerBadge.innerText = 'TRANSMITIENDO...';
@@ -2464,7 +2464,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       if (resSpan) {
         resSpan.innerHTML = '<span style="color:#D4AF37;">⏳ Transmitiendo POST JSON...</span>';
       }
-      const targetUrl = url || (nodeId === 'make' ? (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6') : '');
+      const targetUrl = url || (nodeId === 'make' ? (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg') : '');
 
       const telemetryPayload = {
         event: 'WAR_ROOM_PING_TEST',
@@ -2818,7 +2818,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
             title: 'Fallo de Comunicación en Webhook Make.com (HTTP 502)',
             service: 'Make.com Omnichannel Sync',
             structured_diagnostic: {
-              endpoint: 'https://hook.us2.make.com/p8netq49ok9qd53sm2fcowubdvz3dnc6',
+              endpoint: 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg',
               http_status: 502,
               latency_ms: 5020,
               root_cause: 'Timeout persistente en gateway de Make.com al procesar la cola omnicanal.'
