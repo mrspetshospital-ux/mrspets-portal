@@ -3038,10 +3038,14 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       try {
         const res = await fetch('/api/v1/war-room/execute-patch', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-API-Key': 'mrspets_sec_warroom_live_2026_antigravity'
+          },
           body: JSON.stringify({
             incident_id: incidentId,
             authorized_by: adminName,
+            token: 'mrspets_warroom_admin_key_2026',
             notes: 'Parche autorizado desde el Cuarto de Guerra por ' + adminName
           })
         });
