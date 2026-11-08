@@ -38,6 +38,8 @@
       this.savedIssueDesc = '';
       this.savedIssueSeverity = 'CRÍTICA';
       this.lastManualDispatchResult = null;
+      this.manualJsonContent = '';
+      this.isManualJsonDirty = false;
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -1086,29 +1088,30 @@
             <textarea id="wr-new-issue-desc" oninput="window.warRoomEngine.updateJsonLivePreview()" rows="2" placeholder="Describe los síntomas y detalles de la falla..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:vertical; outline:none;">${this.escapeHtml(currentDesc)}</textarea>
           </div>
 
-          <!-- 6. VISTA PREVIA DINÁMICA DEL PAYLOAD EXACTO HACIA MAKE.COM -->
-          <div style="margin-bottom:16px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 16px;">
+          <!-- 6. PAYLOAD EDITABLE HACIA MAKE.COM (PUEDE MODIFICARSE O PEGARSE CUALQUIER JSON LIBRE) -->
+          <div style="margin-bottom:16px; background:#0B0F19; border:1.5px solid rgba(16,185,129,0.35); border-radius:12px; padding:12px 16px; box-shadow:0 4px 16px rgba(0,0,0,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:0.72rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Payload Estructurado hacia Make.com (5 Claves Exactas):</span>
-                <span id="wr-json-service-badge" style="font-size:0.7rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:0.74rem; font-weight:800; color:#10B981; text-transform:uppercase; letter-spacing:0.05em;">📦 Payload JSON Editable hacia Make.com:</span>
+                <span id="wr-json-status-badge" style="font-size:0.68rem; font-weight:800; color:#34D399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px;">✓ JSON Válido (Editable)</span>
+                <span id="wr-json-service-badge" style="font-size:0.68rem; font-weight:800; color:#FDE047; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:2px 8px; border-radius:6px;">${this.escapeHtml(currentService)}</span>
               </div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button type="button" onclick="window.warRoomEngine.loadIncidentJsonIntoPlayground()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38BDF8; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Copia este JSON hacia el editor libre para agregar variables o cambiar valores">
-                  <span>🧪</span> <span>Probar en Consola JSON</span>
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <button type="button" onclick="window.warRoomEngine.resetManualJsonToDefault()" style="background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.35); color:#FDE047; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Restaurar el JSON con las 5 claves estándar">
+                  <span>🔄</span> <span>Restaurar 5 Claves</span>
                 </button>
-                <button type="button" onclick="window.warRoomEngine.copyLivePreviewJson()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#E2E8F0; font-size:0.72rem; font-weight:700; padding:4px 9px; border-radius:8px; cursor:pointer;" title="Copiar este JSON al portapapeles">
-                  <span>📋</span>
+                <button type="button" onclick="window.warRoomEngine.copyLivePreviewJson()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#E2E8F0; font-size:0.72rem; font-weight:700; padding:4px 9px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Copiar este JSON al portapapeles">
+                  <span>📋</span> <span>Copiar</span>
+                </button>
+                <button type="button" onclick="window.warRoomEngine.loadIncidentJsonIntoPlayground()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38BDF8; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Copia este JSON hacia el editor libre para agregar variables o cambiar valores">
+                  <span>🧪</span> <span>Consola Libre</span>
                 </button>
               </div>
             </div>
-            <pre id="wr-json-live-preview" style="margin:0; font-family:'JetBrains Mono', monospace; font-size:0.76rem; color:#38BDF8; white-space:pre-wrap; max-height:140px; overflow-y:auto; background:rgba(0,0,0,0.55); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">${JSON.stringify({
-              timestamp: new Date().toISOString(),
-              source: currentService,
-              status: currentStatus,
-              telemetry: currentTelemetry,
-              event: "WAR_ROOM_MANUAL_INCIDENT"
-            }, null, 2)}</pre>
+            <div style="font-size:0.71rem; color:#94A3B8; margin-bottom:8px;">
+              💡 <em>Puedes hacer clic, escribir o pegar directamente cualquier variable JSON aquí (ej: columnas de Google Sheets). Este contenido exacto será despachado al webhook de Make.com.</em>
+            </div>
+            <textarea id="wr-json-live-preview" oninput="window.warRoomEngine.onManualJsonEdited(this.value)" rows="8" placeholder="Escribe o pega aquí tu JSON estructurado para Make.com..." style="width:100%; box-sizing:border-box; margin:0; font-family:'JetBrains Mono', Consolas, monospace; font-size:0.78rem; color:#38BDF8; line-height:1.45; background:rgba(0,0,0,0.65); padding:12px 14px; border-radius:8px; border:1.5px solid rgba(16,185,129,0.35); outline:none; resize:vertical; min-height:160px;">${this.getOrInitManualJson(currentService, currentStatus, currentTelemetry)}</textarea>
           </div>
 
           <!-- 7. BOTÓN DE ENVÍO MANUAL -->
@@ -1223,9 +1226,68 @@
       this.updateJsonLivePreview();
     }
 
-    updateJsonLivePreview() {
+    getOrInitManualJson(currentService, currentStatus, currentTelemetry) {
+      if (this.manualJsonContent && this.isManualJsonDirty) {
+        return this.escapeHtml(this.manualJsonContent);
+      }
+      const defaultObj = {
+        timestamp: new Date().toISOString(),
+        source: currentService || 'Make.com Webhook Omnichannel',
+        status: String(currentStatus || '500'),
+        telemetry: currentTelemetry || `Fallo reportado en ${currentService}`,
+        event: "WAR_ROOM_MANUAL_INCIDENT"
+      };
+      this.manualJsonContent = JSON.stringify(defaultObj, null, 2);
+      return this.escapeHtml(this.manualJsonContent);
+    }
+
+    onManualJsonEdited(newText) {
+      this.manualJsonContent = newText;
+      this.isManualJsonDirty = true;
+      const statusBadge = document.getElementById('wr-json-status-badge');
+      try {
+        const parsed = JSON.parse(newText);
+        const keys = Object.keys(parsed || {});
+        if (statusBadge) {
+          statusBadge.innerHTML = `✓ JSON Válido (${keys.length} variables)`;
+          statusBadge.style.color = '#34D399';
+          statusBadge.style.borderColor = 'rgba(16,185,129,0.4)';
+          statusBadge.style.background = 'rgba(16,185,129,0.15)';
+        }
+      } catch (e) {
+        if (statusBadge) {
+          statusBadge.innerHTML = '⚠️ Sintaxis JSON Inválida';
+          statusBadge.style.color = '#F87171';
+          statusBadge.style.borderColor = 'rgba(239,68,68,0.4)';
+          statusBadge.style.background = 'rgba(239,68,68,0.15)';
+        }
+      }
+    }
+
+    resetManualJsonToDefault() {
+      this.isManualJsonDirty = false;
+      this.updateJsonLivePreview(true);
+      const statusBadge = document.getElementById('wr-json-status-badge');
+      if (statusBadge) {
+        statusBadge.innerHTML = '✓ JSON Estándar Restaurado';
+        statusBadge.style.color = '#FDE047';
+        statusBadge.style.borderColor = 'rgba(212,175,55,0.4)';
+        statusBadge.style.background = 'rgba(212,175,55,0.15)';
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('🔄 JSON restaurado con las 5 claves estándar.', 'info');
+      }
+    }
+
+    updateJsonLivePreview(force = false) {
       const previewEl = document.getElementById('wr-json-live-preview');
       if (!previewEl) return;
+
+      // Si el usuario ya personalizó el JSON manualmente y no estamos forzando reset, respetar su texto
+      if (this.isManualJsonDirty && !force) {
+        return;
+      }
+
       const sourceInput = document.getElementById('wr-new-issue-source');
       const serviceSelect = document.getElementById('wr-new-issue-service');
       const statusInput = document.getElementById('wr-new-issue-status');
@@ -1242,7 +1304,9 @@
         telemetry: telemetry,
         event: 'WAR_ROOM_MANUAL_INCIDENT'
       };
-      previewEl.innerText = JSON.stringify(payloadPreview, null, 2);
+      const formatted = JSON.stringify(payloadPreview, null, 2);
+      this.manualJsonContent = formatted;
+      previewEl.value = formatted;
     }
 
     async declareManualIncident() {
@@ -1262,14 +1326,31 @@
       const targetUrl = (this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4').trim();
       const nowIso = new Date().toISOString();
 
-      // Objeto JSON estructurado exactamente con las 5 claves requeridas
-      const makePayload = {
-        timestamp: nowIso,
-        source: selectedSource,
-        status: selectedStatus,
-        telemetry: telemetryText,
-        event: 'WAR_ROOM_MANUAL_INCIDENT'
-      };
+      // Leer directamente el contenido editable del JSON
+      const previewEl = document.getElementById('wr-json-live-preview');
+      const rawJson = previewEl ? (previewEl.value || previewEl.innerText || '').trim() : '';
+
+      let makePayload;
+      if (rawJson) {
+        try {
+          makePayload = JSON.parse(rawJson);
+        } catch (err) {
+          alert(`⚠️ El JSON que intentas enviar contiene un error de sintaxis:\n${err.message}\n\nPor favor revisa las comillas, comas o llaves antes de despachar a Make.com.`);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>';
+          }
+          return;
+        }
+      } else {
+        makePayload = {
+          timestamp: nowIso,
+          source: selectedSource,
+          status: selectedStatus,
+          telemetry: telemetryText,
+          event: 'WAR_ROOM_MANUAL_INCIDENT'
+        };
+      }
 
       if (btn) {
         btn.disabled = true;
@@ -1352,6 +1433,7 @@
 
         // 4. Confirmación Visual cuando POST devuelve HTTP 200 OK
         if (httpOk) {
+          const keysCount = Object.keys(makePayload || {}).length;
           this.lastManualDispatchResult = {
             success: true,
             status: 200,
@@ -1360,7 +1442,8 @@
             source: selectedSource,
             statusCode: selectedStatus,
             telemetry: telemetryText,
-            responseBody: respBody
+            responseBody: respBody,
+            keysCount: keysCount
           };
 
           if (confirmationArea) {
@@ -1368,8 +1451,39 @@
           }
 
           if (window.app && typeof window.app.showToast === 'function') {
-            window.app.showToast(`✅ Alerta enviada exitosamente a Make.com (HTTP 200 OK en ${latency}ms).`, 'success');
+            window.app.showToast(`✅ Payload despachado a Make.com (HTTP 200 OK &bull; ${keysCount} variables en ${latency}ms).`, 'success');
           }
+
+          // Registrar en chat local del War Room
+          await this.sendChatMessage(`🚨 **Payload Personalizado Despachado a Make.com (HTTP 200 OK):** [${selectedSource}] &bull; Variables enviadas: \`${keysCount}\` &bull; Latencia: \`${latency}ms\``);
+          await this.fetchStatus();
+        } else {
+          if (confirmationArea) {
+            confirmationArea.innerHTML = `
+              <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px;">
+                <span style="color:#EF4444; font-weight:800;">⚠️ Error al despachar a Make.com. Verifique que el escenario esté encendido en Make.</span>
+              </div>
+            `;
+          }
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
+          }
+        }
+      } catch (err) {
+        if (confirmationArea) {
+          confirmationArea.innerHTML = `
+            <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px; color:#FCA5A5;">
+              Fallo de envío: ${err.message}
+            </div>
+          `;
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>';
+        }
+      }
+    }
 
           // Registrar en chat local del War Room
           await this.sendChatMessage(`🚨 **Alerta Manual Despachada a Make.com (HTTP 200 OK):** [${selectedSource}] &bull; Status: \`${selectedStatus}\` &bull; Telemetría: *"${telemetryText}"*`);
@@ -1937,56 +2051,37 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
     }
 
     loadIncidentJsonIntoPlayground() {
-      const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
-      const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
-      const desc = document.getElementById('wr-new-issue-desc')?.value || 'Fallo detectado en infraestructura';
-      const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
+      const previewEl = document.getElementById('wr-json-live-preview');
+      const rawText = previewEl ? (previewEl.value || previewEl.innerText || '').trim() : '';
+      if (rawText) {
+        this.customJsonContent = rawText;
+      } else {
+        const service = this.selectedIncidentService || document.getElementById('wr-new-issue-service')?.value || 'Make.com Webhook Omnichannel';
+        const severity = document.getElementById('wr-new-issue-severity')?.value || 'CRÍTICA';
+        const desc = document.getElementById('wr-new-issue-desc')?.value || 'Fallo detectado en infraestructura';
+        const targetUrl = this.nodeConfigs.make_webhook_url || 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
 
-      const payload = {
-        event: 'WAR_ROOM_INCIDENT_REPORTED',
-        service: service,
-        component_affected: service,
-        severity: severity,
-        description: desc,
-        reported_by: this.getAuthorizedAdminName(),
-        webhook_target: targetUrl,
-        timestamp: new Date().toISOString(),
-        metrics: {
-          latency_ms: 450,
-          status_code: 502,
-          retries: 2
-        }
-      };
-
-      this.customJsonContent = JSON.stringify(payload, null, 2);
-      this.activeTab = 'playground';
-      this.refreshModalContent(true);
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('📋 JSON de la incidencia cargado en la Consola Make.', 'info');
+        const payload = {
+          event: 'WAR_ROOM_INCIDENT_REPORTED',
+          source: service,
+          status: '500',
+          telemetry: desc,
+          reported_by: this.getAuthorizedAdminName(),
+          timestamp: new Date().toISOString()
+        };
+        this.customJsonContent = JSON.stringify(payload, null, 2);
       }
-    }
 
-    loadDiagnosticJsonIntoPlayground() {
-      const diag = (this.activeIncident && this.activeIncident.structured_diagnostic) || {
-        event: "STRUCTURED_DIAGNOSTIC_FAILURE",
-        incident_id: "INC-DIAGNOSTIC",
-        status: "FAILURE_DETECTED",
-        service: "Make.com Webhook Omnichannel",
-        http_status: 502,
-        timestamp: new Date().toISOString()
-      };
-
-      this.customJsonContent = JSON.stringify(diag, null, 2);
       this.activeTab = 'playground';
       this.refreshModalContent(true);
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('🧪 Paquete de diagnóstico cargado en la Consola Make.', 'info');
+        window.app.showToast('📋 JSON cargado en la Consola Make para pruebas libres.', 'info');
       }
     }
 
     copyLivePreviewJson() {
       const previewEl = document.getElementById('wr-json-live-preview');
-      const text = previewEl ? previewEl.innerText : '';
+      const text = previewEl ? (previewEl.value || previewEl.innerText || '').trim() : (this.manualJsonContent || '');
       if (!text) return;
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
