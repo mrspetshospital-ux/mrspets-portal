@@ -1565,9 +1565,9 @@ def war_room_guest():
 def war_room_get_config():
     if war_room_engine:
         return war_room_engine.node_configs
-    cfg_url = os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+    cfg_url = os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
     if "p8netq49" in cfg_url or not cfg_url.startswith("https://hook."):
-        cfg_url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+        cfg_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     return {
         "make_webhook_url": cfg_url,
         "make_api_key": os.environ.get("MAKE_API_KEY", ""),
@@ -1624,7 +1624,7 @@ async def war_room_simulate_alert(request: Request):
                     message_id=inc.get("incident_id", f"INC-{uuid.uuid4().hex[:6]}"),
                     agente_origen="Cuarto de Guerra",
                     agente_destino=service_name,
-                    webhook_utilizado=os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"),
+                    webhook_utilizado=os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"),
                     estado="ALERTA_DESPACHADA",
                     respuesta_preview=f"Alerta POST despachada hacia Make.com ({inc.get('title', '')[:40]})"
                 )
@@ -1644,10 +1644,10 @@ async def war_room_test_make(request: Request):
 
     target_url = body.get('url') or (war_room_engine.node_configs.get("make_webhook_url") if war_room_engine else None) or os.environ.get(
         "MAKE_WEBHOOK_URL_WAR_ROOM",
-        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
     )
     if "p8netq49" in str(target_url) or not str(target_url).startswith("https://hook."):
-        target_url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+        target_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     custom_payload = body.get('payload')
     if war_room_engine:
         res = war_room_engine.test_make_links(target_url, custom_payload)
@@ -1680,10 +1680,10 @@ async def war_room_dispatch_json(request: Request):
 
     target_url = body.get('url') or (war_room_engine.node_configs.get("make_webhook_url") if war_room_engine else None) or os.environ.get(
         "MAKE_WEBHOOK_URL_WAR_ROOM",
-        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+        os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
     )
     if "p8netq49" in str(target_url) or not str(target_url).startswith("https://hook."):
-        target_url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+        target_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     custom_payload = body.get('payload')
     if war_room_engine:
         res = war_room_engine.dispatch_custom_webhook(target_url, custom_payload)

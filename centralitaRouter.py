@@ -146,7 +146,7 @@ class CentralitaRouter:
         # Webhook oficial verificado de Make (Región US-2)
         self.make_webhook_url: str = os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
         )
 
     def resolve_target_agent(self, text: str, requested_slug: Optional[str] = None) -> Tuple[str, str]:

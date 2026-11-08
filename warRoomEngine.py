@@ -82,14 +82,14 @@ class WarRoomEngine:
         self.active_incidents: List[Dict[str, Any]] = []
         self.resolved_incidents: List[Dict[str, Any]] = []
         self.ephemeral_tokens: Dict[str, Dict[str, Any]] = {}
-        resolved_make_url = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM") or os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+        resolved_make_url = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM") or os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
         if "p8netq49" in resolved_make_url or not resolved_make_url.startswith("https://hook."):
-            resolved_make_url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+            resolved_make_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
 
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": resolved_make_url,
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
-            "make_fallback_url": "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4",
+            "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": "gemini-2.5-flash",
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
@@ -215,10 +215,10 @@ class WarRoomEngine:
         """
         url = target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
         )
         if "p8netq49" in str(url) or not str(url).startswith("https://hook."):
-            url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+            url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
         test_id = f"TEST-MAKE-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -348,10 +348,10 @@ class WarRoomEngine:
         """
         url = (target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
         )).strip()
         if "p8netq49" in url or not url.startswith("https://hook."):
-            url = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+            url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
 
         dispatch_id = f"DISPATCH-JSON-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -495,7 +495,7 @@ class WarRoomEngine:
         
         target_webhook = self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
         )
         default_details = {
             "endpoint": target_webhook,

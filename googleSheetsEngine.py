@@ -29,7 +29,7 @@ AUDIT_LOG_FILE = os.path.join(LOGS_DIR, "audit_trail.jsonl")
 
 DEFAULT_SPREADSHEET_ID = "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
 DEFAULT_SHEET_TAB = "Registro de Interacciones"
-DEFAULT_MAKE_WEBHOOK = "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4"
+DEFAULT_MAKE_WEBHOOK = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
 FALLBACK_MAKE_WEBHOOK = ""
 DEFAULT_BOARD_ID = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
 
