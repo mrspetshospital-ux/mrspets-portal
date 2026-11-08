@@ -1371,8 +1371,8 @@ def _check_basic(request: Request) -> bool:
 @app.middleware("http")
 async def portal_gate(request: Request, call_next):
     path = request.url.path
-    # La API tiene su propia autenticación por sesión; los estáticos van tras Basic.
-    if path.startswith("/api/") or path in ("/healthz",):
+    # La API, health checks y el portal Concierge VIP son accesibles libremente
+    if path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/")) or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest"):
         response = await call_next(request)
     elif not _check_basic(request):
         return PlainTextResponse(
