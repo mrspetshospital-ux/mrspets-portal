@@ -400,31 +400,85 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     .metric:last-child { border-bottom: none; }
     .metric span { color: #94A3B8; font-weight: 600; }
     .metric strong { color: #F8FAFC; font-weight: 700; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 13px; margin-top: 12px; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 0.9rem; cursor: pointer; border: none; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 13px; margin-top: 12px; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 0.9rem; cursor: pointer; border: none; font-family:inherit; }
     .btn-gold { background: linear-gradient(135deg, #D4AF37, #B8860B); color: #0F172A; box-shadow: 0 4px 15px rgba(212,175,55,0.3); }
     .btn-outline { background: rgba(255,255,255,0.06); border: 1.5px solid #475569; color: #CBD5E1; }
+    .btn-deploy { background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; border: 1.5px solid #34D399; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="badge">🟢 OPERATIVO • HTTP 200 OK</div>
     <h1>🏥 Servidor Mrs. Pets & MisiPet</h1>
-    <p>Verificación de salud del entorno operativo local (Puerto 8080).</p>
+    <p>Verificación de salud del entorno operativo (Puerto 8080 & Render).</p>
     <div class="metric"><span>Estado del Servidor:</span><strong style="color:#34D399;">🟢 ONLINE (100% Operativo)</strong></div>
     <div class="metric"><span>Versión del Núcleo:</span><strong>2.4.0 (Silent Luxury Engine)</strong></div>
     <div class="metric"><span>Cerebro QA Anti-Blank:</span><strong style="color:#FBBF24;">🛡️ Blindado Activo</strong></div>
     <div class="metric"><span>Cloud Gateway (Render):</span><strong>mrspets-portal.onrender.com</strong></div>
     <div style="margin-top: 24px;">
+      <button type="button" class="btn btn-deploy" id="btn-deploy-render" onclick="triggerRenderDeploy(this)">
+        🚀 Disparar Deploy Hook de Render (Actualizar Nube)
+      </button>
+      <div id="deploy-result" style="display:none; margin-top:10px; font-size:0.84rem; padding:12px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#A7F3D0; line-height:1.4;"></div>
       <a class="btn btn-gold" href="/">🐾 Abrir Portal Concierge VIP Mrs. Pets</a>
       <a class="btn btn-outline" href="/?warroom=1">⚡ Consola Cuarto de Guerra (War Room)</a>
       <a class="btn btn-outline" href="/healthz?json=1">📋 Ver Respuesta JSON Cruda</a>
     </div>
   </div>
+  <script>
+    function triggerRenderDeploy(btn) {
+      btn.innerText = '⏳ Conectando con Render Deploy Hook...';
+      btn.disabled = true;
+      fetch('/api/v1/render/deploy', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var resEl = document.getElementById('deploy-result');
+          resEl.style.display = 'block';
+          if (d.status === 'success') {
+            var depId = (d.render_response && d.render_response.deploy) ? d.render_response.deploy.id : 'OK';
+            resEl.innerHTML = '✅ <strong>¡Despliegue activado en Render con éxito!</strong><br>Deploy ID: <code>' + depId + '</code><br>Render está construyendo la última versión.';
+            btn.innerText = '✅ Despliegue en Marcha';
+          } else {
+            resEl.innerHTML = '⚠️ ' + d.message;
+            btn.innerText = 'Reintentar Despliegue';
+            btn.disabled = false;
+          }
+        })
+        .catch(function(err) {
+          alert('Error al disparar deploy: ' + err);
+          btn.innerText = 'Reintentar Despliegue';
+          btn.disabled = false;
+        });
+    }
+  </script>
 </body>
 </html>"""
                 self._send_html(200, html_resp)
                 return
             self._send_json(200, {"status": "ok", "service": "Mrs. Pets & MisiPet Multi-Module Server", "version": "2.4.0"})
+            return
+
+        # -----------------------------
+        # API: DISPARADOR DIRECTO DE DEPLOY HOOK RENDER
+        # -----------------------------
+        if path_clean in ['/api/v1/render/deploy', '/api/v1/war-room/trigger-render-deploy']:
+            try:
+                hook_url = os.environ.get("RENDER_DEPLOY_HOOK", "https://api.render.com/deploy/srv-dbjca0dg1s2s73fbagbg?key=xc9xAZzbo5Y")
+                req = urllib.request.Request(hook_url, data=b"", headers={"User-Agent": "MrsPets-WarRoom/2.4.0"}, method="POST")
+                with urllib.request.urlopen(req, timeout=12) as r:
+                    resp_data = r.read().decode('utf-8', errors='ignore')
+                    try:
+                        resp_json = json.loads(resp_data)
+                    except Exception:
+                        resp_json = {"raw": resp_data}
+                    self._send_json(200, {
+                        "status": "success",
+                        "message": "Deploy Hook de Render disparado con éxito",
+                        "render_response": resp_json,
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"Error al disparar Render Deploy Hook: {str(e)}"})
             return
 
         # -----------------------------
@@ -560,6 +614,29 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path_clean = parsed.path
         body = self._read_body_json()
+
+        # -----------------------------
+        # API: DISPARADOR DIRECTO DE DEPLOY HOOK RENDER (POST)
+        # -----------------------------
+        if path_clean in ['/api/v1/render/deploy', '/api/v1/war-room/trigger-render-deploy']:
+            try:
+                hook_url = os.environ.get("RENDER_DEPLOY_HOOK", "https://api.render.com/deploy/srv-dbjca0dg1s2s73fbagbg?key=xc9xAZzbo5Y")
+                req = urllib.request.Request(hook_url, data=b"", headers={"User-Agent": "MrsPets-WarRoom/2.4.0"}, method="POST")
+                with urllib.request.urlopen(req, timeout=12) as r:
+                    resp_data = r.read().decode('utf-8', errors='ignore')
+                    try:
+                        resp_json = json.loads(resp_data)
+                    except Exception:
+                        resp_json = {"raw": resp_data}
+                    self._send_json(200, {
+                        "status": "success",
+                        "message": "Deploy Hook de Render disparado con éxito",
+                        "render_response": resp_json,
+                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    })
+            except Exception as e:
+                self._send_json(500, {"status": "error", "message": f"Error al disparar Render Deploy Hook: {str(e)}"})
+            return
 
         # -----------------------------
         # API: AUTHENTICATION & LOGIN (POST)
