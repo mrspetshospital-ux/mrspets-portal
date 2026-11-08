@@ -88,7 +88,7 @@ class WarRoomEngine:
                 os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
-            "make_fallback_url": "",  # Pendiente: Crear Custom Webhook real en Make (hash alfanumérico)
+            "make_fallback_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": "gemini-2.5-flash",
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
@@ -320,6 +320,9 @@ class WarRoomEngine:
             }
         else:
             keys_detected = list(telemetry_payload.keys()) if isinstance(telemetry_payload, dict) else []
+            diag_message = f"Make.com respondió con código {http_code} ({error_msg}). Verifique que el escenario esté activo en Make.com."
+            if http_code == 401:
+                diag_message = f"Make.com rechazó la conexión con HTTP 401 Unauthorized. Causa: El webhook en Make tiene activada autenticación con API Key o restricción por IP y no se recibió la clave secreta válida (x-make-apikey), o el webhook fue pausado."
             return {
                 "status": "error" if not (http_code in (404, 502, 503)) else "stopped",
                 "link_verified": False,
@@ -332,7 +335,7 @@ class WarRoomEngine:
                 "keys_detected": keys_detected,
                 "payload_bytes": len(req_data) if 'req_data' in locals() else 0,
                 "timestamp": now_iso,
-                "message": f"Make.com respondió con código {http_code} ({error_msg}). Verifique que el escenario esté activo en Make.com."
+                "message": diag_message
             }
 
     def dispatch_custom_webhook(self, target_url: Optional[str] = None, payload: Any = None) -> Dict[str, Any]:
@@ -457,7 +460,7 @@ class WarRoomEngine:
         """Actualiza y persiste las URLs y conexiones de cada nodo de IA."""
         if isinstance(new_configs, dict):
             for k, v in new_configs.items():
-                if k in self.node_configs and v:
+                if k in self.node_configs and v is not None:
                     self.node_configs[k] = str(v).strip()
         self.chat_history.append({
             "id": f"MSG-{secrets.token_hex(4)}",

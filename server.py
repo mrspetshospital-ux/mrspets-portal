@@ -1639,7 +1639,7 @@ async def war_room_test_make(request: Request):
     except Exception:
         pass
 
-    target_url = body.get('url') or os.environ.get(
+    target_url = body.get('url') or (war_room_engine.node_configs.get("make_webhook_url") if war_room_engine else None) or os.environ.get(
         "MAKE_WEBHOOK_URL_WAR_ROOM",
         os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
     )
@@ -1673,7 +1673,7 @@ async def war_room_dispatch_json(request: Request):
     except Exception:
         body = {}
 
-    target_url = body.get('url') or os.environ.get(
+    target_url = body.get('url') or (war_room_engine.node_configs.get("make_webhook_url") if war_room_engine else None) or os.environ.get(
         "MAKE_WEBHOOK_URL_WAR_ROOM",
         os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
     )
