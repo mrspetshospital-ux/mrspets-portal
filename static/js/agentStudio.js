@@ -17,7 +17,7 @@ class AgentStudio {
     this.governanceStorageKey = 'mrspets_ai_governance_config';
     this.brainDriveStorageKey = 'mrspets_leia_brain_drive_url';
 
-    this.defaultMakeWebhookUrl = 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
+    this.defaultMakeWebhookUrl = 'https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4';
     this.defaultTeamilyWebhookUrl = 'https://teamily.ai/v1/agents/geo-a/responses';
     this.defaultBrainDriveUrl = 'https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge';
 

@@ -48,7 +48,7 @@ class TestWarRoomEngine(unittest.TestCase):
             title="Fallo de Comunicación en Webhook Make.com (HTTP 502)",
             error_code="WEBHOOK_UNREACHABLE_502",
             details={
-                "endpoint": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+                "endpoint": "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4",
                 "http_status": 502,
                 "attempt_count": 3
             },
@@ -173,7 +173,7 @@ class TestWarRoomEngine(unittest.TestCase):
             "bcv_rate": 887.30
         }
         res = war_room_engine.dispatch_custom_webhook(
-            target_url="https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+            target_url="https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4",
             payload=custom_payload
         )
         self.assertIn("dispatch_id", res)

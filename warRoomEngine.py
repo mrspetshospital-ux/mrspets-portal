@@ -85,10 +85,10 @@ class WarRoomEngine:
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": os.environ.get(
                 "MAKE_WEBHOOK_URL_WAR_ROOM",
-                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
+                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
-            "make_fallback_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+            "make_fallback_url": "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4",
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": "gemini-2.5-flash",
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
@@ -214,7 +214,7 @@ class WarRoomEngine:
         """
         url = target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
         )
         test_id = f"TEST-MAKE-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -345,7 +345,7 @@ class WarRoomEngine:
         """
         url = (target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
         )).strip()
 
         dispatch_id = f"DISPATCH-JSON-{uuid.uuid4().hex[:8].upper()}"
@@ -490,7 +490,7 @@ class WarRoomEngine:
         
         target_webhook = self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
-            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg")
+            os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/oc9x9n212xfgm0q50y94rhou8n4871s4")
         )
         default_details = {
             "endpoint": target_webhook,
