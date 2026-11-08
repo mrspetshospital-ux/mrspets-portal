@@ -1485,37 +1485,6 @@
       }
     }
 
-          // Registrar en chat local del War Room
-          await this.sendChatMessage(`🚨 **Alerta Manual Despachada a Make.com (HTTP 200 OK):** [${selectedSource}] &bull; Status: \`${selectedStatus}\` &bull; Telemetría: *"${telemetryText}"*`);
-          await this.fetchStatus();
-        } else {
-          if (confirmationArea) {
-            confirmationArea.innerHTML = `
-              <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px;">
-                <span style="color:#EF4444; font-weight:800;">⚠️ Error al despachar a Make.com. Verifique que el escenario esté encendido.</span>
-              </div>
-            `;
-          }
-          if (window.app && typeof window.app.showToast === 'function') {
-            window.app.showToast('⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
-          }
-        }
-      } catch (err) {
-        if (confirmationArea) {
-          confirmationArea.innerHTML = `
-            <div style="background:rgba(239,68,68,0.15); border:1.5px solid #EF4444; border-radius:12px; padding:14px 18px; margin-top:16px; color:#FCA5A5;">
-              Fallo de envío: ${err.message}
-            </div>
-          `;
-        }
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<span>🚨</span> <span>Enviar Alerta & Despachar a Make.com (POST)</span>';
-        }
-      }
-    }
-
     /* ----------------------------------------------------------------------
        10.B. PESTAÑA PLAYGROUND: CONSOLA DE PRUEBAS & EDITOR LIBRE DE JSON MAKE
        Permite copiar, pegar y enviar cualquier JSON libre hacia Make.com
