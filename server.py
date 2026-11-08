@@ -242,6 +242,16 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data_bytes)
 
+    def _send_html(self, status_code, html_content):
+        data = html_content.encode('utf-8')
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Length', str(len(data)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.end_headers()
+        self.wfile.write(data)
+
     def _read_body_json(self):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
@@ -372,6 +382,48 @@ class CustomHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if path_clean in ['/healthz', '/api/health', '/api/health/status', '/api/v1/health']:
+            accept_header = self.headers.get('Accept', '')
+            if 'text/html' in accept_header and not query.get('json'):
+                html_resp = """<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mrs. Pets — Estado de Salud del Servidor</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0F172A; color: #F8FAFC; margin: 0; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+    .card { background: #1E293B; border: 1.5px solid #D4AF37; border-radius: 24px; padding: 34px; max-width: 520px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.6); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 99px; font-weight: 800; font-size: 0.8rem; background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid #10B981; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px 0; font-size: 1.55rem; color: #FFFFFF; font-weight: 900; }
+    p { margin: 0 0 20px 0; font-size: 0.88rem; color: #94A3B8; line-height: 1.5; }
+    .metric { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #334155; font-size: 0.88rem; }
+    .metric:last-child { border-bottom: none; }
+    .metric span { color: #94A3B8; font-weight: 600; }
+    .metric strong { color: #F8FAFC; font-weight: 700; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 13px; margin-top: 12px; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 0.9rem; cursor: pointer; border: none; }
+    .btn-gold { background: linear-gradient(135deg, #D4AF37, #B8860B); color: #0F172A; box-shadow: 0 4px 15px rgba(212,175,55,0.3); }
+    .btn-outline { background: rgba(255,255,255,0.06); border: 1.5px solid #475569; color: #CBD5E1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🟢 OPERATIVO • HTTP 200 OK</div>
+    <h1>🏥 Servidor Mrs. Pets & MisiPet</h1>
+    <p>Verificación de salud del entorno operativo local (Puerto 8080).</p>
+    <div class="metric"><span>Estado del Servidor:</span><strong style="color:#34D399;">🟢 ONLINE (100% Operativo)</strong></div>
+    <div class="metric"><span>Versión del Núcleo:</span><strong>2.4.0 (Silent Luxury Engine)</strong></div>
+    <div class="metric"><span>Cerebro QA Anti-Blank:</span><strong style="color:#FBBF24;">🛡️ Blindado Activo</strong></div>
+    <div class="metric"><span>Cloud Gateway (Render):</span><strong>mrspets-portal.onrender.com</strong></div>
+    <div style="margin-top: 24px;">
+      <a class="btn btn-gold" href="/">🐾 Abrir Portal Concierge VIP Mrs. Pets</a>
+      <a class="btn btn-outline" href="/?warroom=1">⚡ Consola Cuarto de Guerra (War Room)</a>
+      <a class="btn btn-outline" href="/healthz?json=1">📋 Ver Respuesta JSON Cruda</a>
+    </div>
+  </div>
+</body>
+</html>"""
+                self._send_html(200, html_resp)
+                return
             self._send_json(200, {"status": "ok", "service": "Mrs. Pets & MisiPet Multi-Module Server", "version": "2.4.0"})
             return
 
