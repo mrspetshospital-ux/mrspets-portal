@@ -1578,6 +1578,29 @@ def war_room_get_config():
     }
 
 
+@app.post("/api/v1/war-room/chat")
+async def war_room_post_chat(request: Request):
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    sender = body.get("sender", "Dirección General & Mando Operativo")
+    role = body.get("role", "Dirección General")
+    message = str(body.get("message", "")).strip()
+    node_id = body.get("node_id", "harryt")
+
+    if not message:
+        return {"status": "error", "message": "Mensaje vacío"}
+
+    if war_room_engine:
+        msg = war_room_engine.add_chat_message(sender, role, message, node_id)
+        return {"status": "success", "message": msg}
+
+    return {"status": "success", "echo": message}
+
+
 @app.post("/api/v1/war-room/config")
 async def war_room_save_config(request: Request):
     body = {}
