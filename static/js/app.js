@@ -160,42 +160,16 @@ class App {
     }, true);
   }
 
-  // 🛡️ REGLA EXCLUSIVA SIDEBAR: Navegación fluida y auto-cierre al seleccionar opción
+  // 🛡️ REGLA EXCLUSIVA SIDEBAR: Navegación fluida y scroll independiente
   initSidebarAccordionControl() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    const sidebarFamilies = sidebar.querySelectorAll('details.nav-family');
-    let isTogglingFamily = false;
-
-    // 1. Escucha reactiva en evento 'toggle' nativo con bandera de protección contra rebotes
-    sidebarFamilies.forEach(family => {
-      family.addEventListener('toggle', () => {
-        if (isTogglingFamily) return;
-        if (family.open) {
-          isTogglingFamily = true;
-          sidebarFamilies.forEach(other => {
-            if (other !== family && other.open) {
-              other.removeAttribute('open');
-              other.open = false;
-            }
-          });
-          isTogglingFamily = false;
-        }
-      });
-    });
-
-    // 2. Al hacer clic en cualquier .nav-item (persona, servicio, modal o pestaña):
-    // Auto-cerrar el cajón lateral en dispositivos móviles para despejar la pantalla completa
+    // Al hacer clic en una opción final (.nav-item) en dispositivos móviles, auto-cerrar el drawer para mostrar la vista
     const allSidebarNavItems = sidebar.querySelectorAll('.nav-item');
     allSidebarNavItems.forEach(item => {
       item.addEventListener('click', () => {
-        const parentFamily = item.closest('details.nav-family');
-        if (parentFamily && !parentFamily.open) {
-          parentFamily.open = true;
-        }
-
-        // Auto-cierre inmediato en móviles y pantallas táctiles
+        // En móviles y tablets, cerrar el cajón lateral tras elegir una opción para que el usuario disfrute de la pantalla completa
         if (window.innerWidth <= 992) {
           const mobileSidebar = document.querySelector('.sidebar');
           const mobileBackdrop = document.getElementById('mobile-sidebar-backdrop');
