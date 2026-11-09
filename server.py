@@ -2036,8 +2036,11 @@ def healthz(request: Request):
 
 
 @app.get("/video.mp4")
+@app.head("/video.mp4")
 @app.get("/concierge_video.mp4")
+@app.head("/concierge_video.mp4")
 @app.get("/flow.mp4")
+@app.head("/flow.mp4")
 def serve_splash_video():
     for cand in ["video.mp4", "concierge_video.mp4", "assets/video.mp4", "assets/concierge_video.mp4"]:
         vpath = os.path.join(STATIC_DIR, cand)
