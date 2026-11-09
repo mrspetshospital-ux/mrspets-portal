@@ -160,61 +160,47 @@ class App {
     }, true);
   }
 
-  // 🛡️ REGLA EXCLUSIVA SIDEBAR: Máximo UNA pestaña del menú de la izquierda abierta a la vez
-  // Si se abre Grooming y luego se abre Clínica Veterinaria, Grooming se cierra automáticamente.
-  // Aplica idéntico tanto para modo Staff como para modo Visitante/Cliente.
+  // 🛡️ REGLA EXCLUSIVA SIDEBAR: Navegación fluida y auto-cierre al seleccionar opción
   initSidebarAccordionControl() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
     const sidebarFamilies = sidebar.querySelectorAll('details.nav-family');
-    if (!sidebarFamilies.length) return;
+    let isTogglingFamily = false;
 
-    // 1. Interceptar el click en la cabecera (<summary>) para cerrar las demás antes de la pintura
+    // 1. Escucha reactiva en evento 'toggle' nativo con bandera de protección contra rebotes
     sidebarFamilies.forEach(family => {
-      const summary = family.querySelector('summary') || family.querySelector('.nav-family-title');
-      if (summary) {
-        summary.addEventListener('click', () => {
-          // Si esta familia está cerrada y el usuario la va a abrir:
-          if (!family.open) {
-            sidebarFamilies.forEach(other => {
-              if (other !== family && other.open) {
-                other.removeAttribute('open');
-                other.open = false;
-              }
-            });
-          }
-        });
-      }
-
-      // 2. Escucha reactiva en evento 'toggle' nativo (red de seguridad universal para teclado y APIs)
       family.addEventListener('toggle', () => {
+        if (isTogglingFamily) return;
         if (family.open) {
+          isTogglingFamily = true;
           sidebarFamilies.forEach(other => {
             if (other !== family && other.open) {
               other.removeAttribute('open');
               other.open = false;
             }
           });
+          isTogglingFamily = false;
         }
       });
     });
 
-    // 3. Al hacer clic en cualquier .nav-item dentro del menú de la izquierda
+    // 2. Al hacer clic en cualquier .nav-item (persona, servicio, modal o pestaña):
+    // Auto-cerrar el cajón lateral en dispositivos móviles para despejar la pantalla completa
     const allSidebarNavItems = sidebar.querySelectorAll('.nav-item');
     allSidebarNavItems.forEach(item => {
       item.addEventListener('click', () => {
         const parentFamily = item.closest('details.nav-family');
-        if (parentFamily) {
-          if (!parentFamily.open) {
-            parentFamily.open = true;
-          }
-          sidebarFamilies.forEach(other => {
-            if (other !== parentFamily && other.open) {
-              other.removeAttribute('open');
-              other.open = false;
-            }
-          });
+        if (parentFamily && !parentFamily.open) {
+          parentFamily.open = true;
+        }
+
+        // Auto-cierre inmediato en móviles y pantallas táctiles
+        if (window.innerWidth <= 992) {
+          const mobileSidebar = document.querySelector('.sidebar');
+          const mobileBackdrop = document.getElementById('mobile-sidebar-backdrop');
+          if (mobileSidebar) mobileSidebar.classList.remove('mobile-open');
+          if (mobileBackdrop) mobileBackdrop.style.display = 'none';
         }
       });
     });
