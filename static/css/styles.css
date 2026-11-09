@@ -82,7 +82,6 @@
 html {
   overflow-y: scroll;
   overflow-x: hidden;
-  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   scrollbar-gutter: stable;
 }
@@ -99,14 +98,13 @@ html.portal-open {
 
 body {
   font-family: var(--font-body);
-  background-color: var(--bg-dark);
+  background-color: #FBFBFD;
   color: var(--text-main);
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  overflow-x: clip;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -346,9 +344,10 @@ a:hover {
 }
 
 html.splash-bypassed #app-container {
-  display: flex !important;
+  display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 
@@ -382,10 +381,14 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-text-fill-color: transparent;
 }
 
-/* App Container Layout */
+/* App Container Layout (Pure Block Zero-Jitter Architecture) */
 #app-container {
-  display: flex;
+  display: block;
+  position: relative;
+  width: 100%;
   min-height: 100vh;
+  background: #FBFBFD;
+  box-sizing: border-box;
 }
 
 /* Sidebar - Black Obsidian & Gold */
@@ -862,16 +865,17 @@ h1, h2, h3, h4, h5, h6 {
   color: #fbbf24;
 }
 
-/* Main Content Wrapper (Zero-Jitter Hardware Accelerated) */
+/* Main Content Wrapper (Zero-Jitter Pure Block Architecture) */
 .main-wrapper {
+  display: block;
   margin-left: var(--sidebar-width);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
   width: calc(100% - var(--sidebar-width));
   max-width: calc(100% - var(--sidebar-width));
-  overflow-x: clip;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  position: relative;
+  background: #FBFBFD;
 }
 
 /* Header - Clean White & Gold (Zero-Jitter Responsive Architecture) */
@@ -890,6 +894,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 25px rgba(11, 15, 25, 0.04);
   box-sizing: border-box;
   overflow: hidden;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -914,16 +919,17 @@ h1, h2, h3, h4, h5, h6 {
   flex-shrink: 1;
   min-width: 0;
   flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 /* Control estricto anti-desbordamiento y anti-temblor al redimensionar ventana */
-@media (max-width: 1650px) {
+@media (max-width: 1750px) {
   #btn-master-auto-deploy span#btn-master-auto-deploy-text {
     display: none !important;
   }
 }
 
-@media (max-width: 1440px) {
+@media (max-width: 1550px) {
   #btn-header-api-status {
     display: none !important;
   }
@@ -932,13 +938,13 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 1350px) {
+@media (max-width: 1400px) {
   .top-header a[href*="wa.me"] {
     display: none !important;
   }
 }
 
-@media (max-width: 1250px) {
+@media (max-width: 1280px) {
   .top-header {
     padding: 0 16px;
   }
@@ -1957,12 +1963,21 @@ canvas#waveform-canvas {
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.3s ease;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay:not(.active) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .modal-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .modal-card {

@@ -186,23 +186,24 @@
           try {
             if (window.app && typeof window.app.playSuccessChime === 'function') window.app.playSuccessChime();
           } catch(e){}
-          alert(msg + '\n\nRender está compilando la última versión en vivo en https://mrspets-portal.onrender.com');
           if (btn) {
-            btn.innerHTML = '✅ <span>¡Actualizado en Render!</span>';
+            btn.innerHTML = '✅ <span>¡Actualizado en Render! (' + depId.slice(-6) + ')</span>';
             setTimeout(function() {
               btn.innerHTML = origText;
               btn.disabled = false;
-            }, 5000);
+            }, 6000);
           }
         } else {
           var errMsg = '⚠️ Error en el despliegue: ' + (data.message || 'Fallo desconocido');
           if (window.app && typeof window.app.showToast === 'function') {
             window.app.showToast(errMsg, 'danger');
           }
-          alert(errMsg);
           if (btn) {
-            btn.innerHTML = origText;
-            btn.disabled = false;
+            btn.innerHTML = '❌ <span>Reintentar</span>';
+            setTimeout(function() {
+              btn.innerHTML = origText;
+              btn.disabled = false;
+            }, 4000);
           }
         }
       })
@@ -211,10 +212,12 @@
         if (window.app && typeof window.app.showToast === 'function') {
           window.app.showToast(netErr, 'danger');
         }
-        alert(netErr);
         if (btn) {
-          btn.innerHTML = origText;
-          btn.disabled = false;
+          btn.innerHTML = '⚠️ <span>Error de Red</span>';
+          setTimeout(function() {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+          }, 4000);
         }
       });
     };
@@ -1117,10 +1120,10 @@
                 </div>
               </div>
 
-              <!-- MAIN FOREGROUND PHOTO (FOTO PRIMER PLANO) -->
-              <div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; width:100%; max-width:460px; min-width:0;">
-                <div style="position:relative; width:100%; max-width:460px; height:260px; min-height:260px; aspect-ratio:16/9; border-radius:24px; overflow:hidden; border:2px solid #C5A065; background:#1C1C1E; box-shadow: 0 12px 36px rgba(0,0,0,0.45), 0 0 25px rgba(197, 160, 101, 0.25); flex-shrink:0;">
-                  <img src="assets/main_hero.jpg" onerror="this.onerror=null; this.src='assets/media_1789775225842.jpg';" alt="Mrs. Pets Main Foreground Image - Happy Dog at Sunset" loading="eager" decoding="async" style="width:100%; height:260px; min-height:260px; max-height:260px; aspect-ratio:16/9; display:block; object-fit:cover; border-radius:20px; transform:none !important; pointer-events:none;">
+              <!-- MAIN FOREGROUND PHOTO (FOTO PRIMER PLANO ESTABLE SILENT LUXURY) -->
+              <div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; width:100%; max-width:480px; min-width:0; box-sizing:border-box;">
+                <div style="position:relative; width:100%; max-width:480px; height:270px; border-radius:24px; overflow:hidden; border:2px solid #C5A065; background:#1C1C1E; box-shadow: 0 12px 36px rgba(0,0,0,0.45), 0 0 25px rgba(197, 160, 101, 0.25); flex-shrink:0; box-sizing:border-box;">
+                  <img src="assets/main_hero.jpg" onerror="this.onerror=null; this.src='assets/media_1789775225842.jpg';" alt="Mrs. Pets Main Foreground Image - Happy Dog at Sunset" loading="eager" decoding="async" style="width:100%; height:100%; display:block; object-fit:cover; border-radius:20px; transform:none !important; pointer-events:none;">
                   <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top, rgba(16,24,32,0.92), transparent); padding:16px; text-align:center; color:#F5E6C8; font-weight:700; font-size:0.85rem; letter-spacing:0.05em; pointer-events:none;">
                     🐾 Experiencia al Aire Libre y Libertad en Mrs. Pets
                   </div>

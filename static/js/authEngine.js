@@ -837,15 +837,19 @@ class AuthEngine {
     }
 
     if (splash) {
-      splash.style.transition = 'opacity 0.3s ease';
+      splash.style.transition = 'none';
       splash.style.opacity = '0';
       splash.style.visibility = 'hidden';
-      setTimeout(() => {
-        if (splash && this.isVideoFinished) {
-          splash.style.setProperty('display', 'none', 'important');
-          splash.style.setProperty('pointer-events', 'none', 'important');
-        }
-      }, 300);
+      splash.style.setProperty('display', 'none', 'important');
+      splash.style.setProperty('pointer-events', 'none', 'important');
+    }
+
+    const splashVid = document.getElementById('brand-splash-video');
+    if (splashVid) {
+      try {
+        splashVid.pause();
+        splashVid.style.display = 'none';
+      } catch(e) {}
     }
 
     if (appContainer) {
@@ -1004,7 +1008,7 @@ class AuthEngine {
     }
 
     if (appContainer) {
-      appContainer.style.setProperty('display', 'flex', 'important');
+      appContainer.style.setProperty('display', 'block', 'important');
       appContainer.style.opacity = '1';
       appContainer.style.visibility = 'visible';
       appContainer.style.setProperty('pointer-events', 'auto', 'important');
