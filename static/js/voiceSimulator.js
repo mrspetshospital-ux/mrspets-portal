@@ -88,7 +88,35 @@ class VoiceSimulator {
     }
 
     // Initial Agent Greeting for Mrs Pets (Leia)
-    const greeting = '¡Hola! Gracias por llamar a Mrs. Pets en la Avenida 2 El Milagro, Maracaibo. Soy Leia 🎀, tu Asistente Ejecutiva y Concierge VIP. Nuestra filosofía es: "We see pets — donde recibimos mascotas y despedimos amigos". ¿Ya eres un chico Mrs. Pet o eres un cliente nuevo? Te recuerdo con orgullo que todos nuestros paquetes de estética incluyen la hidratación de pulpejos para tu príncipe o princesa, y nuestra atención presencial en sucursal finaliza de manera estricta a las 6:00 p.m. ¿En qué te puedo servir hoy?';
+    const isClient = (window.authEngine && window.authEngine.userRole === 'client') ||
+                     localStorage.getItem('mrs_pets_auth_role') === 'client' ||
+                     sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
+
+    let greeting = '';
+    if (isClient) {
+      let petName = 'Sofía';
+      let tutorTitle = 'Sra. Dalibel';
+      const savedPetId = localStorage.getItem('mrs_pets_active_vip_patient_id') || (window.authEngine && window.authEngine.currentVipPetId);
+      let patient = null;
+      if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {
+        patient = window.authEngine.getPatientById(savedPetId);
+      }
+      if (patient) {
+        petName = patient.name || patient.petName || 'Sofía';
+        const rawOwner = patient.owner || patient.ownerName || 'Dalybell Ramírez Montilla';
+        if (rawOwner.toLowerCase().includes('dalybel') || rawOwner.toLowerCase().includes('dalibel') || rawOwner.toLowerCase().includes('talibel')) {
+          tutorTitle = 'Sra. Dalibel';
+        } else {
+          tutorTitle = `Sra. ${rawOwner.split(' ')[0]}`;
+        }
+      }
+      const petHonorific = (petName.toLowerCase().includes('thor') || petName.toLowerCase().includes('buddy')) ? 'príncipe' : 'princesa';
+      const petAddress = petName.toLowerCase() === petHonorific ? petHonorific : `${petHonorific} ${petName}`;
+
+      greeting = `¡Hola! Gracias por llamar a Mrs. Pets. Soy Leia 🎀. ¿Cómo estás, ${petAddress}? El día de hoy, ¿cómo está, ${tutorTitle}? Qué alegría saludarle. ¿En qué puedo ayudarle hoy? ¿Desea hacer una reserva?`;
+    } else {
+      greeting = '¡Hola! Gracias por llamar a Mrs. Pets en la Avenida 2 El Milagro, Maracaibo. Soy Leia 🎀, tu Asistente Ejecutiva y Concierge VIP. Nuestra filosofía es: "We see pets — donde recibimos mascotas y despedimos amigos". ¿Ya eres un chico Mrs. Pet o eres un cliente nuevo? Te recuerdo con orgullo que todos nuestros paquetes de estética incluyen la hidratación de pulpejos para tu príncipe o princesa, y nuestra atención presencial en sucursal finaliza de manera estricta a las 6:00 p.m. ¿En qué te puedo servir hoy?';
+    }
     this.addTranscript('agent', greeting);
     this.speak(greeting);
 
@@ -191,7 +219,14 @@ class VoiceSimulator {
         } else if (lower.includes('pago') || lower.includes('tarjeta') || lower.includes('zelle')) {
           reply = "En Mrs Pets aceptamos Tarjetas de Crédito/Débito, Zelle, PayPal y pagos electrónicos inmediatos.";
         } else if (lower.includes('cita') || lower.includes('reserva') || lower.includes('grooming')) {
-          reply = "¡Con gusto! En Mrs Pets Maracaibo agendamos tu turno de grooming o estadía de hotel. ¿Qué día te gustaría agendar?";
+          const isClientUser = (window.authEngine && window.authEngine.userRole === 'client') ||
+                               localStorage.getItem('mrs_pets_auth_role') === 'client' ||
+                               sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
+          if (isClientUser) {
+            reply = "¡Con el mayor de los gustos, Sra. Dalibel! Podemos coordinar de inmediato el turno de grooming spa o consulta médica para consentir a Sofía. ¿Para qué fecha y hora le gustaría agendar?";
+          } else {
+            reply = "¡Con gusto! En Mrs Pets Maracaibo agendamos tu turno de grooming o estadía de hotel. ¿Qué día te gustaría agendar?";
+          }
         } else {
           reply = "Entendido. En Mrs Pets estamos para servirte. ¿Deseas consultar sobre tu mascota, agendar una cita o adquirir un producto?";
         }

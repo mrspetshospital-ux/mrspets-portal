@@ -493,10 +493,44 @@ class MrsPetsArchitectureEngine {
         if (target) this.triggerTinkerbellEffect(target);
         this.updateChatHeaderSessionBadge();
         this.syncModelSelectors();
+        this.syncInitialGreetingForCurrentSession();
         setTimeout(() => {
           const input = document.getElementById('leia-chat-input');
           if (input) input.focus();
         }, 150);
+      }
+    }
+  }
+
+  syncInitialGreetingForCurrentSession() {
+    const container = document.getElementById('leia-chat-messages');
+    if (!container) return;
+    const session = this.getActiveSessionContext();
+
+    if (session.userType === 'client') {
+      const petName = session.petName ? session.petName.split(' ')[0].replace(/[\(\)]/g, '') : 'Sofía';
+      const petHonorific = (petName.toLowerCase().includes('thor') || petName.toLowerCase().includes('buddy') || petName.toLowerCase().includes('max')) ? 'príncipe' : 'princesa';
+      const petAddress = petName.toLowerCase() === petHonorific ? petHonorific : `${petHonorific} ${petName}`;
+
+      let tutorHonorific = 'Sra. Dalibel';
+      const normOwner = (session.userName || '').toLowerCase();
+      if (normOwner.includes('dalybel') || normOwner.includes('dalibel') || normOwner.includes('talibel')) {
+        tutorHonorific = 'Sra. Dalibel';
+      } else if (normOwner.includes('dra.') || normOwner.includes('dr.')) {
+        tutorHonorific = session.userName;
+      } else if (session.userName) {
+        tutorHonorific = `Sra. ${session.userName.split(' ')[0]}`;
+      }
+
+      // Solo si el contenedor tiene el saludo por defecto de invitado
+      if (container.children.length <= 1 || container.innerHTML.includes('¿Con quién tengo el gusto')) {
+        container.innerHTML = `
+          <div class="leia-client-bot-bubble" style="background:#1e293b !important; color:#ffffff !important; padding:12px 14px; border-radius:14px 14px 14px 2px; border:1px solid rgba(251,191,36,0.35); line-height:1.5;">
+            <span style="color:#ffffff !important;">¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás, ${petAddress}? ✨🐾<br><br>
+            El día de hoy, ¿cómo está, <strong style="color:#fef08a !important;">${tutorHonorific}</strong>? Qué gran alegría tenerlas en casa.<br><br>
+            ¿En qué puedo ayudarle hoy? <strong>¿Desea hacer una reserva?</strong></span>
+          </div>
+        `;
       }
     }
   }
@@ -851,15 +885,27 @@ class MrsPetsArchitectureEngine {
       let activePetName = null;
       let activePetSpecies = null;
 
-      if (savedPetId && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-        const p = window.petStatusEngine.pets.find(pet => pet.id === savedPetId);
+      if (savedPetId) {
+        let p = null;
+        if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {
+          p = window.authEngine.getPatientById(savedPetId);
+        }
+        if (!p && window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+          p = window.adminEngine.patientsStatus.find(pet => pet.id === savedPetId);
+        }
+        if (!p && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+          p = window.petStatusEngine.pets.find(pet => pet.id === savedPetId);
+        }
         if (p) {
-          activePetName = p.petName;
+          activePetName = p.name || p.petName;
           activePetSpecies = p.species;
           if (!clientName || clientName === 'Tutor VIP') {
-            clientName = p.ownerName;
+            clientName = p.owner || p.ownerName;
           }
         }
+      }
+      if (!activePetName && (clientName.toLowerCase().includes('dalybel') || clientName.toLowerCase().includes('dalibel'))) {
+        activePetName = 'Sofía';
       }
 
       return {

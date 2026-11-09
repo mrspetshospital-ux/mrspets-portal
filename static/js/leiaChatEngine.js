@@ -55,7 +55,68 @@
             return false;
         },
 
+        getCurrentClientContext() {
+            const isClient = (window.authEngine && window.authEngine.userRole === 'client') ||
+                             localStorage.getItem('mrs_pets_auth_role') === 'client' ||
+                             sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
+
+            if (!isClient) return null;
+
+            const petId = (window.authEngine && window.authEngine.currentVipPetId) ||
+                          localStorage.getItem('mrs_pets_active_vip_patient_id') ||
+                          'PET-100';
+
+            let patient = null;
+            if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {
+                patient = window.authEngine.getPatientById(petId);
+            }
+            if (!patient && window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+                patient = window.adminEngine.patientsStatus.find(p => p.id === petId);
+            }
+            if (!patient && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+                patient = window.petStatusEngine.pets.find(p => p.id === petId);
+            }
+
+            let rawOwner = (patient && (patient.owner || patient.ownerName)) ||
+                           (window.authEngine && window.authEngine.userName) ||
+                           localStorage.getItem('mrs_pets_active_customer_name') ||
+                           'Dalybell Ramírez Montilla';
+
+            let cleanOwner = rawOwner.split('(')[0].replace(/Tutor de .*/i, '').trim();
+
+            let tutorHonorific = 'Sra. Dalibel';
+            const normOwner = cleanOwner.toLowerCase();
+            if (normOwner.includes('dalybel') || normOwner.includes('dalibel') || normOwner.includes('talibel')) {
+                tutorHonorific = 'Sra. Dalibel';
+            } else if (normOwner.includes('dra.') || normOwner.includes('dr.')) {
+                tutorHonorific = cleanOwner;
+            } else if (cleanOwner) {
+                tutorHonorific = `Sra. ${cleanOwner.split(' ')[0]}`;
+            }
+
+            let petName = (patient && (patient.name || patient.petName)) || 'Sofía';
+            let petHonorific = 'princesa';
+            const normPet = petName.toLowerCase();
+            if (normPet.includes('thor') || normPet.includes('buddy') || normPet.includes('max') || normPet.includes('rudy') || normPet.includes('carlos')) {
+                petHonorific = 'príncipe';
+            }
+
+            return {
+                isClient: true,
+                petId: petId,
+                petName: petName,
+                petHonorific: petHonorific,
+                tutorHonorific: tutorHonorific,
+                ownerName: cleanOwner,
+                patient: patient
+            };
+        },
+
         getCurrentUser() {
+            const client = this.getCurrentClientContext();
+            if (client) {
+                return { name: client.tutorHonorific, role: 'client', petName: client.petName };
+            }
             if (window.AuthEngine && window.AuthEngine.currentUser) {
                 return window.AuthEngine.currentUser;
             }
@@ -188,9 +249,16 @@
         },
 
         setupEventListeners() {
-            // Sincronizar rol cuando cambia el estado de auth
+            // Sincronizar rol y recargar saludo cuando cambia el estado de auth o perfil VIP
             window.addEventListener('auth_state_changed', () => {
                 this.updateRoleView();
+                if (this.messages.length <= 1) {
+                    this.loadInitialGreeting(true);
+                }
+            });
+            window.addEventListener('vip_profile_selected', () => {
+                this.updateRoleView();
+                this.loadInitialGreeting(true);
             });
         },
 
@@ -202,6 +270,14 @@
             if (drawer) {
                 drawer.style.display = this.isOpen ? 'flex' : 'none';
                 if (this.isOpen) {
+                    // Si el chat solo tiene el saludo inicial y se identificó un cliente, refrescar
+                    if (this.messages.length <= 1) {
+                        const client = this.getCurrentClientContext();
+                        const firstMsg = this.messages[0] ? this.messages[0].text : '';
+                        if (client && !firstMsg.includes(client.tutorHonorific)) {
+                            this.loadInitialGreeting(true);
+                        }
+                    }
                     this.updateRoleView();
                     this.scrollToBottom();
                     const input = document.getElementById('leia-chat-text-input');
@@ -216,10 +292,13 @@
         updateRoleView() {
             const roleBadge = document.getElementById('leia-header-role-badge');
             const isStaff = this.isStaffActive();
+            const client = this.getCurrentClientContext();
             const user = this.getCurrentUser();
 
             if (roleBadge) {
-                if (isStaff) {
+                if (client) {
+                    roleBadge.innerHTML = `<span class="badge-role-client" style="color:#fef08a !important; font-weight:800;">👑 Tutor VIP: ${client.tutorHonorific} (${client.petName})</span>`;
+                } else if (isStaff) {
                     roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name}) • Leia VIP</span>`;
                 } else {
                     roleBadge.innerHTML = `<span>Atención a Clientes & Search Concierge • Av. 2 El Milagro</span>`;
@@ -227,13 +306,40 @@
             }
         },
 
-        loadInitialGreeting() {
-            if (this.messages.length > 0) return;
+        loadInitialGreeting(force = false) {
+            if (this.messages.length > 0 && !force) return;
 
             const isStaff = this.isStaffActive();
+            const client = this.getCurrentClientContext();
             const user = this.getCurrentUser();
 
-            if (isStaff) {
+            if (force) {
+                this.messages = [];
+            }
+
+            if (client) {
+                this.lastActivePetName = client.petName;
+                this.tutorName = client.tutorHonorific;
+
+                // Formular saludo personalizado exacto para el tutor y mascota identificada
+                const petAddress = client.petName.toLowerCase() === client.petHonorific 
+                    ? client.petHonorific 
+                    : `${client.petHonorific} ${client.petName}`;
+
+                this.addMessage({
+                    sender: 'leia',
+                    text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo ayudarle hoy? ¿Desea hacer una reserva?`,
+                    buttons: [
+                        '📅 Deseo hacer una reserva',
+                        '✂️ Grooming & Spa VIP',
+                        '🩺 Consulta Médica',
+                        '🏨 Hotel VIP 5★',
+                        '🛍️ Tienda Boutique',
+                        '🤝 Hablar con Administración'
+                    ],
+                    timestamp: new Date()
+                });
+            } else if (isStaff) {
                 this.addMessage({
                     sender: 'leia',
                     text: `¡Hola **${user.name}**! Te saluda **Leia 🎀** (Atención Ejecutiva & Staff).\n\nPuedo apoyarte con consultas administrativas, coordinación de citas o enlace con el Comité Volturi (Talibel, Manolo, Valeria, Mike, Charly). ¿En qué podemos avanzar hoy?`,
@@ -826,8 +932,72 @@
                 }
             }
 
+            const client = this.getCurrentClientContext();
+
+            // 2.1.1 Acciones Directas de Apertura de Reservas para Clientes Identificados
+            if (t.includes('abrir reserva grooming') || t === '✂️ grooming & spa vip') {
+                if (window.clinicaEngine && typeof window.clinicaEngine.openGroomingBookingModal === 'function') {
+                    window.clinicaEngine.openGroomingBookingModal();
+                } else if (window.app && typeof window.app.openModal === 'function') {
+                    window.app.openModal('booking-modal-grooming');
+                }
+                const pet = client ? client.petName : 'su consentida';
+                const tutor = client ? client.tutorHonorific : 'Estimado tutor';
+                this.addMessage({
+                    sender: 'leia',
+                    text: `✂️ **¡Excelente, ${tutor}!** He abierto en pantalla el formulario de **Grooming & Spa** para **${pet}**.\n\nSus datos ya están precargados. Le recordamos con orgullo que la **hidratación de pulpejos** está siempre incluida y nuestra atención en sucursal (Av. 2 El Milagro) es hasta las 6:00 p.m. ✨`,
+                    buttons: ['📅 Revisar Horarios', '🤝 Hablar con Administración'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            if (t.includes('abrir reserva clinica') || t.includes('abrir reserva veterinaria') || t === '🩺 consulta médica') {
+                if (window.clinicaEngine && typeof window.clinicaEngine.openClinicaBookingModal === 'function') {
+                    window.clinicaEngine.openClinicaBookingModal();
+                } else if (window.app && typeof window.app.openModal === 'function') {
+                    window.app.openModal('booking-modal-clinica');
+                }
+                const pet = client ? client.petName : 'su consentida';
+                const tutor = client ? client.tutorHonorific : 'Estimado tutor';
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🩺 **¡Por supuesto, ${tutor}!** He desplegado el módulo de **Consulta Médica Veterinaria** para **${pet}** con nuestro equipo clínico de guardia (Dr. Alejandro Morales).`,
+                    buttons: ['📅 Agendar Cita Médica', '🤝 Hablar con Administración'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
+            if (t.includes('abrir reserva hotel') || t === '🏨 hotel vip 5★') {
+                if (window.clinicaEngine && typeof window.clinicaEngine.openHotelBookingModal === 'function') {
+                    window.clinicaEngine.openHotelBookingModal();
+                } else if (window.app && typeof window.app.openModal === 'function') {
+                    window.app.openModal('booking-modal-hotel');
+                }
+                const pet = client ? client.petName : 'su consentida';
+                const tutor = client ? client.tutorHonorific : 'Estimado tutor';
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🏨 **¡Con todo gusto, ${tutor}!** He desplegado la reserva de **Suite Bioclimática (Hotel 5★)** para **${pet}** con monitoreo 24/7 y parque recreativo libre de estrés.`,
+                    buttons: ['📅 Confirmar Estadía', '🤝 Hablar con Administración'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
             // 2.2 Deseo hacer una reserva / Cita (incluso en Search)
             if (t.includes('reserva') || t.includes('reservar') || t.includes('cita') || t.includes('agendar') || t.includes('turno')) {
+                if (client) {
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia:** 📅 **¡Con el mayor de los gustos, ${client.tutorHonorific}!**\n\nPara consentir a **${client.petName}** como la princesa que es ✨🐾, ¿cuál de nuestros servicios exclusivos desea agendar?\n\n1️⃣ ✂️ **Circuito Grooming Spa 7 Estaciones** (con baño relajante, ozonoterapia e hidratación de pulpejos obligatoria).\n2️⃣ 🩺 **Consulta Médica Veterinaria** (laboratorio IDEXX in-house y triaje de guardia).\n3️⃣ 🏨 **Hospedaje en Suites Bioclimáticas (Hotel VIP 5★)**.\n\n*Puede pulsar una de las opciones para abrir directamente su formulario prioritario con sus datos precargados:*`,
+                        buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                        timestamp: new Date()
+                    });
+                    return;
+                }
+
                 const pet = this.lastActivePetName || 'tu príncipe o princesa';
                 this.addMessage({
                     sender: 'leia',
@@ -1002,7 +1172,17 @@
                 return;
             }
 
-            // Respuesta por defecto cálida de Leia Concierge VIP
+            // Respuesta por defecto cálida de Leia Concierge VIP (Personalizada si el cliente está identificado)
+            if (client) {
+                this.addMessage({
+                    sender: 'leia',
+                    text: `¡Con el mayor cariño, **${client.tutorHonorific}**! Estoy a su completa disposición para consentir a **${client.petName}** como la princesa que es ✨🐾.\n\n¿En qué puedo orientarle hoy? ¿Desea hacer una reserva, consultar horarios o enlazarse con Administración?`,
+                    buttons: ['📅 Deseo hacer una reserva', '✂️ Grooming & Spa VIP', '🩺 Consulta Médica', '🏨 Hotel VIP 5★', '🛍️ Tienda Boutique', '🤝 Hablar con Administración'],
+                    timestamp: new Date()
+                });
+                return;
+            }
+
             this.addMessage({
                 sender: 'leia',
                 text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre cualquiera de nuestras 4 áreas de servicio: Grooming Spa, Clínica, Hotel, Tienda, o pedirme comunicarte con Talibel y el área de Administración)*.`,

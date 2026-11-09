@@ -1216,6 +1216,29 @@ class AuthEngine {
     } else if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets) && window.petStatusEngine.pets.length > 0) {
       patients = [...window.petStatusEngine.pets];
     }
+    const hasSofia = patients.some(p => this.normalizeSearchStr(p.name || p.petName).includes('sofia'));
+    if (!hasSofia) {
+      patients.unshift({
+        id: 'PET-100',
+        name: 'Sofía',
+        petName: 'Sofía',
+        species: 'Yorkshire Terrier VIP (Princesa)',
+        owner: 'Dalybell Ramírez Montilla',
+        ownerName: 'Dalybell Ramírez Montilla',
+        rif: 'V-18.452.910',
+        email: 'dalybell.montilla@example.com',
+        ownerPhone: '+58 414-3891102',
+        pin: '1234',
+        area: 'grooming',
+        stepIndex: 1,
+        turno: 1,
+        turnTicket: 'G-001',
+        notes: 'Princesa Sofía consentida VIP. Circuito Spa con hidratación de pulpejos obligatoria.',
+        photo: 'assets/media__1787695246337.jpg',
+        image: 'assets/media__1787695246337.jpg',
+        ownerPhoto: 'assets/leia_avatar.jpg'
+      });
+    }
     const hasDalybell = patients.some(p => this.normalizeSearchStr(p.owner || p.ownerName).includes('dalybel'));
     if (!hasDalybell) {
       patients.unshift({
@@ -1607,7 +1630,7 @@ class AuthEngine {
   selectVipProfileVerified(petId) {
     const patient = this.getPatientById(petId);
     const ownerName = patient ? (patient.owner || patient.ownerName) : 'Dalybell Ramírez Montilla';
-    const petName = patient ? (patient.name || patient.petName) : 'Princesa';
+    const petName = patient ? (patient.name || patient.petName) : 'Sofía';
 
     this.currentVipPetId = petId;
     localStorage.setItem('mrs_pets_active_vip_patient_id', petId);
@@ -1639,6 +1662,23 @@ class AuthEngine {
     window._isVerifyingProfilePin = false;
 
     this.loginSuccess('client', `${ownerName} (Tutor de ${petName})`);
+
+    // Notificación inmediata al ecosistema conversacional de Leia
+    try {
+      window.dispatchEvent(new CustomEvent('vip_profile_selected', { 
+        detail: { petId, ownerName, petName, patient } 
+      }));
+      window.dispatchEvent(new CustomEvent('auth_state_changed', { 
+        detail: { role: 'client', userName: `${ownerName} (Tutor de ${petName})`, petId, petName } 
+      }));
+    } catch (e) {}
+
+    if (window.LeiaChatEngine && typeof window.LeiaChatEngine.loadInitialGreeting === 'function') {
+      window.LeiaChatEngine.loadInitialGreeting(true);
+    }
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.syncInitialGreetingForCurrentSession === 'function') {
+      window.mrsPetsArch.syncInitialGreetingForCurrentSession();
+    }
 
     if (window.adminEngine && typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
       window.adminEngine.updateHeaderAccountDisplay();
@@ -2020,6 +2060,16 @@ class AuthEngine {
       }
     }
 
+    try {
+      window.dispatchEvent(new CustomEvent('auth_state_changed', { detail: { role: this.userRole, userName: this.userName } }));
+    } catch(e) {}
+    if (window.LeiaChatEngine && typeof window.LeiaChatEngine.loadInitialGreeting === 'function') {
+      window.LeiaChatEngine.loadInitialGreeting(true);
+    }
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.syncInitialGreetingForCurrentSession === 'function') {
+      window.mrsPetsArch.syncInitialGreetingForCurrentSession();
+    }
+
     if (window.app) {
       window.app.showToast(`✨ Bienvenid@ ${userName} al Portal Mrs. Pets`, 'success');
       if (typeof window.app.switchTab === 'function') {
@@ -2082,6 +2132,16 @@ class AuthEngine {
         }
       });
     } catch(e) {}
+
+    try {
+      window.dispatchEvent(new CustomEvent('auth_state_changed', { detail: { role: 'visitor', userName: 'Visitante VIP' } }));
+    } catch(e) {}
+    if (window.LeiaChatEngine && typeof window.LeiaChatEngine.loadInitialGreeting === 'function') {
+      window.LeiaChatEngine.loadInitialGreeting(true);
+    }
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.syncInitialGreetingForCurrentSession === 'function') {
+      window.mrsPetsArch.syncInitialGreetingForCurrentSession();
+    }
 
     document.documentElement.classList.remove('splash-bypassed');
 
