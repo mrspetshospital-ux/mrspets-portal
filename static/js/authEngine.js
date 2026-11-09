@@ -791,6 +791,7 @@ class AuthEngine {
       try {
         videoEl.pause();
         videoEl.currentTime = 0;
+        videoEl.style.display = 'none';
       } catch(e) {}
     }
 
@@ -809,8 +810,9 @@ class AuthEngine {
       portal.scrollTop = 0;
       portal.classList.add('active');
       portal.style.transition = 'none';
-      portal.style.display = 'block';
-      portal.style.setProperty('display', 'block', 'important');
+      portal.style.display = 'flex';
+      portal.style.setProperty('display', 'flex', 'important');
+      portal.style.setProperty('flex-direction', 'column', 'important');
       portal.style.setProperty('align-items', 'center', 'important');
       portal.style.setProperty('justify-content', 'flex-start', 'important');
       portal.style.setProperty('visibility', 'visible', 'important');
@@ -970,12 +972,13 @@ class AuthEngine {
       document.body.style.backgroundColor = '';
     }
 
-    // Pause video so background ended events do not trigger portal transition
+    // Pause video and hide so background ended events do not trigger portal transition
     const videoEl = document.getElementById('brand-splash-video');
     if (videoEl) {
       try {
         videoEl.pause();
         videoEl.currentTime = 0;
+        videoEl.style.display = 'none';
       } catch(e) {}
     }
 
@@ -1079,9 +1082,9 @@ class AuthEngine {
     this.checkAndLoadSavedVideo();
 
     // Temporizador de respaldo de navegación: Transición al Paso 2 (Portal Concierge VIP)
-    // En móviles/tablets usamos 2.0s para evitar pantallas en espera prolongadas
+    // En móviles/tablets usamos 800ms para evitar pantallas en espera prolongadas
     const isMobile = (typeof window !== 'undefined') && (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
-    const splashTimeout = isMobile ? 2000 : 10500;
+    const splashTimeout = isMobile ? 800 : 10500;
 
     if (this.splashTimer) clearTimeout(this.splashTimer);
     this.splashTimer = setTimeout(() => {
