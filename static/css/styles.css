@@ -934,23 +934,10 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: flex-end;
 }
 
-/* Ocultar en la cabecera los botones redundantes que ya están destacados en el Menú Lateral y en el Banner */
+/* Ocultar en la cabecera los botones redundantes */
 #btn-main-header-concierge-portal,
 #btn-main-header-action {
   display: none !important;
-}
-
-/* Control estricto anti-desbordamiento y anti-temblor al redimensionar ventana */
-@media (max-width: 1400px) {
-  #btn-header-api-status {
-    display: none !important;
-  }
-}
-
-@media (max-width: 1250px) {
-  .top-header a[href*="wa.me"] {
-    display: none !important;
-  }
 }
 
 @media (max-width: 1100px) {
