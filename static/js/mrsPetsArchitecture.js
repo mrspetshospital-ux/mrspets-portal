@@ -339,10 +339,34 @@ class MrsPetsArchitectureEngine {
   toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const container = document.getElementById('app-container');
+    if (window.innerWidth <= 992) {
+      let backdrop = document.getElementById('mobile-sidebar-backdrop');
+      if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'mobile-sidebar-backdrop';
+        backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:9999; display:none; transition:opacity 0.25s ease;';
+        backdrop.onclick = () => {
+          if (sidebar) sidebar.classList.remove('mobile-open');
+          backdrop.style.display = 'none';
+        };
+        document.body.appendChild(backdrop);
+      }
+      if (sidebar) {
+        sidebar.classList.toggle('mobile-open');
+        const isOpen = sidebar.classList.contains('mobile-open');
+        backdrop.style.display = isOpen ? 'block' : 'none';
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(isOpen ? '📌 Menú de navegación abierto' : '📌 Menú cerrado', 'info');
+        }
+      }
+      return;
+    }
     if (sidebar) sidebar.classList.toggle('collapsed');
     if (container) container.classList.toggle('sidebar-collapsed');
     const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
-    if (window.app) window.app.showToast(isCollapsed ? '📌 Menú lateral contraído' : '📌 Menú lateral expandido', 'info');
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(isCollapsed ? '📌 Menú lateral contraído' : '📌 Menú lateral expandido', 'info');
+    }
   }
 
   // =========================================================================

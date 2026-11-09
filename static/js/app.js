@@ -362,6 +362,14 @@ class App {
       }
     }
 
+    // Auto-cerrar cajón lateral en dispositivos móviles/tablets al cambiar de pestaña
+    if (window.innerWidth <= 992) {
+      const mobileSidebar = document.querySelector('.sidebar');
+      const mobileBackdrop = document.getElementById('mobile-sidebar-backdrop');
+      if (mobileSidebar) mobileSidebar.classList.remove('mobile-open');
+      if (mobileBackdrop) mobileBackdrop.style.display = 'none';
+    }
+
     // Update Content Views (Protección total contra pantallas en blanco)
     const previousView = document.querySelector('.tab-view.active');
     let activeView = document.getElementById(`tab-${tabName}`);

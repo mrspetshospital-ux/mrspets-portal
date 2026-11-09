@@ -185,8 +185,16 @@ class AuthEngine {
     const splash = document.getElementById('auth-splash-screen');
     if (splash) {
       splash.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || (e.target.closest && (e.target.closest('button') || e.target.closest('a')))) {
+          return;
+        }
+        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        if (isMobile) {
+          this.showConciergePortal();
+          return;
+        }
         const video = document.getElementById('brand-splash-video');
-        if (video && video.muted && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+        if (video && video.muted) {
           this.toggleAudio();
         }
       });
@@ -423,6 +431,26 @@ class AuthEngine {
         const splash = document.getElementById('auth-splash-screen');
         if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
           this.showConciergePortal();
+        }
+      });
+
+      // Detección proactiva de retención en móviles (Autoplay bloqueado o red móvil lenta)
+      video.addEventListener('stalled', () => {
+        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        if (isMobile && !this.isVideoFinished) {
+          console.log("[AuthEngine] Video detenido/stalled en red móvil. Transicionando a Concierge VIP sin bloqueo.");
+          this.showConciergePortal();
+        }
+      });
+      video.addEventListener('suspend', () => {
+        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        if (isMobile && video.paused && !this.isVideoFinished) {
+          setTimeout(() => {
+            if (video.paused && !this.isVideoFinished) {
+              console.log("[AuthEngine] Video suspendido por política móvil. Transicionando a Concierge VIP.");
+              this.showConciergePortal();
+            }
+          }, 900);
         }
       });
     }
@@ -724,6 +752,7 @@ class AuthEngine {
     this.isVideoFinished = true;
     if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
       document.documentElement.classList.remove('splash-bypassed');
+      document.documentElement.classList.add('portal-open');
     }
     if (document.body) {
       document.body.style.backgroundColor = '#121214';
@@ -830,6 +859,9 @@ class AuthEngine {
       this.splashTimer = null;
     }
     const portal = document.getElementById('access-links-portal');
+    if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
+      document.documentElement.classList.remove('portal-open');
+    }
     if (portal) {
       portal.classList.remove('active');
       portal.style.transition = 'opacity 0.25s ease';
@@ -932,6 +964,7 @@ class AuthEngine {
     localStorage.setItem('mrs_pets_skip_splash', 'true');
     if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
       document.documentElement.classList.add('splash-bypassed');
+      document.documentElement.classList.remove('portal-open');
     }
     if (document.body) {
       document.body.style.backgroundColor = '';
@@ -1018,6 +1051,7 @@ class AuthEngine {
     this.isVideoFinished = false;
     if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
       document.documentElement.classList.remove('splash-bypassed');
+      document.documentElement.classList.add('portal-open');
     }
     const splash = document.getElementById('auth-splash-screen');
     const portal = document.getElementById('access-links-portal');
@@ -1044,14 +1078,18 @@ class AuthEngine {
 
     this.checkAndLoadSavedVideo();
 
-    // Temporizador de respaldo de navegación: Transición al Paso 2 (Portal Concierge VIP) pasados 10.5s (duración de video 10.01s)
+    // Temporizador de respaldo de navegación: Transición al Paso 2 (Portal Concierge VIP)
+    // En móviles/tablets usamos 2.0s para evitar pantallas en espera prolongadas
+    const isMobile = (typeof window !== 'undefined') && (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+    const splashTimeout = isMobile ? 2000 : 10500;
+
     if (this.splashTimer) clearTimeout(this.splashTimer);
     this.splashTimer = setTimeout(() => {
       if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
-        console.log("Onboarding transition timer -> Paso 2: Portal Concierge VIP");
+        console.log("Onboarding transition timer -> Paso 2: Portal Concierge VIP (" + (isMobile ? "Móvil Rápido" : "Desktop") + ")");
         this.showConciergePortal();
       }
-    }, 10500);
+    }, splashTimeout);
   }
 
   skipSplashDirectlyToStaff() {
@@ -1737,6 +1775,9 @@ class AuthEngine {
 
     // 2. Mantener activo el portal Concierge VIP en pantalla completa
     const portal = document.getElementById('access-links-portal');
+    if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
+      document.documentElement.classList.remove('portal-open');
+    }
     if (portal) {
       portal.style.setProperty('display', 'block', 'important');
       portal.style.visibility = 'visible';
