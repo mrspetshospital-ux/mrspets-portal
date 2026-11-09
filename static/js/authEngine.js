@@ -185,16 +185,13 @@ class AuthEngine {
     const splash = document.getElementById('auth-splash-screen');
     if (splash) {
       splash.addEventListener('click', (e) => {
+        // Si el usuario hizo clic en un botón (ej: Saltar Video, Activar Audio, Portal Concierge), dejamos que el botón maneje el evento
         if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || (e.target.closest && (e.target.closest('button') || e.target.closest('a')))) {
           return;
         }
-        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-        if (isMobile) {
-          this.showConciergePortal();
-          return;
-        }
+        // Tocar o hacer clic en el video alterna el audio (desmutear) sin interrumpir la reproducción del video
         const video = document.getElementById('brand-splash-video');
-        if (video && video.muted) {
+        if (video) {
           this.toggleAudio();
         }
       });
@@ -296,10 +293,10 @@ class AuthEngine {
 
     if (videoEl) {
       videoEl.style.display = 'block';
-      if (typeof videoEl.load === 'function') {
+      videoEl.muted = true;
+      if (!videoEl.currentSrc && typeof videoEl.load === 'function') {
         try { videoEl.load(); } catch(e) {}
       }
-      videoEl.muted = true;
       if (typeof videoEl.play === 'function') {
         try {
           const playPromise = videoEl.play();
@@ -382,10 +379,30 @@ class AuthEngine {
   setupVideoEventListener() {
     const video = document.getElementById('brand-splash-video');
     if (video) {
+      // 1. Detección de reproducción activa: asegurar que el video corra completo sin interrupción
+      video.addEventListener('playing', () => {
+        console.log("[AuthEngine] Video en reproducción activa (" + (video.duration ? video.duration.toFixed(1) + "s" : "10s") + ").");
+        if (this.splashTimer) {
+          clearTimeout(this.splashTimer);
+          this.splashTimer = null;
+        }
+        // Temporizador de holgura post-duración para asegurar transición si el navegador no dispara 'ended'
+        const expectedDuration = (video.duration && !isNaN(video.duration) && video.duration > 0) ? video.duration : 10.0;
+        this.splashTimer = setTimeout(() => {
+          const splash = document.getElementById('auth-splash-screen');
+          if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
+            console.log("[AuthEngine] Fin de video alcanzado por duración calculada (" + (expectedDuration + 1.5) + "s). Transición al Portal Concierge VIP.");
+            this.isVideoFinished = true;
+            this.showConciergePortal();
+          }
+        }, (expectedDuration + 1.5) * 1000);
+      });
+
+      // 2. Al terminar el video naturalmente ('ended'): cargar el Portal Concierge VIP
       video.addEventListener('ended', () => {
         const splash = document.getElementById('auth-splash-screen');
         if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
-          console.log("Video ended at 10s. Transitioning to Paso 2: Portal Concierge VIP.");
+          console.log("[AuthEngine] Video finalizado al 100%. Transicionando a Portal Concierge VIP.");
           this.isVideoFinished = true;
           if (this.splashTimer) {
             clearTimeout(this.splashTimer);
@@ -395,11 +412,12 @@ class AuthEngine {
         }
       });
 
+      // 3. Respaldo por timeupdate en milésimas antes del final exacto:
       video.addEventListener('timeupdate', () => {
         if (video.duration && video.currentTime >= video.duration - 0.25 && !this.isVideoFinished) {
           const splash = document.getElementById('auth-splash-screen');
           if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden') {
-            console.log("Video reached end (timeupdate). Transitioning to Paso 2: Portal Concierge VIP.");
+            console.log("[AuthEngine] Video completado (timeupdate). Transicionando a Portal Concierge VIP.");
             this.isVideoFinished = true;
             if (this.splashTimer) {
               clearTimeout(this.splashTimer);
@@ -410,15 +428,16 @@ class AuthEngine {
         }
       });
 
+      // 4. Manejo de error de archivo o red con reintento antes de saltar:
       let errorRetryCount = 0;
       video.addEventListener('error', (e) => {
-        console.warn("Video resource loading notice:", e);
+        console.warn("[AuthEngine] Error de recurso de video:", e);
         if (errorRetryCount < 2) {
           errorRetryCount++;
           setTimeout(() => {
             try {
               if (!video.src || video.src.endsWith('video.mp4')) {
-                video.src = 'assets/mrs_pets_flow_video.mp4';
+                video.src = 'assets/concierge_video.mp4';
               } else {
                 video.src = 'video.mp4';
               }
@@ -431,26 +450,6 @@ class AuthEngine {
         const splash = document.getElementById('auth-splash-screen');
         if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
           this.showConciergePortal();
-        }
-      });
-
-      // Detección proactiva de retención en móviles (Autoplay bloqueado o red móvil lenta)
-      video.addEventListener('stalled', () => {
-        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-        if (isMobile && !this.isVideoFinished) {
-          console.log("[AuthEngine] Video detenido/stalled en red móvil. Transicionando a Concierge VIP sin bloqueo.");
-          this.showConciergePortal();
-        }
-      });
-      video.addEventListener('suspend', () => {
-        const isMobile = (window.innerWidth <= 768) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-        if (isMobile && video.paused && !this.isVideoFinished) {
-          setTimeout(() => {
-            if (video.paused && !this.isVideoFinished) {
-              console.log("[AuthEngine] Video suspendido por política móvil. Transicionando a Concierge VIP.");
-              this.showConciergePortal();
-            }
-          }, 900);
         }
       });
     }
@@ -1088,18 +1087,20 @@ class AuthEngine {
 
     this.checkAndLoadSavedVideo();
 
-    // Temporizador de respaldo de navegación: Transición al Paso 2 (Portal Concierge VIP)
-    // En móviles/tablets usamos 800ms para evitar pantallas en espera prolongadas
-    const isMobile = (typeof window !== 'undefined') && (window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
-    const splashTimeout = isMobile ? 800 : 10500;
-
+    // Temporizador de rescate pasivo SOLO si el video jamás logra reproducir (ej. fallo extremo de red)
+    // Se otorga una ventana holgada de 25 segundos para permitir carga en redes lentas sin cortar el video.
+    // Tan pronto como el video empiece a reproducirse (evento 'playing'), este temporizador se sincroniza con la duración real del video.
     if (this.splashTimer) clearTimeout(this.splashTimer);
     this.splashTimer = setTimeout(() => {
-      if (splash && splash.style.display !== 'none' && splash.style.visibility !== 'hidden' && !this.isVideoFinished) {
-        console.log("Onboarding transition timer -> Paso 2: Portal Concierge VIP (" + (isMobile ? "Móvil Rápido" : "Desktop") + ")");
-        this.showConciergePortal();
+      const splashEl = document.getElementById('auth-splash-screen');
+      const vidEl = document.getElementById('brand-splash-video');
+      if (splashEl && splashEl.style.display !== 'none' && splashEl.style.visibility !== 'hidden' && !this.isVideoFinished) {
+        if (!vidEl || vidEl.paused || vidEl.ended) {
+          console.log("[AuthEngine] Respaldo de navegación por inactividad de video -> Portal Concierge VIP.");
+          this.showConciergePortal();
+        }
       }
-    }, splashTimeout);
+    }, 25000);
   }
 
   skipSplashDirectlyToStaff() {
