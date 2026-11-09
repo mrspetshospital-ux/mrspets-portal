@@ -975,8 +975,8 @@ class AuthEngine {
     }
     if (document.body) {
       document.body.style.backgroundColor = '';
-      document.body.style.overflowY = 'auto';
-      document.body.style.overflow = '';
+      document.body.style.overflowY = 'visible';
+      document.body.style.overflow = 'visible';
     }
 
     // Pause video and hide so background ended events do not trigger portal transition

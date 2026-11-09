@@ -235,14 +235,16 @@ class App {
   switchTab(tabName, bypassAuthCheck = false, targetElement = null, areaFilter = null) {
     // 🛡️ LIBERACIÓN TOTAL E INMEDIATA DE SCROLL:
     // Asegurar que html y body permitan el desplazamiento vertical libre en cualquier pestaña
-    if (typeof document !== 'undefined' && document.documentElement) {
-      document.documentElement.classList.remove('portal-open');
-      document.documentElement.classList.add('splash-bypassed');
-      document.documentElement.style.overflowY = 'auto';
-    }
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.style.overflowY = 'auto';
-      document.body.style.overflow = '';
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) {
+        document.documentElement.classList.remove('portal-open');
+        document.documentElement.classList.add('splash-bypassed');
+        document.documentElement.style.overflowY = 'auto';
+      }
+      if (document.body) {
+        document.body.style.overflowY = 'visible';
+        document.body.style.overflow = 'visible';
+      }
     }
 
     // 🛡️ REGLA CRÍTICA DE AISLAMIENTO: MODO CANDIDATO / POSTULANTE RRHH
