@@ -233,6 +233,18 @@ class App {
   }
 
   switchTab(tabName, bypassAuthCheck = false, targetElement = null, areaFilter = null) {
+    // 🛡️ LIBERACIÓN TOTAL E INMEDIATA DE SCROLL:
+    // Asegurar que html y body permitan el desplazamiento vertical libre en cualquier pestaña
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.classList.remove('portal-open');
+      document.documentElement.classList.add('splash-bypassed');
+      document.documentElement.style.overflowY = 'auto';
+    }
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.overflowY = 'auto';
+      document.body.style.overflow = '';
+    }
+
     // 🛡️ REGLA CRÍTICA DE AISLAMIENTO: MODO CANDIDATO / POSTULANTE RRHH
     // Si el usuario está en el portal de empleo/postulación, su acceso queda estrictamente
     // limitado al formato de CV. Queda prohibida la navegación a pestañas internas.

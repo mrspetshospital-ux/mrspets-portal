@@ -80,13 +80,11 @@
 }
 
 html {
-  overflow-y: auto;
+  overflow-y: auto !important;
   overflow-x: hidden;
+  height: auto;
+  min-height: 100%;
   -webkit-text-size-adjust: 100%;
-}
-
-html.portal-open {
-  overflow: hidden !important;
 }
 
 * {
@@ -101,9 +99,11 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   min-height: 100dvh;
+  height: auto;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  overflow-y: auto !important;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -386,8 +386,10 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   width: 100%;
   min-height: 100vh;
+  height: auto;
   background: #FBFBFD;
   box-sizing: border-box;
+  overflow: visible !important;
 }
 
 /* Sidebar - Black Obsidian & Gold */
@@ -873,8 +875,11 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
   box-sizing: border-box;
   overflow-x: hidden;
+  overflow-y: visible !important;
   position: relative;
   background: #FBFBFD;
+  min-height: 100vh;
+  height: auto;
 }
 
 /* Header - Clean White & Gold (Zero-Jitter Responsive Architecture) */
@@ -1048,6 +1053,8 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
   background: #FBFBFD !important;
   min-height: calc(100vh - var(--header-height));
+  height: auto;
+  overflow: visible !important;
 }
 
 .tab-view {
@@ -1059,8 +1066,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tab-view.active {
-  display: block;
+  display: block !important;
   min-height: calc(100vh - var(--header-height) - 64px);
+  height: auto;
+  overflow: visible !important;
 }
 
 /* Buttons */

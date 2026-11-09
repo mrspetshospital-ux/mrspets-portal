@@ -971,9 +971,12 @@ class AuthEngine {
     if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList) {
       document.documentElement.classList.add('splash-bypassed');
       document.documentElement.classList.remove('portal-open');
+      document.documentElement.style.overflowY = 'auto';
     }
     if (document.body) {
       document.body.style.backgroundColor = '';
+      document.body.style.overflowY = 'auto';
+      document.body.style.overflow = '';
     }
 
     // Pause video and hide so background ended events do not trigger portal transition

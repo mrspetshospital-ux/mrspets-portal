@@ -78,7 +78,6 @@
       if (portal) {
         portal.scrollTop = 0;
         portal.classList.add('active');
-        if (document.documentElement) document.documentElement.classList.add('portal-open');
         portal.style.setProperty('display', 'block', 'important');
         portal.style.setProperty('visibility', 'visible', 'important');
         portal.style.setProperty('opacity', '1', 'important');
@@ -145,17 +144,31 @@
       } catch(e){}
       const portal = document.getElementById('access-links-portal');
       const splash = document.getElementById('auth-splash-screen');
+      const appContainer = document.getElementById('app-container');
       if (portal) {
         portal.style.setProperty('display', 'none', 'important');
         portal.style.opacity = '0';
         portal.style.visibility = 'hidden';
         portal.classList.remove('active');
-        if (document.documentElement) document.documentElement.classList.remove('portal-open');
       }
       if (splash) {
-        splash.style.setProperty('display', 'block', 'important');
-        splash.style.opacity = '1';
-        splash.style.visibility = 'visible';
+        splash.style.setProperty('display', 'none', 'important');
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+      }
+      if (appContainer) {
+        appContainer.style.setProperty('display', 'block', 'important');
+        appContainer.style.opacity = '1';
+        appContainer.style.visibility = 'visible';
+      }
+      if (document.documentElement) {
+        document.documentElement.classList.remove('portal-open');
+        document.documentElement.classList.add('splash-bypassed');
+        document.documentElement.style.overflowY = 'auto';
+      }
+      if (document.body) {
+        document.body.style.overflowY = 'auto';
+        document.body.style.overflow = '';
       }
     };
 
