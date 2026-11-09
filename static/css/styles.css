@@ -712,6 +712,52 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
 }
 
+/* Sidebar Collapsed State - Footer & Botones de Accion Resumidos */
+.sidebar.collapsed .sidebar-footer {
+  padding: 10px 4px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sidebar.collapsed .sidebar-footer .user-profile {
+  justify-content: center !important;
+  padding: 4px 0 !important;
+  margin-bottom: 4px !important;
+}
+
+.sidebar.collapsed .sidebar-footer .user-info {
+  display: none !important;
+}
+
+.sidebar.collapsed .sidebar-footer-actions {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sidebar.collapsed .sidebar-footer-action {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 12px !important;
+  margin: 0 auto !important;
+}
+
+.sidebar.collapsed .sidebar-footer-action .icon {
+  margin: 0 !important;
+}
+
+.sidebar.collapsed .sidebar-footer-action .nav-item-text,
+.sidebar.collapsed .sidebar-footer-action span:not(.icon) {
+  display: none !important;
+}
+
 #app-container.sidebar-collapsed .main-wrapper {
   margin-left: var(--sidebar-collapsed-width);
   width: calc(100% - var(--sidebar-collapsed-width));
