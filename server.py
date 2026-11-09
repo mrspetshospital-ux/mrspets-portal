@@ -1371,8 +1371,12 @@ def _check_basic(request: Request) -> bool:
 @app.middleware("http")
 async def portal_gate(request: Request, call_next):
     path = request.url.path
-    # La API, health checks y el portal Concierge VIP son accesibles libremente
-    if path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/")) or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest"):
+    # La API, health checks, archivos estáticos, multimedia y el portal Concierge VIP son accesibles libremente
+    if (
+        path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/"))
+        or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
+        or path.endswith((".mp4", ".mp3", ".webm", ".jpg", ".jpeg", ".png", ".svg", ".ico", ".webp", ".woff", ".woff2"))
+    ):
         response = await call_next(request)
     elif not _check_basic(request):
         return PlainTextResponse(
@@ -1572,11 +1576,8 @@ def war_room_guest():
 def war_room_get_config():
     if war_room_engine:
         return war_room_engine.node_configs
-    cfg_url = os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
-    if "p8netq49" in cfg_url or not cfg_url.startswith("https://hook."):
-        cfg_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     return {
-        "make_webhook_url": cfg_url,
+        "make_webhook_url": os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"),
         "make_api_key": os.environ.get("MAKE_API_KEY", ""),
         "make_fallback_url": "",
         "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
@@ -1676,8 +1677,6 @@ async def war_room_test_make(request: Request):
         "MAKE_WEBHOOK_URL_WAR_ROOM",
         os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
     )
-    if "p8netq49" in str(target_url) or not str(target_url).startswith("https://hook."):
-        target_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     custom_payload = body.get('payload')
     if war_room_engine:
         res = war_room_engine.test_make_links(target_url, custom_payload)
@@ -1712,8 +1711,6 @@ async def war_room_dispatch_json(request: Request):
         "MAKE_WEBHOOK_URL_WAR_ROOM",
         os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
     )
-    if "p8netq49" in str(target_url) or not str(target_url).startswith("https://hook."):
-        target_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     custom_payload = body.get('payload')
     if war_room_engine:
         res = war_room_engine.dispatch_custom_webhook(target_url, custom_payload)
@@ -2036,6 +2033,17 @@ def healthz(request: Request):
     }
 
 
+
+
+@app.get("/video.mp4")
+@app.get("/concierge_video.mp4")
+@app.get("/flow.mp4")
+def serve_splash_video():
+    for cand in ["video.mp4", "concierge_video.mp4", "assets/video.mp4", "assets/concierge_video.mp4"]:
+        vpath = os.path.join(STATIC_DIR, cand)
+        if os.path.exists(vpath):
+            return FileResponse(vpath, media_type="video/mp4")
+    return PlainTextResponse("Video no encontrado", status_code=404)
 
 
 @app.get("/")

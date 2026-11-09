@@ -80,10 +80,9 @@
 }
 
 html {
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
-  scrollbar-gutter: stable;
 }
 
 html.portal-open {
@@ -888,8 +887,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 90;
   box-shadow: 0 4px 25px rgba(11, 15, 25, 0.04);
   box-sizing: border-box;
@@ -901,9 +899,9 @@ h1, h2, h3, h4, h5, h6 {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 340px;
 }
 
 .header-title {
@@ -920,57 +918,42 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
   flex-wrap: nowrap;
   overflow: hidden;
+  justify-content: flex-end;
+}
+
+/* Ocultar en la cabecera los botones redundantes que ya están destacados en el Menú Lateral y en el Banner */
+#btn-main-header-concierge-portal,
+#btn-main-header-action {
+  display: none !important;
 }
 
 /* Control estricto anti-desbordamiento y anti-temblor al redimensionar ventana */
-@media (max-width: 1750px) {
-  #btn-master-auto-deploy span#btn-master-auto-deploy-text {
-    display: none !important;
-  }
-}
-
-@media (max-width: 1550px) {
+@media (max-width: 1400px) {
   #btn-header-api-status {
     display: none !important;
   }
-  #btn-master-auto-deploy {
-    padding: 6px 10px !important;
-  }
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1250px) {
   .top-header a[href*="wa.me"] {
     display: none !important;
   }
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
   .top-header {
-    padding: 0 16px;
+    padding: 0 14px;
   }
   #global-search-wrapper {
-    max-width: 200px !important;
-  }
-  #btn-main-header-concierge-portal {
-    display: none !important;
+    max-width: 180px !important;
   }
   #user-account-badge {
     padding: 4px 8px !important;
   }
   #user-account-name-text {
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 1100px) {
-  #user-account-name-text,
-  #user-account-badge span:first-child {
     display: none !important;
   }
-  #btn-main-header-action {
+  #user-account-badge span:first-child {
     display: none !important;
   }
 }
