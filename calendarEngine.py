@@ -62,7 +62,7 @@ class CalendarEngine:
                 "grooming": {
                     "id": "grooming",
                     "name": "Circuito Grooming Spa 7 Estaciones",
-                    "max_capacity_per_hour": 3,
+                    "max_capacity_per_hour": 4,
                     "responsable": "Dalybell Ramírez / Staff Spa",
                     "color": "#D4AF37",
                     "description": "Ozonoterapia, Baño Relajante e Hidratación de Pulpejos"
@@ -146,7 +146,7 @@ class CalendarEngine:
         return {
             "id": norm or "general",
             "name": f"Área {norm.capitalize()}",
-            "max_capacity_per_hour": 3,
+            "max_capacity_per_hour": 4,
             "responsable": "Staff Mrs. Pets",
             "color": "#D4AF37",
             "description": "Atención especializada"
@@ -263,7 +263,7 @@ class CalendarEngine:
 
         norm_area = str(area or "grooming").lower().strip()
         room = self.get_room_info(norm_area)
-        max_cap = room.get("max_capacity_per_hour", 3)
+        max_cap = room.get("max_capacity_per_hour", 4)
 
         # 1. Regla inmutable: DOMINGOS CERRADOS
         if self.is_sunday(d):

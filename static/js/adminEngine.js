@@ -3996,7 +3996,7 @@ class AdminEngine {
                 <strong style="color:#D4AF37;">✂️ Circuito Grooming Spa (7 Estaciones)</strong>
                 <div style="font-size:0.75rem; color:#64748B;">Responsable: Dalybell Ramírez / Staff Spa</div>
               </div>
-              <span class="badge" style="background:rgba(212,175,55,0.15); color:#92400E; font-weight:800;">Máx 3 turnos/h</span>
+              <span class="badge" style="background:rgba(212,175,55,0.15); color:#92400E; font-weight:800;">Máx 4 turnos/h</span>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px;">

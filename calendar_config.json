@@ -39,7 +39,7 @@
     "grooming": {
       "id": "grooming",
       "name": "Circuito Grooming Spa 7 Estaciones",
-      "max_capacity_per_hour": 3,
+      "max_capacity_per_hour": 4,
       "responsable": "Dalybell Ramírez / Staff Spa",
       "color": "#D4AF37",
       "description": "Ozonoterapia, Baño Relajante e Hidratación de Pulpejos"
