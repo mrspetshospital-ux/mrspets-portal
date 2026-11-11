@@ -4806,6 +4806,12 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
 }
 
 /* BURBUJAS DEL WIDGET MODAL DE CLIENTES (AVATAR REDONDO) */
+/* REGLA DE TRANSPARENCIA TOTAL PARA CLIENTES: Ocultar selector de modelo de IA */
+body.customer-view-mode #leia-chat-model-bar,
+.client-mode #leia-chat-model-bar {
+  display: none !important;
+}
+
 #leia-chat-card {
   color: #FFFFFF !important;
 }

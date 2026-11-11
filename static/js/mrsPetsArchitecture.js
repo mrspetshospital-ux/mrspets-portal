@@ -70,6 +70,18 @@ class MrsPetsArchitectureEngine {
     this.renderEmployeeCameraModal();
     this.enforceUniversalContrastRule();
 
+    // Sincronizar visibilidad del selector de modelos IA al cambiar perfil de sesión
+    window.addEventListener('auth_state_changed', () => {
+      this.updateChatHeaderSessionBadge();
+      this.updateModelBarVisibility();
+      this.syncInitialGreetingForCurrentSession();
+    });
+    window.addEventListener('vip_profile_selected', () => {
+      this.updateChatHeaderSessionBadge();
+      this.updateModelBarVisibility();
+      this.syncInitialGreetingForCurrentSession();
+    });
+
     console.log("Mrs. Pets 8-Module Architecture Engine Initialized Successfully with Universal Contrast.");
   }
 
@@ -407,11 +419,11 @@ class MrsPetsArchitectureEngine {
           <button onclick="mrsPetsArch.toggleLeiaChat()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:4px 8px;">✕</button>
         </div>
 
-        <!-- SELECTOR MODULAR DE MODELO IA (GEMINI 3.8 FLASH DEFAULT & EXTENSIBLE A GEMINI 4) -->
-        <div id="leia-chat-model-bar" style="background:#090d18; padding:7px 14px; border-bottom:1px solid rgba(251,191,36,0.22); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <!-- SELECTOR MODULAR DE MODELO IA (EXCLUSIVO PARA STAFF ADMINISTRATIVO • TRANSPARENTE PARA CLIENTES) -->
+        <div id="leia-chat-model-bar" style="background:#090d18; padding:7px 14px; border-bottom:1px solid rgba(251,191,36,0.22); display:none; align-items:center; justify-content:space-between; gap:8px;">
           <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0;">
             <span style="font-size:0.75rem;">⚡</span>
-            <span style="font-size:0.7rem; color:#94a3b8; font-weight:700; white-space:nowrap;">Modelo:</span>
+            <span style="font-size:0.7rem; color:#94a3b8; font-weight:700; white-space:nowrap;">Modelo Staff:</span>
             <select id="leia-model-selector-chat" onchange="mrsPetsArch.handleAiModelChange(this.value)" style="flex:1; min-width:0; background:#040711; color:#fbbf24; border:1px solid rgba(251,191,36,0.4); border-radius:8px; font-size:0.72rem; padding:3px 6px; font-weight:700; outline:none; cursor:pointer;">
             </select>
           </div>
@@ -545,26 +557,74 @@ class MrsPetsArchitectureEngine {
         const shortName = session.userName ? session.userName.split(' ')[0] : 'Staff';
         badge.innerHTML = `💼 ${shortName} • Staff HAR`;
         badge.style.background = '#2563eb';
+        badge.title = 'Modo Staff activo • Selector de IA habilitado';
+        badge.style.cursor = 'default';
+        badge.onclick = null;
       } else if (session.userType === 'client') {
         const shortName = session.userName ? session.userName.split(' ')[0] : 'Cliente';
         badge.innerHTML = `⭐ ${shortName} • Cliente VIP`;
         badge.style.background = '#059669';
+        badge.title = 'Canal Exclusivo VIP';
+        badge.style.cursor = 'pointer';
+        badge.onclick = () => this.handleChatBadgeStaffUnlock();
       } else {
         badge.innerHTML = `🎀 Asistente Ejecutiva & VIP`;
         badge.style.background = '#d97706';
+        badge.title = 'Canal de Bienvenida VIP';
+        badge.style.cursor = 'pointer';
+        badge.onclick = () => this.handleChatBadgeStaffUnlock();
       }
     }
 
     if (subtitle) {
       if (session.userType === 'staff_admin') {
-        subtitle.innerHTML = `Consola Operativa • ${(session.activeTab || 'admin').toUpperCase()}`;
+        const activeModel = this.getActiveAiModel();
+        const shortModel = activeModel.name.split('(')[0].trim();
+        subtitle.innerHTML = `Consola Operativa Staff • <span style="color:#fef08a;">${shortModel}</span>`;
         subtitle.style.color = '#93c5fd';
       } else if (session.userType === 'client') {
-        subtitle.innerHTML = session.petName ? `Tutor de ${session.petName}` : `Expediente Clínico & Spa`;
+        subtitle.innerHTML = session.petName ? `Tutor de ${session.petName} • Avenida 2 El Milagro` : `Expediente Clínico & Spa • Avenida 2 El Milagro`;
         subtitle.style.color = '#a7f3d0';
       } else {
         subtitle.innerHTML = `Avenida 2 El Milagro • We see pets`;
         subtitle.style.color = '#94a3b8';
+      }
+    }
+
+    this.updateModelBarVisibility();
+  }
+
+  updateModelBarVisibility() {
+    const session = this.getActiveSessionContext();
+    const modelBar = document.getElementById('leia-chat-model-bar');
+    if (modelBar) {
+      const isStaff = session && session.userType === 'staff_admin';
+      modelBar.style.display = isStaff ? 'flex' : 'none';
+    }
+  }
+
+  handleChatBadgeStaffUnlock() {
+    const key = window.prompt("🔒 Acceso Staff Administrativo • Mrs. Pets\n\nSi eres miembro del staff y requieres ajustar el motor de IA, introduce tu clave de control:");
+    if (!key) return;
+    const cleanKey = key.trim().toLowerCase();
+    if (cleanKey === 'nicole' || cleanKey === 'admin' || cleanKey === 'mrspets2026' || cleanKey === 'volturi') {
+      if (window.authEngine) {
+        window.authEngine.userRole = 'staff';
+        window.authEngine.isAuthenticated = true;
+        window.authEngine.userName = 'Staff Administrativo (HAR)';
+      }
+      if (document.body) {
+        document.body.classList.remove('customer-view-mode');
+      }
+      this.updateChatHeaderSessionBadge();
+      this.updateModelBarVisibility();
+      this.syncModelSelectors();
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast("🔓 Modo Staff activado. Selector de IA disponible.", "success");
+      }
+    } else {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast("❌ Clave incorrecta.", "error");
       }
     }
   }
@@ -849,37 +909,14 @@ class MrsPetsArchitectureEngine {
   }
 
   getActiveSessionContext() {
-    // 1. Detect HAR Admin / Staff profile
-    const isAdminAuthenticated = window.adminEngine && window.adminEngine.isEnterpriseAuthenticated;
-    const isStaffRole = window.authEngine && window.authEngine.userRole === 'staff';
-    const currentTab = (window.app && window.app.currentTab) || 'home';
-    const isTabAdmin = currentTab === 'admin';
-
-    if (isAdminAuthenticated || isStaffRole || isTabAdmin) {
-      const staffUser = (window.adminEngine && window.adminEngine.currentStaffUser) || {
-        id: 'USR-03',
-        name: 'Administrador General (HAR)',
-        username: 'admin',
-        rol_principal: 'admin',
-        role: 'admin'
-      };
-
-      return {
-        userType: 'staff_admin',
-        userRole: staffUser.rol_principal || staffUser.role || 'admin',
-        userId: staffUser.id || 'HAR-ADMIN',
-        userName: staffUser.name || (window.authEngine && window.authEngine.userName) || 'Administrador HAR',
-        sessionMode: 'backoffice_admin',
-        activeTab: currentTab,
-        department: staffUser.rol_principal || 'administracion'
-      };
-    }
-
-    // 2. Detect Client VIP / Tutor profile
-    const isClientRole = window.authEngine && window.authEngine.userRole === 'client';
+    // 0. Detect Client VIP / Tutor profile (Prioridad absoluta cuando está en vista/perfil de cliente)
+    const isCustomerViewMode = document.body && document.body.classList.contains('customer-view-mode');
+    const authRole = window.authEngine && window.authEngine.userRole;
+    const isClientRole = (authRole === 'client') || isCustomerViewMode;
     const savedPetId = localStorage.getItem('mrs_pets_active_vip_patient_id') || (window.authEngine && window.authEngine.currentVipPetId);
+    const currentTab = (window.app && window.app.currentTab) || 'home';
 
-    if (isClientRole || savedPetId) {
+    if (isClientRole || (savedPetId && authRole !== 'staff' && !window.adminEngine?.isEnterpriseAuthenticated)) {
       let rawName = (window.authEngine && window.authEngine.userName) || 'Tutor VIP';
       let clientName = rawName.split('(')[0].trim();
       let activePetName = null;
@@ -904,7 +941,7 @@ class MrsPetsArchitectureEngine {
           }
         }
       }
-      if (!activePetName && (clientName.toLowerCase().includes('dalybel') || clientName.toLowerCase().includes('dalibel'))) {
+      if (!activePetName && (clientName.toLowerCase().includes('dalybell') || clientName.toLowerCase().includes('dalibel'))) {
         activePetName = 'Sofía';
       }
 
@@ -917,6 +954,44 @@ class MrsPetsArchitectureEngine {
         phone: (window.authEngine && window.authEngine.currentUserPhone) || null,
         sessionMode: 'client_portal',
         activeTab: currentTab
+      };
+    }
+
+    // 1. Detect Visitor Mode (Explícito)
+    const isVisitorRole = (authRole === 'visitor' || authRole === 'guest');
+    if (isVisitorRole && currentTab !== 'admin') {
+      return {
+        userType: 'visitor',
+        userRole: 'guest',
+        userId: 'GUEST-' + Math.floor(1000 + Math.random() * 9000),
+        userName: 'Invitado VIP',
+        sessionMode: 'public_portal',
+        activeTab: currentTab
+      };
+    }
+
+    // 2. Detect HAR Admin / Staff profile
+    const isAdminAuthenticated = window.adminEngine && window.adminEngine.isEnterpriseAuthenticated;
+    const isStaffRole = authRole === 'staff';
+    const isTabAdmin = currentTab === 'admin';
+
+    if ((isAdminAuthenticated || isStaffRole || isTabAdmin) && !isClientRole && !isVisitorRole) {
+      const staffUser = (window.adminEngine && window.adminEngine.currentStaffUser) || {
+        id: 'USR-03',
+        name: 'Administrador General (HAR)',
+        username: 'admin',
+        rol_principal: 'admin',
+        role: 'admin'
+      };
+
+      return {
+        userType: 'staff_admin',
+        userRole: staffUser.rol_principal || staffUser.role || 'admin',
+        userId: staffUser.id || 'HAR-ADMIN',
+        userName: staffUser.name || (window.authEngine && window.authEngine.userName) || 'Administrador HAR',
+        sessionMode: 'backoffice_admin',
+        activeTab: currentTab,
+        department: staffUser.rol_principal || 'administracion'
       };
     }
 
@@ -997,13 +1072,15 @@ class MrsPetsArchitectureEngine {
     const activeModel = this.getActiveAiModel();
     console.log(`[AI MODEL MANAGER] Modelo activo actualizado a: ${cleanId} (${activeModel.name})`);
 
-    if (notify && window.app && typeof window.app.showToast === 'function') {
+    const session = this.getActiveSessionContext();
+    if (notify && session && session.userType === 'staff_admin' && window.app && typeof window.app.showToast === 'function') {
       window.app.showToast(`⚡ Modelo de IA cambiado a: ${activeModel.name}`, 'success');
     }
   }
 
   handleAiModelChange(modelId) {
     this.setActiveAiModel(modelId, true);
+    this.updateChatHeaderSessionBadge();
   }
 
   registerNewAiModel(modelId, modelName) {
@@ -1269,6 +1346,7 @@ class MrsPetsArchitectureEngine {
     }
 
     const session = this.getActiveSessionContext();
+    const isStaff = session && session.userType === 'staff_admin';
 
     // 2. Bloquear input y botón para evitar congelamiento o envíos dobles
     const inputEl = document.getElementById('leia-chat-input');
@@ -1307,6 +1385,10 @@ class MrsPetsArchitectureEngine {
       typingDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
 
       const roleBadge = `🎀 Leia • Concierge VIP`;
+      // TRANSPARENCIA TOTAL PARA CLIENTES: nunca ver modelos técnicos
+      const modelDetailHtml = isStaff
+        ? `<span>${roleBadge} • <strong style="color:#fef08a;">${cleanModelName}</strong></span>`
+        : `<span>${roleBadge} • <span style="color:#a7f3d0;">En línea</span></span>`;
 
       typingDiv.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
@@ -1314,7 +1396,7 @@ class MrsPetsArchitectureEngine {
           <strong>Leia está respondiendo a tu consulta...</strong>
         </div>
         <div style="font-size:0.73rem; color:#94a3b8; font-style:italic; display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
-          <span>${roleBadge} • <strong style="color:#fef08a;">${cleanModelName}</strong></span>
+          ${modelDetailHtml}
           <span id="leia-timer-counter" style="color:#fbbf24; font-weight:bold;">(0s)</span>
         </div>
       `;
@@ -1331,8 +1413,9 @@ class MrsPetsArchitectureEngine {
       }, 1000);
     }
 
-    // 4. DESPACHO REAL POR POST HACIA /api/v1/teamily/agent-chat (Leia Concierge / Centralita Router)
-    // Con registro automático inmutable en Google Sheets
+    // 4. DESPACHO MULTI-CANAL INTELIGENTE (SEGÚN MODELO SELECCIONADO POR EL STAFF)
+    let serverReplyText = null;
+    const isTeamlyPrimary = (activeModel.id && activeModel.id.includes('teamly'));
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
     const agentPayload = {
       message_id: messageId,
@@ -1341,49 +1424,101 @@ class MrsPetsArchitectureEngine {
       agent_slug: 'leia',
       agent_name: 'Leia Concierge VIP & Asistencia CEO',
       board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+      model: activeModel.id,
       context: {
         userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
         petName: this.lastActivePetName || (session && session.activePetName) || '',
         userType: (session && session.userType) || 'client',
-        channel: 'Widget Circular (Leia Concierge)'
+        channel: 'Widget Circular (Leia Concierge)',
+        activeModel: activeModel.id
       }
     };
 
-    let serverReplyText = null;
-    try {
-      const abortCtrl = new AbortController();
-      const fetchTimer = setTimeout(() => abortCtrl.abort(), 12000);
-      const res = await fetch('/api/v1/teamily/agent-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(agentPayload),
-        signal: abortCtrl.signal
-      });
-      clearTimeout(fetchTimer);
-      if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          const rawReply = typeof data.response_text === 'object' && data.response_text.text
-            ? data.response_text.text
-            : (data.response_text || (data.output && data.output.text));
-          if (rawReply && String(rawReply).trim().length > 0) {
-            serverReplyText = rawReply;
+    if (isTeamlyPrimary) {
+      // Prioridad: Teamily Live API
+      try {
+        const abortCtrl = new AbortController();
+        const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+        const res = await fetch('/api/v1/teamily/agent-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(agentPayload),
+          signal: abortCtrl.signal
+        });
+        clearTimeout(fetchTimer);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            const rawReply = typeof data.response_text === 'object' && data.response_text.text
+              ? data.response_text.text
+              : (data.response_text || (data.output && data.output.text) || data.reply);
+            if (rawReply && String(rawReply).trim().length > 0) {
+              serverReplyText = rawReply;
+            }
           }
         }
+      } catch (err) {
+        console.warn("[LEIA CHAT] Teamily no disponible, activando failover a Make/Gemini:", err);
       }
-    } catch (err) {
-      console.warn("[LEIA CHAT] Error al contactar /api/v1/teamily/agent-chat:", err);
-    }
 
-    // Despacho complementario en segundo plano a Make.com (sin bloquear)
-    try {
-      this.dispatchChatBidirectional({
-        sessionId: this.getChatSessionId(),
-        message: cleanText,
-        detalleAdicionales: cleanText,
-        userQuery: cleanText
-      }).catch(() => {});
-    } catch (e) {}
+      // Failover a Make.com + Gemini si Teamily no respondió
+      if (!serverReplyText) {
+        try {
+          const makeRes = await this.dispatchChatBidirectional({
+            sessionId: this.getChatSessionId(),
+            message: cleanText,
+            detalleAdicionales: cleanText,
+            userQuery: cleanText
+          });
+          if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
+            serverReplyText = makeRes.replyText;
+          }
+        } catch (e) {}
+      }
+    } else {
+      // Prioridad: Make.com + Gemini (o modelo Gemini seleccionado por Staff)
+      try {
+        const makeRes = await this.dispatchChatBidirectional({
+          sessionId: this.getChatSessionId(),
+          message: cleanText,
+          detalleAdicionales: cleanText,
+          userQuery: cleanText
+        });
+        if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
+          serverReplyText = makeRes.replyText;
+        }
+      } catch (e) {
+        console.warn("[LEIA CHAT] Make.com / Gemini no respondió, activando failover a Teamily:", e);
+      }
+
+      // Failover a Teamily Live API si Make/Gemini falló (o dio 429 quota)
+      if (!serverReplyText) {
+        try {
+          const abortCtrl = new AbortController();
+          const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+          const res = await fetch('/api/v1/teamily/agent-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(agentPayload),
+            signal: abortCtrl.signal
+          });
+          clearTimeout(fetchTimer);
+          if (res.ok) {
+            const data = await res.json();
+            if (data) {
+              const rawReply = typeof data.response_text === 'object' && data.response_text.text
+                ? data.response_text.text
+                : (data.response_text || (data.output && data.output.text) || data.reply);
+              if (rawReply && String(rawReply).trim().length > 0) {
+                serverReplyText = rawReply;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("[LEIA CHAT] Failover de Teamily también agotado:", err);
+        }
+      }
+    }
 
     // 5. Limpiar estado de carga y restaurar formulario
     if (timerInterval) clearInterval(timerInterval);
@@ -1403,12 +1538,22 @@ class MrsPetsArchitectureEngine {
       sendBtn.style.cursor = 'pointer';
     }
 
-    // 6. Renderizar respuesta viva del servidor / Teamily Margaret o activar Fallback contextual
-    if (serverReplyText) {
+    // 6. Renderizar respuesta viva del servidor / Teamily / Gemini o activar Fallback contextual
+    const isTechnicalError = serverReplyText && (
+      String(serverReplyText).includes('[ERROR GEMINI') ||
+      String(serverReplyText).includes('quota') ||
+      String(serverReplyText).includes('HTTP 429') ||
+      String(serverReplyText).includes('HTTP 404') ||
+      String(serverReplyText).includes('Traceback (most recent call last')
+    );
+
+    // Para clientes o visitantes, nunca renderizar errores técnicos de cuota o HTTP;
+    // se activa el fallback elegante de Lujo Silencioso.
+    if (serverReplyText && (!isTechnicalError || isStaff)) {
       const formattedHtml = this.formatMarkdownToHtml(serverReplyText);
       this.appendLeiaMessage(formattedHtml, 'bot');
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('Respuesta de Leia Concierge recibida ✨', 'success');
+      if (isStaff && window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`Respuesta de Leia recibida (${cleanModelName}) ✨`, 'success');
       }
     } else {
       // Fallback contextual elegante bajo la doctrina de Lujo Silencioso
