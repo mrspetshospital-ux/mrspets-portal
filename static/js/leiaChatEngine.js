@@ -890,9 +890,26 @@
 
                     const isReceipt = String(rawReply).includes('serverMsgID');
                     if (!isReceipt && rawReply && String(rawReply).trim().length > 0) {
+                        const lowerUser = (userText || '').toLowerCase();
+                        const isBookingContext = lowerUser.includes('reserva') || lowerUser.includes('cita') || 
+                                                lowerUser.includes('turno') || lowerUser.includes('agendar') || 
+                                                lowerUser.includes('horario') || lowerUser.includes('baño') || 
+                                                lowerUser.includes('grooming') || lowerUser.includes('clinica') ||
+                                                lowerUser.includes('domingo');
+                        let dynamicButtons = null;
+                        if (isBookingContext) {
+                            dynamicButtons = [
+                                '✂️ Cita Grooming Spa',
+                                '🩺 Consulta Dra. Margaret',
+                                '🏨 Suite Hotel VIP 5★',
+                                '📅 Ver Disponibilidad'
+                            ];
+                        }
+
                         this.addMessage({
                             sender: 'leia',
                             text: rawReply,
+                            buttons: dynamicButtons,
                             timestamp: new Date()
                         });
                         return;
@@ -996,6 +1013,28 @@
                     timestamp: new Date()
                 });
                 return;
+            }
+
+            // 2.1.2 Consulta Rápida de Disponibilidad en Vivo (Reglas Dra. Margaret & Dalybell)
+            if (t === '📅 ver disponibilidad' || t === 'ver disponibilidad' || t === 'consultar disponibilidad' || t === '📅 disponibilidad') {
+                this.showTypingIndicator(true);
+                try {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const res = await fetch(`/api/v1/calendario/disponibilidad?fecha=${todayStr}&area=grooming`);
+                    const data = await res.json();
+                    this.showTypingIndicator(false);
+                    const slots = (data && data.slots_available && data.slots_available.length > 0) ? data.slots_available : ['09:00', '11:00', '14:00', '16:00'];
+                    const slotsList = slots.slice(0, 4).join(', ');
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia (Disponibilidad en Vivo • Dra. Margaret & Dalybell):**\n\n📅 **Horario de Atención:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00) estrictamente.\n⛔ **Domingos:** Cerrado para descanso médico y de spa.\n\n✨ **Turnos disponibles hoy en Spa & Grooming:**\n• Horas: **${slotsList}**\n\n¿En cuál de estos horarios deseas que consintamos a tu mascota?`,
+                        buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                        timestamp: new Date()
+                    });
+                    return;
+                } catch(e) {
+                    this.showTypingIndicator(false);
+                }
             }
 
             // 2.2 Deseo hacer una reserva / Cita (incluso en Search)

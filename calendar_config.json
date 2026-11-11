@@ -1,0 +1,76 @@
+{
+  "regular_hours": {
+    "monday_to_saturday": {
+      "open": "08:00",
+      "close": "18:00",
+      "slot_interval_min": 60
+    },
+    "sunday": {
+      "status": "closed",
+      "reason": "Instalaciones cerradas por descanso médico del personal y mantenimiento preventivo. Atención regular de Lunes a Sábado de 8:00 a.m. a 6:00 p.m."
+    }
+  },
+  "blocked_dates": [
+    {
+      "id": "BLK-DOMINGOS",
+      "recurrence": "weekly_sunday",
+      "area": "all",
+      "reason": "Domingo cerrado para atención al público (Descanso Dra. Margaret y Staff)",
+      "created_by": "Dalybell Ramírez & Dra. Margaret"
+    },
+    {
+      "id": "BLK-01",
+      "date": "2026-11-15",
+      "time": "all_day",
+      "area": "all",
+      "reason": "Domingo - Instalaciones cerradas",
+      "created_by": "Sistema"
+    },
+    {
+      "id": "BLK-02",
+      "date": "2026-11-22",
+      "time": "all_day",
+      "area": "all",
+      "reason": "Domingo - Instalaciones cerradas",
+      "created_by": "Sistema"
+    }
+  ],
+  "rooms": {
+    "grooming": {
+      "id": "grooming",
+      "name": "Circuito Grooming Spa 7 Estaciones",
+      "max_capacity_per_hour": 3,
+      "responsable": "Dalybell Ramírez / Staff Spa",
+      "color": "#D4AF37",
+      "description": "Ozonoterapia, Baño Relajante e Hidratación de Pulpejos"
+    },
+    "clinica": {
+      "id": "clinica",
+      "name": "Consultorio & Quirófano Dra. Margaret",
+      "max_capacity_per_hour": 2,
+      "responsable": "Dra. Margaret",
+      "color": "#10B981",
+      "description": "Medicina Preventiva, Diagnóstico IDEXX y Cirugía"
+    },
+    "hotel": {
+      "id": "hotel",
+      "name": "Suites Bioclimáticas VIP Hotel 5★",
+      "max_capacity_per_hour": 8,
+      "responsable": "Equipo Hotel Mrs. Pets",
+      "color": "#3B82F6",
+      "description": "Hospedaje VIP, Monitoreo 24/7 y Parque Libre de Estrés"
+    },
+    "tienda": {
+      "id": "tienda",
+      "name": "Boutique & Asesoría Nutricional VIP",
+      "max_capacity_per_hour": 5,
+      "responsable": "Staff Boutique",
+      "color": "#F59E0B",
+      "description": "Alimentos Super Premium, Farmacia y Accesorios Exclusivos"
+    }
+  },
+  "make_calendar_webhook_url": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
+  "google_calendar_id": "primary",
+  "timezone": "America/Caracas",
+  "last_synced_at": null
+}

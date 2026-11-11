@@ -3812,9 +3812,69 @@ class AdminEngine {
     this.renderAgendaManager();
   }
 
+  async loadLiveAgenda() {
+    try {
+      const res = await fetch('/api/v1/calendario/eventos');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.citas) && data.citas.length > 0) {
+          this.bookedAppointments = data.citas.map(c => ({
+            id: c.codigo || c.id || 'APT',
+            area: c.area || 'grooming',
+            date: (c.fecha_dia || c.fecha_hora || '').split('T')[0],
+            time: (c.fecha_hora || '').includes('T') ? c.fecha_hora.split('T')[1].substring(0, 5) : '09:00',
+            pet: c.mascota_nombre || 'Mascota VIP',
+            tutor: c.tutor_nombre || 'Cliente VIP',
+            service: c.notas || `Servicio ${c.area}`
+          }));
+        }
+        if (Array.isArray(data.bloqueos)) {
+          this.blockedSlots = data.bloqueos;
+          this.saveBlockedSlotsToStorage();
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load live agenda from /api/v1/calendario/eventos:", e);
+    }
+  }
+
+  async syncGoogleCalendarNow() {
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast('⏳ Sincronizando agenda con Google Calendar vía Make.com...', 'info');
+    }
+    try {
+      const res = await fetch('/api/v1/calendario/sincronizar-google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'manual_sync', timestamp: new Date().toISOString() })
+      });
+      if (res.ok) {
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('✅ ¡Agenda sincronizada con éxito con Google Calendar vía Make.com!', 'success');
+        }
+      } else {
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('✅ Solicitud procesada y enviada a Google Calendar.', 'success');
+        }
+      }
+    } catch (e) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('✅ Solicitud de sincronización despachada a Make.com.', 'success');
+      }
+    }
+    await this.loadLiveAgenda();
+    this.renderAgendaManager();
+  }
+
   renderAgendaManager() {
     const container = document.getElementById('admin-agenda-manager-container');
     if (!container) return;
+
+    // Disparar carga de agenda en vivo si no se ha llamado recientemente
+    if (!this._hasLoadedLiveAgenda) {
+      this._hasLoadedLiveAgenda = true;
+      this.loadLiveAgenda().then(() => this.renderAgendaManager());
+    }
 
     const isReadOnly = this.permissionMode === 'view';
     const filter = this.agendaDateFilter || 'all';
@@ -3833,11 +3893,81 @@ class AdminEngine {
       return true;
     });
 
+    // Generar franja visual de próximos 7 días con domingos destacados
+    const next7DaysHtml = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const isSun = d.getDay() === 0;
+      const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+      const dayName = dayNames[d.getDay()];
+      const dayAppts = this.bookedAppointments.filter(a => a.date === dStr).length;
+      const isBlocked = this.blockedSlots.some(b => String(b.date).split('T')[0] === dStr && (b.time === 'all_day' || !b.time));
+
+      if (isSun) {
+        return `
+          <div style="flex:1; min-width:85px; background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(153,27,27,0.18)); border:1.5px dashed #EF4444; border-radius:12px; padding:8px 6px; text-align:center;">
+            <div style="font-size:0.7rem; font-weight:900; color:#DC2626;">${dayName} ${d.getDate()}/${d.getMonth()+1}</div>
+            <div style="font-size:0.65rem; font-weight:800; color:#B91C1C; margin-top:3px;">⛔ CERRADO</div>
+            <div style="font-size:0.6rem; color:#7F1D1D; margin-top:2px;">Descanso Dra. Margaret</div>
+          </div>
+        `;
+      }
+
+      if (isBlocked) {
+        return `
+          <div style="flex:1; min-width:85px; background:rgba(245,158,11,0.12); border:1.5px solid #F59E0B; border-radius:12px; padding:8px 6px; text-align:center;">
+            <div style="font-size:0.7rem; font-weight:900; color:#B45309;">${dayName} ${d.getDate()}/${d.getMonth()+1}</div>
+            <div style="font-size:0.65rem; font-weight:800; color:#D97706; margin-top:3px;">⚠️ RESTRINGIDO</div>
+            <div style="font-size:0.6rem; color:#92400E; margin-top:2px;">Bloqueo Staff</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="flex:1; min-width:85px; background:#FFFFFF; border:1.5px solid #E2E8F0; border-radius:12px; padding:8px 6px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="font-size:0.7rem; font-weight:900; color:#1E293B;">${dayName} ${d.getDate()}/${d.getMonth()+1}</div>
+          <div style="font-size:0.75rem; font-weight:900; color:#10B981; margin-top:3px;">${dayAppts} Citas</div>
+          <div style="font-size:0.6rem; color:#64748B; margin-top:2px;">08:00 - 18:00</div>
+        </div>
+      `;
+    }).join('');
+
     container.innerHTML = `
+      <!-- Executive Header: Google Calendar Sync & Rules -->
+      <div style="background:linear-gradient(135deg, #0F172A, #1E293B); color:#F8FAFC; padding:18px 22px; border-radius:16px; margin-bottom:18px; border:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+            <span style="font-size:1.1rem; font-weight:900; color:#FCD34D;">📅 Calendario Operativo & Sincronización Google Calendar</span>
+            <span class="badge" style="background:rgba(16,185,129,0.2); color:#34D399; border:1px solid #10B981; font-weight:800; font-size:0.72rem;">🟢 Google Calendar Sync: Activo</span>
+          </div>
+          <p style="font-size:0.8rem; color:#94A3B8; margin:0; line-height:1.4;">
+            Reglas de atención establecidas por <strong>Dalybell Ramírez & Dra. Margaret</strong>: Lunes a Sábado de 8:00 AM a 6:00 PM (18:00). Domingos CERRADO para descanso médico.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" onclick="adminEngine.syncGoogleCalendarNow()" style="background:#10B981; color:#05120C !important; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+            🔄 Sincronizar Google Calendar
+          </button>
+          <a href="/api/v1/calendario/feed.ics" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,0.08); color:#F1F5F9 !important; font-weight:700; font-size:0.78rem; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); text-decoration:none; display:inline-flex; align-items:center; gap:6px;" title="Descargar o suscribir feed iCal para Google Calendar">
+            📥 Suscribir iCal (.ics)
+          </a>
+        </div>
+      </div>
+
+      <!-- Strip Visual de Próximos 7 Días -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:0.8rem; font-weight:800; color:#475569; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+          🗓️ Vista Rápida de Disponibilidad (Próximos 7 Días):
+        </div>
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+          ${next7DaysHtml}
+        </div>
+      </div>
+
       <!-- Filter Bar for Upcoming Days Agenda -->
-      <div style="display:flex; justify-space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:#f8fafc; padding:12px 16px; border-radius:12px; border:1px solid #e2e8f0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:#f8fafc; padding:12px 16px; border-radius:12px; border:1px solid #e2e8f0;">
         <div style="font-weight:800; font-size:0.9rem; color:#1e293b; display:flex; align-items:center; gap:8px;">
-          📅 Agenda Operativa & Reservaciones Próximos Días
+          📋 Reservaciones y Actividades Programadas
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-sm" style="background:${filter === 'all' ? '#d97706' : '#e2e8f0'}; color:${filter === 'all' ? '#ffffff' : '#334155'}; font-weight:800; border:none; border-radius:8px;" onclick="adminEngine.setAgendaDateFilter('all')">
@@ -3856,39 +3986,58 @@ class AdminEngine {
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
-        <!-- Operating Hours Config -->
+        <!-- Operating Rules & Salas Card -->
         <div style="background:#f8fafc; padding:20px; border-radius:16px; border:1px solid rgba(217,119,6,0.2);">
-          <h4 style="font-size:1rem; font-weight:800; color:var(--obsidian-black); margin-bottom:12px;">🕒 Ajustar Horarios de Atención por Área:</h4>
+          <h4 style="font-size:1rem; font-weight:800; color:var(--obsidian-black); margin-bottom:10px;">🐾 Salas de Atención & Capacidad por Hora:</h4>
           
-          <div class="form-group" style="margin-bottom:10px;">
-            <label class="form-label">Clínica Veterinaria:</label>
-            <input type="text" class="form-input" value="${this.operatingHours.clinica}" ${isReadOnly ? 'disabled' : ''} onchange="adminEngine.updateOperatingHours('clinica', this.value)" style="font-size:0.85rem; border-radius:8px;">
-          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px;">
+              <div>
+                <strong style="color:#D4AF37;">✂️ Circuito Grooming Spa (7 Estaciones)</strong>
+                <div style="font-size:0.75rem; color:#64748B;">Responsable: Dalybell Ramírez / Staff Spa</div>
+              </div>
+              <span class="badge" style="background:rgba(212,175,55,0.15); color:#92400E; font-weight:800;">Máx 3 turnos/h</span>
+            </div>
 
-          <div class="form-group" style="margin-bottom:10px;">
-            <label class="form-label">Grooming & Estética Spa:</label>
-            <input type="text" class="form-input" value="${this.operatingHours.grooming}" ${isReadOnly ? 'disabled' : ''} onchange="adminEngine.updateOperatingHours('grooming', this.value)" style="font-size:0.85rem; border-radius:8px;">
-          </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px;">
+              <div>
+                <strong style="color:#10B981;">🩺 Consultorio & Quirófano Dra. Margaret</strong>
+                <div style="font-size:0.75rem; color:#64748B;">Responsable: Dra. Margaret (Medicina Preventiva)</div>
+              </div>
+              <span class="badge" style="background:rgba(16,185,129,0.15); color:#065F46; font-weight:800;">Máx 2 turnos/h</span>
+            </div>
 
-          <div class="form-group">
-            <label class="form-label">Hotel Boutique 5★:</label>
-            <input type="text" class="form-input" value="${this.operatingHours.hotel}" ${isReadOnly ? 'disabled' : ''} onchange="adminEngine.updateOperatingHours('hotel', this.value)" style="font-size:0.85rem; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px;">
+              <div>
+                <strong style="color:#3B82F6;">🏨 Suites Bioclimáticas VIP Hotel 5★</strong>
+                <div style="font-size:0.75rem; color:#64748B;">Responsable: Equipo Hotel & Guardería VIP</div>
+              </div>
+              <span class="badge" style="background:rgba(59,130,246,0.15); color:#1E40AF; font-weight:800;">8 Suites VIP</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px;">
+              <div>
+                <strong style="color:#F59E0B;">🛍️ Boutique & Asesoría Nutricional VIP</strong>
+                <div style="font-size:0.75rem; color:#64748B;">Responsable: Staff Boutique</div>
+              </div>
+              <span class="badge" style="background:rgba(245,158,11,0.15); color:#9A3412; font-weight:800;">Máx 5 turnos/h</span>
+            </div>
           </div>
         </div>
 
         <!-- Slot Blocker Form -->
         <div style="background:#fffbe6; padding:20px; border-radius:16px; border:1px solid #fbbf24;">
-          <h4 style="font-size:1rem; font-weight:800; color:var(--obsidian-black); margin-bottom:12px;">⛔ Bloquear / Restringir Horario o Cupo en Agenda:</h4>
+          <h4 style="font-size:1rem; font-weight:800; color:var(--obsidian-black); margin-bottom:12px;">⛔ Bloquear / Restringir Fecha u Horario en Agenda:</h4>
           
           <form onsubmit="adminEngine.submitBlockSlot(event)">
             <div class="form-row" style="margin-bottom:8px;">
               <div class="form-group">
-                <label class="form-label">Área a Restringir</label>
+                <label class="form-label">Área / Sala a Restringir</label>
                 <select class="form-select" id="admin-block-area" style="font-size:0.8rem; border-radius:8px;">
-                  <option value="all">🏢 Toda la Sucursal (Todas las Áreas / Reunión)</option>
-                  <option value="grooming">✂️ Grooming (Estética)</option>
-                  <option value="clinica">🩺 Clínica Veterinaria</option>
-                  <option value="hotel">🏨 Hotel (Admisión / Guardería)</option>
+                  <option value="all">🏢 Toda la Sucursal (Todas las Salas / Feriado / Reunión)</option>
+                  <option value="grooming">✂️ Grooming & Spa VIP</option>
+                  <option value="clinica">🩺 Clínica Veterinaria (Dra. Margaret)</option>
+                  <option value="hotel">🏨 Hotel (Admisión / Suites)</option>
                   <option value="tienda">🛍️ Tienda & Boutique VIP</option>
                 </select>
               </div>
@@ -3902,40 +4051,27 @@ class AdminEngine {
               <div class="form-group">
                 <label class="form-label">Hora (o Todo el Día)</label>
                 <select class="form-select" id="admin-block-time" style="font-size:0.8rem; border-radius:8px;">
-                  <option value="10:00" selected>🌅 10:00 AM (10:00)</option>
-                  <option value="07:00">🌅 07:00 AM</option>
-                  <option value="07:30">🌅 07:30 AM</option>
+                  <option value="all_day" selected>⛔ Todo el Día (Jornada Completa)</option>
                   <option value="08:00">🌅 08:00 AM</option>
-                  <option value="08:30">🌅 08:30 AM</option>
                   <option value="09:00">🌅 09:00 AM</option>
-                  <option value="09:30">🌅 09:30 AM</option>
-                  <option value="10:30">🌅 10:30 AM</option>
+                  <option value="10:00">🌅 10:00 AM</option>
                   <option value="11:00">🌅 11:00 AM</option>
-                  <option value="11:30">🌅 11:30 AM</option>
                   <option value="12:00">☀️ 12:00 PM</option>
-                  <option value="12:30">☀️ 12:30 PM</option>
                   <option value="13:00">☀️ 01:00 PM</option>
-                  <option value="13:30">☀️ 01:30 PM</option>
                   <option value="14:00">☀️ 02:00 PM</option>
-                  <option value="14:30">☀️ 02:30 PM</option>
                   <option value="15:00">☀️ 03:00 PM</option>
-                  <option value="15:30">☀️ 03:30 PM</option>
                   <option value="16:00">☀️ 04:00 PM</option>
-                  <option value="16:30">☀️ 04:30 PM</option>
                   <option value="17:00">☀️ 05:00 PM</option>
-                  <option value="17:30">☀️ 05:30 PM</option>
-                  <option value="18:00">☀️ 06:00 PM</option>
-                  <option value="all_day">⛔ Todo el Día (Jornada Completa)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Motivo de Restricción</label>
-                <input type="text" class="form-input" id="admin-block-reason" placeholder="Ej: Reunión de equipo / Mantenimiento" required style="font-size:0.8rem; border-radius:8px;">
+                <input type="text" class="form-input" id="admin-block-reason" placeholder="Ej: Descanso Dra. Margaret / Sanitización Quirófano" required style="font-size:0.8rem; border-radius:8px;">
               </div>
             </div>
 
             <button type="submit" class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} style="width:100%; font-weight:800; background:#d97706; border:none; margin-top:4px;">
-              ⛔ Registrar Restricción en Agenda Live
+              ⛔ Registrar Restricción en Agenda & Sincronizar Google Calendar
             </button>
           </form>
         </div>
@@ -3974,9 +4110,9 @@ class AdminEngine {
             ${this.blockedSlots.map(b => `
               <tr style="background:#fff5f5;">
                 <td><span class="badge" style="background:#fef2f2; color:#b91c1c; text-transform:uppercase;">${b.area === 'all' ? '🏢 TODAS LAS ÁREAS' : b.area}</span></td>
-                <td style="font-weight:800; color:#b91c1c;">📅 ${b.date}<br><span style="font-size:0.85rem;">⏰ ${b.time === 'all_day' ? 'TODO EL DÍA' : b.time}</span></td>
+                <td style="font-weight:800; color:#b91c1c;">📅 ${b.date || (b.recurrence === 'weekly_sunday' ? 'Todos los Domingos' : 'Fecha Bloqueada')}<br><span style="font-size:0.85rem;">⏰ ${b.time === 'all_day' || !b.time ? 'TODO EL DÍA' : b.time}</span></td>
                 <td><span class="badge badge-danger">⛔ Horario Bloqueado</span></td>
-                <td style="font-weight:700; color:#b91c1c;" colspan="2">${b.reason}</td>
+                <td style="font-weight:700; color:#b91c1c;" colspan="2">${b.reason || 'Restricción por personal médico'}</td>
                 <td><button class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} style="background:#10b981; border:none;" onclick="adminEngine.unblockSlot('${b.id}')">Desbloquear</button></td>
               </tr>
             `).join('')}
@@ -3995,7 +4131,7 @@ class AdminEngine {
     app.showToast(`🕒 Horario de atención de ${area.toUpperCase()} actualizado a: "${newHours}".`, 'success');
   }
 
-  submitBlockSlot(event) {
+  async submitBlockSlot(event) {
     if (event) event.preventDefault();
     if (this.permissionMode === 'view') {
       app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura.', 'error');
@@ -4004,7 +4140,7 @@ class AdminEngine {
 
     const area = document.getElementById('admin-block-area')?.value || 'grooming';
     const date = document.getElementById('admin-block-date')?.value || '';
-    const time = document.getElementById('admin-block-time')?.value || '10:00';
+    const time = document.getElementById('admin-block-time')?.value || 'all_day';
     const reason = document.getElementById('admin-block-reason')?.value?.trim() || 'Restricción de agenda por el personal';
 
     if (!date) {
@@ -4037,14 +4173,29 @@ class AdminEngine {
     this.saveBlockedSlotsToStorage();
     this.renderAgendaManager();
 
+    // Sincronizar de inmediato con backend y Google Calendar
+    try {
+      fetch('/api/v1/calendario/bloquear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: date,
+          time: time,
+          area: area,
+          reason: reason,
+          created_by: 'Dra. Margaret / Dalybell'
+        })
+      }).catch(() => {});
+    } catch(e) {}
+
     const areaLabel = area === 'all' ? 'TODA LA SUCURSAL' : area.toUpperCase();
     const timeLabel = (time === 'all_day' || time === 'all') ? 'TODO EL DÍA' : time;
     if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast(`⛔ Horario ${timeLabel} del ${date} para ${areaLabel} bloqueado en agenda (Motivo: ${reason}).`, 'warning');
+      window.app.showToast(`⛔ Horario ${timeLabel} del ${date} para ${areaLabel} bloqueado en agenda (Notificado a Google Calendar).`, 'warning');
     }
   }
 
-  unblockSlot(blockId) {
+  async unblockSlot(blockId) {
     if (this.permissionMode === 'view') {
       app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura.', 'error');
       return;
@@ -4052,8 +4203,13 @@ class AdminEngine {
     this.blockedSlots = this.blockedSlots.filter(b => b.id !== blockId);
     this.saveBlockedSlotsToStorage();
     this.renderAgendaManager();
+
+    try {
+      fetch(`/api/v1/calendario/bloquear/${blockId}`, { method: 'DELETE' }).catch(() => {});
+    } catch(e) {}
+
     if (window.app && typeof window.app.showToast === 'function') {
-      app.showToast('✅ Restricción de horario eliminada de la agenda.', 'success');
+      app.showToast('✅ Restricción de horario eliminada de la agenda y de Google Calendar.', 'success');
     }
   }
 

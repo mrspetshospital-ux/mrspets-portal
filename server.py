@@ -77,6 +77,11 @@ try:
 except Exception as _e_cr:
     centralita_router = None
 
+try:
+    from calendarEngine import calendar_engine
+except Exception as _e_cal:
+    calendar_engine = None
+
 
 # ---------------------------------------------------------------------
 # Logging — errores claros y consultables
@@ -795,6 +800,30 @@ def crear_cita(data: CitaIn, request: Request, user=Depends(require_user)):
             raise HTTPException(409, f"El turno {codigo} ya existe para ese día.")
         raise
     sec.audit("citas", "INSERT", rid, usuario=user, ip=client_ip(request))
+
+    # Sincronización automática con Google Calendar vía Make.com
+    if calendar_engine:
+        def _sync_gcal_worker():
+            try:
+                tutor_info = db.q("SELECT t.nombre, t.telefono FROM tutores t JOIN mascotas m ON m.tutor_id = t.id WHERE m.id=%s", (data.mascota_id,), one=True) or {}
+                serv_info = db.q("SELECT nombre FROM servicios WHERE id=%s", (data.servicio_id,), one=True) or {} if data.servicio_id else {}
+                appt_dict = {
+                    "codigo": codigo,
+                    "id": rid,
+                    "area": data.area,
+                    "pet": m.get("nombre", "Consentido"),
+                    "tutor": tutor_info.get("nombre", "Tutor VIP"),
+                    "tutor_telefono": tutor_info.get("telefono", ""),
+                    "service": serv_info.get("nombre", f"Servicio {data.area}"),
+                    "fecha_hora": str(data.fecha_hora),
+                    "notas": data.notas or "Agendado en portal Mrs. Pets"
+                }
+                gcal_payload = calendar_engine.build_make_gcal_payload("appointment_created", appt_dict)
+                calendar_engine.dispatch_to_make(gcal_payload)
+            except Exception as _e_sync:
+                log.warning("No se pudo sincronizar cita con Google Calendar Make: %s", _e_sync)
+        threading.Thread(target=_sync_gcal_worker, daemon=True).start()
+
     return ok(id=rid, codigo=codigo)
 
 
@@ -1864,9 +1893,25 @@ def _call_gemini_for_leia_engine(
     else:
         normalized.append({"role": "user", "parts": [{"text": user_message}]})
 
+    active_system_prompt = LEIA_VIP_SYSTEM_PROMPT
+    if calendar_engine:
+        lower_msg = user_message.lower()
+        booking_triggers = [
+            "reserva", "reservar", "cita", "agendar", "turno", "disponib",
+            "horario", "hora", "abierto", "atienden", "cerrado", "domingo",
+            "lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabado", "sábado",
+            "mañana", "hoy", "semana", "atencion", "atención", "baño", "grooming", "consulta", "hotel"
+        ]
+        if any(trig in lower_msg for trig in booking_triggers):
+            try:
+                cal_ctx = calendar_engine.get_leia_context_summary()
+                active_system_prompt = active_system_prompt + "\n" + cal_ctx
+            except Exception as _e_ctx:
+                log.warning("No se pudo obtener contexto de calendario: %s", _e_ctx)
+
     req_body = {
         "systemInstruction": {
-            "parts": [{"text": LEIA_VIP_SYSTEM_PROMPT}]
+            "parts": [{"text": active_system_prompt}]
         },
         "contents": normalized,
         "generationConfig": {
@@ -1947,7 +1992,9 @@ async def leia_chat_v1(request: Request):
         "userType": user_type,
         "userName": user_name,
         "petName": pet_name,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "operating_hours": "Lunes a Sábado de 08:00 AM a 06:00 PM (Domingos CERRADO)",
+        "calendar_status": calendar_engine.check_availability(datetime.now().strftime("%Y-%m-%d")) if calendar_engine else None
     }
     _async_notify_make_webhook(make_url, make_payload)
 
@@ -2000,6 +2047,156 @@ async def leia_chat_v1(request: Request):
         "latency_ms": gem_res.get("latency_ms"),
         "user_type": user_type
     }
+
+
+# =====================================================================
+# CALENDARIO, HORARIOS, DISPONIBILIDAD & GOOGLE CALENDAR SYNC (MAKE.COM)
+# =====================================================================
+
+@app.get("/api/v1/calendario/config")
+def get_calendar_config_endpoint():
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    return ok(**calendar_engine.config)
+
+
+@app.post("/api/v1/calendario/config")
+async def update_calendar_config_endpoint(request: Request):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    saved = calendar_engine.save_config(body)
+    return ok(config=saved)
+
+
+@app.get("/api/v1/calendario/disponibilidad")
+def check_calendar_availability_endpoint(
+    fecha: Optional[str] = Query(None),
+    hora: Optional[str] = Query(None),
+    area: Optional[str] = Query("grooming")
+):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    res = calendar_engine.check_availability(fecha, hora, area)
+    return ok(**res)
+
+
+@app.get("/api/v1/calendario/eventos")
+def get_calendar_events_endpoint(
+    desde: Optional[str] = Query(None),
+    hasta: Optional[str] = Query(None),
+    area: Optional[str] = Query(None)
+):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    
+    appts = []
+    try:
+        sql = """SELECT c.*, m.nombre AS mascota_nombre, t.nombre AS tutor_nombre, t.telefono AS tutor_telefono
+                 FROM citas c
+                 JOIN mascotas m ON m.id = c.mascota_id
+                 JOIN tutores t ON t.id = m.tutor_id
+                 WHERE c.activo=TRUE"""
+        params = []
+        if desde:
+            sql += " AND c.fecha_hora >= %s"
+            params.append(desde)
+        if hasta:
+            sql += " AND c.fecha_hora <= %s"
+            params.append(hasta)
+        if area:
+            sql += " AND c.area = %s"
+            params.append(area)
+        sql += " ORDER BY c.fecha_hora ASC"
+        appts = db.q(sql, tuple(params))
+    except Exception:
+        appts = calendar_engine._memory_appointments
+
+    blocks = calendar_engine.get_blocked_slots(area=area)
+
+    return ok(
+        citas=appts,
+        bloqueos=blocks,
+        regular_hours=calendar_engine.config.get("regular_hours"),
+        rooms=calendar_engine.config.get("rooms"),
+        last_synced_at=calendar_engine.config.get("last_synced_at")
+    )
+
+
+@app.post("/api/v1/calendario/bloquear")
+async def block_calendar_slot_endpoint(request: Request):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    fecha = body.get("date") or body.get("fecha")
+    hora = body.get("time") or body.get("hora") or "all_day"
+    area = body.get("area") or "all"
+    motivo = body.get("reason") or body.get("motivo") or "Restricción médica / administrativa"
+    creado_por = body.get("created_by") or "Dra. Margaret / Dalybell"
+
+    if not fecha:
+        raise HTTPException(400, "Debe especificar la fecha a bloquear (YYYY-MM-DD)")
+
+    try:
+        new_block = calendar_engine.add_blocked_slot(
+            date_str=fecha,
+            time_str=hora,
+            area=area,
+            reason=motivo,
+            created_by=creado_por
+        )
+        return ok(bloqueo=new_block)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/api/v1/calendario/bloquear/{slot_id}")
+def unblock_calendar_slot_endpoint(slot_id: str):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    removed = calendar_engine.remove_blocked_slot(slot_id)
+    if not removed:
+        raise HTTPException(404, "Bloqueo no encontrado")
+    return ok(removed=True, slot_id=slot_id)
+
+
+@app.post("/api/v1/calendario/sincronizar-google")
+async def sync_google_calendar_endpoint(request: Request):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    webhook_url = body.get("webhookUrl") or calendar_engine.config.get("make_calendar_webhook_url")
+    payload = {
+        "event": "manual_calendar_sync_requested",
+        "source": "mrs_pets_portal",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_rooms": 4,
+        "rooms": calendar_engine.config.get("rooms"),
+        "regular_hours": calendar_engine.config.get("regular_hours"),
+        "active_blocks_count": len(calendar_engine.config.get("blocked_dates", []))
+    }
+    dispatch_res = calendar_engine.dispatch_to_make(payload, custom_url=webhook_url)
+    return ok(dispatch=dispatch_res, last_synced_at=calendar_engine.config.get("last_synced_at"))
+
+
+@app.get("/api/v1/calendario/feed.ics")
+def ical_feed_endpoint():
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    ics_content = calendar_engine.generate_ical_feed(days_ahead=30)
+    return Response(content=ics_content, media_type="text/calendar; charset=utf-8")
+
 
 
 @app.post("/api/webhook/make-pos")
