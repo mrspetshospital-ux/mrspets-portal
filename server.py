@@ -47,9 +47,17 @@ except Exception as _e_misi:
     misipet_engine = None
 
 try:
-    from teamilyClient import teamily_geo_a_client
+    from teamilyClient import (
+        teamily_geo_a_client,
+        TeamilyGeoARequest,
+        TeamilyThreadConfig,
+        normalize_teamily_endpoint
+    )
 except Exception as _e_team:
     teamily_geo_a_client = None
+    TeamilyGeoARequest = None
+    TeamilyThreadConfig = None
+    def normalize_teamily_endpoint(e, **k): return e
 
 try:
     from elevenlabsEngine import elevenlabs_engine
@@ -1956,6 +1964,23 @@ def teamily_status():
     return {"status": "success", "teamily": "ready"}
 
 
+# Mapeo canónico de subagentes del Comité Volturi hacia sus mesas de Teamily
+AGENT_TEAMLY_USERS = {
+    "leia": ("@9000376919168475", "Leia Concierge VIP & Asistente CEO"),
+    "margaret": ("@9000376919168475", "Margaret Atención al Cliente"),
+    "valeria": ("@9000487795593348", "Valeria RRHH"),
+    "vanessa": ("@9000487795593348", "Valeria RRHH"),
+    "manolo": ("@9000441148643782", "Manolo Operaciones"),
+    "mike": ("@9000215760376233", "Mike Infraestructura"),
+    "oneal": ("@9000339468227100", "O'Neil Marketing"),
+    "oneil": ("@9000339468227100", "O'Neil Marketing"),
+    "oneal_mercadeo": ("@9000255459464666", "O'Neil Mercadotecnia"),
+    "sebastian": ("@9000074393459175", "Sebastian Ventas"),
+    "pandora": ("@9000274735437072", "Pandora Compras"),
+    "rocky": ("@9000476605193636", "Rocky Logística"),
+    "charlie": ("geo-a", "Charly GEO A & Finanzas")
+}
+
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
 async def teamily_chat(request: Request):
@@ -1963,9 +1988,87 @@ async def teamily_chat(request: Request):
         body = await request.json()
     except Exception:
         body = {}
-    msg = body.get("message") or body.get("prompt") or ""
-    agent = body.get("agent_id") or "leia"
-    return {"status": "success", "agent": agent, "reply": f"Respuesta de {agent}: {msg}"}
+
+    inp = str(body.get("input") or body.get("message") or body.get("prompt") or body.get("query") or "").strip()
+    agent_slug = str(body.get("agent_slug") or body.get("agent_id") or "leia").strip().lower().replace("@", "")
+    agent_name = str(body.get("agent_name") or "").strip()
+    board_id = body.get("board_id") or getattr(teamily_geo_a_client, "board_id", None) or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+    endpoint_override = body.get("endpoint_override")
+    server_key_override = body.get("server_key_override")
+    context_data = body.get("context") or {}
+    message_id = body.get("message_id") or request.headers.get("x-message-id") or f"MSG-{secrets.token_hex(6)}"
+
+    if not inp:
+        return {"status": "error", "message": "Mensaje vacío", "reply": "El mensaje no puede estar vacío."}
+
+    # 1. Determinar canalización hacia Charly en Teamily con mención @userID
+    clean_input = inp
+    if agent_slug in AGENT_TEAMLY_USERS and agent_slug not in ("charlie", "geo-a"):
+        tag, label = AGENT_TEAMLY_USERS[agent_slug]
+        if tag not in clean_input and not clean_input.lower().startswith("charly"):
+            target_label = agent_name or label
+            clean_input = f"Charly, canaliza y entrega este requerimiento a {target_label} ({tag}) en su mesa de trabajo correspondiente: {clean_input}"
+
+    # 2. Despacho en tiempo real hacia Teamily API (Live)
+    if teamily_geo_a_client and TeamilyGeoARequest:
+        try:
+            req = TeamilyGeoARequest(
+                input=clean_input,
+                thread=TeamilyThreadConfig(mode=body.get("thread_mode", "new"), thread_id=body.get("thread_id")),
+                wait=True,
+                board_id=board_id
+            )
+            res = teamily_geo_a_client.send_message(
+                req,
+                endpoint_override=endpoint_override,
+                server_key_override=server_key_override
+            )
+            if res.success and res.response_text and len(res.response_text.strip()) > 0:
+                if centralita_router:
+                    centralita_router.record_trace(
+                        message_id=message_id,
+                        agente_origen="user",
+                        agente_destino=agent_slug,
+                        webhook_utilizado="Teamily GEO A Client (Live API)",
+                        estado="TEAMILEY_ENTREGADO",
+                        respuesta_preview=res.response_text[:120],
+                        extra={"latency_ms": res.latency_ms, "board_id": board_id}
+                    )
+                return {
+                    "status": "success",
+                    "status_code": 200,
+                    "success": True,
+                    "message_id": message_id,
+                    "agent_slug": agent_slug,
+                    "agent_name": agent_name or agent_slug.title(),
+                    "response_text": res.response_text,
+                    "reply": res.response_text,
+                    "output": {"text": res.response_text},
+                    "data": res.data,
+                    "latency_ms": res.latency_ms,
+                    "source": "teamily_live"
+                }
+        except Exception as e_team:
+            log.warning("Fallo al contactar Teamily API: %s", e_team)
+
+    # 3. Fallback Resiliente con Centralita Router (Zero-Downtime)
+    if centralita_router:
+        route_res = centralita_router.route_message(
+            message_id=message_id,
+            user_input=inp,
+            requested_slug=agent_slug,
+            context=context_data,
+            agente_origen="user"
+        )
+        route_res["source"] = "centralita_fallback"
+        return route_res
+
+    return {
+        "status": "success",
+        "agent_slug": agent_slug,
+        "reply": f"Requerimiento registrado para {agent_slug}: {inp}",
+        "response_text": f"Requerimiento registrado para {agent_slug}: {inp}"
+    }
 
 
 @app.post("/api/v1/google-sheets/record-interaction")
