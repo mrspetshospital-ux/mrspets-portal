@@ -191,6 +191,9 @@
                     <!-- Formulario de Entrada y Adjuntos -->
                     <form id="leia-chat-input-form" class="leia-chat-input-form" onsubmit="event.preventDefault(); window.LeiaChatEngine.handleSendMessage();">
                         <div class="leia-input-toolbar">
+                            <button type="button" class="btn-toolbar-attach" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function'){window.adminEngine.openLargeCalendarModal();}else{window.LeiaChatEngine.sendUserQuickText('📅 Ver Disponibilidad');}" style="background:rgba(16,185,129,0.15); border:1.5px solid #10B981; color:#34D399 !important; font-weight:800;" title="Abrir Calendario Grande & Disponibilidad Live">
+                                📅 <span class="btn-label-desktop">Calendario Live</span>
+                            </button>
                             <button type="button" class="btn-toolbar-attach" onclick="document.getElementById('leia-input-image').click();" title="Subir o Tomar Foto (Cámara / Galería)">
                                 📷 <span class="btn-label-desktop">Foto</span>
                             </button>
@@ -328,8 +331,10 @@
 
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo ayudarle hoy? ¿Desea hacer una reserva?`,
+                    text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo orientarle hoy? Puede consultar disponibilidad en vivo, abrir el calendario o reservar:`,
                     buttons: [
+                        '📅 Ver Disponibilidad',
+                        '📅 Calendario Grande (Staff)',
                         '📅 Deseo hacer una reserva',
                         '✂️ Grooming & Spa VIP',
                         '🩺 Consulta Médica',
@@ -343,14 +348,30 @@
                 this.addMessage({
                     sender: 'leia',
                     text: `¡Hola **${user.name}**! Te saluda **Leia 🎀** (Atención Ejecutiva & Staff).\n\nPuedo apoyarte con consultas administrativas, coordinación de citas o enlace con el Comité Volturi (Talibel, Manolo, Valeria, Mike, Charly). ¿En qué podemos avanzar hoy?`,
-                    buttons: ['📅 Reservas & Citas', '🤝 Contactar Administración', '✂️ Grooming & Spa', '🏛️ Comité Volturi'],
+                    buttons: [
+                        '📅 Calendario Grande (Staff)',
+                        '📅 Ver Disponibilidad',
+                        '📅 Reservas & Citas',
+                        '🤝 Contactar Administración',
+                        '✂️ Grooming & Spa',
+                        '🏛️ Comité Volturi'
+                    ],
                     timestamp: new Date()
                 });
             } else {
                 this.addMessage({
                     sender: 'leia',
                     text: `¡Hola! Soy **Leia 🎀** ✨🐾.\n\nQué gusto tenerte aquí. Estoy a tu completa disposición para orientarte sobre nuestro equipo, administración, servicios o resolver cualquier duda de **Mrs. Pets**.\n\n¿Con quién tengo el gusto de hablar y en qué puedo ayudarte hoy?`,
-                    buttons: ['🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
+                    buttons: [
+                        '📅 Ver Disponibilidad',
+                        '📅 Calendario Grande (Staff)',
+                        '🐾 Soy Cliente',
+                        '📅 Deseo una Reserva',
+                        '✂️ Grooming Spa',
+                        '🩺 Clínica Médica',
+                        '🏨 Hotel VIP 5★',
+                        '🤝 Hablar con Administración'
+                    ],
                     timestamp: new Date()
                 });
             }
@@ -835,6 +856,52 @@
                         window.teamilyExecutiveEngine.openDirectChatModal(matchedAgent.id);
                     }, 800);
                     return;
+                }
+            }
+
+            // 0.1 Apertura Inmediata del Calendario Grande para Staff
+            const isRequestingCalendar = t.includes('calendario grande') || t.includes('abrir calendario') || t.includes('ver calendario') || t.includes('calendario staff') || t === '📅 calendario grande (staff)';
+            if (isRequestingCalendar) {
+                this.addMessage({
+                    sender: 'leia',
+                    text: `🎀 **Leia (Concierge VIP):** 📅 ¡Abriendo el **Calendario General Operativo** de Mrs. Pets en pantalla grande para el Staff! ✨🐾\n\nAquí puedes revisar la ocupación en tiempo real de las 4 salas, los horarios establecidos por **Dalybell Ramírez & Dra. Margaret** (Lunes a Sábado de 8:00 AM a 6:00 PM, Domingos Cerrado) y la sincronización con Google Calendar.`,
+                    buttons: ['🔄 Sincronizar Google Calendar', '✂️ Cita Grooming Spa', '🩺 Consulta Médica'],
+                    timestamp: new Date()
+                });
+                setTimeout(() => {
+                    if (window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') {
+                        window.adminEngine.openLargeCalendarModal();
+                    } else if (window.app) {
+                        window.app.switchTab('admin');
+                        setTimeout(() => {
+                            const el = document.getElementById('acc-agenda');
+                            if (el) { el.open = true; el.scrollIntoView({ behavior: 'smooth' }); if (window.adminEngine) window.adminEngine.renderAgendaManager(); }
+                        }, 150);
+                    }
+                }, 300);
+                return;
+            }
+
+            // 0.2 Consulta Rápida de Disponibilidad en Vivo
+            const isRequestingAvailability = t === '📅 ver disponibilidad' || t === 'ver disponibilidad' || t === 'consultar disponibilidad' || t === 'disponibilidad' || t.includes('hay disponibilidad');
+            if (isRequestingAvailability) {
+                this.showTypingIndicator(true);
+                try {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const res = await fetch(`/api/v1/calendario/disponibilidad?fecha=${todayStr}&area=grooming`);
+                    const data = await res.json();
+                    this.showTypingIndicator(false);
+                    const slots = (data && data.slots_available && data.slots_available.length > 0) ? data.slots_available : ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
+                    const slotsList = slots.slice(0, 5).join(', ');
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia (Disponibilidad en Vivo • Dra. Margaret & Dalybell):**\n\n📅 **Horario Oficial:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00) estrictamente.\n⛔ **Domingos:** Cerrado por descanso médico del personal y spa.\n\n✨ **Turnos disponibles para hoy en Spa & Grooming (Aforo: 4 por hora):**\n• Horas disponibles: **${slotsList}**\n\nPuedes abrir el **Calendario Grande** para ver toda la semana o agendar directamente:`,
+                        buttons: ['📅 Calendario Grande (Staff)', '✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                        timestamp: new Date()
+                    });
+                    return;
+                } catch(e) {
+                    this.showTypingIndicator(false);
                 }
             }
 

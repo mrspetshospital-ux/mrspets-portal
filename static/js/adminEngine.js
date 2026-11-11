@@ -4220,8 +4220,335 @@ class AdminEngine {
     }
     this.bookedAppointments = this.bookedAppointments.filter(a => a.id !== aptId);
     this.refreshAllOperationalViews();
+    if (document.getElementById('modal-large-calendar')?.style.display === 'flex') {
+      this.renderLargeCalendarModalContent();
+    }
     app.showToast('Cita cancelada y horario liberado en agenda.', 'info');
   }
+
+  // =========================================================================
+  // CALENDARIO GRANDE GENERAL (STAFF & OPERACIONES - MRS. PETS CORP)
+  // =========================================================================
+  openLargeCalendarModal(weekOffset = 0, selectedArea = 'all') {
+    this.largeCalWeekOffset = (typeof weekOffset === 'number') ? weekOffset : (this.largeCalWeekOffset || 0);
+    this.largeCalSelectedArea = selectedArea || this.largeCalSelectedArea || 'all';
+
+    let modal = document.getElementById('modal-large-calendar');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-large-calendar';
+      modal.className = 'modal-overlay';
+      modal.style.cssText = 'display:flex; position:fixed; inset:0; z-index:9999999; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:12px;';
+      modal.innerHTML = `
+        <div class="modal-card" style="max-width:1480px; width:99%; height:94vh; max-height:94vh; display:flex; flex-direction:column; background:#FFFFFF; border-radius:24px; box-shadow:0 25px 70px rgba(0,0,0,0.5); overflow:hidden; border:1px solid #CBD5E1;">
+          <div id="large-calendar-modal-inner" style="display:flex; flex-direction:column; height:100%; width:100%; overflow:hidden;"></div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) this.closeLargeCalendarModal();
+      });
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+
+    // Cargar citas en vivo desde el servidor
+    this.loadLiveAgenda().then(() => {
+      this.renderLargeCalendarModalContent();
+    });
+    this.renderLargeCalendarModalContent();
+  }
+
+  closeLargeCalendarModal() {
+    const modal = document.getElementById('modal-large-calendar');
+    if (modal) {
+      modal.style.display = 'none';
+      modal.classList.remove('active');
+    }
+  }
+
+  changeLargeCalendarWeek(delta) {
+    if (delta === 0) {
+      this.largeCalWeekOffset = 0;
+    } else {
+      this.largeCalWeekOffset = (this.largeCalWeekOffset || 0) + delta;
+    }
+    this.renderLargeCalendarModalContent();
+  }
+
+  setLargeCalendarArea(area) {
+    this.largeCalSelectedArea = area;
+    this.renderLargeCalendarModalContent();
+  }
+
+  renderLargeCalendarModalContent() {
+    const inner = document.getElementById('large-calendar-modal-inner');
+    if (!inner) return;
+
+    const offset = this.largeCalWeekOffset || 0;
+    const filterArea = this.largeCalSelectedArea || 'all';
+
+    // Calcular lunes de la semana solicitada
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 is Sun, 1 is Mon...
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday + (offset * 7));
+
+    // Generar 7 días (Lunes a Domingo)
+    const weekDays = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dayNames = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
+      return {
+        dateObj: d,
+        isoDate: isoDate,
+        dayName: dayNames[i],
+        dayNum: d.getDate(),
+        monthNum: d.getMonth() + 1,
+        isSunday: i === 6,
+        isToday: isoDate === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      };
+    });
+
+    const firstDay = weekDays[0];
+    const lastDay = weekDays[6];
+    const weekLabel = `${firstDay.dayNum}/${firstDay.monthNum} al ${lastDay.dayNum}/${lastDay.monthNum}/${lastDay.dateObj.getFullYear()}`;
+
+    // Horas estándar operativas (08:00 a 17:00, cierre estricto a las 18:00)
+    const operatingHours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+
+    // Salas oficiales y sus aforos
+    const salasConfig = {
+      grooming: { name: 'Circuito Grooming Spa (7 Estaciones)', maxCap: 4, color: '#D4AF37', icon: '✂️' },
+      clinica: { name: 'Consultorio Dra. Margaret', maxCap: 2, color: '#10B981', icon: '🩺' },
+      hotel: { name: 'Suites Hotel VIP 5★', maxCap: 8, color: '#3B82F6', icon: '🏨' },
+      tienda: { name: 'Boutique & Asesoría VIP', maxCap: 5, color: '#F59E0B', icon: '🛍️' }
+    };
+
+    inner.innerHTML = `
+      <!-- 1. Header Ejecutivo Grande -->
+      <div style="background:linear-gradient(135deg, #0F172A, #1E293B); color:#F8FAFC; padding:14px 22px; border-bottom:2px solid #D4AF37; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; flex-shrink:0;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.25rem; font-weight:900; color:#FCD34D;">📅 Calendario General Operativo (Mrs. Pets Corp)</span>
+            <span class="badge" style="background:rgba(16,185,129,0.2); color:#34D399; border:1px solid #10B981; font-weight:800; font-size:0.75rem;">🟢 Google Calendar Sync: Activo</span>
+            <span class="badge" style="background:rgba(212,175,55,0.2); color:#FCD34D; border:1px solid #D4AF37; font-weight:800; font-size:0.75rem;">✂️ Grooming: 4 turnos/h</span>
+          </div>
+          <p style="font-size:0.78rem; color:#94A3B8; margin:3px 0 0 0;">
+            Reglas de atención establecidas por <strong>Dalybell Ramírez & Dra. Margaret</strong>: Lunes a Sábado de 8:00 AM a 6:00 PM (18:00) • Domingos CERRADO para descanso médico y spa.
+          </p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-sm" onclick="adminEngine.syncGoogleCalendarNow()" style="background:#10B981; color:#05120C !important; font-weight:800; font-size:0.78rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+            🔄 Sincronizar Google Calendar
+          </button>
+          <a href="/api/v1/calendario/feed.ics" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,0.08); color:#F1F5F9 !important; font-weight:700; font-size:0.78rem; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); text-decoration:none;">
+            📥 Feed iCal (.ics)
+          </a>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.closeLargeCalendarModal()" style="background:#EF4444; color:#FFFFFF !important; font-weight:900; border:none; border-radius:10px; padding:8px 14px; cursor:pointer;">
+            ✕ Cerrar
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Barra de Navegación Semanal & Filtro de Salas -->
+      <div style="background:#F8FAFC; padding:10px 22px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; flex-shrink:0;">
+        <!-- Controles de Semana -->
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-sm" onclick="adminEngine.changeLargeCalendarWeek(-1)" style="background:#FFFFFF; border:1px solid #CBD5E1; color:#334155; font-weight:800; border-radius:8px; padding:6px 12px; cursor:pointer;">
+            ◀ Anterior
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.changeLargeCalendarWeek(0)" style="background:${offset === 0 ? '#D4AF37' : '#FFFFFF'}; border:1px solid #CBD5E1; color:${offset === 0 ? '#121214' : '#334155'}; font-weight:800; border-radius:8px; padding:6px 14px; cursor:pointer;">
+            📍 Esta Semana (Hoy)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.changeLargeCalendarWeek(1)" style="background:#FFFFFF; border:1px solid #CBD5E1; color:#334155; font-weight:800; border-radius:8px; padding:6px 12px; cursor:pointer;">
+            Siguiente ▶
+          </button>
+          <span style="font-weight:800; color:#0F172A; font-size:0.85rem; margin-left:6px;">
+            Semana: ${weekLabel}
+          </span>
+        </div>
+
+        <!-- Filtros de Salas -->
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm" onclick="adminEngine.setLargeCalendarArea('all')" style="background:${filterArea === 'all' ? '#0F172A' : '#FFFFFF'}; color:${filterArea === 'all' ? '#FCD34D' : '#475569'}; font-weight:800; font-size:0.75rem; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; padding:6px 10px;">
+            🏢 Todas las Salas
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.setLargeCalendarArea('grooming')" style="background:${filterArea === 'grooming' ? '#D4AF37' : '#FFFFFF'}; color:${filterArea === 'grooming' ? '#121214' : '#475569'}; font-weight:800; font-size:0.75rem; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; padding:6px 10px;">
+            ✂️ Grooming Spa (4/h)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.setLargeCalendarArea('clinica')" style="background:${filterArea === 'clinica' ? '#10B981' : '#FFFFFF'}; color:${filterArea === 'clinica' ? '#FFFFFF' : '#475569'}; font-weight:800; font-size:0.75rem; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; padding:6px 10px;">
+            🩺 Clínica Dra. Margaret (2/h)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.setLargeCalendarArea('hotel')" style="background:${filterArea === 'hotel' ? '#3B82F6' : '#FFFFFF'}; color:${filterArea === 'hotel' ? '#FFFFFF' : '#475569'}; font-weight:800; font-size:0.75rem; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; padding:6px 10px;">
+            🏨 Hotel 5★ (8)
+          </button>
+          <button type="button" class="btn btn-sm" onclick="adminEngine.setLargeCalendarArea('tienda')" style="background:${filterArea === 'tienda' ? '#F59E0B' : '#FFFFFF'}; color:${filterArea === 'tienda' ? '#FFFFFF' : '#475569'}; font-weight:800; font-size:0.75rem; border-radius:8px; border:1px solid #CBD5E1; cursor:pointer; padding:6px 10px;">
+            🛍️ Boutique (5/h)
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Grid Visual de 7 Columnas (Expansivo & Scrollable) -->
+      <div style="flex:1; overflow-y:auto; overflow-x:auto; padding:12px 18px; background:#F1F5F9;">
+        <div style="display:grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap:12px; min-width:1260px;">
+          ${weekDays.map(day => {
+            // Filtrar citas del día
+            const dayAppts = this.bookedAppointments.filter(a => {
+              const aDate = String(a.date || '').split('T')[0];
+              if (aDate !== day.isoDate) return false;
+              if (filterArea !== 'all' && this.normalizeAreaForComparison(a.area) !== filterArea) return false;
+              return true;
+            });
+
+            // Filtrar bloqueos del día
+            const dayBlocks = this.blockedSlots.filter(b => {
+              if (b.recurrence === 'weekly_sunday' && day.isSunday) return true;
+              const bDate = String(b.date || '').split('T')[0];
+              if (bDate !== day.isoDate) return false;
+              if (filterArea !== 'all' && b.area !== 'all' && this.normalizeAreaForComparison(b.area) !== filterArea) return false;
+              return true;
+            });
+
+            const isAllDayBlocked = dayBlocks.some(b => b.time === 'all_day' || !b.time);
+
+            // COLUMNA DOMINGO
+            if (day.isSunday) {
+              return `
+                <div style="background:#FFF5F5; border:2px dashed #EF4444; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; min-height:600px;">
+                  <div style="background:#FEF2F2; padding:10px 12px; border-bottom:1.5px solid #FCA5A5; text-align:center;">
+                    <div style="font-weight:900; color:#DC2626; font-size:0.82rem;">${day.dayName}</div>
+                    <div style="font-size:1.1rem; font-weight:900; color:#991B1B;">${day.dayNum}/${day.monthNum}</div>
+                    <span class="badge" style="background:#EF4444; color:#FFFFFF; font-weight:900; font-size:0.65rem; margin-top:4px;">⛔ CERRADO</span>
+                  </div>
+                  <div style="padding:20px 14px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; text-align:center; color:#7F1D1D;">
+                    <span style="font-size:2.5rem; margin-bottom:12px;">🛑</span>
+                    <h5 style="font-size:0.95rem; font-weight:900; color:#991B1B; margin-bottom:6px;">Instalaciones Cerradas</h5>
+                    <p style="font-size:0.75rem; color:#7F1D1D; line-height:1.4; margin-bottom:14px;">
+                      Descanso médico establecido por <strong>Dra. Margaret & Dalybell Ramírez</strong>. Mantenimiento profundo de salas y sanitización Vision AI.
+                    </p>
+                    <div style="background:#FFFFFF; border:1px solid #FCA5A5; border-radius:10px; padding:8px 12px; font-size:0.7rem; font-weight:700; color:#B91C1C;">
+                      Atención regular de Lunes a Sábado hasta las 6:00 p.m.
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+
+            // COLUMNAS LUNES A SÁBADO
+            return `
+              <div style="background:#FFFFFF; border:${day.isToday ? '2px solid #D4AF37' : '1px solid #CBD5E1'}; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                <!-- Header del Día -->
+                <div style="background:${day.isToday ? 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))' : '#F8FAFC'}; padding:10px 12px; border-bottom:1.5px solid ${day.isToday ? '#D4AF37' : '#E2E8F0'}; text-align:center;">
+                  <div style="font-weight:900; color:${day.isToday ? '#B45309' : '#1E293B'}; font-size:0.82rem;">${day.dayName}</div>
+                  <div style="font-size:1.15rem; font-weight:900; color:#0F172A;">${day.dayNum}/${day.monthNum}</div>
+                  <div style="display:flex; justify-content:center; gap:4px; margin-top:4px;">
+                    <span class="badge" style="background:#10B981; color:#FFFFFF; font-weight:800; font-size:0.65rem;">
+                      ${dayAppts.length} Citas
+                    </span>
+                    ${day.isToday ? '<span class="badge" style="background:#D4AF37; color:#121214; font-weight:900; font-size:0.65rem;">HOY</span>' : ''}
+                  </div>
+                </div>
+
+                <!-- Bloqueo de Día Completo si aplica -->
+                ${isAllDayBlocked ? `
+                  <div style="padding:14px; background:#FFFBEB; border-bottom:1px solid #FDE68A; margin:8px; border-radius:10px; text-align:center;">
+                    <strong style="color:#B45309; font-size:0.78rem;">⛔ DÍA BLOQUEADO</strong>
+                    <div style="font-size:0.7rem; color:#78350F; margin-top:2px;">
+                      ${dayBlocks.find(b => b.time === 'all_day' || !b.time)?.reason || 'Restricción médica'}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Franjas Horarias Operativas (08:00 a 17:00) -->
+                <div style="padding:8px 6px; display:flex; flex-direction:column; gap:8px; flex:1;">
+                  ${operatingHours.map(hour => {
+                    // Citas de esta hora
+                    const hourAppts = dayAppts.filter(a => {
+                      const t = String(a.time || '').substring(0, 5);
+                      return t === hour;
+                    });
+
+                    // Bloqueos de esta hora
+                    const hourBlock = dayBlocks.find(b => {
+                      const t = String(b.time || '').substring(0, 5);
+                      return t === hour;
+                    });
+
+                    // Aforo de Grooming (máx 4 por hora)
+                    const groomingCount = hourAppts.filter(a => this.normalizeAreaForComparison(a.area) === 'grooming').length;
+                    const groomingFree = Math.max(0, 4 - groomingCount);
+
+                    return `
+                      <div style="border:1px solid ${hourAppts.length > 0 ? '#CBD5E1' : '#E2E8F0'}; border-radius:10px; padding:6px 8px; background:${hourBlock ? '#FFF1F2' : (hourAppts.length > 0 ? '#F8FAFC' : '#FFFFFF')};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                          <span style="font-size:0.72rem; font-weight:900; color:#475569;">⏰ ${hour}</span>
+                          ${hourBlock ? `
+                            <span class="badge badge-danger" style="font-size:0.6rem; padding:1px 5px;">⛔ Bloqueado</span>
+                          ` : `
+                            <span style="font-size:0.62rem; color:#059669; font-weight:800; background:#ECFDF5; padding:1px 5px; border-radius:6px;">
+                              ✂️ ${groomingFree}/4 libres
+                            </span>
+                          `}
+                        </div>
+
+                        ${hourBlock ? `
+                          <div style="font-size:0.68rem; color:#991B1B; font-weight:700;">
+                            ${hourBlock.reason}
+                          </div>
+                        ` : ''}
+
+                        <!-- Citas registradas en esta hora -->
+                        ${hourAppts.map(a => {
+                          const areaKey = this.normalizeAreaForComparison(a.area);
+                          const sala = salasConfig[areaKey] || { color: '#64748B', icon: '🐾', name: a.area };
+                          return `
+                            <div style="background:#FFFFFF; border-left:3px solid ${sala.color}; border-radius:6px; padding:4px 6px; margin-top:3px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                              <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size:0.75rem; color:#0F172A;">🐾 ${a.pet || 'Mascota'}</strong>
+                                <span style="font-size:0.65rem; font-weight:800; color:${sala.color};">${sala.icon}</span>
+                              </div>
+                              <div style="font-size:0.68rem; color:#64748B;">👤 ${a.tutor || 'Cliente VIP'}</div>
+                              <div style="font-size:0.62rem; color:#94A3B8; margin-top:1px;">${a.service || a.area} (${a.id})</div>
+                              <button type="button" onclick="adminEngine.cancelAppointment('${a.id}')" style="margin-top:2px; font-size:0.6rem; color:#EF4444; background:none; border:none; padding:0; cursor:pointer; font-weight:700;">✕ Liberar</button>
+                            </div>
+                          `;
+                        }).join('')}
+
+                        ${!hourBlock && hourAppts.length === 0 ? `
+                          <button type="button" onclick="clinicaEngine ? clinicaEngine.openGroomingBookingModal('Circuito Grooming Spa', '', '', { defaultDate: '${day.isoDate}', defaultTime: '${hour}' }) : null" style="width:100%; font-size:0.65rem; color:#047857; background:#F0FDF4; border:1px dashed #A7F3D0; border-radius:6px; padding:3px; cursor:pointer; font-weight:700; margin-top:2px;">
+                            + Agendar Cita
+                          </button>
+                        ` : ''}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- 4. Footer con Resumen de Capacidad & Botón de Bloqueo Rápido -->
+      <div style="background:#FFFFFF; padding:10px 22px; border-top:1px solid #CBD5E1; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:14px; font-size:0.78rem; color:#475569;">
+          <span>🐾 <strong>Aforos Oficiales por Hora:</strong></span>
+          <span>✂️ Grooming: <strong>4</strong></span>
+          <span>🩺 Clínica: <strong>2</strong></span>
+          <span>🏨 Hotel: <strong>8</strong></span>
+          <span>🛍️ Boutique: <strong>5</strong></span>
+        </div>
+        <div>
+          <button type="button" class="btn btn-sm" onclick="app.switchTab('admin'); adminEngine.closeLargeCalendarModal(); setTimeout(() => { const el = document.getElementById('acc-agenda'); if(el){el.open=true; el.scrollIntoView({behavior:'smooth'});} }, 150);" style="background:#F59E0B; color:#121214 !important; font-weight:800; font-size:0.75rem; padding:6px 14px; border-radius:8px; border:none; cursor:pointer;">
+            ⛔ Bloquear Fecha o Turno Específico
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
 
 
 
