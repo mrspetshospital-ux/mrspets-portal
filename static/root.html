@@ -794,6 +794,13 @@
               <span class="nav-badge" style="background:#4A6B5D; color:white; font-weight:800;">RESERVAR</span>
             </a>
 
+            <!-- CALENDARIO OPERATIVO & GOOGLE CALENDAR SYNC -->
+            <a class="nav-item" id="btn-sidebar-calendario-agenda" onclick="if(window.app) { app.switchTab('admin'); setTimeout(() => { const el = document.getElementById('acc-agenda'); if(el) { el.open = true; el.scrollIntoView({ behavior: 'smooth' }); if(window.adminEngine) window.adminEngine.renderAgendaManager(); } }, 150); }" style="border:1.5px solid #10B981; background:rgba(16,185,129,0.1); cursor:pointer; margin-bottom:4px;" title="Ver Calendario Operativo & Sincronización Google Calendar">
+              <span class="icon">📅</span>
+              <span style="font-weight:800; color:#10B981;">Calendario & Horarios Live</span>
+              <span class="nav-badge" style="background:#10B981; color:#05120C; font-weight:900;">AGENDA</span>
+            </a>
+
             <a class="nav-item" data-tab="pet-status" data-area-filter="grooming" onclick="app.switchTab('pet-status', false, this, 'grooming')" style="border:1px solid #fbbf24; background:rgba(251,191,36,0.12); cursor:pointer; margin-bottom:4px;">
               <span class="icon"><i data-lucide="scissors" style="color:#d97706;"></i></span>
               <span style="font-weight:800; color:#d97706;">Control Estatus Grooming</span>
