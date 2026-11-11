@@ -161,7 +161,7 @@ class WarRoomEngine:
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
-            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
             "gemini_api_key": os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", "")),
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
             "volturi_endpoint_url": "/api/v1/war-room/chat",
@@ -929,7 +929,10 @@ class WarRoomEngine:
         override_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Llama a la API oficial de Google Gemini (gemini-2.5-flash) en modo real.
+        Llama a la API oficial de Google Gemini en modo real con tolerancia a fallas.
+        - Prioriza el modelo configurado (gemini-3.8-flash).
+        - Si Google reporta 503 (Servicio no disponible por alta demanda) o timeout,
+          conmuta resiliente a los modelos de respaldo (gemini-3.5-flash-lite / gemini-3.1-flash-lite).
         - Carga el system prompt del nodo seleccionado.
         - Contexto: últimos 10 mensajes del canal correspondiente.
         - Mide tiempo real con time.time().
@@ -942,7 +945,16 @@ class WarRoomEngine:
             or self.node_configs.get("gemini_api_key", "").strip()
         )
 
-        model = self.node_configs.get("gemini_model", "gemini-2.5-flash")
+        primary_model = self.node_configs.get("gemini_model", "gemini-3.8-flash")
+        if primary_model in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
+            primary_model = "gemini-3.8-flash"
+
+        # Cadena de modelos prioritarios y resilientes
+        candidate_models = [primary_model]
+        for fallback in ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"]:
+            if fallback not in candidate_models:
+                candidate_models.append(fallback)
+
         t0 = time.time()
 
         if not api_key:
@@ -956,10 +968,10 @@ class WarRoomEngine:
                 "error": err_msg,
                 "reply": err_msg,
                 "latency_ms": elapsed_ms,
-                "http_code": 401
+                "http_code": 401,
+                "model_used": primary_model
             }
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         system_prompt = NODE_SYSTEM_PROMPTS.get(target_node_id, NODE_SYSTEM_PROMPTS.get("volturi", ""))
 
         # Contexto del canal específico
@@ -1007,63 +1019,64 @@ class WarRoomEngine:
             "contents": normalized_contents,
             "generationConfig": {
                 "temperature": 0.35,
-                "maxOutputTokens": 1200
+                "maxOutputTokens": 1000
             }
         }
 
-        try:
-            req_data = json.dumps(req_body).encode("utf-8")
-            headers = {
-                "Content-Type": "application/json; charset=utf-8",
-                "x-goog-api-key": api_key
-            }
-            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
-            ctx_ssl = ssl.create_default_context()
-            ctx_ssl.check_hostname = False
-            ctx_ssl.verify_mode = ssl.CERT_NONE
+        ctx_ssl = ssl.create_default_context()
+        ctx_ssl.check_hostname = False
+        ctx_ssl.verify_mode = ssl.CERT_NONE
+        headers = {
+            "Content-Type": "application/json; charset=utf-8",
+            "x-goog-api-key": api_key
+        }
+        req_data = json.dumps(req_body).encode("utf-8")
 
-            with urllib.request.urlopen(req, timeout=12.0, context=ctx_ssl) as resp:
-                elapsed_ms = int((time.time() - t0) * 1000)
-                http_code = resp.status
-                resp_text = resp.read().decode("utf-8", errors="ignore")
-                parsed = json.loads(resp_text)
+        last_error = ""
+        last_http_code = 500
 
-                candidates = parsed.get("candidates", [])
-                if candidates and candidates[0].get("content", {}).get("parts"):
-                    model_text = candidates[0]["content"]["parts"][0].get("text", "").strip()
-                    return {
-                        "success": True,
-                        "reply": model_text,
-                        "latency_ms": elapsed_ms,
-                        "http_code": http_code
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Gemini no devolvió texto en candidates: {resp_text[:200]}",
-                        "reply": f"❌ [ERROR GEMINI]: Inferencia sin candidatos válidos ({http_code})",
-                        "latency_ms": elapsed_ms,
-                        "http_code": http_code
-                    }
-        except urllib.error.HTTPError as he:
-            elapsed_ms = int((time.time() - t0) * 1000)
-            err_body = he.read().decode("utf-8", errors="ignore")
-            return {
-                "success": False,
-                "error": f"HTTP {he.code}: {err_body[:300]}",
-                "reply": f"❌ [ERROR GEMINI HTTP {he.code}]: {err_body[:200]}",
-                "latency_ms": elapsed_ms,
-                "http_code": he.code
-            }
-        except Exception as exc:
-            elapsed_ms = int((time.time() - t0) * 1000)
-            return {
-                "success": False,
-                "error": str(exc),
-                "reply": f"❌ [ERROR GEMINI]: {str(exc)}",
-                "latency_ms": elapsed_ms,
-                "http_code": 500
-            }
+        for model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            try:
+                req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=12.0, context=ctx_ssl) as resp:
+                    elapsed_ms = int((time.time() - t0) * 1000)
+                    http_code = resp.status
+                    resp_text = resp.read().decode("utf-8", errors="ignore")
+                    parsed = json.loads(resp_text)
+
+                    candidates = parsed.get("candidates", [])
+                    if candidates and candidates[0].get("content", {}).get("parts"):
+                        model_text = candidates[0]["content"]["parts"][0].get("text", "").strip()
+                        return {
+                            "success": True,
+                            "reply": model_text,
+                            "latency_ms": elapsed_ms,
+                            "http_code": http_code,
+                            "model_used": model
+                        }
+            except urllib.error.HTTPError as he:
+                last_http_code = he.code
+                err_body = he.read().decode("utf-8", errors="ignore")
+                last_error = f"HTTP {he.code}: {err_body[:250]}"
+                # Si es 503 (saturación de Google), continuar al siguiente modelo de respaldo
+                if he.code == 503:
+                    continue
+                # Si es error 400 o 403 de credenciales, romper inmediatamente
+                break
+            except Exception as exc:
+                last_error = str(exc)
+                continue
+
+        elapsed_ms = int((time.time() - t0) * 1000)
+        return {
+            "success": False,
+            "error": last_error or "Timeout en llamada a Gemini",
+            "reply": f"❌ [ERROR GEMINI {last_http_code}]: {last_error or 'Tiempo de espera agotado al conectar con Google Gemini'}",
+            "latency_ms": elapsed_ms,
+            "http_code": last_http_code,
+            "model_used": primary_model
+        }
 
     def process_chat(
         self,
