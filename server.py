@@ -1474,10 +1474,10 @@ async def render_deploy():
 # WAR ROOM & MAKE.COM INTEGRATION
 # =====================================================================
 @app.get("/api/v1/war-room/status")
-def war_room_status():
+def war_room_status(channel_id: Optional[str] = None):
     if war_room_engine:
         try:
-            return war_room_engine.get_status()
+            return war_room_engine.get_status(channel_id=channel_id)
         except Exception as e:
             log.warning("war_room_engine error: %s", e)
     return {
@@ -1487,7 +1487,8 @@ def war_room_status():
             "database": {"status": "CONNECTED", "engine": "Postgres" if db.IS_POSTGRES else "SQLite"},
             "render_hook": {"status": "ACTIVE", "auto_deploy": True}
         },
-        "has_active_incidents": False
+        "has_active_incidents": False,
+        "chat_messages": []
     }
 
 
@@ -1597,16 +1598,43 @@ async def war_room_post_chat(request: Request):
     sender = body.get("sender", "Dirección General & Mando Operativo")
     role = body.get("role", "Dirección General")
     message = str(body.get("message", "")).strip()
-    node_id = body.get("node_id", "harryt")
+    target_node_id = body.get("target_node_id") or body.get("node_id") or "volturi"
+    channel_id = body.get("channel_id") or "deliberacion"
+    override_api_key = (
+        body.get("api_key")
+        or body.get("gemini_api_key")
+        or request.headers.get("x-goog-api-key")
+        or request.headers.get("x-gemini-api-key")
+    )
 
     if not message:
-        return {"status": "error", "message": "Mensaje vacío"}
+        return {
+            "status": "error",
+            "message": "Mensaje vacío",
+            "reply": "❌ Error: El mensaje no puede estar vacío.",
+            "target_node_id": target_node_id,
+            "channel_id": channel_id
+        }
 
     if war_room_engine:
-        msg = war_room_engine.add_chat_message(sender, role, message, node_id)
-        return {"status": "success", "message": msg}
+        # Conversación real por nodo con Gemini 2.5 Flash y respuesta en la misma llamada
+        result = war_room_engine.process_chat(
+            sender=sender,
+            role=role,
+            message=message,
+            target_node_id=target_node_id,
+            channel_id=channel_id,
+            override_api_key=override_api_key
+        )
+        return result
 
-    return {"status": "success", "echo": message}
+    return {
+        "status": "error",
+        "message": "War Room Engine no inicializado",
+        "reply": "❌ Error: El motor del Cuarto de Guerra no está en línea.",
+        "target_node_id": target_node_id,
+        "channel_id": channel_id
+    }
 
 
 @app.post("/api/v1/war-room/config")

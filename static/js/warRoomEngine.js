@@ -20,6 +20,15 @@
       this.allActiveIncidents = [];
       this.nodes = {};
       this.chatMessages = [];
+      this.selectedTargetNode = 'volturi'; // Nodo destinatario activo para conversación directa
+      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'fallas', 'trazas', 'cuadros_falla', 'consorcio_jason')
+      this.channelsList = [
+        { id: 'deliberacion', name: 'Deliberación Ejecutiva', icon: '🏛️' },
+        { id: 'fallas', name: 'Fallas Operativas', icon: '🚨' },
+        { id: 'trazas', name: 'Trazas Descentralizadas', icon: '🌐' },
+        { id: 'cuadros_falla', name: 'Cuadros de Falla', icon: '📊' },
+        { id: 'consorcio_jason', name: 'Consorcio Jason', icon: '🤝' }
+      ];
       this.nodeConfigs = {
         make_webhook_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         make_api_key: '',
@@ -95,6 +104,67 @@
         return badgeEl.innerText.trim();
       }
       return sessionStorage.getItem('mrs_pets_staff_user') || 'Harryt / Dalybell (Dirección General)';
+    }
+
+    setTargetNode(nodeId) {
+      if (!nodeId) return;
+      this.selectedTargetNode = nodeId;
+      const nodeLabels = {
+        harryt: 'Harryt & Dalybell (Dirección General)',
+        volturi: 'Charlie / Comité Volturi (Gobernanza & Ética)',
+        antigravity: 'Google AntiGravity (Ingeniería & Código)',
+        make: 'Make.com (Webhooks & Flujos)',
+        teamly: 'Super Agent / Teamly (Operaciones & Agentes)'
+      };
+      const label = nodeLabels[nodeId] || nodeId.toUpperCase();
+
+      // Actualizar pastillas del selector de nodo
+      const pills = document.querySelectorAll('.wr-node-select-pill');
+      pills.forEach(p => {
+        const isCur = p.getAttribute('data-node-id') === nodeId;
+        p.classList.toggle('active', isCur);
+        p.style.borderColor = isCur ? '#D4AF37' : 'rgba(255,255,255,0.15)';
+        p.style.background = isCur ? 'rgba(212,175,55,0.25)' : 'rgba(255,255,255,0.05)';
+        p.style.color = isCur ? '#FDE047' : '#FFFFFF';
+      });
+
+      // Actualizar tarjetas de nodos superiores
+      const cards = document.querySelectorAll('.war-room-node-card');
+      cards.forEach(c => {
+        const isCard = c.getAttribute('data-node-id') === nodeId;
+        c.style.outline = isCard ? '2px solid #D4AF37' : 'none';
+        c.style.boxShadow = isCard ? '0 0 16px rgba(212,175,55,0.35)' : 'none';
+      });
+
+      // Actualizar placeholder y badge
+      const input = document.getElementById('wr-chat-input');
+      if (input) {
+        input.placeholder = `Hablando con ${label}: escribe tu consulta o instrucción directa...`;
+      }
+      const badge = document.getElementById('wr-active-target-badge');
+      if (badge) {
+        badge.innerHTML = `🎯 Destinatario: <span style="color:#FDE047; font-weight:800;">${label}</span>`;
+      }
+      const sendBtnTxt = document.getElementById('wr-btn-send-label');
+      if (sendBtnTxt) {
+        sendBtnTxt.innerText = `Enviar a ${nodeId.toUpperCase()}`;
+      }
+    }
+
+    setChannel(channelId) {
+      if (!channelId) return;
+      this.selectedChannel = channelId;
+      // Actualizar botones de canal
+      const btns = document.querySelectorAll('.wr-channel-btn');
+      btns.forEach(btn => {
+        const isCur = btn.getAttribute('data-channel-id') === channelId;
+        btn.classList.toggle('active', isCur);
+        btn.style.background = isCur ? 'linear-gradient(135deg, rgba(212,175,55,0.3), rgba(184,134,11,0.2))' : 'rgba(255,255,255,0.04)';
+        btn.style.borderColor = isCur ? '#D4AF37' : 'rgba(255,255,255,0.1)';
+        btn.style.color = isCur ? '#FDE047' : '#94A3B8';
+      });
+      // Refrescar mensajes correspondientes a este canal
+      this.renderChatFeedOnly();
     }
 
     /* ----------------------------------------------------------------------
@@ -435,8 +505,10 @@
       nodesList.forEach(nodeId => {
         const nodeData = this.nodes[nodeId] || {};
         const pingEl = document.getElementById(`wr-card-ping-${nodeId}`);
-        if (pingEl && nodeData.ping_ms !== undefined) {
-          pingEl.innerText = `${nodeData.ping_ms}ms`;
+        if (pingEl) {
+          pingEl.innerText = (nodeData.ping_ms !== undefined && nodeData.ping_ms !== null)
+            ? `${nodeData.ping_ms}ms`
+            : 'En espera...';
         }
       });
 
@@ -717,24 +789,30 @@
         const nodeData = this.nodes[item.id] || {};
         const nodeStatus = nodeData.status || (isAlert && (item.id === 'make' || item.id === 'volturi') ? 'ALERTA' : 'ESTABLE');
         const isNodeAlert = nodeStatus === 'ALERTA';
-        const ping = nodeData.ping_ms || (item.id === 'antigravity' ? '1ms' : (item.id === 'harryt' ? '0ms' : '15ms'));
+        const isTarget = this.selectedTargetNode === item.id;
+        const ping = (nodeData.ping_ms !== undefined && nodeData.ping_ms !== null) ? `${nodeData.ping_ms}ms` : 'En espera...';
         const stateDesc = nodeData.state_desc || (isNodeAlert ? '🚨 Alerta: Falla en webhook de entrega' : '● Enlace nominal activo');
 
         return `
-          <div class="war-room-node-card ${isNodeAlert ? 'node-alert' : 'node-stable'}">
+          <div class="war-room-node-card ${isNodeAlert ? 'node-alert' : 'node-stable'}" 
+               data-node-id="${item.id}"
+               onclick="window.warRoomEngine.setTargetNode('${item.id}')"
+               style="cursor:pointer; transition:all 0.2s ease; ${isTarget ? 'outline:2px solid #D4AF37; box-shadow:0 0 16px rgba(212,175,55,0.35);' : ''}"
+               title="Clic para seleccionar a ${item.name} como destinatario de chat">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:1.3rem;">${item.icon}</span>
                 <span style="font-weight:800; font-size:0.85rem; color:#FFFFFF;">${item.name}</span>
+                ${isTarget ? '<span style="font-size:0.6rem; background:#D4AF37; color:#0B0F19; font-weight:900; padding:1px 6px; border-radius:4px;">🎯 DESTINO</span>' : ''}
               </div>
-              <button type="button" class="btn-node-status-ping" onclick="window.warRoomEngine.pingNode('${item.id}', '')" style="border:none; cursor:pointer; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:12px; background:${isNodeAlert ? '#EF4444' : '#10B981'}; color:#FFFFFF; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,0.25);" title="Hacer clic para enviar prueba de telemetría POST JSON">
+              <button type="button" class="btn-node-status-ping" onclick="event.stopPropagation(); window.warRoomEngine.pingNode('${item.id}', '')" style="border:none; cursor:pointer; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:12px; background:${isNodeAlert ? '#EF4444' : '#10B981'}; color:#FFFFFF; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,0.25);" title="Hacer clic para enviar prueba de telemetría POST JSON">
                 <span>${nodeStatus}</span> <span>⚡</span>
               </button>
             </div>
             <div style="font-size:0.72rem; color:#CBD5E1; font-weight:600;">${item.role}</div>
             <div style="font-size:0.7rem; color:#94A3B8; font-style:italic;">${stateDesc}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; font-size:0.68rem; color:#64748B; border-top:1px solid rgba(255,255,255,0.06); padding-top:4px;">
-              <span>Latencia: <strong id="wr-card-ping-${item.id}" style="color:#D4AF37;">${ping}</strong></span>
+              <span>Latencia Real: <strong id="wr-card-ping-${item.id}" style="color:#D4AF37;">${ping}</strong></span>
               <span>Telemetría: 60 FPS</span>
             </div>
           </div>
@@ -834,50 +912,93 @@
     }
 
     /* ----------------------------------------------------------------------
-       9. PESTAÑA 1: CHAT & SALA DE DELIBERACIÓN EN VIVO
+       9. PESTAÑA 1: CHAT & SALA DE DELIBERACIÓN EN VIVO (CONVERSACIÓN REAL POR NODO)
        ---------------------------------------------------------------------- */
     renderChatTabHtml() {
       const messagesHtml = this.getFormattedMessagesHtml();
+      const currentTarget = this.selectedTargetNode || 'volturi';
+      const nodeLabels = {
+        harryt: 'Harryt & Dalybell (Dirección)',
+        volturi: 'Charlie / Volturi (Ética & Riesgo)',
+        antigravity: 'Google AntiGravity (Ingeniería)',
+        make: 'Make.com (Webhooks & Flujos)',
+        teamly: 'Teamly (Operaciones)'
+      };
+      const activeLabel = nodeLabels[currentTarget] || currentTarget.toUpperCase();
 
       return `
         <div class="wr-chat-container">
-          <div style="padding:12px 18px; background:linear-gradient(135deg, #111827, #0B0F19); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:1.1rem;">💬</span>
-              <strong style="font-size:0.88rem; color:#FFFFFF;">Canal de Deliberación Ejecutiva (Dirección & IAs)</strong>
-            </div>
-            <span style="font-size:0.72rem; color:#94A3B8;">Escribe para reportar fallas, pedir diagnósticos o autorizar parches</span>
+          <!-- 1. BARRA DE NAVEGACIÓN DE CANALES SEPARADOS -->
+          <div style="padding:10px 16px; background:#0B0F19; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; overflow-x:auto;">
+            <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase; white-space:nowrap;">Canales:</span>
+            ${this.channelsList.map(ch => `
+              <button type="button" class="wr-channel-btn ${this.selectedChannel === ch.id ? 'active' : ''}" 
+                data-channel-id="${ch.id}" 
+                onclick="window.warRoomEngine.setChannel('${ch.id}')"
+                style="border:1px solid ${this.selectedChannel === ch.id ? '#D4AF37' : 'rgba(255,255,255,0.1)'}; background:${this.selectedChannel === ch.id ? 'linear-gradient(135deg, rgba(212,175,55,0.3), rgba(184,134,11,0.2))' : 'rgba(255,255,255,0.04)'}; color:${this.selectedChannel === ch.id ? '#FDE047' : '#94A3B8'}; padding:5px 12px; border-radius:18px; font-size:0.74rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; transition:all 0.15s ease;">
+                <span>${ch.icon}</span> ${ch.name}
+              </button>
+            `).join('')}
           </div>
 
-          <!-- FEED DE MENSAJES -->
+          <!-- 2. BARRA DE SELECCIÓN DE NODO DESTINATARIO (CONVERSACIÓN DIRECTA) -->
+          <div style="padding:8px 16px; background:linear-gradient(135deg, #111827, #0B0F19); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase;">Conversar con Nodo:</span>
+              ${[
+                { id: 'volturi', name: 'Volturi', icon: '🏛️' },
+                { id: 'antigravity', name: 'AntiGravity', icon: '⚡' },
+                { id: 'harryt', name: 'Harryt & Dalybell', icon: '👑' },
+                { id: 'make', name: 'Make.com', icon: '🔗' },
+                { id: 'teamly', name: 'Teamly', icon: '🤝' }
+              ].map(n => {
+                const isSelected = this.selectedTargetNode === n.id;
+                return `
+                  <button type="button" class="wr-node-select-pill ${isSelected ? 'active' : ''}"
+                    data-node-id="${n.id}"
+                    onclick="window.warRoomEngine.setTargetNode('${n.id}')"
+                    style="border:1px solid ${isSelected ? '#D4AF37' : 'rgba(255,255,255,0.15)'}; background:${isSelected ? 'rgba(212,175,55,0.25)' : 'rgba(255,255,255,0.05)'}; color:${isSelected ? '#FDE047' : '#FFFFFF'}; padding:4px 10px; border-radius:14px; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;">
+                    <span>${n.icon}</span> ${n.name}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+            <div id="wr-active-target-badge" style="font-size:0.72rem; color:#A5B4FC; font-weight:700;">
+              🎯 Destinatario: <span style="color:#FDE047; font-weight:800;">${activeLabel}</span>
+            </div>
+          </div>
+
+          <!-- 3. FEED DE MENSAJES DEL CANAL -->
           <div id="wr-chat-feed" class="wr-chat-feed">
             ${messagesHtml}
           </div>
 
-          <!-- BOTONES DE ACCESO RÁPIDO (QUICK CHIPS) -->
+          <!-- 4. BOTONES DE ACCESO RÁPIDO (QUICK CHIPS) -->
           <div style="padding:8px 16px; background:#0D131F; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px; overflow-x:auto; align-items:center;">
-            <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase;">Accesos Rápidos:</span>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.quickReportIssue('🚨 Leia no está conversando ni respondiendo a los tutores. Solicito diagnóstico y conmutación de canal.')">
-              ⚡ Leia no conversa
+            <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase; white-space:nowrap;">Accesos Rápidos:</span>
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('antigravity'); window.warRoomEngine.quickReportIssue('AntiGravity: ¿Cuál es la versión actual del backend FastAPI, arquitectura de rutas y estado de despliegue en Render?')">
+              ⚡ Diagnóstico AntiGravity
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.quickReportIssue('🔗 El webhook de Make.com reporta error HTTP 502 Bad Gateway. Purgar cola y activar respaldo.')">
-              🔗 Make Webhook Caído
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('volturi'); window.warRoomEngine.quickReportIssue('Comité Volturi: Solicito dictamen ético sobre riesgo de hotfixes y endpoints de integración.')">
+              🏛️ Dictamen Volturi
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.quickReportIssue('⚡ Autorizo desplegar el parche de contingencia con AntiGravity inmediatamente.')">
-              ✅ Autorizar Parche
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('make'); window.warRoomEngine.quickReportIssue('Make.com: Reporta estado de enlaces de webhooks, buffers y última confirmación HTTP 200.')">
+              🔗 Enlace Make
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.quickReportIssue('📊 Solicito auditoría de latencia y estado de los 5 nodos a la mesa de guerra.')">
-              📊 Auditoría 5 Nodos
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('teamly'); window.warRoomEngine.quickReportIssue('Teamly: Estado del enjambre de agentes y tablero operativo en curso.')">
+              🤝 Estado Teamly
             </button>
           </div>
 
-          <!-- ÁREA DE ESCRITURA -->
+          <!-- 5. ÁREA DE ESCRITURA -->
           <div style="padding:14px 18px; background:#111827; border-top:1px solid rgba(255,255,255,0.1); display:flex; gap:12px; align-items:flex-end;">
             <div style="flex:1;">
-              <textarea id="wr-chat-input" rows="2" placeholder="Escribe a la mesa ejecutiva y equipo de IAs (ej: 'Leia no está conversando, no responde...', 'Reporto falla en webhook Make')..." style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:none; outline:none;"></textarea>
+              <textarea id="wr-chat-input" rows="2" 
+                placeholder="Hablando con ${activeLabel}: escribe tu consulta o instrucción directa..." 
+                style="width:100%; box-sizing:border-box; background:#090D16; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:#F1F5F9; font-family:inherit; resize:none; outline:none;"></textarea>
             </div>
             <button type="button" onclick="window.warRoomEngine.sendChatMessage()" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; font-weight:900; font-size:0.85rem; padding:12px 22px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; box-shadow:0 4px 15px rgba(212,175,55,0.3);">
-              <span>🚀 Enviar a la Mesa</span>
+              <span>🚀</span> <span id="wr-btn-send-label">Enviar a ${currentTarget.toUpperCase()}</span>
             </button>
           </div>
         </div>
@@ -885,15 +1006,23 @@
     }
 
     getFormattedMessagesHtml() {
-      if (!this.chatMessages || this.chatMessages.length === 0) {
+      const activeChannel = this.selectedChannel || 'deliberacion';
+      const channelMsgs = (this.chatMessages || []).filter(msg => {
+        const ch = msg.channel_id || 'deliberacion';
+        return ch === activeChannel;
+      });
+
+      if (!channelMsgs || channelMsgs.length === 0) {
+        const channelName = (this.channelsList.find(c => c.id === activeChannel) || {}).name || activeChannel;
         return `
           <div style="text-align:center; padding:40px; color:#64748B; font-size:0.8rem;">
-            No hay mensajes registrados. La sala de deliberación de los 5 nodos está a la escucha.
+            No hay mensajes registrados en el canal <strong>${this.escapeHtml(channelName)}</strong>.<br>
+            Selecciona un nodo destinatario y envía tu mensaje para iniciar la conversación real con Gemini 2.5 Flash.
           </div>
         `;
       }
 
-      return this.chatMessages.map(msg => {
+      return channelMsgs.map(msg => {
         const nid = msg.node_id || 'guest';
         let bg = 'rgba(255,255,255,0.04)';
         let border = '1px solid rgba(255,255,255,0.1)';
@@ -928,16 +1057,24 @@
         }
 
         const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        const latencyBadge = (msg.latency_ms !== undefined && msg.latency_ms !== null)
+          ? `<span style="background:rgba(212,175,55,0.18); color:#FDE047; padding:1px 6px; border-radius:6px; font-size:0.68rem; font-family:monospace; font-weight:700;">${msg.latency_ms}ms</span>`
+          : '';
+        const channelBadge = `<span style="background:rgba(255,255,255,0.08); color:#94A3B8; padding:1px 6px; border-radius:6px; font-size:0.65rem;">${msg.channel_id || activeChannel}</span>`;
 
         return `
-          <div class="wr-msg-bubble" style="background:${bg}; border:${border};">
-            <div class="wr-msg-header">
+          <div class="wr-msg-bubble" style="background:${bg}; border:${border}; margin-bottom:10px; border-radius:10px; padding:10px 14px;">
+            <div class="wr-msg-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <span style="font-weight:800; color:${titleColor}; display:flex; align-items:center; gap:6px;">
-                <span>${icon}</span> ${this.escapeHtml(msg.sender || 'Mesa')} &bull; <span style="font-weight:600; color:#94A3B8;">${this.escapeHtml(msg.role || '')}</span>
+                <span>${icon}</span> ${this.escapeHtml(msg.sender || 'Mesa')} &bull; <span style="font-weight:600; color:#94A3B8; font-size:0.75rem;">${this.escapeHtml(msg.role || '')}</span>
               </span>
-              <span style="color:#64748B; font-size:0.7rem;">${timeStr}</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                ${channelBadge}
+                ${latencyBadge}
+                <span style="color:#64748B; font-size:0.7rem;">${timeStr}</span>
+              </div>
             </div>
-            <div style="color:#F1F5F9; font-size:0.83rem; word-break:break-word;">
+            <div style="color:#F1F5F9; font-size:0.83rem; word-break:break-word; line-height:1.45; white-space:pre-wrap;">
               ${this.escapeHtml(msg.message || '')}
             </div>
           </div>
@@ -967,36 +1104,56 @@
       if (!text) return;
 
       const adminName = this.getAuthorizedAdminName();
+      const targetNode = this.selectedTargetNode || 'volturi';
+      const activeChannel = this.selectedChannel || 'deliberacion';
+
       this.isSending = true;
 
-      // Inyección optimista local
+      // Inyección optimista local en el canal activo
       const optimisticMsg = {
         id: 'MSG-' + Math.random().toString(36).substring(2, 8),
         sender: adminName,
         role: 'Dirección General & Mando Operativo',
         message: text,
         timestamp: new Date().toISOString(),
-        node_id: 'harryt'
+        node_id: 'harryt',
+        channel_id: activeChannel,
+        latency_ms: null
       };
       this.chatMessages.push(optimisticMsg);
       if (input) input.value = '';
       this.renderChatFeedOnly();
 
       try {
-        await fetch('/api/v1/war-room/chat', {
+        const resp = await fetch('/api/v1/war-room/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sender: adminName,
             role: 'Dirección General & Mando Operativo',
             message: text,
-            node_id: 'harryt'
+            target_node_id: targetNode,
+            node_id: targetNode,
+            channel_id: activeChannel
           })
         });
-        // Refrescar para recibir deliberaciones de AntiGravity, Volturi o Teamly
-        setTimeout(() => this.fetchStatus(), 600);
+
+        const data = await resp.json();
+        // Respuesta en la misma llamada: Inyectar mensaje de vuelta del nodo
+        if (data && data.node_message) {
+          this.chatMessages.push(data.node_message);
+          if (data.target_node_id && this.nodes[data.target_node_id]) {
+            this.nodes[data.target_node_id].ping_ms = data.latency_ms;
+            const pingEl = document.getElementById(`wr-card-ping-${data.target_node_id}`);
+            if (pingEl) pingEl.innerText = `${data.latency_ms}ms`;
+          }
+          this.renderChatFeedOnly();
+        }
+
+        // Refrescar status global para actualizar tarjetas y telemetría
+        setTimeout(() => this.fetchStatus(), 400);
       } catch (err) {
-        // En offline, mantener optimista
+        console.warn('War Room Chat network error:', err);
       } finally {
         this.isSending = false;
       }
