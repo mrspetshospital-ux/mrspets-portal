@@ -18,6 +18,8 @@ Variables de entorno (ver .env.example):
 import os
 import re
 import hmac
+import secrets
+import uuid
 import logging
 import traceback
 from datetime import datetime, timezone, timedelta
