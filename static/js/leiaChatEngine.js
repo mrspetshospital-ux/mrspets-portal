@@ -839,13 +839,19 @@
             }
 
             // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE VIP & ASISTENCIA CEO
-            // Petición POST real al backend con Centralita Router y registro inmutable en Google Sheets
+            // Petición POST real al backend (Google Gemini o Teamily según selección)
             try {
                 this.showTypingIndicator(true);
-                const teamilyCtrl = new AbortController();
-                const teamilyTimeout = setTimeout(() => teamilyCtrl.abort(), 12000);
+                const activeModel = (window.mrsPetsArch && typeof window.mrsPetsArch.getActiveAiModelId === 'function')
+                    ? window.mrsPetsArch.getActiveAiModelId()
+                    : 'gemini-3.8-flash';
+                const isTeamly = activeModel.includes('teamly');
+                const targetEndpoint = isTeamly ? '/api/v1/teamily/agent-chat' : '/api/v1/leia/chat';
+
+                const abortCtrl = new AbortController();
+                const timeoutId = setTimeout(() => abortCtrl.abort(), 12000);
                 const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-                const res = await fetch('/api/v1/teamily/agent-chat', {
+                const res = await fetch(targetEndpoint, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -855,26 +861,32 @@
                         message_id: messageId,
                         agente_origen: 'user',
                         input: userText,
+                        message: userText,
+                        model: activeModel,
                         agent_slug: 'leia',
                         agent_name: 'Leia Concierge VIP & Asistencia CEO',
                         board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+                        userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                        petName: this.lastActivePetName || '',
+                        userType: isStaff ? 'staff_admin' : 'client',
                         context: {
                             userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                             petName: this.lastActivePetName || '',
                             userType: isStaff ? 'staff_admin' : 'client',
-                            channel: 'Widget Search (Leia Search)'
+                            channel: 'Widget Search (Leia Search)',
+                            activeModel: activeModel
                         }
                     }),
-                    signal: teamilyCtrl.signal
+                    signal: abortCtrl.signal
                 });
-                clearTimeout(teamilyTimeout);
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 this.showTypingIndicator(false);
 
                 if (res.ok && data) {
                     const rawReply = typeof data.response_text === 'object' && data.response_text.text 
                         ? data.response_text.text 
-                        : (data.response_text || (data.output && data.output.text));
+                        : (data.response_text || data.reply || (data.output && data.output.text));
 
                     const isReceipt = String(rawReply).includes('serverMsgID');
                     if (!isReceipt && rawReply && String(rawReply).trim().length > 0) {

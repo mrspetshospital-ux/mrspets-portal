@@ -1476,26 +1476,49 @@ class MrsPetsArchitectureEngine {
         } catch (e) {}
       }
     } else {
-      // Prioridad: Make.com + Gemini (o modelo Gemini seleccionado por Staff)
+      // Prioridad: Google Gemini en Vivo + Telemetría Make.com
+      // 1. Despachar a Make.com en paralelo para registro y webhook
+      this.dispatchChatBidirectional({
+        sessionId: this.getChatSessionId(),
+        message: cleanText,
+        detalleAdicionales: cleanText,
+        userQuery: cleanText
+      }).catch(e => console.warn("[LEIA CHAT] Telemetría Make:", e));
+
+      // 2. Inferencia inteligente directa con Gemini en el backend
       try {
-        const makeRes = await this.dispatchChatBidirectional({
-          sessionId: this.getChatSessionId(),
-          message: cleanText,
-          detalleAdicionales: cleanText,
-          userQuery: cleanText
+        const geminiCtrl = new AbortController();
+        const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
+        const res = await fetch('/api/v1/leia/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: cleanText,
+            model: activeModel.id,
+            userType: session.userType,
+            userName: session.userName,
+            petName: session.petName,
+            sessionId: this.getChatSessionId()
+          }),
+          signal: geminiCtrl.signal
         });
-        if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
-          serverReplyText = makeRes.replyText;
+        clearTimeout(geminiTimeout);
+
+        if (res.ok) {
+          const gemData = await res.json();
+          if (gemData && (gemData.reply || gemData.response_text)) {
+            serverReplyText = gemData.reply || gemData.response_text;
+          }
         }
       } catch (e) {
-        console.warn("[LEIA CHAT] Make.com / Gemini no respondió, activando failover a Teamily:", e);
+        console.warn("[LEIA CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
       }
 
-      // Failover a Teamily Live API si Make/Gemini falló (o dio 429 quota)
+      // 3. Failover a Teamily Live API si Gemini no respondió
       if (!serverReplyText) {
         try {
           const abortCtrl = new AbortController();
-          const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+          const fetchTimer = setTimeout(() => abortCtrl.abort(), 14000);
           const res = await fetch('/api/v1/teamily/agent-chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
