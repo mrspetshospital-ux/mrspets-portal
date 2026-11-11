@@ -1164,8 +1164,20 @@ class MrsPetsArchitectureEngine {
     return this.activeChatSessionId;
   }
 
+  getLeiaWebhookUrl() {
+    const saved = localStorage.getItem('mrspets_make_leia_webhook_url');
+    if (saved && saved.trim()) return saved.trim();
+    return 'https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg';
+  }
+
+  saveLeiaWebhookUrl(url) {
+    if (url && url.trim()) {
+      localStorage.setItem('mrspets_make_leia_webhook_url', url.trim());
+    }
+  }
+
   async dispatchChatBidirectional(chatPayload) {
-    const webhookUrl = this.getPosWebhookUrl();
+    const webhookUrl = this.getLeiaWebhookUrl();
     const session = this.getActiveSessionContext();
     const activeModel = this.getActiveAiModel();
 
@@ -1175,6 +1187,13 @@ class MrsPetsArchitectureEngine {
       timestamp: new Date().toISOString(),
       sessionId: chatPayload.sessionId || this.getChatSessionId(),
       channel: "leia_chat_widget",
+      message: chatPayload.message,
+      prompt: chatPayload.message,
+      input: chatPayload.message,
+      userQuery: chatPayload.message,
+      query: chatPayload.message,
+      text: chatPayload.message,
+      detalleAdicionales: chatPayload.message,
       aiModel: activeModel.id,
       aiModelName: activeModel.name,
       modelEngine: (activeModel.id && activeModel.id.includes('teamly')) ? "Teamly Orchestrator" : "Google Gemini",
@@ -1184,19 +1203,17 @@ class MrsPetsArchitectureEngine {
       userName: session.userName,
       sessionMode: session.sessionMode,
       activeTab: session.activeTab,
-      message: chatPayload.message,
-      detalleAdicionales: chatPayload.message,
       requiresAction: false
     };
 
     if (session.petName) fullPayload.petName = session.petName;
     if (session.phone) fullPayload.phone = session.phone;
 
-    console.log(`[LEIA CHAT BIDIRECCIONAL] Despacho limpio (Modelo: ${activeModel.id}) -> ${webhookUrl}:`, fullPayload);
+    console.log(`[LEIA CHAT BIDIRECCIONAL] Despacho a Make Leia (Modelo: ${activeModel.id}) -> ${webhookUrl}:`, fullPayload);
 
     const startTime = performance.now();
     let result = { hasCustomReply: false, replyText: '' };
-    const TIMEOUT_MS = 2500; // Timeout ágil de 2.5s para no congelar la interacción con el usuario en vivo
+    const TIMEOUT_MS = 8000; // Timeout de 8s para dar tiempo al Webhook Response de Make (Drive + Gemini)
 
     // Helper para extraer el cuerpo de respuesta HTTP 200 devuelto por Make.com
     const extractReplyFromBody = (bodyStr) => {
@@ -1476,45 +1493,54 @@ class MrsPetsArchitectureEngine {
         } catch (e) {}
       }
     } else {
-      // Prioridad: Google Gemini en Vivo + Telemetría Make.com
-      // 1. Despachar a Make.com en paralelo para registro y webhook
-      this.dispatchChatBidirectional({
-        sessionId: this.getChatSessionId(),
-        message: cleanText,
-        detalleAdicionales: cleanText,
-        userQuery: cleanText
-      }).catch(e => console.warn("[LEIA CHAT] Telemetría Make:", e));
-
-      // 2. Inferencia inteligente directa con Gemini en el backend
+      // Prioridad 1: Escenario Make.com exclusivo de Leia (Google Drive + Gemini + Webhook Response)
       try {
-        const geminiCtrl = new AbortController();
-        const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
-        const res = await fetch('/api/v1/leia/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: cleanText,
-            model: activeModel.id,
-            userType: session.userType,
-            userName: session.userName,
-            petName: session.petName,
-            sessionId: this.getChatSessionId()
-          }),
-          signal: geminiCtrl.signal
+        const makeRes = await this.dispatchChatBidirectional({
+          sessionId: this.getChatSessionId(),
+          message: cleanText,
+          detalleAdicionales: cleanText,
+          userQuery: cleanText
         });
-        clearTimeout(geminiTimeout);
-
-        if (res.ok) {
-          const gemData = await res.json();
-          if (gemData && (gemData.reply || gemData.response_text)) {
-            serverReplyText = gemData.reply || gemData.response_text;
-          }
+        if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
+          serverReplyText = makeRes.replyText;
+          console.log("[LEIA CHAT] Respuesta viva recibida desde Make.com (Drive + Gemini):", serverReplyText);
         }
       } catch (e) {
-        console.warn("[LEIA CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
+        console.warn("[LEIA CHAT] Make.com no devolvió texto, activando inferencia directa de respaldo:", e);
       }
 
-      // 3. Failover a Teamily Live API si Gemini no respondió
+      // Prioridad 2: Si Make.com no respondió (o hizo timeout), invocar Google Gemini directo en el backend
+      if (!serverReplyText) {
+        try {
+          const geminiCtrl = new AbortController();
+          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
+          const res = await fetch('/api/v1/leia/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: cleanText,
+              model: activeModel.id,
+              userType: session.userType,
+              userName: session.userName,
+              petName: session.petName,
+              sessionId: this.getChatSessionId()
+            }),
+            signal: geminiCtrl.signal
+          });
+          clearTimeout(geminiTimeout);
+
+          if (res.ok) {
+            const gemData = await res.json();
+            if (gemData && (gemData.reply || gemData.response_text)) {
+              serverReplyText = gemData.reply || gemData.response_text;
+            }
+          }
+        } catch (e) {
+          console.warn("[LEIA CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
+        }
+      }
+
+      // Prioridad 3: Failover a Teamily Live API si Make y Gemini no respondieron
       if (!serverReplyText) {
         try {
           const abortCtrl = new AbortController();

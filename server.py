@@ -1936,8 +1936,8 @@ async def leia_chat_v1(request: Request):
     # Despacho en segundo plano a Make.com (trazabilidad inmutable)
     make_url = (
         body.get("makeUrl")
-        or os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
-        or os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
+        or os.environ.get("MAKE_WEBHOOK_URL_LEIA")
+        or "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg"
     )
     make_payload = {
         "event": "leia_chat_conversation",
@@ -2071,7 +2071,7 @@ async def get_agent_studio_config():
         "queriesToday": 150,
         "makeFailoverAlerts": 1,
         "teamilyWebhookUrl": "https://api.teamily.ai/v1/mrspets/orchestrate",
-        "makeWebhookUrl": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
+        "makeWebhookUrl": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
         "brainDriveUrl": "https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge",
         "agentName": "Leia 🎀 (Asistente Ejecutiva & Concierge VIP)",
         "avatarUrl": "https://lh3.googleusercontent.com/d/1H8bgWAbgyrBYzKsrXUb5rHjzy-NwqcoL",
