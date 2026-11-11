@@ -2198,6 +2198,45 @@ def ical_feed_endpoint():
     return Response(content=ics_content, media_type="text/calendar; charset=utf-8")
 
 
+# =====================================================================
+# SISTEMA DE NOTIFICACIONES EN VIVO DE RESERVACIONES (STAFF & CLIENTE)
+# =====================================================================
+_LIVE_RESERVATIONS_EVENTS = []
+_MAX_LIVE_EVENTS = 60
+
+@app.post("/api/v1/notificaciones/reservacion")
+async def broadcast_reservation_event_endpoint(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    event_type = data.get("type", "RESERVATION_CREATED")
+    payload = data.get("payload", {})
+    evt_id = data.get("id") or f"EVT-{int(time.time()*1000)}-{secrets.token_hex(3)}"
+
+    new_evt = {
+        "id": evt_id,
+        "type": event_type,
+        "payload": payload,
+        "timestamp": time.time(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    _LIVE_RESERVATIONS_EVENTS.append(new_evt)
+    if len(_LIVE_RESERVATIONS_EVENTS) > _MAX_LIVE_EVENTS:
+        _LIVE_RESERVATIONS_EVENTS.pop(0)
+
+    return ok(broadcasted=True, event=new_evt)
+
+
+@app.get("/api/v1/notificaciones/recientes")
+def get_recent_reservation_notifications_endpoint(since: Optional[float] = Query(0.0)):
+    cutoff = since or (time.time() - 300)
+    events = [e for e in _LIVE_RESERVATIONS_EVENTS if e.get("timestamp", 0) > cutoff]
+    return ok(events=events, current_time=time.time())
+
+
 
 @app.post("/api/webhook/make-pos")
 async def proxy_make_pos_webhook(request: Request):

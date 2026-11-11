@@ -2307,6 +2307,11 @@ class AdminEngine {
       }
     }
 
+    // 🔔 DISPARAR ALERTA EN VIVO EN PANTALLA: "Se acaba de hacer una reserva, por favor confirme"
+    if (window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyReservationCreated === 'function') {
+      window.liveNotificationEngine.notifyReservationCreated(newPending);
+    }
+
     return newPending;
   }
 
@@ -3072,6 +3077,20 @@ class AdminEngine {
     if (targetArea === 'clinica') {
       this.dispatchPatientBudgetEmail(appt, existingPatient);
     }
+
+    // 🎉 DISPARAR ALERTA EN VIVO DE CELEBRACIÓN AL CLIENTE: "¡Felicitaciones! Su reserva ha sido confirmada"
+    if (window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyReservationApproved === 'function') {
+      window.liveNotificationEngine.notifyReservationApproved({
+        id: appt.id,
+        pet: appt.pet || (existingPatient ? (existingPatient.name || existingPatient.petName) : 'Mascota VIP'),
+        tutor: appt.tutor || (existingPatient ? (existingPatient.owner || existingPatient.ownerName) : 'Tutor VIP'),
+        area: targetArea,
+        service: appt.service || 'Servicio Integral VIP',
+        date: appt.date || (existingPatient ? existingPatient.reservationDate : ''),
+        time: appt.time || (existingPatient ? existingPatient.reservationTime : ''),
+        turnNumber: nextTurn
+      });
+    }
   }
 
   dispatchPatientBudgetEmail(appt, patient) {
@@ -3308,6 +3327,11 @@ class AdminEngine {
     if (window.app) window.app.showToast(`❌ Cita ${apptId} (${petName}) RECHAZADA. Solicitud eliminada de la bandeja y del control de estatus.`, 'warning');
     if (window.whatsappSim && typeof window.whatsappSim.sendPreset === 'function') {
       window.whatsappSim.sendPreset(`Hola *${tutorName}*, tu solicitud de reserva *${apptId}* para *${petName}* el *${appt.date || ''} @ ${appt.time || ''}* ha sido *RECHAZADA* por el personal de operaciones debido a ajuste de agenda. Por favor comunícate con Leia Concierge al +58 414-6799510 para seleccionar un nuevo horario.`);
+    }
+
+    // ⚠️ DISPARAR NOTIFICACIÓN EN VIVO DE RECHAZO / REPROGRAMACIÓN
+    if (window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyReservationRejected === 'function') {
+      window.liveNotificationEngine.notifyReservationRejected(appt);
     }
   }
 
