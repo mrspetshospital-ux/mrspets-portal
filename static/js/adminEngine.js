@@ -6395,4 +6395,9 @@ class AdminEngine {
 
 const adminEngine = new AdminEngine();
 window.adminEngine = adminEngine;
+window.openLargeCalendarModal = function(offset, area) {
+  if (window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') {
+    return window.adminEngine.openLargeCalendarModal(offset, area);
+  }
+};
 document.addEventListener('DOMContentLoaded', () => adminEngine.init());

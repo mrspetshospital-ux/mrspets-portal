@@ -1294,8 +1294,8 @@
             if (client) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Con el mayor cariño, **${client.tutorHonorific}**! Estoy a su completa disposición para consentir a **${client.petName}** como la princesa que es ✨🐾.\n\n¿En qué puedo orientarle hoy? ¿Desea hacer una reserva, consultar horarios o enlazarse con Administración?`,
-                    buttons: ['📅 Deseo hacer una reserva', '✂️ Grooming & Spa VIP', '🩺 Consulta Médica', '🏨 Hotel VIP 5★', '🛍️ Tienda Boutique', '🤝 Hablar con Administración'],
+                    text: `¡Con el mayor cariño, **${client.tutorHonorific}**! Estoy a su completa disposición para consentir a **${client.petName}** como la princesa que es ✨🐾.\n\n¿En qué puedo orientarle hoy? Puede consultar disponibilidad en vivo, abrir el calendario o agendar cita:`,
+                    buttons: ['📅 Ver Disponibilidad', '📅 Calendario Grande (Staff)', '📅 Deseo hacer una reserva', '✂️ Grooming Spa (4 turnos/h)', '🩺 Consulta Médica', '🏨 Hotel VIP 5★', '🛍️ Tienda Boutique', '🤝 Hablar con Administración'],
                     timestamp: new Date()
                 });
                 return;
@@ -1303,8 +1303,8 @@
 
             this.addMessage({
                 sender: 'leia',
-                text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre cualquiera de nuestras 4 áreas de servicio: Grooming Spa, Clínica, Hotel, Tienda, o pedirme comunicarte con Talibel y el área de Administración)*.`,
-                buttons: ['🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
+                text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre disponibilidad en tiempo real, abrir el calendario general, o pedirme comunicarte con Talibel y el área de Administración)*.`,
+                buttons: ['📅 Ver Disponibilidad', '📅 Calendario Grande (Staff)', '🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa (4 turnos/h)', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
                 timestamp: new Date()
             });
         }

@@ -1032,6 +1032,11 @@
             </div>
           </div>
 
+          <!-- BOTÓN DIRECTO DE CALENDARIO OPERATIVO (STAFF & GOOGLE CALENDAR SYNC) -->
+          <button type="button" id="btn-header-calendario-direct" class="btn btn-sm" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else if(typeof window.openLargeCalendarModal === 'function') { window.openLargeCalendarModal(); } else if(window.app) { app.switchTab('admin'); }" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; font-weight:800; border:1px solid #34D399; border-radius:12px; padding:7px 14px; cursor:pointer; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35); flex-shrink:0; white-space:nowrap;" title="Ver Calendario General Operativo (Sincronizado con Google Calendar)">
+            📅 <span style="display:inline; font-weight:900;">Calendario Live</span>
+          </button>
+
           <!-- SELECTOR DE MONEDA EN TIEMPO REAL: USD ($) / BOLÍVARES (BS. BCV) -->
           <div id="header-currency-selector-container" style="flex-shrink:0;"></div>
 
@@ -8522,10 +8527,10 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/mrsPetsArchitecture.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
+  <script src="js/mrsPetsArchitecture.js?v=20261111_CALENDARIO_LIVE_V4"></script>
   <script src="js/voiceSimulator.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
   <script src="js/whatsappSimulator.js?v=20261102_TEAMLY_UNIFIED_WORKSPACE_V3"></script>
-  <script src="js/adminEngine.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
+  <script src="js/adminEngine.js?v=20261111_CALENDARIO_LIVE_V4"></script>
   <!-- Initialize the PayPal JS-SDK -->
   <script
       src="https://www.paypal.com/sdk/js?client-id=AZsucuz1u2aGc72_jOiooKb6ecknYgGEuWrnHtChTShlz3vSD5cD3MOj40ige8KMRN2avkZaFuOnzM3W&buyer-country=US&currency=USD&components=buttons&enable-funding=venmo,paylater,card"
@@ -8557,7 +8562,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/rbacMiddleware.js?v=20261108_WAR_ROOM_TAB_V7"></script>
   <script src="js/teamlyEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/teamilyExecutiveEngine.js?v=20261104_COGNITIVE_FALLBACK_V1"></script>
-  <script src="js/leiaChatEngine.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
+  <script src="js/leiaChatEngine.js?v=20261111_CALENDARIO_LIVE_V4"></script>
   <script src="js/leiaConciergeCard.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/storeSalesEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/adminFinanceEngine.js?v=20261102_FISCAL_INVOICING_V1"></script>
