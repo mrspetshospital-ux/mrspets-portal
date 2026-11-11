@@ -1165,54 +1165,15 @@
             <!-- CONTENEDOR HORIZONTAL DE LOS 8 MÓDULOS -->
             <div style="display:flex; flex-direction:row; gap:16px; overflow-x:auto; padding-bottom:18px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch;">
               
-              <!-- MÓDULO 1: LEIA CONCIERGE IA -->
-              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(212,175,55,0.6); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <span style="font-size:1.8rem;">🎀</span>
-                  <span class="badge" style="background:#FFFBE6; color:#B45309; border:1px solid #FDE68A; font-weight:800;">Módulo 1</span>
-                </div>
-                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">1. Leia Concierge IA</h4>
-                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
-                  Avatar flotante 24/7 con aprendizaje predictivo, triajes de emergencia y agendamiento combinado.
-                </p>
-                <div style="font-size:0.75rem; font-weight:800; color:#d97706;">Abrir Chat Leia IA ➔</div>
-              </div>
-
-              <!-- MÓDULO 2: Q-VET & DICOM -->
-              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(56,189,248,0.5); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.openDicomViewer()">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <span style="font-size:1.8rem;">🔬</span>
-                  <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #38bdf8; font-weight:800;">Módulo 2</span>
-                </div>
-                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">2. Q-Vet & Visor DICOM HD</h4>
-                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
-                  Conectado a Q-Vet, Visor DICOM sin latencia (Rayos X / Ecografías) y Botón SOS 24/7.
-                </p>
-                <div style="font-size:0.75rem; font-weight:800; color:#0284c7;">Abrir Visor DICOM ➔</div>
-              </div>
-
-              <!-- MÓDULO 3: HOTEL 5 ESTRELLAS -->
-              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(16,185,129,0.5); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.openHotelCam()">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <span style="font-size:1.8rem;">🏨</span>
-                  <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #10b981; font-weight:800;">Módulo 3</span>
-                </div>
-                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">3. Hotel Boutique 5★</h4>
-                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
-                  Suites bioclimáticas, Cam Cams 24/7 encriptadas y Menú Room Service sincronizado.
-                </p>
-                <div style="font-size:0.75rem; font-weight:800; color:#059669;">Ver Cam Cams Hotel ➔</div>
-              </div>
-
-              <!-- MÓDULO 4: GROOMING 7 ESTACIONES -->
-              <div class="card" id="module4-grooming-card" style="min-width:280px; max-width:320px; flex-shrink:0; border:1.5px solid rgba(239,68,68,0.5); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer; position:relative;" onclick="app.switchTab('pet-status', false, null, 'grooming')">
+              <!-- MÓDULO 1: GROOMING, ESTACIÓN Y VISIÓN LEIA -->
+              <div class="card" id="module4-grooming-card" style="min-width:280px; max-width:320px; flex-shrink:0; border:2px solid #ef4444; padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer; position:relative; box-shadow:0 4px 15px rgba(239,68,68,0.12);" onclick="app.switchTab('pet-status', false, null, 'grooming')">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <span style="font-size:1.8rem;">✂️</span>
-                  <span class="badge" style="background:#fef2f2; color:#b91c1c; border:1px solid #ef4444; font-weight:800;">Módulo 4</span>
+                  <span class="badge" style="background:#fef2f2; color:#b91c1c; border:1px solid #ef4444; font-weight:800;">Módulo 1</span>
                 </div>
-                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">4. Grooming 7 Estaciones & Vision AI</h4>
+                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">1. Grooming, Estación y Visión LEIA</h4>
                 <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:10px;">
-                  Circuito 7 pasos (Recepción a Entrega) con detección dérmica por Vision AI.
+                  Circuito 7 estaciones (Recepción a Entrega) con detección dérmica por Visión LEIA e hidratación de pulpejos obligatoria.
                 </p>
 
                 <!-- DYNAMIC PULSING PENDING BADGE -->
@@ -1229,6 +1190,45 @@
                     ✂️ Agendar Cita
                   </button>
                 </div>
+              </div>
+
+              <!-- MÓDULO 2: HOTEL BOUTIQUE -->
+              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(16,185,129,0.5); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.openHotelCam()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-size:1.8rem;">🏨</span>
+                  <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #10b981; font-weight:800;">Módulo 2</span>
+                </div>
+                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">2. Hotel Boutique 5★</h4>
+                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
+                  Suites bioclimáticas, Cam Cams 24/7 encriptadas y Menú Room Service sincronizado.
+                </p>
+                <div style="font-size:0.75rem; font-weight:800; color:#059669;">Ver Cam Cams Hotel ➔</div>
+              </div>
+
+              <!-- MÓDULO 3: LEIA CON SEARCH -->
+              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(212,175,55,0.6); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-size:1.8rem;">🎀</span>
+                  <span class="badge" style="background:#FFFBE6; color:#B45309; border:1px solid #FDE68A; font-weight:800;">Módulo 3</span>
+                </div>
+                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">3. LEIA con Search</h4>
+                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
+                  Avatar flotante 24/7 con aprendizaje predictivo, triajes de emergencia y motor de búsqueda unificada.
+                </p>
+                <div style="font-size:0.75rem; font-weight:800; color:#d97706;">Abrir Chat Leia & Search ➔</div>
+              </div>
+
+              <!-- MÓDULO 4: QV DIVISOR (Q-VET & VISOR DICOM HD) -->
+              <div class="card" style="min-width:280px; max-width:300px; flex-shrink:0; border:1.5px solid rgba(56,189,248,0.5); padding:18px; background:#FFFFFF; border-radius:18px; cursor:pointer;" onclick="mrsPetsArch.openDicomViewer()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-size:1.8rem;">🔬</span>
+                  <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #38bdf8; font-weight:800;">Módulo 4</span>
+                </div>
+                <h4 style="font-size:1rem; font-weight:900; color:#2C2C2E; margin-bottom:6px;">4. QV Divisor (Q-Vet & DICOM)</h4>
+                <p style="font-size:0.78rem; color:#555558; line-height:1.4; margin-bottom:12px;">
+                  Conectado a Q-Vet, Visor DICOM sin latencia (Rayos X / Ecografías) y Botón SOS 24/7.
+                </p>
+                <div style="font-size:0.75rem; font-weight:800; color:#0284c7;">Abrir Visor DICOM (QV Divisor) ➔</div>
               </div>
 
               <!-- MÓDULO 5: BIO-TRACKER -->
@@ -8527,10 +8527,10 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/mrsPetsArchitecture.js?v=20261111_CALENDARIO_LIVE_V4"></script>
+  <script src="js/mrsPetsArchitecture.js?v=20261111_MODULOS_ORDEN_V5"></script>
   <script src="js/voiceSimulator.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
   <script src="js/whatsappSimulator.js?v=20261102_TEAMLY_UNIFIED_WORKSPACE_V3"></script>
-  <script src="js/adminEngine.js?v=20261111_CALENDARIO_LIVE_V4"></script>
+  <script src="js/adminEngine.js?v=20261111_MODULOS_ORDEN_V5"></script>
   <!-- Initialize the PayPal JS-SDK -->
   <script
       src="https://www.paypal.com/sdk/js?client-id=AZsucuz1u2aGc72_jOiooKb6ecknYgGEuWrnHtChTShlz3vSD5cD3MOj40ige8KMRN2avkZaFuOnzM3W&buyer-country=US&currency=USD&components=buttons&enable-funding=venmo,paylater,card"
@@ -8562,7 +8562,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/rbacMiddleware.js?v=20261108_WAR_ROOM_TAB_V7"></script>
   <script src="js/teamlyEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/teamilyExecutiveEngine.js?v=20261104_COGNITIVE_FALLBACK_V1"></script>
-  <script src="js/leiaChatEngine.js?v=20261111_CALENDARIO_LIVE_V4"></script>
+  <script src="js/leiaChatEngine.js?v=20261111_MODULOS_ORDEN_V5"></script>
   <script src="js/leiaConciergeCard.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/storeSalesEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/adminFinanceEngine.js?v=20261102_FISCAL_INVOICING_V1"></script>
