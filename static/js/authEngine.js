@@ -829,6 +829,8 @@ class AuthEngine {
         cardContainer.style.margin = 'auto';
       }
 
+      this.toggleDirectLoginSection(false);
+
       // Mantener la visualización arriba para presentar las opciones VIP prioritarias
       if (portal) {
         portal.scrollTop = 0;
@@ -2276,6 +2278,7 @@ class AuthEngine {
           </div>
         `;
         alertEl.style.display = 'block';
+        this.toggleDirectLoginSection(true);
         alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
       if (window.app && typeof window.app.showToast === 'function') {
@@ -2327,6 +2330,45 @@ class AuthEngine {
       }
     } catch (e) {
       console.warn("[AuthEngine] ensurePortalVisible error:", e);
+    }
+  }
+
+  toggleDirectLoginSection(forceOpen = null) {
+    const dropdown = document.getElementById('portal-credentials-dropdown');
+    const chevron = document.getElementById('chevron-portal-auth');
+    const btn = document.getElementById('btn-portal-toggle-login');
+    if (!dropdown) return;
+
+    const isCurrentlyOpen = (dropdown.style.display !== 'none' && dropdown.style.display !== '');
+    const shouldOpen = (forceOpen !== null) ? forceOpen : !isCurrentlyOpen;
+
+    if (shouldOpen) {
+      dropdown.style.display = 'block';
+      dropdown.style.animation = 'fadeIn 0.25s ease forwards';
+      if (chevron) {
+        chevron.innerText = '▴';
+        chevron.style.transform = 'rotate(180deg)';
+      }
+      if (btn) {
+        btn.style.borderColor = '#fbbf24';
+        btn.style.boxShadow = '0 0 16px rgba(251, 191, 36, 0.45)';
+      }
+      setTimeout(() => {
+        const userInput = document.getElementById('splash-user-input');
+        if (userInput) {
+          try { userInput.focus(); } catch(e) {}
+        }
+      }, 80);
+    } else {
+      dropdown.style.display = 'none';
+      if (chevron) {
+        chevron.innerText = '▾';
+        chevron.style.transform = 'rotate(0deg)';
+      }
+      if (btn) {
+        btn.style.borderColor = '#D4AF37';
+        btn.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35)';
+      }
     }
   }
 
@@ -2658,6 +2700,11 @@ if (typeof window !== 'undefined') {
       modal.style.setProperty('visibility', 'visible', 'important');
       modal.style.setProperty('pointer-events', 'auto', 'important');
       modal.style.setProperty('z-index', '2000000', 'important');
+    }
+  };
+  window.togglePortalAuthSection = function(forceOpen) {
+    if (window.authEngine && typeof window.authEngine.toggleDirectLoginSection === 'function') {
+      return window.authEngine.toggleDirectLoginSection(forceOpen);
     }
   };
 }

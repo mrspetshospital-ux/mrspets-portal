@@ -367,45 +367,46 @@
             💼 <span>Staff / Vista Empresa</span> ➔
           </button>
 
-          <!-- 5. TRABAJA CON NOSOTROS (POSTULACIÓN RRHH / ENVIAR CV) -->
+          <!-- 5. CONFIRMACIÓN E INGRESO DE USUARIO Y CLAVE (OPCIÓN DESPLEGABLE) -->
+          <div>
+            <button type="button" class="btn" id="btn-portal-toggle-login" onclick="window.authEngine ? window.authEngine.toggleDirectLoginSection() : (window.togglePortalAuthSection ? window.togglePortalAuthSection() : null)" style="width:100%; padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:linear-gradient(135deg, #1e293b, #0f172a); color:#FFFFFF; border:1.5px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 14px rgba(0,0,0,0.35); transition:all 0.25s ease;">
+              🔑 <span>Confirmación e Ingreso de Usuario y Clave</span> <span id="chevron-portal-auth" style="color:#D4AF37; font-weight:900; margin-left:6px; font-size:1rem; transition:transform 0.25s ease;">▾</span>
+            </button>
+
+            <!-- CONTENEDOR DESPLEGABLE DE CREDENCIALES -->
+            <div id="portal-credentials-dropdown" style="display:none; background:rgba(15,23,42,0.95); border:1.5px solid #D4AF37; border-radius:16px; padding:18px; margin-top:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); text-align:left;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(212,175,55,0.25); padding-bottom:8px;">
+                <span style="font-size:0.75rem; font-weight:800; color:#D4AF37; text-transform:uppercase; letter-spacing:0.06em;">Acceso con Credenciales Registradas</span>
+                <span style="font-size:0.72rem; color:#94a3b8;">Staff & Clientes VIP</span>
+              </div>
+              <form id="splash-auth-form" onsubmit="authEngine.handleSplashLogin(event)" style="text-align:left;">
+                <div id="splash-auth-error-alert" role="alert" style="display:none; margin-bottom:12px; padding:12px 14px; background:rgba(239,68,68,0.18); border:1.5px solid #EF4444; border-radius:12px; color:#FCA5A5; font-size:0.86rem; font-weight:700; line-height:1.45; text-align:left; box-shadow:0 6px 20px rgba(239,68,68,0.25);"></div>
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+                  <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#F4F1EA; margin-bottom:4px;">Usuario, Correo o Identificación VIP *</label>
+                    <input type="text" id="splash-user-input" class="form-input" placeholder="Ej: dalybell, admin, dr.morales, o ID registrado" required style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.95); border:1.5px solid rgba(212,175,55,0.6); border-radius:12px; padding:12px 14px; color:#1C1C1E; font-weight:700; font-size:0.92rem;">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#F4F1EA; margin-bottom:4px;">Clave Personal o Contraseña *</label>
+                    <input type="password" id="splash-pass-input" class="form-input" placeholder="Ingrese su clave personal *" required style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.95); border:1.5px solid rgba(212,175,55,0.6); border-radius:12px; padding:12px 14px; color:#1C1C1E; font-weight:700; font-size:0.92rem;">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:0.95rem; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #4A6B5D, #2C4A3E); color:white; border:1.5px solid #D4AF37; box-shadow:0 6px 20px rgba(74,107,93,0.5); cursor:pointer; letter-spacing:0.02em;">
+                  🔓 Iniciar Sesión / Confirmar Acceso ➔
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- 6. TRABAJA CON NOSOTROS (POSTULACIÓN RRHH / ENVIAR CV) -->
           <button class="btn" id="btn-portal-enviar-cv" onclick="window.authEngine ? window.authEngine.goToHrPortal() : authEngine.goToHrPortal()" style="padding:13px; font-size:0.9rem; font-weight:900; border-radius:14px; background:linear-gradient(135deg, #1C1C1E, #2C2C2E); color:#D4AF37; border:2px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 14px rgba(212,175,55,0.25);">
             👥 <span>Trabaja con Nosotros (Postulación RRHH / Enviar CV)</span> ➔
           </button>
 
-          <!-- 6. CONTINUAR A LA PLATAFORMA / EXPLORAR COMO VISITANTE -->
+          <!-- 7. CONTINUAR A LA PLATAFORMA / EXPLORAR COMO VISITANTE -->
           <button type="button" class="btn" onclick="window.authEngine ? window.authEngine.closeConciergePortal() : authEngine.closeConciergePortal()" style="padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:rgba(255,255,255,0.08); color:#FBFBFD; border:1.5px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px; box-shadow:0 4px 14px rgba(0,0,0,0.3);">
             🐾 <span>Continuar a la Plataforma / Explorar como Visitante</span> ➔
           </button>
-        </div>
-
-        <!-- DIVISOR ELEGANTE DE ACCESO CON CREDENCIALES -->
-        <div style="display:flex; align-items:center; gap:12px; margin:18px 0 16px 0;">
-          <div style="flex:1; height:1px; background:rgba(212,175,55,0.3);"></div>
-          <span style="font-size:0.74rem; color:#D4AF37; font-weight:800; text-transform:uppercase; letter-spacing:0.06em;">Confirmación de Ingreso de Usuario y Clave</span>
-          <div style="flex:1; height:1px; background:rgba(212,175,55,0.3);"></div>
-        </div>
-
-        <!-- 🔑 SECCIÓN INFERIOR DE ACCESO: CONFIRMACIÓN E INGRESO DE USUARIO Y CLAVE -->
-        <div style="background:rgba(0,0,0,0.5); border:1.5px solid #D4AF37; border-radius:18px; padding:20px; margin-bottom:12px; box-shadow:0 8px 25px rgba(0,0,0,0.6);">
-          <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:0.88rem; font-weight:900; color:#D4AF37; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px;">
-            <span>🔑</span> Confirmación e Ingreso de Usuario y Clave
-          </div>
-          <form id="splash-auth-form" onsubmit="authEngine.handleSplashLogin(event)" style="text-align:left;">
-            <div id="splash-auth-error-alert" role="alert" style="display:none; margin-bottom:12px; padding:12px 14px; background:rgba(239,68,68,0.18); border:1.5px solid #EF4444; border-radius:12px; color:#FCA5A5; font-size:0.86rem; font-weight:700; line-height:1.45; text-align:left; box-shadow:0 6px 20px rgba(239,68,68,0.25);"></div>
-            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
-              <div>
-                <label style="display:block; font-size:0.75rem; font-weight:700; color:#F4F1EA; margin-bottom:4px;">Usuario, Correo o Identificación VIP *</label>
-                <input type="text" id="splash-user-input" class="form-input" placeholder="Ej: admin, dr.morales, o ID / Usuario registrado" required style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.95); border:1.5px solid rgba(212,175,55,0.6); border-radius:12px; padding:12px 14px; color:#1C1C1E; font-weight:700; font-size:0.92rem;">
-              </div>
-              <div>
-                <label style="display:block; font-size:0.75rem; font-weight:700; color:#F4F1EA; margin-bottom:4px;">Clave Personal o Contraseña *</label>
-                <input type="password" id="splash-pass-input" class="form-input" placeholder="Ingrese su clave personal *" required style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.95); border:1.5px solid rgba(212,175,55,0.6); border-radius:12px; padding:12px 14px; color:#1C1C1E; font-weight:700; font-size:0.92rem;">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:0.95rem; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #4A6B5D, #2C4A3E); color:white; border:1.5px solid #D4AF37; box-shadow:0 6px 20px rgba(74,107,93,0.5); cursor:pointer; letter-spacing:0.02em;">
-              🔑 Iniciar Sesión / Confirmar Acceso ➔
-            </button>
-          </form>
         </div>
       </div>
 
