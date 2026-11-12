@@ -185,7 +185,7 @@ class MisipetEngine:
             fuel_burn_rate = gen_vars.get("consumo_lts_hora", 5.5)
             autonomy_hours = round(fuel_liters / fuel_burn_rate, 1) if fuel_burn_rate > 0 else 0
             power_plant = {
-                "name": generator_asset.get("name"),
+                "name": generator_asset.get("name", "Planta Eléctrica Cummins 65 kVA Diésel / Gas Insonorizada"),
                 "fuel_liters": fuel_liters,
                 "tank_capacity_liters": fuel_cap,
                 "fuel_pct": fuel_pct,
@@ -193,12 +193,23 @@ class MisipetEngine:
                 "autonomy_hours": autonomy_hours,
                 "voltage": gen_vars.get("voltaje_salida_v", 208),
                 "frequency_hz": gen_vars.get("frecuencia_hz", 60.0),
+                "battery_voltage_v": gen_vars.get("bateria_arranque_v", 13.8),
+                "coolant_temp_c": gen_vars.get("temperatura_refrigerante_c", 82.0),
+                "hours_odometer": generator_asset.get("hours_odometer", 420.0),
+                "minor_service_interval_hours": generator_asset.get("minor_service_interval_hours", 50),
+                "major_service_interval_hours": generator_asset.get("major_service_interval_hours", 250),
+                "last_minor_service": generator_asset.get("last_minor_service", "2026-10-24"),
+                "next_minor_service": generator_asset.get("next_minor_service", "2026-11-15"),
+                "last_major_service": generator_asset.get("last_major_service", "2026-07-10"),
+                "next_major_service": generator_asset.get("next_major_service", "2027-01-10"),
+                "service_quarter": "Q4 2026 / Q1 2027",
+                "ip_address": generator_asset.get("wifi_config", {}).get("ip_address", "192.168.1.185"),
                 "status": "Listo para Transferencia Automática (ATS)",
                 "semaphore": "green" if fuel_pct >= 50 else ("yellow" if fuel_pct >= 25 else "red")
             }
         else:
             power_plant = {
-                "name": "Planta Cummins 65 kVA",
+                "name": "Planta Cummins 65 kVA Diésel / Gas Insonorizada",
                 "fuel_liters": 210,
                 "tank_capacity_liters": 250,
                 "fuel_pct": 84.0,
@@ -206,7 +217,18 @@ class MisipetEngine:
                 "autonomy_hours": 38.2,
                 "voltage": 208,
                 "frequency_hz": 60.0,
-                "status": "Operativo",
+                "battery_voltage_v": 13.8,
+                "coolant_temp_c": 82.0,
+                "hours_odometer": 420.0,
+                "minor_service_interval_hours": 50,
+                "major_service_interval_hours": 250,
+                "last_minor_service": "2026-10-24",
+                "next_minor_service": "2026-11-15",
+                "last_major_service": "2026-07-10",
+                "next_major_service": "2027-01-10",
+                "service_quarter": "Q4 2026 / Q1 2027",
+                "ip_address": "192.168.1.185",
+                "status": "Operativo (ATS)",
                 "semaphore": "green"
             }
 
