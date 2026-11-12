@@ -2267,7 +2267,7 @@ async def proxy_make_pos_webhook(request: Request):
     )
 
     try:
-        with urllib.request.urlopen(req, context=ctx_ssl, timeout=8) as resp:
+        with urllib.request.urlopen(req, context=ctx_ssl, timeout=35) as resp:
             resp_bytes = resp.read()
             resp_str = resp_bytes.decode("utf-8", errors="ignore")
             latency_ms = int((time.time() - t0) * 1000)

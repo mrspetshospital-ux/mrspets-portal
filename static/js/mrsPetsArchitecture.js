@@ -1245,7 +1245,7 @@ class MrsPetsArchitectureEngine {
 
     const startTime = performance.now();
     let result = { hasCustomReply: false, replyText: '' };
-    const TIMEOUT_MS = 8000; // Timeout de 8s para dar tiempo al Webhook Response de Make (Drive + Gemini)
+    const TIMEOUT_MS = 35000; // Timeout de 35s para dar tiempo al Webhook Response de Make (Drive + Gemini)
 
     // Helper para extraer el cuerpo de respuesta HTTP 200 devuelto por Make.com
     const extractReplyFromBody = (bodyStr) => {
@@ -1325,7 +1325,7 @@ class MrsPetsArchitectureEngine {
       // 2. Resiliencia vía Proxy Local con timeout controlado (evita congelar al usuario)
       try {
         const proxyCtrl = new AbortController();
-        const proxyTimeoutId = setTimeout(() => proxyCtrl.abort(), 2500);
+        const proxyTimeoutId = setTimeout(() => proxyCtrl.abort(), 35000);
         const proxyRes = await fetch('/api/webhook/make-pos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
