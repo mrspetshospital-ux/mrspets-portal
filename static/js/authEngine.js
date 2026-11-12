@@ -1717,19 +1717,19 @@ class AuthEngine {
       event.preventDefault();
     }
 
-    // 1. Activar sesión en Rol de Visitante para reservaciones públicas
-    this.isAuthenticated = true;
-    this.userRole = 'visitor';
-    this.userName = 'Visitante VIP';
-    this.currentVipPetId = null;
-
+    // 1. Marcar bandera para retorno seguro a Concierge VIP si se cancela o cierra con 'X'
+    window._openedBookingFromConcierge = true;
     try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('mrs_pets_opened_from_concierge', 'true');
+        sessionStorage.removeItem('mrs_pets_client_authenticated');
+        sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
+      }
+      localStorage.removeItem('mrs_pets_skip_splash');
       localStorage.removeItem('mrs_pets_active_vip_patient_id');
       localStorage.removeItem('mrs_pets_active_customer_name');
-      localStorage.setItem('mrs_pets_skip_splash', 'true');
       localStorage.setItem('mrs_pets_auth_role', 'visitor');
       localStorage.setItem('mrs_pets_auth_name', 'Visitante VIP');
-      sessionStorage.removeItem('mrs_pets_client_authenticated');
 
       // Limpiar autorizaciones de PIN residuales en la pestaña para evitar suplantaciones
       if (typeof sessionStorage !== 'undefined') {
@@ -1741,6 +1741,12 @@ class AuthEngine {
         }
       }
     } catch (e) {}
+
+    // El visitante NO está autenticado en cuenta privada ni personal
+    this.isAuthenticated = false;
+    this.userRole = 'visitor';
+    this.userName = 'Visitante VIP';
+    this.currentVipPetId = null;
 
     // 2. Revelar la plataforma principal y ocultar portal splash
     this.hidePortalAndShowApp();
@@ -2702,7 +2708,7 @@ if (typeof window !== 'undefined') {
       modal.style.setProperty('z-index', '2000000', 'important');
     }
   };
-  window.togglePortalAuthSection = function(forceOpen) {
+  window.togglePortalAuthSection = window.togglePortalAuthSection || function(forceOpen) {
     if (window.authEngine && typeof window.authEngine.toggleDirectLoginSection === 'function') {
       return window.authEngine.toggleDirectLoginSection(forceOpen);
     }

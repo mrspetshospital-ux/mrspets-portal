@@ -175,6 +175,48 @@
       }
     };
 
+    window.togglePortalAuthSection = function(forceOpen) {
+      try {
+        var dropdown = document.getElementById('portal-credentials-dropdown');
+        var chevron = document.getElementById('chevron-portal-auth');
+        var btn = document.getElementById('btn-portal-toggle-login');
+        if (!dropdown) return;
+
+        var isCurrentlyOpen = (dropdown.style.display !== 'none' && dropdown.style.display !== '');
+        var shouldOpen = (forceOpen !== null && forceOpen !== undefined) ? forceOpen : !isCurrentlyOpen;
+
+        if (shouldOpen) {
+          dropdown.style.display = 'block';
+          if (chevron) {
+            chevron.innerText = '▴';
+            chevron.style.transform = 'rotate(180deg)';
+          }
+          if (btn) {
+            btn.style.borderColor = '#fbbf24';
+            btn.style.boxShadow = '0 0 18px rgba(251, 191, 36, 0.45)';
+          }
+          setTimeout(function() {
+            var userInput = document.getElementById('splash-user-input');
+            if (userInput) {
+              try { userInput.focus(); } catch(e) {}
+            }
+          }, 80);
+        } else {
+          dropdown.style.display = 'none';
+          if (chevron) {
+            chevron.innerText = '▾';
+            chevron.style.transform = 'none';
+          }
+          if (btn) {
+            btn.style.borderColor = '#D4AF37';
+            btn.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35)';
+          }
+        }
+      } catch (err) {
+        console.error('[togglePortalAuthSection error]', err);
+      }
+    };
+
     
     window.triggerSystemAutoDeploy = function(btn) {
       var origText = btn ? btn.innerHTML : '';
@@ -369,7 +411,7 @@
 
           <!-- 5. CONFIRMACIÓN E INGRESO DE USUARIO Y CLAVE (OPCIÓN DESPLEGABLE) -->
           <div>
-            <button type="button" class="btn" id="btn-portal-toggle-login" onclick="window.authEngine ? window.authEngine.toggleDirectLoginSection() : (window.togglePortalAuthSection ? window.togglePortalAuthSection() : null)" style="width:100%; padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:linear-gradient(135deg, #1e293b, #0f172a); color:#FFFFFF; border:1.5px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 14px rgba(0,0,0,0.35); transition:all 0.25s ease;">
+            <button type="button" class="btn" id="btn-portal-toggle-login" onclick="window.togglePortalAuthSection()" style="width:100%; padding:13px; font-size:0.9rem; font-weight:800; border-radius:14px; background:linear-gradient(135deg, #1e293b, #0f172a); color:#FFFFFF; border:1.5px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 14px rgba(0,0,0,0.35); transition:all 0.25s ease;">
               🔑 <span>Confirmación e Ingreso de Usuario y Clave</span> <span id="chevron-portal-auth" style="color:#D4AF37; font-weight:900; margin-left:6px; font-size:1rem; transition:transform 0.25s ease;">▾</span>
             </button>
 
@@ -8564,7 +8606,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/mrsPetsArchitecture.js?v=20261111_LIVE_NOTIFY_V1"></script>
   <script src="js/voiceSimulator.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
   <script src="js/whatsappSimulator.js?v=20261102_TEAMLY_UNIFIED_WORKSPACE_V3"></script>
-  <script src="js/adminEngine.js?v=20261111_LIVE_NOTIFY_V1"></script>
+  <script src="js/adminEngine.js?v=20261112_PORTAL_SAFE_RETURN_V1"></script>
   <script src="js/liveNotificationEngine.js?v=20261111_LIVE_NOTIFY_V1"></script>
   <!-- Initialize the PayPal JS-SDK -->
   <script
@@ -8584,13 +8626,13 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/healthDashboard.js?v=20261031_V1"></script>
   <script src="js/callLogs.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/analytics.js?v=20261031_ZERO_JITTER_V7"></script>
-  <script src="js/authEngine.js?v=20261109_VIDEO_FULL_CONCIERGE_V7"></script>
+  <script src="js/authEngine.js?v=20261112_PORTAL_SAFE_RETURN_V1"></script>
   <script src="js/petStatus.js?v=20261102_STATUS_DATE_COUNTS_V1"></script>
   <script src="js/clinicaEngine.js?v=20261103_AGENDA_BLOCKER_V1"></script>
   <script src="js/parametricMatrixEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/sixSigmaTelemetry.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/smartContrastEngine.js?v=20261031_ZERO_JITTER_V7"></script>
-  <script src="js/app.js?v=20261109_SIDEBAR_SCROLL_V6"></script>
+  <script src="js/app.js?v=20261112_PORTAL_SAFE_RETURN_V1"></script>
   <script src="js/globalSearchEngine.js?v=20261103_HIGIENE_CUIDADO_V1"></script>
   <script src="js/financialEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/hrRecruitmentEngine.js?v=20261031_ZERO_JITTER_V7"></script>

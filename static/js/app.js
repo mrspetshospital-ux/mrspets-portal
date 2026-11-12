@@ -676,6 +676,15 @@ class App {
         window.authEngine.userRole = 'staff';
       }
     }
+
+    if (modal && !modal._hasBackdropDismiss) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.closeModal(modalId);
+        }
+      });
+      modal._hasBackdropDismiss = true;
+    }
   }
 
   closeModal(modalId) {
@@ -689,48 +698,80 @@ class App {
     }
 
     // Stop Funnel Telemetry Timer if closed before booking
-    if ((modalId === 'hotel-booking-modal' || modalId === 'clinic-booking-modal' || modalId === 'grooming-booking-modal') && window._activeFunnelTimer) {
+    if ((modalId === 'hotel-booking-modal' || modalId === 'clinic-booking-modal' || modalId === 'grooming-booking-modal' || modalId === 'booking-modal-clinica' || modalId === 'booking-modal-grooming' || modalId === 'booking-modal-hotel') && window._activeFunnelTimer) {
       if (window.sixSigmaTelemetryEngine) {
         window.sixSigmaTelemetryEngine.stopTimer(window._activeFunnelTimer, { completed: false, closedReason: 'user_cancelled' });
       }
       window._activeFunnelTimer = null;
     }
 
-    // ZERO-TRUST GATE: Si el visitante NO está autenticado y se cierra un modal de registro o acceso,
-    // NUNCA exponer el app-container ni la cuenta activa por defecto. Retornar obligatoriamente al Portal Concierge.
-    if (!window.authEngine || !window.authEngine.isAuthenticated) {
-      const portalModals = [
-        'enterprise-login-modal',
-        'registration-modal',
-        'vip-client-lookup-modal',
-        'client-profile-pin-modal',
-        'booking-modal-clinica',
-        'booking-modal-grooming',
-        'booking-modal-hotel',
-        'clinic-booking-modal',
-        'grooming-booking-modal',
-        'hotel-booking-modal'
-      ];
-      if (portalModals.includes(modalId)) {
-        // PERO: Si el usuario está cambiando de área de reserva, verificando PIN o está activo en rol de cliente/visitante, NO bloquear la app
-        if (window._isSwitchingBookingArea || window._isVerifyingProfilePin) return;
-        if (window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest' || window.authEngine.userRole === 'client' || window.authEngine.currentVipPetId)) {
-          return;
+    // ZERO-TRUST GATE: Si el visitante NO está autenticado o el modal fue abierto desde el Concierge VIP
+    // al cerrar el modal de reservación o acceso con la 'X', NUNCA exponer el app-container ni la cuenta activa en segundo plano.
+    // Retornar obligatoriamente al Portal Concierge VIP.
+    const portalModals = [
+      'enterprise-login-modal',
+      'registration-modal',
+      'vip-client-lookup-modal',
+      'client-profile-pin-modal',
+      'booking-modal-clinica',
+      'booking-modal-grooming',
+      'booking-modal-hotel',
+      'clinic-booking-modal',
+      'grooming-booking-modal',
+      'hotel-booking-modal'
+    ];
+
+    if (portalModals.includes(modalId)) {
+      // 1. Si está transicionando entre áreas de reserva o verificando PIN de perfil, no retornar al portal
+      if (window._isSwitchingBookingArea || window._isVerifyingProfilePin) return;
+
+      // 2. Si se está ejecutando la confirmación de la cita (para mostrar la pantalla de confirmación Screen Pop), no interrumpir
+      if (window.clinicaEngine && (window.clinicaEngine._isConfirmingClinica || window.clinicaEngine._isConfirmingGrooming || window.clinicaEngine._isConfirmingHotel)) {
+        return;
+      }
+
+      // 3. Comprobar si el usuario tiene una sesión legítima y autenticada con credenciales verificadas
+      const isClientAuth = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
+      const isEnterpriseAuth = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true');
+      const isStaffActive = (window.authEngine && typeof window.authEngine.isEnterpriseStaffActive === 'function' && window.authEngine.isEnterpriseStaffActive());
+      const wasOpenedFromConcierge = Boolean(window._openedBookingFromConcierge || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_opened_from_concierge') === 'true'));
+
+      // Si fue abierto desde el Concierge O el usuario NO está autenticado con clave confirmada:
+      if (wasOpenedFromConcierge || (!isClientAuth && !isEnterpriseAuth && !isStaffActive)) {
+        window._openedBookingFromConcierge = false;
+        try {
+          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('mrs_pets_opened_from_concierge');
+          localStorage.removeItem('mrs_pets_skip_splash');
+        } catch(e) {}
+
+        if (window.authEngine) {
+          window.authEngine.isAuthenticated = false;
         }
-        localStorage.removeItem('mrs_pets_skip_splash');
-        if (window.authEngine && typeof window.authEngine.showConciergePortal === 'function') {
+
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+          appContainer.style.setProperty('display', 'none', 'important');
+          appContainer.style.opacity = '0';
+          appContainer.style.visibility = 'hidden';
+        }
+
+        if (typeof window.showConciergePortalSafe === 'function') {
+          window.showConciergePortalSafe();
+        } else if (window.authEngine && typeof window.authEngine.showConciergePortal === 'function') {
           window.authEngine.showConciergePortal();
         } else {
           const portal = document.getElementById('access-links-portal');
           if (portal) {
             portal.classList.add('active');
             portal.style.removeProperty('display');
-            portal.style.setProperty('display', 'block', 'important');
+            portal.style.setProperty('display', 'flex', 'important');
             portal.style.setProperty('opacity', '1', 'important');
             portal.style.setProperty('visibility', 'visible', 'important');
             portal.style.setProperty('pointer-events', 'auto', 'important');
+            portal.style.setProperty('z-index', '100000', 'important');
           }
         }
+        return;
       }
     }
   }

@@ -1367,20 +1367,26 @@ class AdminEngine {
     if (window.authEngine && window.authEngine.userRole === 'candidate') return 'Postulante RRHH';
     if (this.viewEnvironment === 'enterprise') return 'Staff Operativo';
 
-    // 1. En Vista Cliente, consultar localStorage primero
+    const isClientAuth = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
+
+    // 1. En Vista Cliente, consultar localStorage primero SOLO si está autenticado
     const storedCust = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_customer_name') : null;
-    if (storedCust && !storedCust.toLowerCase().includes('staff') && storedCust !== 'Visitante VIP') {
+    if (isClientAuth && storedCust && !storedCust.toLowerCase().includes('staff') && storedCust !== 'Visitante VIP') {
       return storedCust.split('(')[0].trim();
     }
 
-    // 2. Si authEngine tiene un nombre no staff
-    if (window.authEngine && window.authEngine.userName && window.authEngine.userName !== 'Staff Operativo' && !window.authEngine.userName.toLowerCase().includes('staff') && window.authEngine.userName !== 'Visitante VIP') {
+    // 2. Si authEngine tiene un nombre de cliente autenticado
+    if (isClientAuth && window.authEngine && window.authEngine.userName && window.authEngine.userName !== 'Staff Operativo' && !window.authEngine.userName.toLowerCase().includes('staff') && window.authEngine.userName !== 'Visitante VIP') {
       return window.authEngine.userName.split('(')[0].trim();
     }
 
     const nameTextEl = document.getElementById('user-account-name-text');
-    if (nameTextEl && nameTextEl.innerText && nameTextEl.innerText !== 'Staff Operativo' && !nameTextEl.innerText.includes('Staff') && nameTextEl.innerText !== 'Visitante VIP') {
+    if (isClientAuth && nameTextEl && nameTextEl.innerText && nameTextEl.innerText !== 'Staff Operativo' && !nameTextEl.innerText.includes('Staff') && nameTextEl.innerText !== 'Visitante VIP') {
       return nameTextEl.innerText.trim();
+    }
+
+    if (!isClientAuth) {
+      return 'Visitante VIP';
     }
 
     return 'Dalybell Ramírez Montilla';
@@ -1407,11 +1413,13 @@ class AdminEngine {
       badgeLabel = 'Staff Activo:';
     } else {
       accountName = this.getCurrentCustomerName();
-      badgeLabel = 'Cuenta de';
+      const isClientAuth = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
+      badgeLabel = (isClientAuth && accountName !== 'Visitante VIP') ? 'Cuenta de' : 'Modo:';
     }
 
     if (!accountName || (this.viewEnvironment !== 'enterprise' && accountName.toLowerCase().includes('staff'))) {
-      accountName = 'Dalybell Montilla';
+      const isClientAuth = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
+      accountName = isClientAuth ? 'Dalybell Montilla' : 'Visitante VIP';
     }
 
     if (this.viewEnvironment !== 'enterprise') {
