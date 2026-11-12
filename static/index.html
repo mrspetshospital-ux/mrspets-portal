@@ -1821,9 +1821,12 @@
                     Gestión activa por estaciones: Grooming Spa, Clínica Veterinaria y Hotel 5★
                   </p>
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                   <button type="button" class="btn btn-sm" id="btn-toggle-pet-status-mode" onclick="if(window.adminEngine) { adminEngine.setEnvironment(adminEngine.viewEnvironment === 'enterprise' ? 'customer' : 'enterprise'); }" style="font-weight:800; font-size:0.82rem; padding:6px 14px; border-radius:10px; border:1px solid #cbd5e1; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.06); transition:all 0.2s ease; background:#4A6B5D; color:#FFFFFF;">
                     🏢 Vista Staff Operativo (Mostrando Todos) ▾
+                  </button>
+                  <button type="button" id="btn-pet-status-calendario-live" class="btn btn-sm" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else if(typeof window.openLargeCalendarModal === 'function') { window.openLargeCalendarModal(); } else if(window.app) { app.switchTab('admin'); }" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF !important; font-weight:800; border:1px solid #34D399; border-radius:10px; padding:6px 14px; cursor:pointer; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); white-space:nowrap;" title="Ver Calendario Operativo Live y Disponibilidad (Sincronizado)">
+                    📅 <span style="font-weight:900;">Calendario Live</span>
                   </button>
                   <button type="button" class="btn btn-sm staff-only-control" id="btn-pet-status-subir-grooming" onclick="if(window.mrsPetsArch) mrsPetsArch.openEmployeeCamera();" style="font-weight:800; font-size:0.82rem; padding:6px 14px; border-radius:10px; border:1.5px solid #D4AF37; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.2); transition:all 0.2s ease; background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214;" title="Subir Fotos de Grooming & Control de Calidad (Staff)">
                     📸 Subir Fotos Grooming / QC

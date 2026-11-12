@@ -220,6 +220,38 @@ class CalendarEngine:
             return True
         return False
 
+    def add_appointment(self, appt_data: dict) -> dict:
+        """Registra una cita en memoria / base de datos y la almacena persistentemente."""
+        if not appt_data.get("id"):
+            appt_data["id"] = f"APT-{uuid.uuid4().hex[:6].upper()}"
+        appt_data["codigo"] = appt_data.get("id")
+        appt_data["activo"] = True
+
+        # Evitar duplicados por id/codigo
+        self._memory_appointments = [a for a in self._memory_appointments if a.get("id") != appt_data["id"] and a.get("codigo") != appt_data["codigo"]]
+        self._memory_appointments.append(appt_data)
+
+        # También intentar persistir en DB si existe
+        try:
+            import db
+            sql = """INSERT INTO citas (codigo, area, fecha_dia, fecha_hora, notas, activo)
+                     VALUES (%s, %s, %s, %s, %s, TRUE)"""
+            fecha_hora = f"{appt_data.get('date')} {appt_data.get('time', '09:00')}:00" if "T" not in str(appt_data.get("time")) else str(appt_data.get("time"))
+            db.x(sql, (appt_data["codigo"], appt_data.get("area", "grooming"), 
+                       appt_data.get("date"), fecha_hora, 
+                       f"{appt_data.get('pet')} - {appt_data.get('tutor')} ({appt_data.get('service')})"))
+        except Exception:
+            pass
+
+        # Disparar sincronización a Google Calendar vía Make
+        try:
+            gcal_payload = self.build_make_gcal_payload("create_appointment", appt_data)
+            self.dispatch_to_make(gcal_payload)
+        except Exception:
+            pass
+
+        return appt_data
+
     def get_appointments_for_date(self, target_date: date, area: Optional[str] = None) -> List[dict]:
         """Obtiene citas de la base de datos si está disponible o de memoria/fallback."""
         d_str = target_date.isoformat()

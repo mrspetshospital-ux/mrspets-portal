@@ -2076,6 +2076,15 @@ canvas#waveform-canvas {
   pointer-events: auto !important;
 }
 
+/* Modales de reservación y confirmación en primer plano sobre cualquier calendario o backdrop */
+#booking-modal-grooming,
+#booking-modal-clinica,
+#booking-modal-hotel,
+#booking-confirmation-pop,
+.booking-modal-foreground {
+  z-index: 10000005 !important;
+}
+
 .modal-card {
   background: #FFFFFF !important;
   border: 2px solid #D4AF37 !important;

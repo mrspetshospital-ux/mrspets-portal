@@ -2035,6 +2035,43 @@ class ClinicaEngine {
         notes: reason || `Estudio: ${studyVal} (${doctorVal})`
       });
 
+      if (!Array.isArray(window.adminEngine.bookedAppointments)) window.adminEngine.bookedAppointments = [];
+      const isAlreadyInBooked = window.adminEngine.bookedAppointments.some(a => a.id === bookingId || (a.pet === cleanPet && a.date === date && a.time === time));
+      if (!isAlreadyInBooked) {
+        window.adminEngine.bookedAppointments.push({
+          id: bookingId,
+          petId: targetPetId,
+          area: 'clinica',
+          date: date,
+          time: time,
+          pet: cleanPet,
+          tutor: cleanTutor,
+          service: studyVal
+        });
+        if (typeof window.adminEngine.saveBookedAppointmentsToStorage === 'function') {
+          window.adminEngine.saveBookedAppointmentsToStorage();
+        }
+      }
+      if (typeof window.adminEngine.renderLargeCalendarModalContent === 'function') {
+        window.adminEngine.renderLargeCalendarModalContent();
+      }
+
+      try {
+        fetch('/api/v1/calendario/citas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: bookingId,
+            area: 'clinica',
+            date: date,
+            time: time,
+            pet: cleanPet,
+            tutor: cleanTutor,
+            service: studyVal
+          })
+        }).catch(() => {});
+      } catch(e) {}
+
       if (typeof window.adminEngine.registerNewPatient === 'function') {
         window.adminEngine.registerNewPatient({
           id: targetPetId,
@@ -2633,8 +2670,13 @@ class ClinicaEngine {
   openGroomingBookingModal(packageTitle = 'Circuito Grooming Spa 7 Estaciones', prefillPetName = '', prefillTutorName = '', options = {}) {
     const modal = document.getElementById('booking-modal-grooming');
     if (modal) {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.style.setProperty('z-index', '10000005', 'important');
       modal.style.removeProperty('display');
-      modal.style.display = '';
+      modal.style.setProperty('display', 'flex', 'important');
+      modal.classList.add('active');
     }
 
     const titleEl = document.getElementById('booking-grooming-package');
@@ -2665,13 +2707,17 @@ class ClinicaEngine {
     this.setupBookingPinField('grooming', activeUser, finalPet, finalTutor);
 
     const dateInput = document.getElementById('booking-grooming-date');
-    if (dateInput && !dateInput.value) {
+    if (options && options.defaultDate) {
+      if (dateInput) dateInput.value = options.defaultDate;
+    } else if (dateInput && !dateInput.value) {
       const today = new Date();
       dateInput.value = today.toISOString().split('T')[0];
     }
 
     const timeInput = document.getElementById('booking-grooming-time');
-    if (timeInput) {
+    if (options && options.defaultTime) {
+      if (timeInput) timeInput.value = options.defaultTime;
+    } else if (timeInput) {
       timeInput.value = this.getSmartBookingTime(dateInput ? dateInput.value : null);
     }
     this.updateTimeAmPmBadge('grooming');
@@ -2811,6 +2857,47 @@ class ClinicaEngine {
         });
       } catch(e) {}
     }
+
+    // 1.1 REGISTRO DIRECTO EN BOOKED APPOINTMENTS PARA VISIBILIDAD INMEDIATA EN CALENDARIO LIVE
+    if (window.adminEngine) {
+      if (!Array.isArray(window.adminEngine.bookedAppointments)) window.adminEngine.bookedAppointments = [];
+      const isAlreadyInBooked = window.adminEngine.bookedAppointments.some(a => a.id === bookingId || (a.pet === cleanPet && a.date === date && a.time === formattedTime));
+      if (!isAlreadyInBooked) {
+        window.adminEngine.bookedAppointments.push({
+          id: bookingId,
+          petId: targetPetId,
+          area: 'grooming',
+          date: date,
+          time: formattedTime,
+          pet: cleanPet,
+          tutor: cleanTutor,
+          service: `Circuito Grooming Spa 7 Estaciones (${shampoo})`
+        });
+        if (typeof window.adminEngine.saveBookedAppointmentsToStorage === 'function') {
+          window.adminEngine.saveBookedAppointmentsToStorage();
+        }
+      }
+      if (typeof window.adminEngine.renderLargeCalendarModalContent === 'function') {
+        window.adminEngine.renderLargeCalendarModalContent();
+      }
+    }
+
+    // 1.2 NOTIFICAR AL BACKEND CALENDAR ENGINE (/api/v1/calendario/citas) Y MAKE GOOGLE CALENDAR
+    try {
+      fetch('/api/v1/calendario/citas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: bookingId,
+          area: 'grooming',
+          date: date,
+          time: time24,
+          pet: cleanPet,
+          tutor: cleanTutor,
+          service: `Circuito Grooming Spa 7 Estaciones (${shampoo})`
+        })
+      }).catch(err => console.warn('Error sincronizando cita con servidor:', err));
+    } catch(e) {}
 
     // 2. ACTUALIZAR PACIENTE EXISTENTE O REGISTRAR NUEVO SI NO EXISTÍA
     if (existing && (!isExistingInActiveServiceToday || date === todayStr)) {
@@ -3154,6 +3241,43 @@ class ClinicaEngine {
             service: `Suite Hotel 5★ (hasta ${checkout}${packSalida ? ' + Pack Salida' : ''})`
           });
         }
+
+        if (!Array.isArray(window.adminEngine.bookedAppointments)) window.adminEngine.bookedAppointments = [];
+        const isAlreadyInBooked = window.adminEngine.bookedAppointments.some(a => a.id === bookingId || (a.pet === cleanPet && a.date === checkin && a.time === time));
+        if (!isAlreadyInBooked) {
+          window.adminEngine.bookedAppointments.push({
+            id: bookingId,
+            petId: targetPetId,
+            area: 'hotel',
+            date: checkin,
+            time: time,
+            pet: cleanPet,
+            tutor: cleanTutor,
+            service: `Suite Hotel 5★ (hasta ${checkout}${packSalida ? ' + Pack Salida' : ''})`
+          });
+          if (typeof window.adminEngine.saveBookedAppointmentsToStorage === 'function') {
+            window.adminEngine.saveBookedAppointmentsToStorage();
+          }
+        }
+        if (typeof window.adminEngine.renderLargeCalendarModalContent === 'function') {
+          window.adminEngine.renderLargeCalendarModalContent();
+        }
+
+        try {
+          fetch('/api/v1/calendario/citas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: bookingId,
+              area: 'hotel',
+              date: checkin,
+              time: time,
+              pet: cleanPet,
+              tutor: cleanTutor,
+              service: `Suite Hotel 5★ (hasta ${checkout}${packSalida ? ' + Pack Salida' : ''})`
+            })
+          }).catch(() => {});
+        } catch(e) {}
 
         if (typeof window.adminEngine.registerNewPatient === 'function') {
           window.adminEngine.registerNewPatient({

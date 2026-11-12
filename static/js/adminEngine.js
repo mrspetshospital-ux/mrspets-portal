@@ -3841,17 +3841,28 @@ class AdminEngine {
       const res = await fetch('/api/v1/calendario/eventos');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.citas) && data.citas.length > 0) {
-          this.bookedAppointments = data.citas.map(c => ({
-            id: c.codigo || c.id || 'APT',
-            area: c.area || 'grooming',
-            date: (c.fecha_dia || c.fecha_hora || '').split('T')[0],
-            time: (c.fecha_hora || '').includes('T') ? c.fecha_hora.split('T')[1].substring(0, 5) : '09:00',
-            pet: c.mascota_nombre || 'Mascota VIP',
-            tutor: c.tutor_nombre || 'Cliente VIP',
-            service: c.notas || `Servicio ${c.area}`
-          }));
+        const serverAppts = (Array.isArray(data.citas) && data.citas.length > 0)
+          ? data.citas.map(c => ({
+              id: c.codigo || c.id || 'APT',
+              area: c.area || 'grooming',
+              date: (c.fecha_dia || c.fecha_hora || c.date || '').split('T')[0],
+              time: (c.fecha_hora || c.time || '').includes('T') ? c.fecha_hora.split('T')[1].substring(0, 5) : (c.time || '09:00').substring(0, 5),
+              pet: c.mascota_nombre || c.pet || 'Mascota VIP',
+              tutor: c.tutor_nombre || c.tutor || 'Cliente VIP',
+              service: c.notas || c.service || `Servicio ${c.area}`
+            }))
+          : [];
+
+        // Combinar con citas locales sin borrar citas recién creadas en la interfaz
+        const merged = Array.isArray(this.bookedAppointments) ? [...this.bookedAppointments] : [];
+        for (const sa of serverAppts) {
+          if (!merged.some(m => m.id === sa.id || (m.pet === sa.pet && m.date === sa.date && m.time === sa.time))) {
+            merged.push(sa);
+          }
         }
+        this.bookedAppointments = merged;
+        this.saveBookedAppointmentsToStorage();
+
         if (Array.isArray(data.bloqueos)) {
           this.blockedSlots = data.bloqueos;
           this.saveBlockedSlotsToStorage();
@@ -4262,7 +4273,7 @@ class AdminEngine {
       modal = document.createElement('div');
       modal.id = 'modal-large-calendar';
       modal.className = 'modal-overlay';
-      modal.style.cssText = 'display:flex; position:fixed; inset:0; z-index:9999999; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:12px;';
+      modal.style.cssText = 'display:flex; position:fixed; inset:0; z-index:9000000; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:12px;';
       modal.innerHTML = `
         <div class="modal-card" style="max-width:1480px; width:99%; height:94vh; max-height:94vh; display:flex; flex-direction:column; background:#FFFFFF; border-radius:24px; box-shadow:0 25px 70px rgba(0,0,0,0.5); overflow:hidden; border:1px solid #CBD5E1;">
           <div id="large-calendar-modal-inner" style="display:flex; flex-direction:column; height:100%; width:100%; overflow:hidden;"></div>
@@ -4418,8 +4429,14 @@ class AdminEngine {
       <div style="flex:1; overflow-y:auto; overflow-x:auto; padding:12px 18px; background:#F1F5F9;">
         <div style="display:grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap:12px; min-width:1260px;">
           ${weekDays.map(day => {
+            // Combinar citas confirmadas y solicitudes pendientes para visualización integral inmediata
+            const allCalendarAppts = [
+              ...(this.bookedAppointments || []).map(a => ({ ...a, isPending: false })),
+              ...(this.pendingAppointments || []).filter(p => !(this.bookedAppointments || []).some(b => b.id === p.id)).map(p => ({ ...p, isPending: true }))
+            ];
+
             // Filtrar citas del día
-            const dayAppts = this.bookedAppointments.filter(a => {
+            const dayAppts = allCalendarAppts.filter(a => {
               const aDate = String(a.date || '').split('T')[0];
               if (aDate !== day.isoDate) return false;
               if (filterArea !== 'all' && this.normalizeAreaForComparison(a.area) !== filterArea) return false;
@@ -4535,14 +4552,17 @@ class AdminEngine {
                               </div>
                               <div style="font-size:0.68rem; color:#64748B;">👤 ${a.tutor || 'Cliente VIP'}</div>
                               <div style="font-size:0.62rem; color:#94A3B8; margin-top:1px;">${a.service || a.area} (${a.id})</div>
-                              <button type="button" onclick="adminEngine.cancelAppointment('${a.id}')" style="margin-top:2px; font-size:0.6rem; color:#EF4444; background:none; border:none; padding:0; cursor:pointer; font-weight:700;">✕ Liberar</button>
+                              ${a.isPending ? '<span style="font-size:0.6rem; background:#FEF3C7; color:#92400E; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; margin-top:2px;">🟡 Pendiente Confirmar</span>' : '<span style="font-size:0.6rem; background:#ECFDF5; color:#065F46; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; margin-top:2px;">🟢 Confirmada</span>'}
+                              <div style="display:flex; justify-content:flex-end; margin-top:2px;">
+                                <button type="button" onclick="adminEngine.cancelAppointment('${a.id}')" style="font-size:0.6rem; color:#EF4444; background:none; border:none; padding:0; cursor:pointer; font-weight:700;">✕ Liberar</button>
+                              </div>
                             </div>
                           `;
                         }).join('')}
 
-                        ${!hourBlock && hourAppts.length === 0 ? `
-                          <button type="button" onclick="clinicaEngine ? clinicaEngine.openGroomingBookingModal('Circuito Grooming Spa', '', '', { defaultDate: '${day.isoDate}', defaultTime: '${hour}' }) : null" style="width:100%; font-size:0.65rem; color:#047857; background:#F0FDF4; border:1px dashed #A7F3D0; border-radius:6px; padding:3px; cursor:pointer; font-weight:700; margin-top:2px;">
-                            + Agendar Cita
+                        ${!hourBlock && groomingFree > 0 ? `
+                          <button type="button" onclick="if(window.clinicaEngine && typeof window.clinicaEngine.openGroomingBookingModal === 'function') { window.clinicaEngine.openGroomingBookingModal('Circuito Grooming Spa', '', '', { defaultDate: '${day.isoDate}', defaultTime: '${hour}' }); } else { alert('Abriendo agendamiento...'); }" style="width:100%; font-size:0.68rem; color:#047857; background:#F0FDF4; border:1.5px dashed #10B981; border-radius:8px; padding:5px; cursor:pointer; font-weight:800; margin-top:4px; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.2s ease;">
+                            ➕ Agendar Cita (${groomingFree} disp)
                           </button>
                         ` : ''}
                       </div>

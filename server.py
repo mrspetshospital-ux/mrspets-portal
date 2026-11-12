@@ -2113,17 +2113,37 @@ def get_calendar_events_endpoint(
         sql += " ORDER BY c.fecha_hora ASC"
         appts = db.q(sql, tuple(params))
     except Exception:
-        appts = calendar_engine._memory_appointments
+        appts = []
+
+    # Combinar citas de memoria para que citas creadas en vivo nunca se pierdan
+    all_appts = list(appts) if appts else []
+    for m in (calendar_engine._memory_appointments or []):
+        m_id = m.get("codigo") or m.get("id")
+        if not any((a.get("codigo") == m_id or a.get("id") == m_id) for a in all_appts):
+            all_appts.append(m)
 
     blocks = calendar_engine.get_blocked_slots(area=area)
 
     return ok(
-        citas=appts,
+        citas=all_appts,
         bloqueos=blocks,
         regular_hours=calendar_engine.config.get("regular_hours"),
         rooms=calendar_engine.config.get("rooms"),
         last_synced_at=calendar_engine.config.get("last_synced_at")
     )
+
+
+@app.post("/api/v1/calendario/citas")
+async def add_calendar_appointment_endpoint(request: Request):
+    if not calendar_engine:
+        raise HTTPException(500, "Motor de calendario no inicializado")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    
+    appt = calendar_engine.add_appointment(body)
+    return ok(cita=appt)
 
 
 @app.post("/api/v1/calendario/bloquear")

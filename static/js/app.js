@@ -612,6 +612,11 @@ class App {
           document.body.appendChild(modal);
         }
         modal.style.setProperty('z-index', '2000000', 'important');
+      } else if (modalId.startsWith('booking-modal') || modalId === 'booking-confirmation-pop') {
+        if (modal.parentElement !== document.body) {
+          document.body.appendChild(modal);
+        }
+        modal.style.setProperty('z-index', '10000005', 'important');
       }
       modal.classList.add('active');
       modal.style.removeProperty('display');
