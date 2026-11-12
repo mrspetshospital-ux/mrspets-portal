@@ -417,8 +417,8 @@ class MrsPetsArchitectureEngine {
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
-            <button type="button" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad'); }" title="Abrir Calendario Grande & Disponibilidad" style="background:rgba(16,185,129,0.22); border:1.5px solid #10b981; color:#34d399; font-size:0.75rem; font-weight:800; border-radius:10px; padding:5px 10px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(16,185,129,0.25);">
-              📅 <span style="display:inline;">Calendario</span>
+            <button type="button" id="btn-leia-header-calendar" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); }" title="Abrir Calendario Grande Operativo (Staff)" style="display:none; background:rgba(16,185,129,0.22); border:1.5px solid #10b981; color:#34d399; font-size:0.75rem; font-weight:800; border-radius:10px; padding:5px 10px; cursor:pointer; align-items:center; gap:4px; box-shadow:0 0 10px rgba(16,185,129,0.25);">
+              📅 <span style="display:inline;">Calendario Staff</span>
             </button>
             <button onclick="mrsPetsArch.toggleLeiaChat()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:4px 8px;">✕</button>
           </div>
@@ -441,10 +441,9 @@ class MrsPetsArchitectureEngine {
           <div class="leia-client-bot-bubble" style="background:#1e293b !important; color:#ffffff !important; padding:12px 14px; border-radius:14px 14px 14px 2px; border:1px solid rgba(251,191,36,0.35); line-height:1.5;">
             <span style="color:#ffffff !important;">¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás hoy? ✨🐾<br><br>
             Qué alegría tenerte en nuestra casa. <strong style="color:#fef08a !important;">¿Con quién tengo el gusto de hablar?</strong><br>
-            Puedes consultar turnos y disponibilidad o ver el calendario en vivo:</span>
+            Estoy aquí para ayudarte a coordinar la mejor atención para tu consentido:</span>
             <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-              <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad')" style="background:#10b981; color:#05120c; font-weight:800; font-size:0.75rem; padding:5px 10px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">📅 Ver Disponibilidad</button>
-              <button type="button" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad'); }" style="background:#d4af37; color:#070a11; font-weight:800; font-size:0.75rem; padding:5px 10px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.3);">📅 Calendario Grande</button>
+              <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:800; font-size:0.8rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>
             </div>
           </div>
         </div>
@@ -457,22 +456,19 @@ class MrsPetsArchitectureEngine {
         </div>
 
         <!-- QUICK PROMPT PILLS -->
-        <div style="padding:8px 12px; background:#080d1a; border-top:1px solid rgba(255,255,255,0.07); display:flex; gap:6px; overflow-x:auto; white-space:nowrap; scrollbar-width:none;">
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad')" style="padding:4px 10px; font-size:0.72rem; border-radius:12px; background:linear-gradient(135deg, rgba(16,185,129,0.35), rgba(16,185,129,0.18)); border:1.5px solid #10b981; color:#34d399; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(16,185,129,0.3);">📅 Ver Disponibilidad</button>
-          <button type="button" class="btn btn-sm" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad'); }" style="padding:4px 10px; font-size:0.72rem; border-radius:12px; background:linear-gradient(135deg, rgba(212,175,55,0.35), rgba(212,175,55,0.18)); border:1.5px solid #D4AF37; color:#fef08a; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(212,175,55,0.3);">📅 Calendario Grande (Staff)</button>
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('Hola, soy cliente de la casa')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fef08a; cursor:pointer; flex-shrink:0;">🐾 Soy Cliente</button>
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#a7f3d0; cursor:pointer; flex-shrink:0;">📅 Deseo una Reserva</button>
+        <div id="leia-quick-pills-container" style="padding:8px 12px; background:#080d1a; border-top:1px solid rgba(255,255,255,0.07); display:flex; gap:6px; overflow-x:auto; white-space:nowrap; scrollbar-width:none;">
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="padding:4px 12px; font-size:0.75rem; border-radius:12px; background:linear-gradient(135deg, rgba(16,185,129,0.35), rgba(16,185,129,0.18)); border:1.5px solid #10b981; color:#34d399; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(16,185,129,0.3);">📅 Deseo hacer una reserva</button>
           <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('✂️ Grooming Spa')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(168,85,247,0.18); border:1px solid #a855f7; color:#e9d5ff; cursor:pointer; flex-shrink:0;">✂️ Grooming Spa (4 cupos/h)</button>
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🩺 Clínica Veterinaria')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(56,189,248,0.18); border:1px solid #38bdf8; color:#bae6fd; cursor:pointer; flex-shrink:0;">🩺 Clínica Médica</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🩺 Clínica Médica')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(56,189,248,0.18); border:1px solid #38bdf8; color:#bae6fd; cursor:pointer; flex-shrink:0;">🩺 Clínica Médica</button>
           <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🏨 Hotel VIP 5★')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; color:#fde68a; cursor:pointer; flex-shrink:0;">🏨 Hotel VIP 5★</button>
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🛍️ Boutique & Tienda')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(236,72,153,0.18); border:1px solid #ec4899; color:#fbcfe8; cursor:pointer; flex-shrink:0;">🛍️ Boutique & Tienda</button>
-          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🤝 Hablar con Administración / Talibel')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(234,179,8,0.2); border:1px solid #eab308; color:#fde047; cursor:pointer; flex-shrink:0;">🤝 Hablar con Administración</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🛍️ Boutique Tienda')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(236,72,153,0.18); border:1px solid #ec4899; color:#fbcfe8; cursor:pointer; flex-shrink:0;">🛍️ Boutique Tienda</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🤝 Hablar con Administración')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(234,179,8,0.2); border:1px solid #eab308; color:#fde047; cursor:pointer; flex-shrink:0;">🤝 Hablar con Administración</button>
         </div>
 
-        <!-- BARRA DE ACCIONES MULTIMEDIA: FOTO, AUDIO, DOC & CALENDARIO -->
+        <!-- BARRA DE ACCIONES MULTIMEDIA: FOTO, AUDIO, DOC & RESERVA/CALENDARIO -->
         <div class="leia-actions-bar" style="display:flex; justify-content:space-around; padding:8px 12px; background:#0c111d; border-top:1px solid rgba(251,191,36,0.25); gap:6px;">
-          <button type="button" class="action-btn" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function'){ window.adminEngine.openLargeCalendarModal(); } else { mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad'); }" title="Abrir Calendario Grande & Disponibilidad" style="background:linear-gradient(135deg, #064e3b, #047857); border:1.5px solid #10b981; color:#34d399; padding:6px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.82rem; font-weight:800; flex:1.3; justify-content:center; box-shadow:0 0 10px rgba(16,185,129,0.3);">
-            📅 <span>Calendario</span>
+          <button type="button" id="btn-leia-action-calendar" class="action-btn" onclick="mrsPetsArch.handleLeiaCalendarAction()" title="Deseo hacer una reserva" style="background:linear-gradient(135deg, #064e3b, #047857); border:1.5px solid #10b981; color:#34d399; padding:6px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.82rem; font-weight:800; flex:1.3; justify-content:center; box-shadow:0 0 10px rgba(16,185,129,0.3);">
+            📅 <span id="btn-leia-action-calendar-text">Deseo una reserva</span>
           </button>
           <button type="button" class="action-btn" onclick="document.getElementById('card-photo-input').click()" title="Subir o Tomar Foto (Cámara / Galería)" style="background:#1e293b; border:1px solid #444; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:4px; font-size:0.82rem; flex:1; justify-content:center;">
             📷 <span>Foto</span>
@@ -520,11 +516,74 @@ class MrsPetsArchitectureEngine {
         if (target) this.triggerTinkerbellEffect(target);
         this.updateChatHeaderSessionBadge();
         this.syncModelSelectors();
+        this.updateLeiaRoleControls();
         this.syncInitialGreetingForCurrentSession();
         setTimeout(() => {
           const input = document.getElementById('leia-chat-input');
           if (input) input.focus();
         }, 150);
+      }
+    }
+  }
+
+  handleLeiaCalendarAction() {
+    const session = this.getActiveSessionContext();
+    if (session && session.userType === 'staff_admin') {
+      if (window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') {
+        window.adminEngine.openLargeCalendarModal();
+      }
+    } else {
+      this.sendLeiaQuickPrompt('Deseo hacer una reserva');
+    }
+  }
+
+  updateLeiaRoleControls() {
+    const session = this.getActiveSessionContext();
+    const isStaff = session && session.userType === 'staff_admin';
+
+    // 1. Botón de Calendario en Cabecera de la Tarjeta del Avatar
+    const headerCalBtn = document.getElementById('btn-leia-header-calendar');
+    if (headerCalBtn) {
+      headerCalBtn.style.display = isStaff ? 'flex' : 'none';
+    }
+
+    // 2. Botón de Calendario / Reserva en la Barra Inferior
+    const actionCalBtn = document.getElementById('btn-leia-action-calendar');
+    const actionCalText = document.getElementById('btn-leia-action-calendar-text');
+    if (actionCalBtn) {
+      if (isStaff) {
+        actionCalBtn.title = 'Abrir Calendario General Operativo (Staff)';
+        if (actionCalText) actionCalText.innerText = 'Calendario Staff';
+      } else {
+        actionCalBtn.title = 'Deseo hacer una reserva';
+        if (actionCalText) actionCalText.innerText = 'Deseo una reserva';
+      }
+    }
+
+    // 3. Pills Dinámicas de Respuestas Rápidas (Píldoras)
+    const pillsContainer = document.getElementById('leia-quick-pills-container');
+    if (pillsContainer) {
+      if (isStaff) {
+        pillsContainer.innerHTML = `
+          <button type="button" class="btn btn-sm" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); }" style="padding:4px 10px; font-size:0.72rem; border-radius:12px; background:linear-gradient(135deg, rgba(212,175,55,0.35), rgba(212,175,55,0.18)); border:1.5px solid #D4AF37; color:#fef08a; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(212,175,55,0.3);">📅 Calendario Grande (Staff)</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad')" style="padding:4px 10px; font-size:0.72rem; border-radius:12px; background:linear-gradient(135deg, rgba(16,185,129,0.35), rgba(16,185,129,0.18)); border:1.5px solid #10b981; color:#34d399; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(16,185,129,0.3);">📅 Ver Disponibilidad</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#a7f3d0; cursor:pointer; flex-shrink:0;">📅 Deseo una Reserva</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('✂️ Grooming Spa')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(168,85,247,0.18); border:1px solid #a855f7; color:#e9d5ff; cursor:pointer; flex-shrink:0;">✂️ Grooming Spa (4 cupos/h)</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🩺 Clínica Veterinaria')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(56,189,248,0.18); border:1px solid #38bdf8; color:#bae6fd; cursor:pointer; flex-shrink:0;">🩺 Clínica Médica</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🏨 Hotel VIP 5★')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; color:#fde68a; cursor:pointer; flex-shrink:0;">🏨 Hotel VIP 5★</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🛍️ Boutique & Tienda')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(236,72,153,0.18); border:1px solid #ec4899; color:#fbcfe8; cursor:pointer; flex-shrink:0;">🛍️ Boutique & Tienda</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🤝 Hablar con Administración / Talibel')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(234,179,8,0.2); border:1px solid #eab308; color:#fde047; cursor:pointer; flex-shrink:0;">🤝 Hablar con Administración</button>
+        `;
+      } else {
+        // En Vista Cliente: NUNCA se muestra "Ver Disponibilidad" ni "Calendario Grande Staff"
+        pillsContainer.innerHTML = `
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="padding:4px 12px; font-size:0.75rem; border-radius:12px; background:linear-gradient(135deg, rgba(16,185,129,0.35), rgba(16,185,129,0.18)); border:1.5px solid #10b981; color:#34d399; font-weight:800; cursor:pointer; flex-shrink:0; box-shadow:0 0 8px rgba(16,185,129,0.3);">📅 Deseo hacer una reserva</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('✂️ Grooming Spa')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(168,85,247,0.18); border:1px solid #a855f7; color:#e9d5ff; cursor:pointer; flex-shrink:0;">✂️ Grooming Spa (4 cupos/h)</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🩺 Clínica Médica')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(56,189,248,0.18); border:1px solid #38bdf8; color:#bae6fd; cursor:pointer; flex-shrink:0;">🩺 Clínica Médica</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🏨 Hotel VIP 5★')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; color:#fde68a; cursor:pointer; flex-shrink:0;">🏨 Hotel VIP 5★</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🛍️ Boutique Tienda')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(236,72,153,0.18); border:1px solid #ec4899; color:#fbcfe8; cursor:pointer; flex-shrink:0;">🛍️ Boutique Tienda</button>
+          <button type="button" class="btn btn-sm" onclick="mrsPetsArch.sendLeiaQuickPrompt('🤝 Hablar con Administración')" style="padding:4px 9px; font-size:0.72rem; border-radius:12px; background:rgba(234,179,8,0.2); border:1px solid #eab308; color:#fde047; cursor:pointer; flex-shrink:0;">🤝 Hablar con Administración</button>
+        `;
       }
     }
   }
@@ -550,15 +609,14 @@ class MrsPetsArchitectureEngine {
       }
 
       // Solo si el contenedor tiene el saludo por defecto de invitado
-      if (container.children.length <= 1 || container.innerHTML.includes('¿Con quién tengo el gusto')) {
+      if (container.children.length <= 1 || container.innerHTML.includes('¿Con quién tengo el gusto') || container.innerHTML.includes('disponibilidad') || container.innerHTML.includes('calendario')) {
         container.innerHTML = `
           <div class="leia-client-bot-bubble" style="background:#1e293b !important; color:#ffffff !important; padding:12px 14px; border-radius:14px 14px 14px 2px; border:1px solid rgba(251,191,36,0.35); line-height:1.5;">
             <span style="color:#ffffff !important;">¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás, ${petAddress}? ✨🐾<br><br>
             El día de hoy, ¿cómo está, <strong style="color:#fef08a !important;">${tutorHonorific}</strong>? Qué gran alegría tenerlas en casa.<br><br>
-            ¿En qué puedo ayudarle hoy? Puedes consultar horarios, disponibilidad o abrir el calendario:</span>
+            ¿En qué puedo ayudarle hoy con su consentido?</span>
             <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-              <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad')" style="background:#10b981; color:#05120c; font-weight:800; font-size:0.75rem; padding:5px 10px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">📅 Ver Disponibilidad</button>
-              <button type="button" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { mrsPetsArch.sendLeiaQuickPrompt('📅 Ver Disponibilidad'); }" style="background:#d4af37; color:#070a11; font-weight:800; font-size:0.75rem; padding:5px 10px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.3);">📅 Calendario Grande</button>
+              <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:800; font-size:0.8rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>
             </div>
           </div>
         `;
@@ -611,6 +669,7 @@ class MrsPetsArchitectureEngine {
     }
 
     this.updateModelBarVisibility();
+    this.updateLeiaRoleControls();
   }
 
   updateModelBarVisibility() {
@@ -829,7 +888,9 @@ class MrsPetsArchitectureEngine {
 
     // 0.0 Consulta de Disponibilidad & Calendario Oficial (Sincronizado con Google Calendar)
     if (q.includes('disponibilidad') || q.includes('calendario') || q.includes('agenda') || q.includes('turnos') || q.includes('aforo')) {
-      this.appendLeiaMessage(`📅 <strong>Calendario de Horarios & Disponibilidad en Vivo</strong> (Sincronizado con Google Calendar ✨):<br><br>
+      const session = this.getActiveSessionContext();
+      if (session && session.userType === 'staff_admin') {
+        this.appendLeiaMessage(`📅 <strong>Calendario de Horarios & Disponibilidad en Vivo</strong> (Staff Operativo • Google Calendar Sync):<br><br>
 • 🕒 <strong>Horario Oficial:</strong> Lunes a Sábado de 8:00 AM a 6:00 PM (18:00 cierre estricto).<br>
 • 🚫 <strong>Domingos:</strong> <em>CERRADO</em> (Descanso médico Dra. Margaret & Dalybell).<br>
 • ✂️ <strong>Aforo Grooming Spa:</strong> <strong>4 consentidos por turno por hora</strong> (con hidratación de pulpejos obligatoria).<br>
@@ -837,6 +898,13 @@ class MrsPetsArchitectureEngine {
 • 🏨 <strong>Suites Hotel VIP:</strong> 8 suites bioclimáticas climatizadas 24/7.<br>
 • 🛍️ <strong>Boutique VIP:</strong> 5 clientes por turno.<br><br>
 <button type="button" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { alert('Abriendo calendario...'); }" class="btn btn-sm" style="background:linear-gradient(135deg, #10b981, #059669); color:#05120c !important; font-weight:900; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.4);">📅 Abrir Calendario Grande Completo</button>`, "bot");
+      } else {
+        // En Vista Cliente: Únicamente la opción de hacer una reserva
+        this.appendLeiaMessage(`📅 <strong>Horarios de Atención y Reservas:</strong><br><br>
+Atendemos con amor en nuestra casa de Lunes a Sábado de <strong>8:00 a.m. a 6:00 p.m.</strong> (Domingos cerrado por descanso médico y spa).<br><br>
+¿Deseas que coordinemos una reserva para tu consentido?<br><br>
+<button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" class="btn btn-sm" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:900; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>`, "bot");
+      }
       return;
     }
 
@@ -1705,7 +1773,8 @@ Estimado(a) <strong>${session.userName}</strong>: Consulta de consola operativa 
 
     // 0.0 Consulta de Disponibilidad & Calendario Oficial (Sincronizado con Google Calendar)
     if (lower.includes('disponibilidad') || lower.includes('calendario') || lower.includes('agenda') || lower.includes('turnos') || lower.includes('aforo')) {
-      reply = `📅 <strong>CALENDARIO DE HORARIOS & DISPONIBILIDAD EN VIVO</strong><br><br>
+      if (session.userType === 'staff_admin') {
+        reply = `📅 <strong>CALENDARIO DE HORARIOS & DISPONIBILIDAD EN VIVO</strong><br><br>
 Sincronizado en tiempo real con <strong>Google Calendar</strong> y el estándar operativo de Mrs. Pets Corp:<br><br>
 • 🕒 <strong>Horario Oficial:</strong> Lunes a Sábado de 8:00 AM a 6:00 PM (18:00 cierre estricto de sucursal).<br>
 • 🚫 <strong>Domingos:</strong> <em>CERRADO</em> (Descanso médico Dra. Margaret & Dalybell).<br>
@@ -1714,10 +1783,13 @@ Sincronizado en tiempo real con <strong>Google Calendar</strong> y el estándar 
 • 🏨 <strong>Suites Hotel VIP:</strong> 8 suites bioclimáticas 24/7.<br>
 • 🛍️ <strong>Boutique VIP:</strong> 5 clientes por turno.<br><br>
 <button type="button" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function') { window.adminEngine.openLargeCalendarModal(); } else { alert('Abriendo calendario...'); }" class="btn btn-sm" style="background:linear-gradient(135deg, #10b981, #059669); color:#05120c !important; font-weight:900; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.4);">📅 Abrir Calendario Grande Completo</button>`;
-      this.appendLeiaMessage(reply, 'bot');
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('Disponibilidad y Calendario sincronizados ✨', 'success');
+      } else {
+        reply = `📅 <strong>Horarios de Atención y Reservas:</strong><br><br>
+Atendemos con amor en nuestra casa de Lunes a Sábado de <strong>8:00 a.m. a 6:00 p.m.</strong> (Domingos cerrado por descanso médico y spa).<br><br>
+¿Deseas que coordinemos una reserva para tu consentido?<br><br>
+<button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" class="btn btn-sm" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:900; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>`;
       }
+      this.appendLeiaMessage(reply, 'bot');
       return;
     }
 

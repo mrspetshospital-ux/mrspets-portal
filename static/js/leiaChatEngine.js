@@ -191,8 +191,8 @@
                     <!-- Formulario de Entrada y Adjuntos -->
                     <form id="leia-chat-input-form" class="leia-chat-input-form" onsubmit="event.preventDefault(); window.LeiaChatEngine.handleSendMessage();">
                         <div class="leia-input-toolbar">
-                            <button type="button" class="btn-toolbar-attach" onclick="if(window.adminEngine && typeof window.adminEngine.openLargeCalendarModal === 'function'){window.adminEngine.openLargeCalendarModal();}else{window.LeiaChatEngine.sendUserQuickText('📅 Ver Disponibilidad');}" style="background:rgba(16,185,129,0.15); border:1.5px solid #10B981; color:#34D399 !important; font-weight:800;" title="Abrir Calendario Grande & Disponibilidad Live">
-                                📅 <span class="btn-label-desktop">Calendario Live</span>
+                            <button type="button" class="btn-toolbar-attach" onclick="if(window.adminEngine && window.adminEngine.isEnterpriseAuthenticated && typeof window.adminEngine.openLargeCalendarModal === 'function'){window.adminEngine.openLargeCalendarModal();}else{window.LeiaChatEngine.sendUserQuickText('📅 Deseo hacer una reserva');}" style="background:rgba(16,185,129,0.15); border:1.5px solid #10B981; color:#34D399 !important; font-weight:800;" title="Deseo hacer una reserva">
+                                📅 <span class="btn-label-desktop">Deseo una reserva</span>
                             </button>
                             <button type="button" class="btn-toolbar-attach" onclick="document.getElementById('leia-input-image').click();" title="Subir o Tomar Foto (Cámara / Galería)">
                                 📷 <span class="btn-label-desktop">Foto</span>
@@ -331,10 +331,8 @@
 
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo orientarle hoy? Puede consultar disponibilidad en vivo, abrir el calendario o reservar:`,
+                    text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo orientarle hoy?`,
                     buttons: [
-                        '📅 Ver Disponibilidad',
-                        '📅 Calendario Grande (Staff)',
                         '📅 Deseo hacer una reserva',
                         '✂️ Grooming & Spa VIP',
                         '🩺 Consulta Médica',
@@ -363,10 +361,8 @@
                     sender: 'leia',
                     text: `¡Hola! Soy **Leia 🎀** ✨🐾.\n\nQué gusto tenerte aquí. Estoy a tu completa disposición para orientarte sobre nuestro equipo, administración, servicios o resolver cualquier duda de **Mrs. Pets**.\n\n¿Con quién tengo el gusto de hablar y en qué puedo ayudarte hoy?`,
                     buttons: [
-                        '📅 Ver Disponibilidad',
-                        '📅 Calendario Grande (Staff)',
+                        '📅 Deseo hacer una reserva',
                         '🐾 Soy Cliente',
-                        '📅 Deseo una Reserva',
                         '✂️ Grooming Spa',
                         '🩺 Clínica Médica',
                         '🏨 Hotel VIP 5★',
@@ -1294,8 +1290,8 @@
             if (client) {
                 this.addMessage({
                     sender: 'leia',
-                    text: `¡Con el mayor cariño, **${client.tutorHonorific}**! Estoy a su completa disposición para consentir a **${client.petName}** como la princesa que es ✨🐾.\n\n¿En qué puedo orientarle hoy? Puede consultar disponibilidad en vivo, abrir el calendario o agendar cita:`,
-                    buttons: ['📅 Ver Disponibilidad', '📅 Calendario Grande (Staff)', '📅 Deseo hacer una reserva', '✂️ Grooming Spa (4 turnos/h)', '🩺 Consulta Médica', '🏨 Hotel VIP 5★', '🛍️ Tienda Boutique', '🤝 Hablar con Administración'],
+                    text: `¡Con el mayor cariño, **${client.tutorHonorific}**! Estoy a su completa disposición para consentir a **${client.petName}** como la princesa que es ✨🐾.\n\n¿En qué puedo orientarle hoy?`,
+                    buttons: ['📅 Deseo hacer una reserva', '✂️ Grooming Spa (4 turnos/h)', '🩺 Consulta Médica', '🏨 Hotel VIP 5★', '🛍️ Tienda Boutique', '🤝 Hablar con Administración'],
                     timestamp: new Date()
                 });
                 return;
@@ -1303,8 +1299,8 @@
 
             this.addMessage({
                 sender: 'leia',
-                text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes consultarme sobre disponibilidad en tiempo real, abrir el calendario general, o pedirme comunicarte con Talibel y el área de Administración)*.`,
-                buttons: ['📅 Ver Disponibilidad', '📅 Calendario Grande (Staff)', '🐾 Soy Cliente', '📅 Deseo una Reserva', '✂️ Grooming Spa (4 turnos/h)', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
+                text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás hoy? ✨🐾\n\nQué alegría tenerte en **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n¿Con quién tengo el gusto de hablar hoy y cómo podemos consentir a tu amado príncipe o princesa?\n\n*(Puedes pedirme agendar una cita o comunicarte con Talibel y el área de Administración)*.`,
+                buttons: ['📅 Deseo hacer una reserva', '🐾 Soy Cliente', '✂️ Grooming Spa (4 turnos/h)', '🩺 Clínica Médica', '🏨 Hotel VIP 5★', '🤝 Hablar con Administración'],
                 timestamp: new Date()
             });
         }
