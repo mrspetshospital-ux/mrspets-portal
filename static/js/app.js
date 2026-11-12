@@ -41,6 +41,9 @@ class App {
       const targetTab = (rawHash && rawHash !== 'welcome') ? rawHash : 'admin';
       this.switchTab(targetTab, true);
     }
+    if (typeof adminEngine !== 'undefined' && typeof adminEngine.updateHeaderAccountDisplay === 'function') {
+      adminEngine.updateHeaderAccountDisplay();
+    }
     this.bindNavigation();
     this.bindQuickActions();
     this.renderActivityStream();

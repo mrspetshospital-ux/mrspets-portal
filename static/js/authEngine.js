@@ -2046,6 +2046,9 @@ class AuthEngine {
 
     if (window.adminEngine) {
       window.adminEngine.setEnvironment(role === 'staff' ? 'enterprise' : 'customer');
+      if (typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
+        window.adminEngine.updateHeaderAccountDisplay();
+      }
     }
 
     this.closeConciergePortal();
@@ -2423,6 +2426,12 @@ class AuthEngine {
               window.adminEngine.isEnterpriseAuthenticated = true;
               window.adminEngine.activeRole = authRole;
               window.adminEngine.viewEnvironment = 'enterprise';
+              if (staffMatch) {
+                window.adminEngine.currentStaffUser = staffMatch;
+              } else if (Array.isArray(window.adminEngine.staffProfiles)) {
+                const foundStaff = window.adminEngine.staffProfiles.find(s => (s.username || '').toLowerCase() === 'dalybell');
+                if (foundStaff) window.adminEngine.currentStaffUser = foundStaff;
+              }
               try { 
                 sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
                 sessionStorage.setItem('mrs_pets_staff_role', authRole);
@@ -2434,6 +2443,9 @@ class AuthEngine {
             this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : 'Dalybell Ramírez Montilla (Dirección General & Propietaria)';
             localStorage.setItem('mrs_pets_skip_splash', 'true');
             this.loginSuccess('staff', this.userName);
+            if (window.adminEngine && typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
+              window.adminEngine.updateHeaderAccountDisplay();
+            }
             return;
           }
 
@@ -2460,6 +2472,12 @@ class AuthEngine {
               window.adminEngine.isEnterpriseAuthenticated = true;
               window.adminEngine.activeRole = authRole;
               window.adminEngine.viewEnvironment = 'enterprise';
+              if (staffMatch) {
+                window.adminEngine.currentStaffUser = staffMatch;
+              } else if (Array.isArray(window.adminEngine.staffProfiles)) {
+                const foundStaff = window.adminEngine.staffProfiles.find(s => (s.username || '').toLowerCase() === 'dalybell');
+                if (foundStaff) window.adminEngine.currentStaffUser = foundStaff;
+              }
               try { 
                 sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
                 sessionStorage.setItem('mrs_pets_staff_role', authRole);
@@ -2471,6 +2489,9 @@ class AuthEngine {
             this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : 'Dalybell Ramírez Montilla (Dirección General & Propietaria)';
             localStorage.setItem('mrs_pets_skip_splash', 'true');
             this.loginSuccess('staff', this.userName);
+            if (window.adminEngine && typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
+              window.adminEngine.updateHeaderAccountDisplay();
+            }
             return;
           }
 
@@ -2496,6 +2517,12 @@ class AuthEngine {
           window.adminEngine.isEnterpriseAuthenticated = true;
           window.adminEngine.activeRole = authRole;
           window.adminEngine.viewEnvironment = 'enterprise';
+          if (staffMatch) {
+            window.adminEngine.currentStaffUser = staffMatch;
+          } else if (Array.isArray(window.adminEngine.staffProfiles)) {
+            const foundStaff = window.adminEngine.staffProfiles.find(s => (s.username || '').toLowerCase() === (staffUsername || '').toLowerCase());
+            if (foundStaff) window.adminEngine.currentStaffUser = foundStaff;
+          }
           try { 
             sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
             sessionStorage.setItem('mrs_pets_staff_role', authRole);
@@ -2507,6 +2534,9 @@ class AuthEngine {
         this.userName = (staffMatch && staffMatch.name) ? staffMatch.name : (data.username || staffUsername);
         localStorage.setItem('mrs_pets_skip_splash', 'true');
         this.loginSuccess('staff', this.userName);
+        if (window.adminEngine && typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
+          window.adminEngine.updateHeaderAccountDisplay();
+        }
         return;
       }
 
@@ -2562,6 +2592,10 @@ class AuthEngine {
           window.adminEngine.isEnterpriseAuthenticated = true;
           window.adminEngine.activeRole = 'admin';
           window.adminEngine.viewEnvironment = 'enterprise';
+          if (Array.isArray(window.adminEngine.staffProfiles)) {
+            const foundStaff = window.adminEngine.staffProfiles.find(s => (s.username || '').toLowerCase() === 'dalybell');
+            if (foundStaff) window.adminEngine.currentStaffUser = foundStaff;
+          }
           try { 
             sessionStorage.setItem('mrs_pets_enterprise_authenticated', 'true');
             sessionStorage.setItem('mrs_pets_staff_role', 'admin');
@@ -2573,6 +2607,9 @@ class AuthEngine {
         this.userName = 'Dalybell Ramírez Montilla (Dirección General & Propietaria)';
         localStorage.setItem('mrs_pets_skip_splash', 'true');
         this.loginSuccess('staff', this.userName);
+        if (window.adminEngine && typeof window.adminEngine.updateHeaderAccountDisplay === 'function') {
+          window.adminEngine.updateHeaderAccountDisplay();
+        }
         return;
       }
 

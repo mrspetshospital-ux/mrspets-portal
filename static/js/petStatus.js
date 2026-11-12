@@ -65,6 +65,8 @@ class PetStatusEngine {
         turnTicket: 'G-001',
         notes: 'Corte de exhibición con lazo rojo Mrs. Pets Spa.',
         image: 'assets/media__1787695246337.jpg',
+        photo: 'assets/media__1787695246337.jpg',
+        ownerPhoto: 'assets/leia_avatar.jpg',
         updatedAt: 'Hace 5 min'
       },
       {

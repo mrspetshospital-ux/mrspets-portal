@@ -1389,23 +1389,29 @@ class AdminEngine {
   updateHeaderAccountDisplay() {
     const nameTextEl = document.getElementById('user-account-name-text');
     const avatarImgEl = document.getElementById('user-account-avatar-img');
+    const badgeLabelEl = document.getElementById('user-account-badge-label');
+    const badgeContainer = document.getElementById('user-account-badge');
     if (!nameTextEl) return;
 
     let accountName = '';
-    let accountPhoto = 'assets/media__1787694901704.jpg'; // Foto predeterminada de la mascota VIP (Princesa)
+    let accountPhoto = 'assets/leia_avatar.jpg'; // Foto oficial del perfil de Dalybell Montilla / Tutor VIP
+    let badgeLabel = 'Cuenta de';
 
     if (window.authEngine && window.authEngine.userRole === 'candidate') {
       accountName = 'Postulante RRHH';
       accountPhoto = 'assets/leia_avatar.jpg';
+      badgeLabel = 'Rol:';
     } else if (this.viewEnvironment === 'enterprise' && this.isEnterpriseAuthenticated && this.currentStaffUser) {
       accountName = this.currentStaffUser.name || this.currentStaffUser.username;
       accountPhoto = this.currentStaffUser.photo || this.currentStaffUser.avatar || 'assets/leia_avatar.jpg';
+      badgeLabel = 'Staff Activo:';
     } else {
       accountName = this.getCurrentCustomerName();
+      badgeLabel = 'Cuenta de';
     }
 
     if (!accountName || (this.viewEnvironment !== 'enterprise' && accountName.toLowerCase().includes('staff'))) {
-      accountName = 'Dalybell Ramírez Montilla';
+      accountName = 'Dalybell Montilla';
     }
 
     if (this.viewEnvironment !== 'enterprise') {
@@ -1424,16 +1430,53 @@ class AdminEngine {
         }
       }
 
-      // IMPORTANTE: Se asigna la foto de la MASCOTA (photo o image), NO la foto del tutor
-      if (matchedPatient && (matchedPatient.photo || matchedPatient.image)) {
-        accountPhoto = matchedPatient.photo || matchedPatient.image;
+      // 👑 REGLA DE PERFIL TUTOR VIP: Mostrar SIEMPRE la foto de perfil del TUTOR/A (ownerPhoto), NUNCA la foto de la mascota
+      if (matchedPatient && (matchedPatient.ownerPhoto || matchedPatient.tutorPhoto)) {
+        accountPhoto = matchedPatient.ownerPhoto || matchedPatient.tutorPhoto;
+      } else if (window.authEngine && window.authEngine.customTutorPhoto) {
+        accountPhoto = window.authEngine.customTutorPhoto;
+      } else {
+        const isDalybell = accountName.toLowerCase().includes('dalybell') || accountName.toLowerCase().includes('montilla');
+        if (isDalybell) {
+          const staffDaly = Array.isArray(this.staffProfiles) ? this.staffProfiles.find(s => (s.username || '').toLowerCase() === 'dalybell') : null;
+          accountPhoto = (staffDaly && staffDaly.photo) ? staffDaly.photo : 'assets/leia_avatar.jpg';
+        }
+      }
+
+      // Si el nombre corresponde a Dalybell, asegurar texto "Dalybell Montilla" y etiqueta "Cuenta de"
+      if (accountName.toLowerCase().includes('dalybell') || accountName.toLowerCase().includes('montilla')) {
+        accountName = 'Dalybell Montilla';
+        badgeLabel = 'Cuenta de';
+      }
+    } else {
+      // Vista Empresa: si el usuario activo es Dalybell, asegurar su foto de perfil oficial
+      const isDalybell = accountName.toLowerCase().includes('dalybell') || accountName.toLowerCase().includes('montilla');
+      if (isDalybell) {
+        const staffDaly = Array.isArray(this.staffProfiles) ? this.staffProfiles.find(s => (s.username || '').toLowerCase() === 'dalybell') : null;
+        if (staffDaly && staffDaly.photo) {
+          accountPhoto = staffDaly.photo;
+        } else if (this.currentStaffUser && this.currentStaffUser.photo) {
+          accountPhoto = this.currentStaffUser.photo;
+        } else {
+          accountPhoto = 'assets/leia_avatar.jpg';
+        }
       }
     }
 
     nameTextEl.innerText = accountName;
+    if (badgeLabelEl) {
+      badgeLabelEl.innerText = badgeLabel;
+    }
+    if (badgeContainer) {
+      badgeContainer.title = `${badgeLabel} ${accountName}`;
+    }
     if (avatarImgEl) {
       avatarImgEl.src = accountPhoto;
-      avatarImgEl.alt = accountName;
+      avatarImgEl.alt = `Foto de ${accountName}`;
+      avatarImgEl.onerror = function() {
+        this.onerror = null;
+        this.src = 'assets/leia_avatar.jpg';
+      };
     }
   }
 
@@ -3709,6 +3752,7 @@ class AdminEngine {
       }
     }
 
+    this.updateHeaderAccountDisplay();
     app.closeModal('edit-staff-modal');
     app.showToast(`✅ Perfil y foto de @${username} (${user.name}) actualizados correctamente.`, 'success');
   }
@@ -3742,7 +3786,8 @@ class AdminEngine {
   deleteStaffFromModal() {
     const id = document.getElementById('edit-staff-id')?.value;
     if (id) {
-      app.closeModal('edit-staff-modal');
+      this.updateHeaderAccountDisplay();
+    app.closeModal('edit-staff-modal');
       this.deleteStaffUser(id);
     }
   }
@@ -5798,6 +5843,7 @@ class AdminEngine {
       }
 
       this.savePatientsToStorage();
+      this.updateHeaderAccountDisplay();
       this.renderClientDatabaseManager();
       this.renderStatusManager();
       if (window.app) {
@@ -5859,6 +5905,7 @@ class AdminEngine {
     }
 
     this.savePatientsToStorage();
+    this.updateHeaderAccountDisplay();
     this.renderClientDatabaseManager();
     this.renderStatusManager();
     if (window.app) {
