@@ -1,6 +1,16 @@
 {
   "users": [
     {
+      "username": "dalybell",
+      "nombre": "Dalybell Ramírez Montilla",
+      "role": "admin",
+      "salt": "7a08fce9c3c2d1317849f2c9e11497cf",
+      "password_hash": "d5983eca0f21c16e61e92d824dc7691d70a63cb2078891b383bc22003b92adb9",
+      "iterations": 100000,
+      "created_at": "2026-11-12T00:00:00.000000",
+      "updated_at": "2026-11-12T00:00:00.000000"
+    },
+    {
       "username": "admin",
       "role": "admin",
       "salt": "3181f7f38221fee2912545a722c2207d",

@@ -716,15 +716,16 @@
           <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Seleccione o escriba su Usuario *</label>
           <select id="login-staff-select" class="form-select" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; margin-bottom:8px; font-weight:700; font-size:0.85rem; padding:10px;" onchange="if(this.value){ document.getElementById('login-staff-user').value = this.value; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); } }">
             <option value="">-- ¿Quién es usted? Seleccione su perfil --</option>
+            <option value="dalybell">👑 Dalybell Ramírez Montilla (Dirección General & Propietaria)</option>
             <option value="dr.morales">🩺 Dr. Alejandro Morales (Médico Veterinario Jefe)</option>
             <option value="grooming.staff">✂️ Mariana Colina (Grooming Lead)</option>
-            <option value="admin">🛡️ Administrador General (Dalybell Ramírez)</option>
+            <option value="admin">🛡️ Administrador General</option>
             <option value="recepcion">🏨 Asistente de Recepción (Atención al Cliente)</option>
             <option value="andrea.colina">✂️ Andrea Colina (Grooming Specialist)</option>
             <option value="supervisor">🛡️ Carlos Pérez (Supervisor de Operaciones LAN)</option>
           </select>
 
-          <input type="text" class="form-input" id="login-staff-user" placeholder="O ingrese usuario (Ej: admin, dr.morales)" required style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
+          <input type="text" class="form-input" id="login-staff-user" placeholder="O ingrese usuario (Ej: dalybell, admin, dr.morales)" required style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
         </div>
 
         <div class="form-group" style="margin-bottom:20px;">
@@ -735,6 +736,9 @@
         <div style="margin-bottom:20px;">
           <div style="font-size:0.78rem; color:#E2E8F0 !important; font-weight:700; margin-bottom:8px;">⚡ Selección rápida de perfil (Elegir usuario y luego ingresar clave):</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" onclick="document.getElementById('login-staff-user').value='dalybell'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(212,175,55,0.3); border:1.5px solid #D4AF37; color:#FEF08A !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:900;">
+              👑 Dalybell Ramírez
+            </button>
             <button type="button" onclick="document.getElementById('login-staff-user').value='dr.morales'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(56,189,248,0.25); border:1.5px solid #38bdf8; color:#7dd3fc !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
               🩺 Dr. Alejandro Morales
             </button>

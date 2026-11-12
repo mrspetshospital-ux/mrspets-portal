@@ -159,6 +159,26 @@ def _startup():
         log.warning("ADMIN_PASSWORD vacío: no se crea ni sincroniza el usuario "
                     "'%s'. El acceso a Vista Empresa quedará sin respaldo.", ADMIN_USER)
 
+    # Inicialización del usuario institucional Dalybell Ramírez (Dirección General & Propietaria)
+    try:
+        fila_daly = db.q("SELECT id, password_hash FROM staff_users "
+                         "WHERE LOWER(username)=LOWER(%s)", ("dalybell",), one=True)
+        if not fila_daly:
+            db.execute(
+                """INSERT INTO staff_users (username, nombre, password_hash, rol)
+                   VALUES (%s,%s,%s,'admin')""",
+                ("dalybell", "Dalybell Ramírez Montilla", sec.hash_password("2026")),
+            )
+            log.info("Usuario staff 'dalybell' creado al arrancar con clave '2026'.")
+        elif not sec.verify_password("2026", fila_daly["password_hash"]):
+            db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                       (sec.hash_password("2026"), fila_daly["id"]))
+            log.info("Contraseña de 'dalybell' actualizada a '2026'.")
+        else:
+            log.info("Usuario staff 'dalybell' listo (clave '2026' activa).")
+    except Exception as e_daly:
+        log.warning("No se pudo sembrar usuario 'dalybell' en DB al arrancar: %s", e_daly)
+
     if not PORTAL_PASSWORD:
         log.warning("PORTAL_PASSWORD vacío: el portal queda SIN barrera de acceso. "
                     "Definir en Render antes de compartir la URL.")
@@ -450,6 +470,28 @@ def staff_login(data: LoginIn, request: Request, response: Response):
         except Exception as e:
             log.error("No se pudo sincronizar el usuario '%s': %s", ADMIN_USER, e)
 
+    # --- Respaldo 2.5: Dirección General & Propietaria (Dalybell Ramírez) -
+    if not verificado and username and username.lower() == "dalybell" and (password == "2026" or password == "1234"):
+        verificado = True
+        origen = "direccion_general"
+        try:
+            if row:
+                db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                           (sec.hash_password(password), row["id"]))
+            else:
+                db.execute(
+                    """INSERT INTO staff_users (username, nombre, password_hash, rol)
+                       VALUES (%s,%s,%s,'admin')""",
+                    ("dalybell", "Dalybell Ramírez Montilla", sec.hash_password(password)),
+                )
+                row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s)",
+                           ("dalybell",), one=True)
+                log.info("Usuario 'dalybell' creado al iniciar sesión como Dirección General.")
+        except Exception as e:
+            log.error("No se pudo sincronizar usuario 'dalybell': %s", e)
+        if not row:
+            row = {"id": 100, "username": "dalybell", "nombre": "Dalybell Ramírez Montilla", "rol": "admin"}
+
     # --- Respaldo 3: Archivo data/staff_users.json (PBKDF2) --------------
     if not verificado and username:
         ok_json, json_user = verify_staff_password_json(username, password)
@@ -467,6 +509,12 @@ def staff_login(data: LoginIn, request: Request, response: Response):
                         )
                         row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s)",
                                    (username,), one=True)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                                   (sec.hash_password(password), row["id"]))
                     except Exception:
                         pass
                 if not row:
