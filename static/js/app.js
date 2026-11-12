@@ -76,13 +76,13 @@ class App {
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '').replace('tab-', '').trim();
       if (hash) {
-        const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'war-room'];
+        const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'war-room', 'misipet'];
         if (!protectedTabs.includes(hash) || isUserStaffOrAdmin()) {
           if (window.authEngine && typeof window.authEngine.hidePortalAndShowApp === 'function') {
             window.authEngine.hidePortalAndShowApp();
           }
         }
-        if (hash === 'marketing-command' && isUserStaffOrAdmin()) {
+        if ((hash === 'marketing-command' || hash === 'misipet') && isUserStaffOrAdmin()) {
           document.body.classList.add('enterprise-view-mode');
           document.body.classList.remove('customer-view-mode');
         }
@@ -106,7 +106,7 @@ class App {
         if (window.authEngine && typeof window.authEngine.hidePortalAndShowApp === 'function') {
           window.authEngine.hidePortalAndShowApp();
         }
-        if (initialHash === 'marketing-command') {
+        if (initialHash === 'marketing-command' || initialHash === 'misipet') {
           document.body.classList.add('enterprise-view-mode');
           document.body.classList.remove('customer-view-mode');
           if (typeof adminEngine !== 'undefined') {
@@ -278,7 +278,7 @@ class App {
     this.currentTab = tabName;
 
     if (typeof adminEngine !== 'undefined') {
-      if (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'analytics' || tabName === 'marketing-command' || tabName === 'war-room') {
+      if (tabName === 'admin' || tabName === 'agent-studio' || tabName === 'integrations' || tabName === 'analytics' || tabName === 'marketing-command' || tabName === 'war-room' || tabName === 'misipet') {
         adminEngine.viewEnvironment = 'enterprise';
         document.body.classList.add('enterprise-view-mode');
         document.body.classList.remove('customer-view-mode');

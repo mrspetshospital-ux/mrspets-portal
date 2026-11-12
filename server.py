@@ -2495,32 +2495,120 @@ def misipet_companies():
 def misipet_overview():
     if misipet_engine:
         try:
-            return misipet_engine.get_macro_overview()
+            return misipet_engine.get_overview()
         except Exception as e:
             return {"status": "error", "message": str(e)}
     return {"status": "success", "overview": {}}
 
 
 @app.get("/api/v1/misipet/assets")
-def misipet_assets():
+def misipet_assets(dept: Optional[str] = None, semaphore: Optional[str] = None):
     if misipet_engine:
         try:
-            return misipet_engine.get_assets()
+            return misipet_engine.get_assets(department=dept, semaphore_filter=semaphore)
         except Exception as e:
             return {"status": "error", "message": str(e)}
     return {"status": "success", "assets": []}
 
 
-@app.get("/api/v1/misipet/cameras")
-def misipet_cameras():
+@app.post("/api/v1/misipet/assets")
+async def misipet_create_asset(request: Request):
     if misipet_engine:
         try:
-            return misipet_engine.get_cameras()
+            body = await request.json()
+            dept = body.get("department") or body.get("dept") or "grooming"
+            return misipet_engine.create_asset(dept, body)
         except Exception as e:
             return {"status": "error", "message": str(e)}
-    return {"status": "success", "cameras": []}
+    return {"status": "error", "message": "Engine no disponible"}
 
 
+@app.post("/api/v1/misipet/assets/update")
+async def misipet_update_asset(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            asset_id = body.get("id") or body.get("asset_id")
+            if not asset_id:
+                return {"status": "error", "message": "asset_id requerido"}
+            return misipet_engine.update_asset(asset_id, body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/assets/delete")
+async def misipet_delete_asset(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            asset_id = body.get("id") or body.get("asset_id")
+            if not asset_id:
+                return {"status": "error", "message": "asset_id requerido"}
+            return misipet_engine.delete_asset(asset_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/assets/maintenance")
+async def misipet_asset_maintenance(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            asset_id = body.get("asset_id") or body.get("id")
+            service_type = body.get("service_type", "menor")
+            technician = body.get("technician", "Técnico Especialista")
+            notes = body.get("notes", "")
+            return misipet_engine.perform_maintenance(asset_id, service_type, technician, notes)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/assets/override")
+async def misipet_asset_override(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            asset_id = body.get("asset_id") or body.get("id")
+            new_sem = body.get("new_semaphore") or body.get("semaphore", "green")
+            actor = body.get("actor", "Admin GEO (Harry & Dalybell)")
+            reason = body.get("reason", "Supervisión Directiva")
+            return misipet_engine.override_asset_status(asset_id, new_sem, actor, reason)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- ÓRDENES DE MANTENIMIENTO MIKE (ISO 9001 & MAKE.COM) ---
+@app.get("/api/v1/misipet/maintenance/orders")
+def misipet_maintenance_orders(limit: Optional[int] = None, status: Optional[str] = None, dept: Optional[str] = None):
+    if misipet_engine:
+        try:
+            return misipet_engine.get_maintenance_orders(limit=limit, status=status, dept=dept)
+        except Exception as e:
+            return {"status": "error", "message": str(e), "orders": []}
+    return {"status": "success", "orders": []}
+
+
+@app.post("/api/v1/misipet/maintenance/dispatch")
+async def misipet_maintenance_dispatch(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            asset_id = body.get("asset_id")
+            service_type = body.get("service_type", "Mantenimiento Menor Preventivo")
+            priority = body.get("priority", "Alta")
+            notes = body.get("notes", "")
+            technician = body.get("technician", "")
+            return misipet_engine.dispatch_mike_order(asset_id, service_type, priority, notes, technician)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- BATERÍA DE TANQUES DE AGUA (TUYA IOT & CDT) ---
 @app.get("/api/v1/misipet/tanks")
 def misipet_tanks():
     if misipet_engine:
@@ -2531,6 +2619,149 @@ def misipet_tanks():
     return {"status": "success", "tanks": []}
 
 
+@app.post("/api/v1/misipet/tanks")
+async def misipet_create_tank(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.create_tank(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/tanks/update")
+async def misipet_update_tank(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            tank_id = body.get("id") or body.get("tank_id")
+            if not tank_id:
+                return {"status": "error", "message": "tank_id requerido"}
+            return misipet_engine.update_tank(tank_id, body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/tanks/delete")
+async def misipet_delete_tank(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            tank_id = body.get("id") or body.get("tank_id")
+            if not tank_id:
+                return {"status": "error", "message": "tank_id requerido"}
+            return misipet_engine.delete_tank(tank_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/water/tuya/ping")
+async def misipet_water_tuya_ping(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            tank_id = body.get("tank_id") or body.get("id") or body.get("device_id")
+            user = body.get("user", "Staff/Mantenimiento")
+            return misipet_engine.ping_tuya_sensor(tank_id, user=user)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.get("/api/v1/misipet/water/tuya/health")
+def misipet_water_health():
+    if misipet_engine:
+        try:
+            return misipet_engine.get_tuya_sensors_health()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "health": "OK"}
+
+
+@app.post("/api/v1/misipet/water/tuya/webhook")
+async def misipet_water_tuya_webhook(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.ingest_tuya_webhook(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "received": True}
+
+
+@app.post("/api/v1/misipet/water/cdt/simulate")
+async def misipet_water_cdt_simulate(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            hotel = body.get("hotel")
+            grooming = body.get("grooming")
+            clinic = body.get("clinic")
+            buffer = body.get("buffer")
+            return misipet_engine.calculate_dynamic_cdt(
+                hotel_guests=hotel,
+                grooming_sessions=grooming,
+                clinic_hospitalized=clinic,
+                buffer_factor=buffer
+            )
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- TERMOSTATOS & CLIMATIZACIÓN HVAC (WI-FI ESP32 / CADENA DE FRÍO) ---
+@app.get("/api/v1/misipet/thermostats")
+def misipet_thermostats():
+    if misipet_engine:
+        try:
+            return misipet_engine.get_thermostats()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "thermostats": []}
+
+
+@app.get("/api/v1/misipet/thermostats/{thermostat_id}")
+def misipet_thermostat_by_id(thermostat_id: str):
+    if misipet_engine:
+        try:
+            return misipet_engine.get_thermostat_by_id(thermostat_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/thermostats/config")
+async def misipet_thermostats_config(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            thermostat_id = body.get("id") or body.get("thermostat_id")
+            if not thermostat_id:
+                return {"status": "error", "message": "thermostat_id requerido"}
+            return misipet_engine.update_thermostat_config(thermostat_id, body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/thermostats/ping")
+async def misipet_thermostats_ping(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            thermostat_id = body.get("id") or body.get("thermostat_id")
+            if not thermostat_id:
+                return {"status": "error", "message": "thermostat_id requerido"}
+            return misipet_engine.ping_thermostat(thermostat_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- PLANTA ELÉCTRICA CUMMINS 65 kVA & GENERACIÓN CRÍTICA ---
 @app.get("/api/v1/misipet/power/config")
 @app.get("/api/v1/misipet/power-plant/config")
 def misipet_power_config():
@@ -2542,6 +2773,247 @@ def misipet_power_config():
     return {"status": "success", "power": {"state": "OK"}}
 
 
+@app.post("/api/v1/misipet/power/config")
+@app.post("/api/v1/misipet/power-plant/config")
+async def misipet_update_power_config(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.update_power_plant_config(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/power/ping")
+def misipet_power_ping():
+    if misipet_engine:
+        try:
+            return misipet_engine.ping_power_plant_device()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- CCTV & PASARELA TUKAN ---
+@app.get("/api/v1/misipet/cameras")
+def misipet_cameras(role: Optional[str] = "supervisor"):
+    if misipet_engine:
+        try:
+            return misipet_engine.get_cameras(role=role)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "cameras": []}
+
+
+@app.get("/api/v1/misipet/cctv/config")
+def misipet_cctv_config():
+    if misipet_engine:
+        try:
+            return misipet_engine.get_cctv_config()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/cctv/config")
+async def misipet_update_cctv_config(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.update_cctv_config(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/cctv/ping")
+def misipet_cctv_ping():
+    if misipet_engine:
+        try:
+            return misipet_engine.ping_cctv_connection()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.get("/api/v1/misipet/tukan/config")
+def misipet_tukan_config(role: Optional[str] = "supervisor"):
+    if misipet_engine:
+        try:
+            return misipet_engine.get_tukan_config(role=role)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/tukan/config")
+async def misipet_update_tukan_config(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.update_tukan_config(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- SENSORES IOT & TELEMETRÍA AUTOMÁTICA ---
+@app.get("/api/v1/misipet/iot/devices")
+def misipet_iot_devices(dept: Optional[str] = None, device_type: Optional[str] = None):
+    if misipet_engine:
+        try:
+            return misipet_engine.get_iot_devices(dept=dept, device_type=device_type)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "devices": []}
+
+
+@app.post("/api/v1/misipet/iot/devices")
+async def misipet_register_iot_device(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            return misipet_engine.register_iot_device(body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/iot/devices/update")
+async def misipet_update_iot_device(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            dev_id = body.get("id") or body.get("device_id")
+            if not dev_id:
+                return {"status": "error", "message": "device_id requerido"}
+            return misipet_engine.update_iot_device(dev_id, body)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/iot/devices/delete")
+async def misipet_delete_iot_device(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            dev_id = body.get("id") or body.get("device_id")
+            if not dev_id:
+                return {"status": "error", "message": "device_id requerido"}
+            return misipet_engine.delete_iot_device(dev_id)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/iot/water-tanks")
+async def misipet_iot_water_tanks(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            dev_id = body.get("device_id") or "ESP32-H2O-GATEWAY"
+            tank_id = body.get("tank_id")
+            liters = body.get("liters")
+            level_pct = body.get("level_pct")
+            pump_status = body.get("pump_status")
+            multi_tanks = body.get("tanks")
+            return misipet_engine.ingest_water_tank_telemetry(
+                device_id=dev_id,
+                tank_id=tank_id,
+                liters=liters,
+                level_pct=level_pct,
+                pump_status=pump_status,
+                multi_tanks=multi_tanks
+            )
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/iot/thermal")
+async def misipet_iot_thermal(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            dev_id = body.get("device_id") or "ESP32-TEMP-GATEWAY"
+            zone = body.get("zone_or_asset_id") or body.get("zone_id") or body.get("id")
+            temp = float(body.get("temp_c", 22.0))
+            humidity = body.get("humidity_pct")
+            return misipet_engine.ingest_thermal_telemetry(
+                device_id=dev_id,
+                zone_or_asset_id=zone,
+                temp_c=temp,
+                humidity_pct=humidity
+            )
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/iot/power-resilience")
+async def misipet_iot_power_resilience(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            dev_id = body.get("device_id") or "ESP32-GEN-GATEWAY"
+            fuel = float(body.get("fuel_liters", 210.0))
+            voltage = body.get("voltage")
+            frequency = body.get("frequency")
+            ups_data = body.get("ups_data")
+            return misipet_engine.ingest_power_telemetry(
+                device_id=dev_id,
+                fuel_liters=fuel,
+                voltage=voltage,
+                frequency=frequency,
+                ups_data=ups_data
+            )
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- ELECTROVÁLVULAS DE CORTE AUTOMÁTICO ---
+@app.get("/api/v1/misipet/valves")
+def misipet_valves():
+    if misipet_engine:
+        try:
+            return misipet_engine.get_valves_status()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "success", "valves": []}
+
+
+@app.post("/api/v1/misipet/valves/actuate")
+async def misipet_valves_actuate(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            valve_id = body.get("valve_id") or body.get("id")
+            action = body.get("action", "open")
+            actor = body.get("actor", "Admin GEO")
+            reason = body.get("reason", "Maniobra Operativa")
+            return misipet_engine.actuate_valve(valve_id, action, actor=actor, reason=reason)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+@app.post("/api/v1/misipet/valves/emergency-shutoff")
+async def misipet_valves_shutoff(request: Request):
+    if misipet_engine:
+        try:
+            body = await request.json()
+            actor = body.get("actor", "Make.com Protocolo Fuga")
+            reason = body.get("reason", "Fuga crítica detectada")
+            return misipet_engine.emergency_shutoff_all_valves(actor=actor, reason=reason)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return {"status": "error", "message": "Engine no disponible"}
+
+
+# --- HORARIOS & ASISTENCIA DE PERSONAL ---
 @app.get("/api/v1/misipet/staff-schedule")
 def misipet_staff_schedule():
     if misipet_engine:
@@ -2552,14 +3024,28 @@ def misipet_staff_schedule():
     return {"status": "success", "schedule": []}
 
 
-@app.get("/api/v1/misipet/water/tuya/health")
-def misipet_water_health():
+@app.post("/api/v1/misipet/staff-schedule/update")
+async def misipet_staff_schedule_update(request: Request):
     if misipet_engine:
         try:
-            return misipet_engine.get_tuya_water_health()
+            body = await request.json()
+            staff_id = body.get("staff_id") or body.get("id")
+            status = body.get("status")
+            if staff_id and status:
+                return misipet_engine.update_staff_attendance(
+                    staff_id=staff_id,
+                    status=status,
+                    checkin_time=body.get("checkin_time"),
+                    lunch_status=body.get("lunch_status"),
+                    checkout_time=body.get("checkout_time"),
+                    updates=body
+                )
+            elif body.get("name"):
+                return misipet_engine.save_staff_member(body)
+            return {"status": "error", "message": "Datos de colaborador incompletos"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
-    return {"status": "success", "health": "OK"}
+    return {"status": "error", "message": "Engine no disponible"}
 
 
 @app.get("/api/v1/bcv/rate")

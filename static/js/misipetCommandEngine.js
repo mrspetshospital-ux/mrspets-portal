@@ -32,6 +32,10 @@
       this.lastNotifiedMealAlerts = {};
       this.mealAlertCheckInterval = null;
       this.cdtState = null;
+      this.maintenanceOrders = [];
+      this.filteredMaintenanceOrders = [];
+      this.maintenanceOrdersStatusFilter = 'all';
+      this.maintenanceOrdersSearchTerm = '';
     }
 
     init() {
@@ -41,6 +45,7 @@
       this.loadDepartment(this.activeDepartment);
       this.loadCameras();
       this.loadStaffShifts();
+      this.loadMaintenanceOrders();
       this.setupAutoRefresh();
       this.setupMealAlertMonitor();
     }
@@ -152,11 +157,17 @@
         const res = await fetch('/api/v1/misipet/overview');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        if (data.status === 'error') throw new Error(data.message || 'Error en overview');
         this.overviewData = data;
         this.renderMasterDashboard();
+        this.loadMaintenanceOrders();
         if (!silent) console.log('✅ [MISIPET] Macrovisión cargada:', data);
       } catch (err) {
         console.warn('⚠️ [MISIPET] Fallo al cargar overview, usando datos de respaldo:', err);
+        if (!this.overviewData) {
+          this.overviewData = this.getDefaultOverviewData();
+          this.renderMasterDashboard();
+        }
       }
     }
 
@@ -170,6 +181,12 @@
           t.classList.remove('active-dept');
         }
       });
+
+      if (dept === 'maintenance_orders') {
+        await this.loadMaintenanceOrders();
+        this.renderMaintenanceOrdersView();
+        return;
+      }
 
       if (dept === 'iot_devices') {
         await this.loadIotDevices();
@@ -585,6 +602,9 @@
           `;
         }).join('');
       }
+
+      // Renderizar bitácora de órdenes y parámetros evaluados por Mike
+      this.renderMaintenanceOrdersTable();
     }
 
     // ==========================================
@@ -2998,12 +3018,319 @@
           alert(msg);
           this.announceWithLeia(msg);
           this.loadOverview();
+          this.loadMaintenanceOrders();
         } else {
           alert('Error al despachar orden: ' + data.message);
         }
       } catch (e) {
         alert('Error: ' + e.message);
       }
+    }
+
+    // ==========================================
+    // BITÁCORA Y ÓRDENES DE MANTENIMIENTO MIKE (ISO 9001 & MAKE.COM)
+    // ==========================================
+    async loadMaintenanceOrders() {
+      try {
+        const res = await fetch('/api/v1/misipet/maintenance/orders');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        this.maintenanceOrders = data.orders || [];
+        this.applyMaintenanceOrdersFilter();
+        this.renderMaintenanceOrdersTable();
+        const badge = document.getElementById('misipet-orders-badge');
+        if (badge) badge.innerText = `${this.maintenanceOrders.length} Órdenes`;
+      } catch (err) {
+        console.warn('⚠️ [MISIPET] Fallo al cargar órdenes de mantenimiento:', err);
+      }
+    }
+
+    applyMaintenanceOrdersFilter() {
+      let orders = [...(this.maintenanceOrders || [])];
+      if (this.maintenanceOrdersStatusFilter && this.maintenanceOrdersStatusFilter !== 'all') {
+        const sf = this.maintenanceOrdersStatusFilter.toLowerCase();
+        orders = orders.filter(o => {
+          const s = String(o.status || '').toLowerCase();
+          const p = String(o.priority || '').toLowerCase();
+          const t = String(o.type || '').toLowerCase();
+          return s.includes(sf) || p.includes(sf) || t.includes(sf);
+        });
+      }
+      if (this.maintenanceOrdersSearchTerm) {
+        const term = this.maintenanceOrdersSearchTerm.toLowerCase();
+        orders = orders.filter(o => {
+          const id = String(o.order_id || '').toLowerCase();
+          const name = String(o.asset_name || '').toLowerCase();
+          const aid = String(o.asset_id || '').toLowerCase();
+          const dept = String(o.department || '').toLowerCase();
+          const tech = String(o.technician_assigned || '').toLowerCase();
+          const disp = String(o.dispatched_by_agent || '').toLowerCase();
+          const notes = String(o.notes || '').toLowerCase();
+          return id.includes(term) || name.includes(term) || aid.includes(term) || dept.includes(term) || tech.includes(term) || disp.includes(term) || notes.includes(term);
+        });
+      }
+      this.filteredMaintenanceOrders = orders;
+    }
+
+    filterMaintenanceOrders(term) {
+      this.maintenanceOrdersSearchTerm = (term || '').trim();
+      this.applyMaintenanceOrdersFilter();
+      this.renderMaintenanceOrdersTable();
+      if (this.activeDepartment === 'maintenance_orders') {
+        this.renderMaintenanceOrdersView();
+      }
+    }
+
+    filterMaintenanceOrdersByStatus(status) {
+      this.maintenanceOrdersStatusFilter = status;
+      this.applyMaintenanceOrdersFilter();
+      this.renderMaintenanceOrdersTable();
+      if (this.activeDepartment === 'maintenance_orders') {
+        this.renderMaintenanceOrdersView();
+      }
+    }
+
+    renderMaintenanceOrdersTable() {
+      const container = document.getElementById('misipet-maintenance-orders-container');
+      if (!container) return;
+
+      const orders = this.filteredMaintenanceOrders || this.maintenanceOrders || [];
+      if (orders.length === 0) {
+        container.innerHTML = `
+          <div style="padding:28px; text-align:center; color:#64748B;">
+            <p style="font-weight:700; font-size:0.92rem; margin-bottom:4px;">No se encontraron órdenes de mantenimiento con los filtros seleccionados.</p>
+            <small>Total registradas en el sistema: ${this.maintenanceOrders.length}</small>
+          </div>
+        `;
+        return;
+      }
+
+      const displayOrders = orders.slice(0, 50);
+
+      const html = `
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.82rem;">
+            <thead>
+              <tr style="background:#0F172A; color:#FFFFFF; border-bottom:2px solid #CBD5E1;">
+                <th style="padding:12px 14px; font-weight:800; letter-spacing:0.3px;">N° ORDEN DIGITAL</th>
+                <th style="padding:12px 14px; font-weight:800;">ACTIVO / ÁREA</th>
+                <th style="padding:12px 14px; font-weight:800;">TIPO SERVICIO</th>
+                <th style="padding:12px 14px; font-weight:800;">RESPONSABLE / AGENTE</th>
+                <th style="padding:12px 14px; font-weight:800;">ESTATUS ISO 9001</th>
+                <th style="padding:12px 14px; font-weight:800;">FECHA / HORA</th>
+                <th style="padding:12px 14px; font-weight:800;">NOTAS &amp; DICTAMEN</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${displayOrders.map((o, idx) => {
+                const isDone = String(o.status || '').toLowerCase().includes('completado') || String(o.priority || '').toLowerCase().includes('resuelto');
+                const isMake = String(o.status || '').toLowerCase().includes('make');
+                const badgeBg = isDone ? 'rgba(16,185,129,0.14)' : (isMake ? 'rgba(2,132,199,0.14)' : 'rgba(245,158,11,0.14)');
+                const badgeColor = isDone ? '#047857' : (isMake ? '#0284C7' : '#B45309');
+                const borderLeft = isDone ? '4px solid #10B981' : (isMake ? '4px solid #0284C7' : '4px solid #F59E0B');
+                const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+                const dateStr = o.completed_at || o.dispatched_at || o.created_at || 'Reciente';
+                const formattedDate = dateStr.length > 16 ? dateStr.replace('T', ' ').slice(0, 16) : dateStr;
+
+                return `
+                  <tr style="background:${rowBg}; border-bottom:1px solid #E2E8F0; border-left:${borderLeft};">
+                    <td style="padding:10px 14px; font-family:monospace; font-weight:800; color:#1E293B;">
+                      ${o.order_id || 'ORD-MISIPET'}
+                    </td>
+                    <td style="padding:10px 14px;">
+                      <div style="font-weight:800; color:#0F172A;">${o.asset_name || o.asset_id || 'Activo Planta'}</div>
+                      <small style="color:#64748B; text-transform:uppercase; font-size:0.7rem; font-weight:700;">${o.department || 'Operaciones'} • ${o.asset_id || ''}</small>
+                    </td>
+                    <td style="padding:10px 14px; font-weight:700; color:#334155;">
+                      ${o.type || 'Mantenimiento Preventivo'}
+                    </td>
+                    <td style="padding:10px 14px;">
+                      <div style="font-weight:700; color:#1E293B;">${o.technician_assigned || 'Técnico Autorizado'}</div>
+                      <small style="color:#64748B; font-size:0.7rem;">${o.dispatched_by_agent || 'Mike (Operaciones)'}</small>
+                    </td>
+                    <td style="padding:10px 14px;">
+                      <span style="background:${badgeBg}; color:${badgeColor}; font-weight:800; font-size:0.72rem; padding:4px 9px; border-radius:8px; display:inline-block; border:1px solid ${badgeColor};">
+                        ${isDone ? '🟢 ' : (isMake ? '⚡ ' : '🟡 ')}${o.status || 'Completado ISO 9001'}
+                      </span>
+                    </td>
+                    <td style="padding:10px 14px; color:#64748B; font-size:0.75rem; white-space:nowrap;">
+                      ⏱️ ${formattedDate}
+                    </td>
+                    <td style="padding:10px 14px; color:#475569; max-width:280px; font-size:0.76rem; line-height:1.35;">
+                      ${o.notes || 'Inspección y calibración conforme bajo normas ISO 9001.'}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${orders.length > 50 ? `
+          <div style="padding:10px 16px; background:#F1F5F9; border-top:1px solid #CBD5E1; text-align:center; font-size:0.78rem; font-weight:800; color:#475569;">
+            Mostrando 50 de ${orders.length} órdenes registradas. Use el buscador superior para filtrar por activo, técnico o número de orden.
+          </div>
+        ` : ''}
+      `;
+
+      container.innerHTML = html;
+    }
+
+    renderMaintenanceOrdersView() {
+      const container = document.getElementById('misipet-dept-assets-container');
+      if (!container) return;
+
+      const totalCount = this.maintenanceOrders.length;
+      const doneCount = this.maintenanceOrders.filter(o => String(o.status || '').toLowerCase().includes('completado') || String(o.priority || '').toLowerCase().includes('resuelto')).length;
+      const makeCount = this.maintenanceOrders.filter(o => String(o.status || '').toLowerCase().includes('make')).length;
+
+      let html = `
+        <div class="misipet-orders-full-view" style="padding:14px 0;">
+          <!-- KPI Cards de Mike -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+            <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-left:4px solid #D4AF37;">
+              <span style="font-size:0.72rem; color:#64748B; font-weight:800; text-transform:uppercase;">Total Órdenes Registradas</span>
+              <div style="font-size:1.8rem; font-weight:900; color:#0F172A; margin:6px 0 2px 0;">${totalCount}</div>
+              <small style="color:#D4AF37; font-weight:700;">Bitácora Histórica Activa</small>
+            </div>
+            <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-left:4px solid #10B981;">
+              <span style="font-size:0.72rem; color:#64748B; font-weight:800; text-transform:uppercase;">Completadas ISO 9001</span>
+              <div style="font-size:1.8rem; font-weight:900; color:#047857; margin:6px 0 2px 0;">${doneCount}</div>
+              <small style="color:#059669; font-weight:700;">Certificadas en Planta (Verde)</small>
+            </div>
+            <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-left:4px solid #0284C7;">
+              <span style="font-size:0.72rem; color:#64748B; font-weight:800; text-transform:uppercase;">Despachos Make.com</span>
+              <div style="font-size:1.8rem; font-weight:900; color:#0284C7; margin:6px 0 2px 0;">${makeCount}</div>
+              <small style="color:#0284C7; font-weight:700;">Transmisión Digital en Vivo</small>
+            </div>
+            <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border-left:4px solid #6366F1;">
+              <span style="font-size:0.72rem; color:#64748B; font-weight:800; text-transform:uppercase;">Agente Evaluador</span>
+              <div style="font-size:1.2rem; font-weight:900; color:#4338CA; margin:6px 0 2px 0;">Mike (Operaciones)</div>
+              <small style="color:#6366F1; font-weight:700;">Comité Volturi &amp; Infraestructura</small>
+            </div>
+          </div>
+
+          <!-- Filtros de Búsqueda -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:#F8FAFC; padding:14px 18px; border-radius:12px; border:1px solid #E2E8F0;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; flex:1;">
+              <input type="text" placeholder="🔍 Buscar por N° orden, activo, técnico, notas..." value="${this.maintenanceOrdersSearchTerm || ''}" oninput="misipetEngine.filterMaintenanceOrders(this.value)" style="padding:9px 14px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.85rem; flex:1; min-width:240px; max-width:420px;">
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('all')" style="background:${this.maintenanceOrdersStatusFilter === 'all' ? '#0F172A' : '#FFFFFF'}; color:${this.maintenanceOrdersStatusFilter === 'all' ? '#FFFFFF' : '#334155'}; font-weight:800; border:1px solid #CBD5E1; border-radius:8px; padding:6px 12px; cursor:pointer;">Todas</button>
+                <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('completado')" style="background:${this.maintenanceOrdersStatusFilter === 'completado' ? '#10B981' : '#FFFFFF'}; color:${this.maintenanceOrdersStatusFilter === 'completado' ? '#FFFFFF' : '#047857'}; font-weight:800; border:1px solid #10B981; border-radius:8px; padding:6px 12px; cursor:pointer;">🟢 Completadas</button>
+                <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('make')" style="background:${this.maintenanceOrdersStatusFilter === 'make' ? '#0284C7' : '#FFFFFF'}; color:${this.maintenanceOrdersStatusFilter === 'make' ? '#FFFFFF' : '#0284C7'}; font-weight:800; border:1px solid #0284C7; border-radius:8px; padding:6px 12px; cursor:pointer;">⚡ Make.com</button>
+              </div>
+            </div>
+            <button type="button" class="btn-voice-leia" onclick="misipetEngine.openServiceOrderModal('GROOM-SOP-01')" style="font-weight:900; font-size:0.8rem; padding:8px 16px; border-radius:10px; cursor:pointer;">
+              ⚡ Nueva Orden Mike -> Make.com
+            </button>
+          </div>
+
+          <!-- Tabla de Órdenes -->
+          <div id="misipet-maintenance-orders-container" style="background:#FFFFFF; border-radius:12px; border:1px solid #E2E8F0; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.03);"></div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      this.renderMaintenanceOrdersTable();
+    }
+
+    getDefaultOverviewData() {
+      return {
+        status: "success",
+        timestamp: new Date().toISOString(),
+        branch: "Mrs. Pets • Maracaibo, Venezuela",
+        semaphore_counts: { green: 5, yellow: 23, red: 43, total: 71 },
+        power_plant: {
+          name: "Planta Eléctrica Cummins 65 kVA Diésel / Gas Insonorizada",
+          fuel_liters: 210.0,
+          tank_capacity_liters: 250.0,
+          fuel_pct: 84.0,
+          burn_rate_lph: 5.5,
+          autonomy_hours: 38.2,
+          voltage: 208.0,
+          frequency_hz: 60.0,
+          status: "Automático en Línea (ATS Operativo)",
+          last_maintenance: "2026-10-15",
+          next_maintenance: "2026-12-15",
+          oil_pressure_psi: 52.0,
+          coolant_temp_c: 82.0,
+          ip_address: "192.168.1.185"
+        },
+        water_overview: {
+          total_capacity_liters: 21000,
+          total_current_liters: 18470.0,
+          total_pct: 88.0,
+          daily_consumption_liters: 1017.5,
+          hourly_burn_rate_liters: 42.4,
+          autonomy_days: 18.2,
+          autonomy_hours: 436.8,
+          tanks_count: 4,
+          semaphore: "green",
+          alert_status: "Nominal: Autonomía hídrica óptima superior a 48 horas"
+        },
+        tanks: [
+          {
+            id: "tank-subterraneo",
+            name: "Tanque Subterráneo Principal",
+            capacity_liters: 11000,
+            current_liters: 9570.0,
+            level_pct: 87.0,
+            location: "Patio Central Subterráneo",
+            material: "Concreto armado impermeabilizado",
+            associated_pump: "Bomba Principal Centrífuga 2 HP",
+            semaphore: "green",
+            refill_status: "Llenado Automático Activo"
+          },
+          {
+            id: "tank-techo",
+            name: "Tanque Superior / Techo (Cilíndrico Negro)",
+            capacity_liters: 5000,
+            current_liters: 4500.0,
+            level_pct: 90.0,
+            location: "Plataforma Superior Azotea",
+            material: "Polietileno 4 capas UV",
+            associated_pump: "Bomba Respaldo 1.5 HP",
+            semaphore: "green",
+            refill_status: "Gravedad Activa"
+          },
+          {
+            id: "tank-azul",
+            name: "Tanque Auxiliar Azul",
+            capacity_liters: 3000,
+            current_liters: 2600.0,
+            level_pct: 86.7,
+            location: "Área de Lavandería Exterior",
+            material: "Polietileno Reforzado",
+            associated_pump: "Bomba Ladrona Succión Rápida",
+            semaphore: "green",
+            refill_status: "Reserva grooming y lavado"
+          },
+          {
+            id: "tank-secundario",
+            name: "Tanque Secundario de Emergencia",
+            capacity_liters: 2000,
+            current_liters: 1800.0,
+            level_pct: 90.0,
+            location: "Lateral Sala de Máquinas",
+            material: "Polietileno Horizontal",
+            associated_pump: "By-pass Manual",
+            semaphore: "green",
+            refill_status: "Reserva clínica estéril"
+          }
+        ],
+        blowers_summary: { active_in_shift: 2, strategic_reserve: 1, total: 3 },
+        biometric_attendance: { total_staff: 6, present_count: 6, checkin_deadline: "08:00 AM VET", attendance_rate_pct: 100 },
+        hvac_zones: [
+          { id: "HVAC-TIENDA-5T", name: "Unidad Central HVAC 5T (Tienda & Showroom)", location: "Azotea / Tienda", temp_actual_c: 21.5, temp_target_c: 21.5, semaphore: "green", status: "Enfriamiento Óptimo", wifi_ssid: "MrsPets-IoT-Secure", wifi_ip: "192.168.1.139" },
+          { id: "HVAC-GROOM-3T", name: "Unidad Central HVAC 3T (Grooming Spa & Baños)", location: "Azotea / Grooming", temp_actual_c: 22.0, temp_target_c: 22.0, semaphore: "green", status: "Operativo", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.132" },
+          { id: "HVAC-ADMIN-3T", name: "Unidad Central HVAC 3T (Administración & Finanzas)", location: "Azotea / Admin", temp_actual_c: 20.8, temp_target_c: 21.0, semaphore: "green", status: "Operativo", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.133" },
+          { id: "HVAC-CLINICA-3T", name: "Unidad Central HVAC 3T (Clínica & Quirófano)", location: "Azotea / Clínica", temp_actual_c: 19.5, temp_target_c: 20.0, semaphore: "green", status: "Filtros HEPA Quirúrgicos", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.134" },
+          { id: "HVAC-HOTEL-3T", name: "Unidad Central HVAC 3T (Hotel Canino & Guardería)", location: "Azotea / Hotel", temp_actual_c: 22.0, temp_target_c: 22.0, semaphore: "green", status: "Operativo", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.135" },
+          { id: "HVAC-SPLIT-REC", name: "Split Inverter 18,000 BTU (Recepción Principal)", location: "Recepción", temp_actual_c: 21.0, temp_target_c: 20.5, semaphore: "green", status: "Operativo", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.136" },
+          { id: "HVAC-SPLIT-LAV", name: "Split 18,000 BTU (Lavandería y Almacén Insumos)", location: "Lavandería", temp_actual_c: 22.5, temp_target_c: 22.0, semaphore: "green", status: "Operativo", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.137" },
+          { id: "HVAC-SPLIT-SUITES", name: "Split Inverter 18,000 BTU (Suites Felinas VIP)", location: "Suites Felinas VIP", temp_actual_c: 22.2, temp_target_c: 22.0, semaphore: "green", status: "Operativo Silencioso", wifi_ssid: "MrsPets-IoT-DonBosco", wifi_ip: "192.168.1.138" }
+        ],
+        critical_alerts: []
+      };
     }
 
     // ==========================================

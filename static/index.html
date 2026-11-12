@@ -4118,11 +4118,42 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
                   <button class="misipet-dept-tab" data-dept="flota_gps" onclick="misipetEngine.loadDepartment('flota_gps')">
                     🛰️ Flota VIP & Telemetría GPS
                   </button>
+                  <button class="misipet-dept-tab" data-dept="maintenance_orders" onclick="misipetEngine.loadDepartment('maintenance_orders')" style="border-left: 2px solid #D4AF37; font-weight:800; background:rgba(212,175,55,0.08);">
+                    📋 Bitácora & Órdenes Mike (151)
+                  </button>
                 </div>
 
                 <!-- Contenedor Reactivo de Activos -->
                 <div id="misipet-dept-assets-container">
                   <p class="muted-text">Cargando inventario de activos...</p>
+                </div>
+              </div>
+
+              <!-- Fila 7: Bitácora & Lista de Operaciones de Mantenimiento Mike (ISO 9001) -->
+              <div class="maintenance-orders-section" style="margin-top:28px; padding-top:22px; border-top:2px solid #E2E8F0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                  <div>
+                    <h3 class="section-section-title" style="margin:0; display:flex; align-items:center; gap:8px;">
+                      <span>📋 BITÁCORA DE OPERACIONES &amp; ÓRDENES DE MANTENIMIENTO (EVALUADAS POR MIKE)</span>
+                      <span class="badge" style="background:#10B981; color:#FFFFFF; font-weight:900; font-size:0.75rem; padding:3px 9px; border-radius:12px;" id="misipet-orders-badge">151 Órdenes</span>
+                    </h3>
+                    <p style="margin:4px 0 0 0; font-size:0.8rem; color:#64748B;">
+                      Parámetros evaluados por <strong>Mike (Gerente de Operaciones &amp; Calidad)</strong> • Despacho digital a Make.com y certificación inmutable ISO 9001
+                    </p>
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="misipet-orders-search" placeholder="🔍 Buscar orden, activo, técnico..." oninput="misipetEngine.filterMaintenanceOrders(this.value)" style="padding:7px 12px; border-radius:8px; border:1px solid #CBD5E1; font-size:0.8rem; min-width:220px;">
+                    <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('all')" style="background:#F1F5F9; font-weight:800; border-radius:8px; padding:6px 12px; font-size:0.75rem; border:1px solid #CBD5E1; cursor:pointer;">Todas</button>
+                    <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('completado')" style="background:rgba(16,185,129,0.12); color:#065F46; font-weight:800; border-radius:8px; padding:6px 12px; font-size:0.75rem; border:1px solid #10B981; cursor:pointer;">🟢 Completadas</button>
+                    <button type="button" class="btn btn-sm" onclick="misipetEngine.filterMaintenanceOrdersByStatus('make')" style="background:rgba(2,132,199,0.12); color:#0369A1; font-weight:800; border-radius:8px; padding:6px 12px; font-size:0.75rem; border:1px solid #0284C7; cursor:pointer;">⚡ Despachadas Make</button>
+                    <button type="button" class="btn-voice-leia" onclick="misipetEngine.openServiceOrderModal('GROOM-SOP-01')" style="font-size:0.75rem; padding:6px 12px; border-radius:8px; cursor:pointer;">
+                      ⚡ Emitir Orden con Mike
+                    </button>
+                  </div>
+                </div>
+
+                <div id="misipet-maintenance-orders-container" style="background:#FFFFFF; border-radius:14px; border:1px solid #E2E8F0; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+                  <p class="muted-text" style="padding:24px; text-align:center;">Cargando bitácora de órdenes de mantenimiento...</p>
                 </div>
               </div>
 

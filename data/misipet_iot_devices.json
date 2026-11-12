@@ -1,0 +1,247 @@
+{
+  "devices": [
+    {
+      "id": "ESP32-H2O-BATTERY",
+      "name": "Transmisor IoT Wi-Fi Ultrasónico (Batería 4 Tanques)",
+      "device_type": "water_level_sensor",
+      "protocol": "Wi-Fi HTTP REST / ESP32",
+      "department": "sala_maquinas",
+      "linked_equipment": "Batería de Tanques de Planta",
+      "ip_address": "192.168.1.180",
+      "mac_address": "24:6F:28:B4:72:A1",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:45:00-04:00",
+      "battery_or_mains": "Mains (110V + Respaldo UPS)",
+      "monitored_vars": [
+        "subterraneo_litros",
+        "techo_litros",
+        "azul_litros",
+        "secundario_litros"
+      ],
+      "thresholds": {
+        "critical_level_pct": 25.0,
+        "warning_level_pct": 50.0,
+        "rapid_drop_rate_pct_per_hour": 15.0
+      },
+      "make_webhook_action": "DISPATCH_WATER_EMERGENCY_ORDER"
+    },
+    {
+      "id": "ESP32-TEMP-VAC-01",
+      "name": "Sonda PT100 Grado Médico • Banco de Vacunas",
+      "device_type": "cold_chain_sensor",
+      "protocol": "Wi-Fi HTTP REST / ESP32",
+      "department": "clinica",
+      "linked_equipment": "VET-NEVERA-VAC",
+      "ip_address": "192.168.1.181",
+      "mac_address": "24:6F:28:C8:90:12",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:46:12-04:00",
+      "battery_or_mains": "Respaldo Batería LiPo 72h + UPS",
+      "monitored_vars": [
+        "temperatura_c",
+        "humedad_pct",
+        "puerta_abierta_seg"
+      ],
+      "thresholds": {
+        "safe_min_c": 2.0,
+        "safe_max_c": 8.0,
+        "critical_low_c": 1.5,
+        "critical_high_c": 8.5
+      },
+      "make_webhook_action": "DISPATCH_COLD_CHAIN_BREACH_ALERT"
+    },
+    {
+      "id": "ESP32-TEMP-FARM-02",
+      "name": "Sonda PT100 Grado Médico • Farmacia y Biológicos",
+      "device_type": "cold_chain_sensor",
+      "protocol": "Wi-Fi HTTP REST / ESP32",
+      "department": "clinica",
+      "linked_equipment": "VET-NEVERA-FARM",
+      "ip_address": "192.168.1.182",
+      "mac_address": "24:6F:28:A1:33:5F",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:46:30-04:00",
+      "battery_or_mains": "Respaldo Batería LiPo 72h + UPS",
+      "monitored_vars": [
+        "temperatura_c",
+        "humedad_pct"
+      ],
+      "thresholds": {
+        "safe_min_c": 2.0,
+        "safe_max_c": 8.0,
+        "critical_low_c": 1.5,
+        "critical_high_c": 8.5
+      },
+      "make_webhook_action": "DISPATCH_COLD_CHAIN_BREACH_ALERT"
+    },
+    {
+      "id": "ESP32-HVAC-TIENDA",
+      "name": "Termostato IoT Inteligente 5 Ton Tienda",
+      "device_type": "hvac_thermal_sensor",
+      "protocol": "Wi-Fi HTTP REST / ESP32",
+      "department": "hvac",
+      "linked_equipment": "HVAC-TIENDA-5T",
+      "ip_address": "192.168.1.183",
+      "mac_address": "24:6F:28:D2:11:BC",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:44:50-04:00",
+      "battery_or_mains": "Mains 220V",
+      "monitored_vars": [
+        "temp_ambiente_c",
+        "temp_retorno_c",
+        "amperaje_compresor"
+      ],
+      "thresholds": {
+        "target_temp_c": 21.0,
+        "max_allowed_temp_c": 24.5,
+        "filter_dp_pressure_pa": 250
+      },
+      "make_webhook_action": "DISPATCH_HVAC_OVERHEAT_ALERT"
+    },
+    {
+      "id": "ESP32-HVAC-CLINICA",
+      "name": "Termostato y Presostato HEPA 3 Ton Quirófano",
+      "device_type": "hvac_thermal_sensor",
+      "protocol": "Wi-Fi HTTP REST / ESP32",
+      "department": "hvac",
+      "linked_equipment": "HVAC-CLINICA-3T",
+      "ip_address": "192.168.1.184",
+      "mac_address": "24:6F:28:E4:77:88",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:45:15-04:00",
+      "battery_or_mains": "Mains 220V",
+      "monitored_vars": [
+        "temp_ambiente_c",
+        "presion_positiva_pa",
+        "humedad_rel_pct"
+      ],
+      "thresholds": {
+        "target_temp_c": 19.0,
+        "max_allowed_temp_c": 21.5,
+        "min_positive_pressure_pa": 15
+      },
+      "make_webhook_action": "DISPATCH_QUIROFANO_ISO_ALERT"
+    },
+    {
+      "id": "ESP32-GEN-CUMMINS",
+      "name": "Transmisor Telemetría Combustible y ATS • Cummins 65 kVA",
+      "device_type": "power_generator_sensor",
+      "protocol": "Modbus RS485 to Wi-Fi ESP32",
+      "department": "sala_maquinas",
+      "linked_equipment": "MAQ-PLANTA-ELEC",
+      "ip_address": "192.168.1.185",
+      "mac_address": "24:6F:28:FE:44:23",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:45:55-04:00",
+      "battery_or_mains": "Batería 12V 100Ah + Cargador Flotante",
+      "monitored_vars": [
+        "combustible_litros",
+        "voltaje_gen",
+        "hz_gen",
+        "bateria_arranque_v"
+      ],
+      "thresholds": {
+        "min_fuel_liters": 75.0,
+        "min_battery_v": 12.2,
+        "overtemp_coolant_c": 95.0
+      },
+      "make_webhook_action": "DISPATCH_FUEL_LOW_ALERT",
+      "wifi_ssid": "MrsPets-IoT-Infra",
+      "wifi_password": "Mr$Pet$2026!Gen",
+      "modbus_port": 502,
+      "baud_rate": 9600,
+      "parity": "None",
+      "slave_id": 1,
+      "controller_model": "DeepSea Electronics DSE 7320 / ESP32 Modbus Gateway",
+      "polling_interval_sec": 30,
+      "calibration": {
+        "tank_capacity_liters": 250.0,
+        "fuel_burn_rate_lph": 5.5,
+        "min_fuel_threshold_liters": 75.0,
+        "min_fuel_threshold_pct": 30.0,
+        "nominal_voltage_v": 208,
+        "nominal_frequency_hz": 60.0
+      }
+    },
+    {
+      "id": "ESP32-UPS-MATRIZ",
+      "name": "Monitor de Red y Baterías de la Matriz de UPS",
+      "device_type": "ups_matrix_monitor",
+      "protocol": "SNMP / Wi-Fi ESP32",
+      "department": "ups_matriz",
+      "linked_equipment": "UPS-LAB-3KVA / UPS-CONS-VAC-2KVA",
+      "ip_address": "192.168.1.186",
+      "mac_address": "24:6F:28:11:99:66",
+      "firmware_version": "v2.4.1-MISIPET",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:46:00-04:00",
+      "battery_or_mains": "Mains + Autorespaldo",
+      "monitored_vars": [
+        "carga_pct",
+        "autonomia_minutos",
+        "salud_baterias_pct",
+        "corte_electrico_activo"
+      ],
+      "thresholds": {
+        "min_battery_health_pct": 70.0,
+        "max_load_pct": 80.0,
+        "critical_runtime_minutes": 15
+      },
+      "make_webhook_action": "DISPATCH_UPS_CRITICAL_ALERT"
+    },
+    {
+      "id": "NVR-DAHUA-LAN-22CH",
+      "name": "Grabador NVR Dahua 4K (22 Canales IP en Red Local)",
+      "device_type": "video_nvr_local",
+      "protocol": "ONVIF / RTSP Local",
+      "department": "tienda_seguridad",
+      "linked_equipment": "SEC-CAMARAS-RED",
+      "ip_address": "192.168.1.100",
+      "mac_address": "3C:EF:8C:55:12:88",
+      "firmware_version": "v4.001.0000000.1.R",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:46:10-04:00",
+      "battery_or_mains": "Alimentación UPS 3kVA",
+      "monitored_vars": [
+        "camaras_conectadas",
+        "disco_duro_salud",
+        "fps_promedio"
+      ],
+      "thresholds": {
+        "min_active_cameras": 22,
+        "min_free_storage_gb": 500
+      },
+      "make_webhook_action": "DISPATCH_SECURITY_NVR_ALERT"
+    },
+    {
+      "id": "TUKAN-GATEWAY-CLOUD",
+      "name": "Pasarela Cloud Tukan (Streaming Remoto Directiva GEO)",
+      "device_type": "video_gateway_cloud",
+      "protocol": "Tukan Cloud API / Web Embed Seguro",
+      "department": "tienda_seguridad",
+      "linked_equipment": "SEC-CAMARAS-RED",
+      "ip_address": "cloud.tukan.mrspets.com",
+      "mac_address": "VIRTUAL-GATEWAY-01",
+      "firmware_version": "v3.1.0-CLOUD",
+      "status": "Online",
+      "last_ping": "2026-10-28T10:46:15-04:00",
+      "battery_or_mains": "Cloud Hosted",
+      "monitored_vars": [
+        "token_valido",
+        "sesiones_activas",
+        "latencia_stream_ms"
+      ],
+      "thresholds": {
+        "session_timeout_minutes": 120,
+        "max_latency_ms": 350
+      },
+      "make_webhook_action": "DISPATCH_TUKAN_GATEWAY_ALERT"
+    }
+  ]
+}

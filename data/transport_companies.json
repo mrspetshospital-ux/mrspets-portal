@@ -1,0 +1,68 @@
+[
+  {
+    "id": "transpet-express",
+    "name": "TransPet Maracaibo Express C.A.",
+    "rif": "J-41289012-3",
+    "role": "Empresa Certificada de Logística y Traslado Animal",
+    "fleet": "4 Vans Ejecutivas Climatizadas con Telemetría GPS",
+    "sector": "Gran Maracaibo",
+    "phone": "+584146799510",
+    "cleanPhone": "584146799510",
+    "status": "EMPRESA APROBADA POR GERENCIA",
+    "statusColor": "#D4AF37",
+    "type": "company",
+    "avatar": "🏢",
+    "photo": "https://images.unsplash.com/photo-1559297434-fae8a1916a79?w=300&auto=format&fit=crop&q=80",
+    "approval": "Convenio Corporativo Vigente • Gerencia General Mrs. Pets",
+    "features": [
+      "Capacidad para traslados múltiples y familias de mascotas",
+      "Rutas regulares de recogida matutina y entrega vespertina",
+      "Cobertura: Maracaibo, San Francisco y Aeropuerto La Chinita",
+      "Seguro de responsabilidad civil y póliza de traslado veterinario"
+    ]
+  },
+  {
+    "id": "vip-pet-ride",
+    "name": "VIP Pet Ride Venezuela (División Zulia)",
+    "rif": "J-50143890-1",
+    "role": "Servicio Concierge de Movilidad para Mascotas",
+    "fleet": "Flota de SUVs Híbridas con Blindaje Térmico",
+    "sector": "Maracaibo Norte / Lago",
+    "phone": "+584246001122",
+    "cleanPhone": "584246001122",
+    "status": "EMPRESA APROBADA POR GERENCIA",
+    "statusColor": "#D4AF37",
+    "type": "company",
+    "avatar": "🚘",
+    "photo": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=300&auto=format&fit=crop&q=80",
+    "approval": "Homologación Gerencial ISO-Pet Transport Zulia",
+    "features": [
+      "Filtros de aire HEPA de grado hospitalario en cabina",
+      "Agua mineral ozonizada e hidratación durante trayectos largos",
+      "Traslados ejecutivos puerta a puerta con chofer de traje corporativo",
+      "Cobertura extendida: Isla Dorada, El Milagro, Club Náutico, Costa Oriental"
+    ]
+  },
+  {
+    "id": "ambupet-urgencias",
+    "name": "AmbuPet 24/7 Urgencias Móviles",
+    "rif": "J-31089455-0",
+    "role": "Unidad de Ambulancia y Soporte Vital Veterinario Móvil",
+    "fleet": "2 Ambulancias Tipo III con Chofer Paramédico Veterinario",
+    "sector": "Gran Maracaibo",
+    "phone": "+584149998877",
+    "cleanPhone": "584149998877",
+    "status": "RED DE EMERGENCIAS APROBADA",
+    "statusColor": "#EF4444",
+    "type": "company",
+    "avatar": "🚨",
+    "photo": "https://images.unsplash.com/photo-1587745416684-47953f16f02f?w=300&auto=format&fit=crop&q=80",
+    "approval": "Convenio de Código Rojo Clínico Mrs. Pets",
+    "features": [
+      "Soporte de oxígeno continuo y monitor multiparámetro en ruta",
+      "Camilla articulada de rescate para perros de hasta 90 kg",
+      "Traslado prioritario de urgencias hacia la Clínica Central El Milagro",
+      "Tripulación de chofer profesional + enfermero veterinario de guardia"
+    ]
+  }
+]

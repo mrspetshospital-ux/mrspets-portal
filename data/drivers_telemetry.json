@@ -1,0 +1,166 @@
+{
+  "headquarters": {
+    "name": "Mrs. Pets & MisiPet Sede Central",
+    "address": "Avenida 2 El Milagro con Calle 78 Dr. Portillo, Maracaibo, Zulia",
+    "lat": 10.6698,
+    "lng": -71.6052
+  },
+  "drivers": [
+    {
+      "id": "carlos-mendoza",
+      "name": "Carlos Mendoza",
+      "role": "Chofer VIP Senior & Asistente Técnico Veterinario",
+      "vehicle": "Mercedes-Benz Sprinter VIP Bioclimática",
+      "plates": "A89CB4V",
+      "sector": "El Milagro",
+      "phone": "+584146799510",
+      "cleanPhone": "584146799510",
+      "rating": "5.0",
+      "trips": 148,
+      "status": "EN SERVICIO (GPS ACTIVO)",
+      "statusClass": "status-online",
+      "statusColor": "#10B981",
+      "type": "private",
+      "avatar": "👨‍✈️",
+      "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80",
+      "approval": "Aprobado por Gerencia General (C.I. V-18.492.110)",
+      "gps_enabled": true,
+      "created_by": "admin",
+      "current_location": {
+        "lat": 10.6655,
+        "lng": -71.6045,
+        "speed_kmh": 28.0,
+        "accuracy_m": 8.5,
+        "heading": 15.0,
+        "last_update": "2026-11-02T17:25:00.000000+00:00"
+      },
+      "active_trip": {
+        "trip_id": "TRIP-2026-001",
+        "customer_name": "Dalybell Ramírez Montilla",
+        "pet_name": "Princesa",
+        "origin_address": "Sector Don Bosco (Avenida 3E con Calle 67)",
+        "destination_address": "Sede Central Mrs. Pets (Av. 2 El Milagro)",
+        "dest_lat": 10.6698,
+        "dest_lng": -71.6052,
+        "status": "en_camino",
+        "distance_km": 1.8,
+        "eta_minutes": 5,
+        "started_at": "2026-11-02T17:20:00.000000+00:00"
+      },
+      "features": [
+        "Cabina bioclimática con oxigenoterapia portátil",
+        "Rampa hidráulica suave para movilidad reducida",
+        "Ambientación musical calmante (Frecuencia 432 Hz)",
+        "Trazabilidad satelital GPS activa y cálculo de ETA en tiempo real"
+      ]
+    },
+    {
+      "id": "javier-villalobos",
+      "name": "Javier Villalobos",
+      "role": "Pet Chauffeur Especialista en Razas Grandes / Gigantes",
+      "vehicle": "Chevrolet Suburban Royal Dark Luxury",
+      "plates": "AB302MK",
+      "sector": "Las Delicias",
+      "phone": "+584246109922",
+      "cleanPhone": "584246109922",
+      "rating": "4.9",
+      "trips": 96,
+      "status": "DISPONIBLE (GPS EN ESPERA)",
+      "statusClass": "status-online",
+      "statusColor": "#10B981",
+      "type": "private",
+      "avatar": "👨‍✈️",
+      "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80",
+      "approval": "Aprobado por Gerencia (C.I. V-15.820.334 • RIF Verificado)",
+      "gps_enabled": true,
+      "created_by": "admin",
+      "current_location": {
+        "lat": 10.674,
+        "lng": -71.632,
+        "speed_kmh": 0.0,
+        "accuracy_m": 12.0,
+        "heading": 0.0,
+        "last_update": "2026-11-02T17:15:00.000000+00:00"
+      },
+      "active_trip": null,
+      "features": [
+        "Doble aire acondicionado industrial de alta potencia",
+        "Separadores de impacto acolchados ISOFIX",
+        "Especialista en Gran Danés, Rottweiler, Golden Retriever",
+        "Monitoreo GPS integrado para cálculo de arribo"
+      ]
+    },
+    {
+      "id": "mariangel-rincon",
+      "name": "Mariangel Rincón",
+      "role": "Pet Chauffeur & Cuidados Geriátricos / Felinos",
+      "vehicle": "Toyota Fortuner Diamond White",
+      "plates": "AF881DV",
+      "sector": "La Lago",
+      "phone": "+584120783344",
+      "cleanPhone": "584120783344",
+      "rating": "5.0",
+      "trips": 112,
+      "status": "DISPONIBLE (GPS EN ESPERA)",
+      "statusClass": "status-online",
+      "statusColor": "#10B981",
+      "type": "private",
+      "avatar": "👩‍✈️",
+      "photo": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80",
+      "approval": "Aprobada por Gerencia (C.I. V-22.140.785 • Fear-Free Certified)",
+      "gps_enabled": true,
+      "created_by": "admin",
+      "current_location": {
+        "lat": 10.679,
+        "lng": -71.607,
+        "speed_kmh": 0.0,
+        "accuracy_m": 9.0,
+        "heading": 0.0,
+        "last_update": "2026-11-02T17:10:00.000000+00:00"
+      },
+      "active_trip": null,
+      "features": [
+        "Transportines térmicos acolchados con vista panorámica",
+        "Difusor ambiental de feromonas Feliway / Adaptil",
+        "Suspensión hidroneumática extra suave para mascotas con artritis",
+        "Rastreo satelital con estimación de tiempo de llegada"
+      ]
+    },
+    {
+      "id": "roberto-morales",
+      "name": "Roberto Morales",
+      "role": "Chofer VIP Nocturno & Guardias de Fin de Semana",
+      "vehicle": "Ford Explorer Titanium Executive",
+      "plates": "AG401KL",
+      "sector": "Bella Vista",
+      "phone": "+584146332211",
+      "cleanPhone": "584146332211",
+      "rating": "4.9",
+      "trips": 84,
+      "status": "DE GUARDIA 24/7 (GPS ACTIVO)",
+      "statusClass": "status-guard",
+      "statusColor": "#F59E0B",
+      "type": "private",
+      "avatar": "👨‍✈️",
+      "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80",
+      "approval": "Aprobado por Gerencia (C.I. V-17.904.551)",
+      "gps_enabled": true,
+      "created_by": "admin",
+      "current_location": {
+        "lat": 10.662,
+        "lng": -71.614,
+        "speed_kmh": 32.0,
+        "accuracy_m": 7.0,
+        "heading": 45.0,
+        "last_update": "2026-11-02T17:22:00.000000+00:00"
+      },
+      "active_trip": null,
+      "features": [
+        "Disponibilidad ininterrumpida nocturna y domingos",
+        "Trazabilidad satelital GPS en tiempo real para el tutor",
+        "Botiquín de estabilización móvil de emergencias",
+        "Conexión directa con la clínica central Mrs. Pets"
+      ]
+    }
+  ]
+}

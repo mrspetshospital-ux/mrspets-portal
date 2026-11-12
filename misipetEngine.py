@@ -872,6 +872,30 @@ class MisipetEngine:
             "order": order_payload
         }
 
+    def get_maintenance_orders(self, limit=None, status=None, dept=None):
+        """Retorna la lista de órdenes de mantenimiento preventivo y correctivo evaluadas por Mike."""
+        orders_data = self._read_json(self.orders_file, {"orders": []})
+        orders = orders_data.get("orders", [])
+        if status and status.lower() != "all":
+            stat_low = status.lower()
+            orders = [
+                o for o in orders
+                if stat_low in str(o.get("status", "")).lower()
+                or stat_low in str(o.get("priority", "")).lower()
+            ]
+        if dept and dept.lower() != "all":
+            dept_low = dept.lower()
+            orders = [o for o in orders if str(o.get("department", "")).lower() == dept_low]
+        total_count = len(orders)
+        if limit and isinstance(limit, int) and limit > 0:
+            orders = orders[:limit]
+        return {
+            "status": "success",
+            "orders": orders,
+            "total": total_count,
+            "dispatched_by_agent": "Mike (Gerente de Operaciones & Calidad)"
+        }
+
     # ==========================
     # CÁMARAS Y STREAMING SEGÚN ROL
     # ==========================
@@ -2305,5 +2329,9 @@ class MisipetEngine:
         self._write_json(self.drivers_telemetry_file, data)
         self._log_audit("DRIVER_TRIP_STATUS_UPDATED", {"driver_id": driver_id, "new_status": new_status})
         return {"status": "success", "message": f"Estatus de viaje actualizado a '{new_status}'", "driver": target}
+
+    # Aliases de compatibilidad para endpoints de macrovisión y salud
+    get_macro_overview = get_overview
+    get_tuya_water_health = get_tuya_sensors_health
 
 misipet_engine = MisipetEngine()

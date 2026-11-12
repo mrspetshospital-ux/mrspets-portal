@@ -1,0 +1,191 @@
+{
+  "gateway_name": "Tukan Cloud Security Gateway • Mrs. Pets",
+  "account_id": "TUKAN-ACC-MRSPETS-MARACAIBO",
+  "api_base_url": "https://tukan.mrspets.cloud/api/v1",
+  "stream_base_url": "https://tukan.mrspets.cloud/stream/live",
+  "auth_token": "GEO_HARRY_DALYBELL_SECURE",
+  "authorized_directors": [
+    "Harry",
+    "Dalybell"
+  ],
+  "stream_mode": "hybrid_embed",
+  "responsive_profiles": {
+    "samsung_fold": {
+      "layout": "2x2_expanded",
+      "aspect_ratio": "16:9",
+      "fps": 30,
+      "bitrate_kbps": 2048
+    },
+    "iphone": {
+      "layout": "vertical_scroll_stack",
+      "aspect_ratio": "16:9",
+      "fps": 25,
+      "bitrate_kbps": 1500
+    },
+    "desktop_pc": {
+      "layout": "matrix_4x4_full",
+      "aspect_ratio": "16:9",
+      "fps": 30,
+      "bitrate_kbps": 4096
+    }
+  },
+  "channels": [
+    {
+      "ch": 1,
+      "name": "Recepción y Acceso Principal",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-01",
+      "lan_rtsp": "rtsp://192.168.1.101:554/live/ch1"
+    },
+    {
+      "ch": 2,
+      "name": "Zona de Espera VIP & Tienda",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-02",
+      "lan_rtsp": "rtsp://192.168.1.102:554/live/ch2"
+    },
+    {
+      "ch": 3,
+      "name": "Grooming - Mesas de Trabajo",
+      "dept": "grooming",
+      "tukan_id": "TUK-CH-03",
+      "lan_rtsp": "rtsp://192.168.1.103:554/live/ch3"
+    },
+    {
+      "ch": 4,
+      "name": "Grooming - Bateas de Baño",
+      "dept": "grooming",
+      "tukan_id": "TUK-CH-04",
+      "lan_rtsp": "rtsp://192.168.1.104:554/live/ch4"
+    },
+    {
+      "ch": 5,
+      "name": "Consultorio Veterinario 1",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-05",
+      "lan_rtsp": "rtsp://192.168.1.105:554/live/ch5"
+    },
+    {
+      "ch": 6,
+      "name": "Consultorio Veterinario 2",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-06",
+      "lan_rtsp": "rtsp://192.168.1.106:554/live/ch6"
+    },
+    {
+      "ch": 7,
+      "name": "Quirófano Central 360",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-07",
+      "lan_rtsp": "rtsp://192.168.1.107:554/live/ch7"
+    },
+    {
+      "ch": 8,
+      "name": "Hospitalización & Terapia",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-08",
+      "lan_rtsp": "rtsp://192.168.1.108:554/live/ch8"
+    },
+    {
+      "ch": 9,
+      "name": "Sala de Rayos X Siemens",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-09",
+      "lan_rtsp": "rtsp://192.168.1.109:554/live/ch9"
+    },
+    {
+      "ch": 10,
+      "name": "Laboratorio Clínico Idexx",
+      "dept": "clinica",
+      "tukan_id": "TUK-CH-10",
+      "lan_rtsp": "rtsp://192.168.1.110:554/live/ch10"
+    },
+    {
+      "ch": 11,
+      "name": "Lavandería & Desinfección",
+      "dept": "lavanderia",
+      "tukan_id": "TUK-CH-11",
+      "lan_rtsp": "rtsp://192.168.1.111:554/live/ch11"
+    },
+    {
+      "ch": 12,
+      "name": "Sala de Máquinas & Bombas H2O",
+      "dept": "sala_maquinas",
+      "tukan_id": "TUK-CH-12",
+      "lan_rtsp": "rtsp://192.168.1.112:554/live/ch12"
+    },
+    {
+      "ch": 13,
+      "name": "Planta Eléctrica & Caseta",
+      "dept": "sala_maquinas",
+      "tukan_id": "TUK-CH-13",
+      "lan_rtsp": "rtsp://192.168.1.113:554/live/ch13"
+    },
+    {
+      "ch": 14,
+      "name": "Tanque Subterráneo 11k L",
+      "dept": "sala_maquinas",
+      "tukan_id": "TUK-CH-14",
+      "lan_rtsp": "rtsp://192.168.1.114:554/live/ch14"
+    },
+    {
+      "ch": 15,
+      "name": "Azotea / Tanque 5k L & HVAC",
+      "dept": "hvac",
+      "tukan_id": "TUK-CH-15",
+      "lan_rtsp": "rtsp://192.168.1.115:554/live/ch15"
+    },
+    {
+      "ch": 16,
+      "name": "Rack de Servidores TI & UPS",
+      "dept": "ti_redes",
+      "tukan_id": "TUK-CH-16",
+      "lan_rtsp": "rtsp://192.168.1.116:554/live/ch16"
+    },
+    {
+      "ch": 17,
+      "name": "Hotel Canino & Guardería",
+      "dept": "hvac",
+      "tukan_id": "TUK-CH-17",
+      "lan_rtsp": "rtsp://192.168.1.117:554/live/ch17"
+    },
+    {
+      "ch": 18,
+      "name": "Suites Felinas VIP",
+      "dept": "hvac",
+      "tukan_id": "TUK-CH-18",
+      "lan_rtsp": "rtsp://192.168.1.118:554/live/ch18"
+    },
+    {
+      "ch": 19,
+      "name": "Perímetro Cerco Eléctrico Norte",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-19",
+      "lan_rtsp": "rtsp://192.168.1.119:554/live/ch19"
+    },
+    {
+      "ch": 20,
+      "name": "Perímetro Cerco Eléctrico Sur",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-20",
+      "lan_rtsp": "rtsp://192.168.1.120:554/live/ch20"
+    },
+    {
+      "ch": 21,
+      "name": "Acceso Vehicular & Santa María",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-21",
+      "lan_rtsp": "rtsp://192.168.1.121:554/live/ch21"
+    },
+    {
+      "ch": 22,
+      "name": "Lobby Panorámico Central",
+      "dept": "tienda_seguridad",
+      "tukan_id": "TUK-CH-22",
+      "lan_rtsp": "rtsp://192.168.1.122:554/live/ch22"
+    }
+  ],
+  "preferred_mosaic_grid": "2x2",
+  "default_view_mode": "hybrid",
+  "last_updated_at": "2026-10-31T01:20:30.202424+00:00"
+}
