@@ -1114,6 +1114,30 @@ class PetStatusEngine {
     if (window.adminEngine && typeof window.adminEngine.syncPatientStatusFromTracker === 'function') {
       window.adminEngine.syncPatientStatusFromTracker(petId, targetIdx);
     }
+
+    // 🔔 DISPARAR NOTIFICACIONES EN PANTALLA Y AUTOMATIZACIÓN POR WHATSAPP
+    if (window.liveNotificationEngine) {
+      try {
+        const isHotel = (normArea === 'hotel' || pet.area === 'hotel');
+        if (targetIdx === 1) {
+          if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReceived === 'function') {
+            window.liveNotificationEngine.notifyHotelPetReceived(pet);
+          } else if (typeof window.liveNotificationEngine.notifyPetReceived === 'function') {
+            window.liveNotificationEngine.notifyPetReceived(pet);
+          }
+        } else if (targetIdx >= steps.length - 1) {
+          if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReadyHome === 'function') {
+            window.liveNotificationEngine.notifyHotelPetReadyHome(pet);
+          }
+          if (typeof window.liveNotificationEngine.notifyPetDelivered === 'function') {
+            window.liveNotificationEngine.notifyPetDelivered(pet);
+          }
+        }
+      } catch (errDirectNotif) {
+        console.warn('[PET STATUS] Error en notificación changeStepDirectly:', errDirectNotif);
+      }
+    }
+
     this.render();
 
     if (window.app && typeof window.app.showToast === 'function') {
@@ -2269,6 +2293,11 @@ class PetStatusEngine {
                   📸 Foto QC
                 </button>
               ` : ''}
+              ${(isStaff && pet.area === 'hotel') ? `
+                <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.liveNotificationEngine) window.liveNotificationEngine.notifyHotelPetReadyHome(petStatusEngine.pets.find(p=>p.id==='${pet.id}'));" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:white; font-weight:800; border:none; padding:6px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; box-shadow:0 2px 6px rgba(2,132,199,0.3); cursor:pointer;" title="Notificar al Tutor por WhatsApp y Pantalla: Perrito listo para regresar a casa (Check-out Hotel)">
+                  🏡 Listo para Casa
+                </button>
+              ` : ''}
               <button class="btn btn-whatsapp btn-sm" onclick="petStatusEngine.notifyOwner('${pet.id}')" style="padding:6px 10px; border-radius:8px; margin-left:auto;">
                 📱 WA
               </button>
@@ -2871,6 +2900,29 @@ class PetStatusEngine {
       }
     }
 
+    // 🔔 DISPARAR NOTIFICACIONES EN PANTALLA Y AUTOMATIZACIÓN POR WHATSAPP
+    if (window.liveNotificationEngine) {
+      try {
+        const isHotel = (normAreaAt1 === 'hotel' || pet.area === 'hotel');
+        if (targetIdx === 1) {
+          if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReceived === 'function') {
+            window.liveNotificationEngine.notifyHotelPetReceived(pet);
+          } else if (typeof window.liveNotificationEngine.notifyPetReceived === 'function') {
+            window.liveNotificationEngine.notifyPetReceived(pet);
+          }
+        } else if (targetIdx >= steps.length - 1) {
+          if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReadyHome === 'function') {
+            window.liveNotificationEngine.notifyHotelPetReadyHome(pet);
+          }
+          if (typeof window.liveNotificationEngine.notifyPetDelivered === 'function') {
+            window.liveNotificationEngine.notifyPetDelivered(pet);
+          }
+        }
+      } catch (errNotif) {
+        console.warn('[PET STATUS] Error al disparar notificación liveNotificationEngine:', errNotif);
+      }
+    }
+
     // 🔒 CIERRE OBLIGATORIO: Cerrar de forma inmediata e incondicional el modal tras ejecutar el proceso
     this.closeAdvanceStepModal();
 
@@ -3267,9 +3319,14 @@ class PetStatusEngine {
           <!-- BOTONES DE ACCIÓN PARA STAFF -->
           <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
             ${!isCompleted ? `
-              <button class="btn btn-sm btn-primary" onclick="petStatusEngine.markSaleDelivered('${sale.ticketId}')" style="background:linear-gradient(135deg, #10B981, #059669); color:white; font-weight:900; padding:8px; border-radius:8px; border:none; cursor:pointer; font-size:0.8rem;">
-                ✅ Marcar como Entregado / Despachado
-              </button>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-sm btn-primary" onclick="petStatusEngine.markSaleDelivered('${sale.ticketId}')" style="flex:1.2; background:linear-gradient(135deg, #10B981, #059669); color:white; font-weight:900; padding:8px; border-radius:8px; border:none; cursor:pointer; font-size:0.78rem;">
+                  ✅ Entregar Pedido
+                </button>
+                <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.liveNotificationEngine) window.liveNotificationEngine.notifyStoreOrderReady(window.storeSalesEngine ? window.storeSalesEngine.getAllSales().find(s=>s.ticketId==='${sale.ticketId}') : null);" style="flex:1; background:linear-gradient(135deg, #F59E0B, #D97706); color:white; font-weight:900; padding:8px; border-radius:8px; border:none; cursor:pointer; font-size:0.78rem;" title="Notificar al Cliente por WhatsApp y Pantalla que su pedido ya está empacado y listo">
+                  🛍️ Pedido Listo
+                </button>
+              </div>
             ` : `
               <div style="text-align:center; padding:6px; font-weight:800; font-size:0.76rem; color:#047857; background:#ECFDF5; border-radius:8px; border:1px solid #A7F3D0;">
                 ✨ Operación Facturada & Entregada
@@ -3292,8 +3349,16 @@ class PetStatusEngine {
   markSaleDelivered(ticketId) {
     if (window.storeSalesEngine) {
       window.storeSalesEngine.updateSaleStatus(ticketId, 'completed', 3);
+      const sale = window.storeSalesEngine.getAllSales().find(s => s.ticketId === ticketId || s.id === ticketId);
+      if (sale && window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyStoreOrderReady === 'function') {
+        try {
+          window.liveNotificationEngine.notifyStoreOrderReady(sale);
+        } catch (e) {
+          console.warn('[PET STATUS] Error al notificar pedido listo:', e);
+        }
+      }
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast(`✨ Venta ${ticketId} marcada como Entregada / Despachada.`, 'success');
+        window.app.showToast(`✨ Venta ${ticketId} marcada como Entregada / Despachada y notificada por WhatsApp.`, 'success');
       }
       this.render();
     }

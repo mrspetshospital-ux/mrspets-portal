@@ -2247,6 +2247,26 @@ async def broadcast_reservation_event_endpoint(request: Request):
     if len(_LIVE_RESERVATIONS_EVENTS) > _MAX_LIVE_EVENTS:
         _LIVE_RESERVATIONS_EVENTS.pop(0)
 
+    # Disparo asíncrono a Make.com Webhook para orquestación y trazabilidad multicanal
+    try:
+        make_webhook_url = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM") or os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        make_payload = {
+            "evento": event_type,
+            "origen": "MrsPets_LiveNotificationEngine",
+            "timestamp": new_evt["created_at"],
+            "datos": payload,
+            "whatsapp": {
+                "tutor": payload.get("tutor") or payload.get("owner") or payload.get("ownerName") or payload.get("customerName") or "Tutor VIP",
+                "telefono": payload.get("phone") or payload.get("ownerPhone") or payload.get("customerPhone") or "+584143891102",
+                "mascota": payload.get("pet") or payload.get("petName") or payload.get("name") or "Consentido VIP",
+                "area": payload.get("area") or "Servicios VIP",
+                "mensaje": payload.get("message") or payload.get("waMessage") or ""
+            }
+        }
+        _async_notify_make_webhook(make_webhook_url, make_payload)
+    except Exception as _err_make:
+        pass
+
     return ok(broadcasted=True, event=new_evt)
 
 

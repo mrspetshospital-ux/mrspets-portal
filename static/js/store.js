@@ -3244,6 +3244,8 @@ class StoreEngine {
       window.app.showToast('Procesando pago SSL seguro en Mrs. Pets...', 'info');
     }
 
+    const cartSnapshot = [...this.cart];
+
     setTimeout(() => {
       if (window.app && typeof window.app.closeModal === 'function') {
         window.app.closeModal('checkout-modal');
@@ -3293,7 +3295,7 @@ class StoreEngine {
             rif: 'V-18.452.910',
             phone: '+58 (414) 389-1102',
             petName: 'Princesa',
-            items: this.cart.map(i => ({
+            items: cartSnapshot.map(i => ({
               name: i.name,
               quantity: i.quantity || 1,
               price: typeof i.price === 'number' ? i.price : parseFloat(i.price || 0),
@@ -3314,6 +3316,35 @@ class StoreEngine {
         }
       } catch(e) {
         console.warn('Error al registrar venta en storeSalesEngine:', e);
+      }
+
+      // Notificación en pantalla y automatización WhatsApp
+      if (window.liveNotificationEngine) {
+        try {
+          const hasHotelItem = cartSnapshot.some(it => {
+            const n = (it.name || '').toLowerCase();
+            return n.includes('hotel') || n.includes('suite') || n.includes('hospedaje');
+          });
+
+          const payPayload = {
+            ticketId: ticketId,
+            tutor: customerName || 'Dalybell Ramírez Montilla',
+            phone: '+58 (414) 389-1102',
+            pet: cartSnapshot.find(i => i.pet)?.pet || 'Princesa',
+            total: totalPaid,
+            formattedTotalVes: formattedTotalVes,
+            totalVes: totalVes,
+            items: cartSnapshot
+          };
+
+          if (hasHotelItem && typeof window.liveNotificationEngine.notifyHotelPaymentConfirmed === 'function') {
+            window.liveNotificationEngine.notifyHotelPaymentConfirmed(payPayload);
+          } else if (typeof window.liveNotificationEngine.notifyPaymentConfirmed === 'function') {
+            window.liveNotificationEngine.notifyPaymentConfirmed(payPayload);
+          }
+        } catch (errPayNotify) {
+          console.warn('[LiveNotification] Error en notificación de pago:', errPayNotify);
+        }
       }
 
       if (window.app && typeof window.app.showScreenPop === 'function') {

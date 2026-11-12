@@ -3084,6 +3084,7 @@ class AdminEngine {
         id: appt.id,
         pet: appt.pet || (existingPatient ? (existingPatient.name || existingPatient.petName) : 'Mascota VIP'),
         tutor: appt.tutor || (existingPatient ? (existingPatient.owner || existingPatient.ownerName) : 'Tutor VIP'),
+        phone: appt.phone || appt.ownerPhone || (existingPatient ? (existingPatient.ownerPhone || existingPatient.phone) : null),
         area: targetArea,
         service: appt.service || 'Servicio Integral VIP',
         date: appt.date || (existingPatient ? existingPatient.reservationDate : ''),
@@ -4253,12 +4254,22 @@ class AdminEngine {
       app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura.', 'error');
       return;
     }
+    const cancelledAppt = this.bookedAppointments.find(a => a.id === aptId);
     this.bookedAppointments = this.bookedAppointments.filter(a => a.id !== aptId);
+    this.saveReservationsToStorage();
     this.refreshAllOperationalViews();
     if (document.getElementById('modal-large-calendar')?.style.display === 'flex') {
       this.renderLargeCalendarModalContent();
     }
     app.showToast('Cita cancelada y horario liberado en agenda.', 'info');
+
+    if (cancelledAppt && window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyReservationCancelled === 'function') {
+      try {
+        window.liveNotificationEngine.notifyReservationCancelled(cancelledAppt);
+      } catch (errCancel) {
+        console.warn('[LiveNotification] Error al notificar cancelación:', errCancel);
+      }
+    }
   }
 
   // =========================================================================

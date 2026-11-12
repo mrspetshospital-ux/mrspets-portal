@@ -615,6 +615,14 @@ class StoreSalesEngine {
 
     this.saveSales();
 
+    if (window.liveNotificationEngine && (newStatus === 'ready' || newStatus === 'completed' || sale.stepIndex >= 2)) {
+      try {
+        window.liveNotificationEngine.notifyStoreOrderReady(sale);
+      } catch (errStoreNotify) {
+        console.warn('[LiveNotification] Error en notifyStoreOrderReady:', errStoreNotify);
+      }
+    }
+
     if (window.petStatusEngine && typeof window.petStatusEngine.render === 'function') {
       window.petStatusEngine.render();
     }
