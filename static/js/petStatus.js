@@ -549,6 +549,41 @@ class PetStatusEngine {
     }
     const totalVes = (priceUsd * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const isPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
+    const petId = pet.id || 'PET-102';
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+      ? window.location.origin 
+      : 'https://mrspets-portal.onrender.com';
+    const directPayUrl = `${origin}/?action=checkout&petId=${encodeURIComponent(petId)}&tutor=${encodeURIComponent(tutor)}`;
+
+    const paymentAlertHtml = !isPaid ? `
+      <div style="background:linear-gradient(135deg, #FEF3C7, #FDE68A); border:2px solid #D4AF37; border-radius:14px; padding:14px 16px; margin-top:12px; color:#78350F; box-shadow:0 3px 12px rgba(212,175,55,0.25);">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:900; font-size:0.95rem;">
+            <span>💳</span> <strong>¿Aún no has pagado tu servicio?</strong>
+          </div>
+          <span class="badge" style="background:#D97706; color:#FFFFFF; font-weight:900; font-size:0.75rem; padding:3px 8px; border-radius:6px;">
+            Pendiente de Pago
+          </span>
+        </div>
+        <p style="margin:0 0 10px 0; font-size:0.83rem; line-height:1.45; color:#92400E;">
+          Para agilizar la entrega en recepción sin esperas, puedes pagar directamente en línea con Pago Móvil, Zelle o Tarjeta a Tasa Oficial BCV:
+        </p>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <a href="${directPayUrl}" target="_blank" style="background:#0F172A; color:#D4AF37 !important; font-weight:900; padding:9px 16px; border-radius:10px; text-decoration:none; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; border:1.5px solid #D4AF37; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+            👉 Pague aquí directamente en el carrito
+          </a>
+          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal');" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:9px 16px; border-radius:10px; border:none; font-size:0.82rem; cursor:pointer; box-shadow:0 2px 8px rgba(212,175,55,0.4);">
+            🛒 Abrir Cesta de Compras
+          </button>
+        </div>
+      </div>
+    ` : `
+      <div style="background:#ECFDF5; border:1.5px solid #10B981; border-radius:12px; padding:10px 14px; margin-top:12px; color:#065F46; font-size:0.85rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.1rem;">✅</span> <span><strong>Estatus de Pago:</strong> Pagado con Factura Fiscal Digital SENIAT</span>
+      </div>
+    `;
+
     const summaryHtml = `
       <div style="background:#F8FAFC; border:2px solid #10B981; border-radius:18px; padding:18px 20px; margin-bottom:16px;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
@@ -584,6 +619,8 @@ class PetStatusEngine {
           <br>
           <strong style="color:#047857;">Por favor confirme que se ha realizado el pago de su servicio</strong> para agilizar la entrega inmediata de su consentido en recepción sin tiempos de espera.
         </div>
+
+        ${paymentAlertHtml}
       </div>
     `;
 
@@ -597,7 +634,7 @@ class PetStatusEngine {
         summaryHtml: summaryHtml,
         buttons: [
           {
-            text: '💳 Confirmar Pago / Ver Cesta',
+            text: isPaid ? '🧾 Ver Factura / Cesta' : '💳 Pague Aquí en el Carrito ➔',
             primary: true,
             onClick: () => {
               if (window.app && typeof window.app.openModal === 'function') {
@@ -2714,6 +2751,12 @@ class PetStatusEngine {
           `;
         } else {
           const isGroomingReady = (pet.stepIndex === 6 && (cleanPetArea === 'grooming' || pet.area === 'grooming'));
+          const isPetPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
+          const payOrigin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+            ? window.location.origin 
+            : 'https://mrspets-portal.onrender.com';
+          const petPayUrl = `${payOrigin}/?action=checkout&petId=${encodeURIComponent(pet.id)}&tutor=${encodeURIComponent(pet.ownerName || pet.owner || 'Carlos Mendoza')}`;
+
           actionControlsHTML = `
             ${isGroomingReady ? `
               <div style="background:linear-gradient(135deg, #ECFDF5, #D1FAE5); border:2px solid #10B981; border-radius:14px; padding:12px 14px; margin-bottom:8px; box-shadow:0 4px 14px rgba(16,185,129,0.2);">
@@ -2723,12 +2766,24 @@ class PetStatusEngine {
                 <div style="font-size:0.78rem; color:#047857; line-height:1.4; margin-bottom:8px;">
                   Ha culminado su Circuito Spa (7 Estaciones) y se encuentra en Sala de Espera VIP. Por favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción.
                 </div>
+                ${!isPetPaid ? `
+                  <div style="background:rgba(212,175,55,0.2); border:1px solid #D4AF37; border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:0.78rem; color:#78350F;">
+                    <div style="font-weight:900; margin-bottom:4px;">💳 ¿Aún no has pagado tu servicio?</div>
+                    <a href="${petPayUrl}" target="_blank" style="background:#0F172A; color:#D4AF37 !important; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:900; font-size:0.75rem; display:inline-block; border:1px solid #D4AF37;">
+                      👉 Pague aquí directamente en el carrito
+                    </a>
+                  </div>
+                ` : `
+                  <div style="background:rgba(16,185,129,0.2); border:1px solid #10B981; border-radius:8px; padding:6px 10px; margin-bottom:10px; font-size:0.76rem; color:#065F46; font-weight:800;">
+                    ✅ Estatus: Pagado con Factura Fiscal Digital SENIAT
+                  </div>
+                `}
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); petStatusEngine.triggerPetReadyScreenPop(petStatusEngine.pets.find(p=>p.id==='${pet.id}')||'${pet.id}')" style="background:#10B981; color:white; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
                     🔔 Ver Notificación de Retiro
                   </button>
-                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.app) app.openModal('cart-modal')" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer;">
-                    💳 Confirmar Pago
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.app) app.openModal('cart-modal')" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.35);">
+                    💳 Pague Aquí en el Carrito ➔
                   </button>
                 </div>
               </div>
@@ -3504,7 +3559,22 @@ class PetStatusEngine {
     const pet = this.pets.find(p => p.id === petId);
     if (pet) {
       const currentStep = this.workflows[pet.area][pet.stepIndex];
-      const message = `Hola ${pet.ownerName || pet.owner || 'Tutor VIP'}, te informamos de parte de *Mrs. Pets Maracaibo (Clínica Veterinaria • Av. El Milagro)* que tu mascota *${pet.petName || pet.name || 'la mascota'}* está en: *${currentStep}*. 🐾`;
+      const isPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+        ? window.location.origin 
+        : 'https://mrspets-portal.onrender.com';
+      const directPayUrl = `${origin}/?action=checkout&petId=${encodeURIComponent(pet.id)}&tutor=${encodeURIComponent(pet.ownerName || pet.owner || 'Tutor VIP')}`;
+
+      let paymentText = '';
+      if (pet.stepIndex === 6) {
+        if (!isPaid) {
+          paymentText = `\n\n💳 *¿Aún no has pagado tu servicio? Pague aquí directamente en el carrito:*\n👉 ${directPayUrl}\n*(Haz clic en el enlace para abrir tu cesta y pagar con Pago Móvil, Zelle o Tarjeta a Tasa Oficial BCV)*`;
+        } else {
+          paymentText = `\n\n✅ *Estatus de Pago:* Pagado con Factura Fiscal Digital SENIAT.`;
+        }
+      }
+
+      const message = `Hola ${pet.ownerName || pet.owner || 'Tutor VIP'}, te informamos de parte de *Mrs. Pets Maracaibo (Clínica Veterinaria • Av. El Milagro)* que tu mascota *${pet.petName || pet.name || 'la mascota'}* está en: *${currentStep}*. 🐾${paymentText}`;
       app.showToast(`Notificación enviada a ${pet.ownerName || pet.owner || 'Tutor VIP'}`, 'info');
       whatsappSim.sendMessage(`[AUTOMÁTICO MRS. PETS] ${message}`);
     }

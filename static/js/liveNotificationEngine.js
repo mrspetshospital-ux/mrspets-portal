@@ -274,8 +274,22 @@
       const pet = petData.petName || petData.name || petData.pet || 'Fifi';
       const area = (petData.area || 'Grooming').toUpperCase();
       const turn = petData.turnNumber || '02';
+      const petId = petData.id || petData.petId || 'PET-102';
 
-      const msg = `🎉 *¡${pet} está lista para que sea buscada! (Mrs. Pets ${area})*\n\nHola *${tutor}*, te confirmamos con gran alegría que *${pet}* ya completó su circuito en *${area}* (Nivel 7: Listo ✨) y ha quedado hermosa, perfumada y radiante.\n\nPor favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción o solicite traslado con nuestra Limusina VIP. ¡Te esperamos! 🐾💙`;
+      const isPaid = Boolean(petData.paymentStatus === 'paid' || petData.hasPaid === true || petData.isPaid === true);
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+        ? window.location.origin 
+        : 'https://mrspets-portal.onrender.com';
+      const directPayUrl = `${origin}/?action=checkout&petId=${encodeURIComponent(petId)}&tutor=${encodeURIComponent(tutor)}`;
+      petData.directPayUrl = directPayUrl;
+      petData.isPaid = isPaid;
+
+      let msg = '';
+      if (!isPaid) {
+        msg = `🎉 *¡${pet} está lista para que sea buscada! (Mrs. Pets ${area})*\n\nHola *${tutor}*, te confirmamos con gran alegría que *${pet}* ya completó su circuito en *${area}* (Nivel 7: Listo ✨) y ha quedado hermosa, perfumada y radiante.\n\nPor favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción o solicite traslado con nuestra Limusina VIP. ¡Te esperamos! 🐾💙\n\n💳 *¿Aún no has pagado tu servicio? Pague aquí directamente en el carrito:*\n👉 ${directPayUrl}\n*(Haz clic en este enlace para abrir tu cesta y pagar con Pago Móvil, Zelle o Tarjeta a Tasa Oficial BCV)*`;
+      } else {
+        msg = `🎉 *¡${pet} está lista para que sea buscada! (Mrs. Pets ${area})*\n\nHola *${tutor}*, te confirmamos con gran alegría que *${pet}* ya completó su circuito en *${area}* (Nivel 7: Listo ✨) y ha quedado hermosa, perfumada y radiante.\n\n✅ *Estatus de Pago:* Pagado con Factura Fiscal Digital SENIAT.\n\nPuedes pasar a retirar a tu consentido(a) en recepción o solicitar traslado con nuestra Limusina VIP. ¡Te esperamos! 🐾💙`;
+      }
 
       const waRes = this.sendWhatsAppNotification({
         phone: petData.ownerPhone || petData.phone,
@@ -821,11 +835,35 @@
 
       const tutor = data.ownerName || data.owner || data.tutor || 'Carlos Mendoza';
       const pet = data.petName || data.name || data.pet || 'Fifi';
+      const petId = data.id || data.petId || 'PET-102';
       const area = (data.area || 'Grooming').toUpperCase();
       const waUrl = data.waUrl || `https://wa.me/584146799510`;
       const waPhone = data.waPhone || '+58 412-5551234';
 
+      const isPaid = Boolean(data.paymentStatus === 'paid' || data.hasPaid === true || data.isPaid === true);
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+        ? window.location.origin 
+        : 'https://mrspets-portal.onrender.com';
+      const directPayUrl = data.directPayUrl || `${origin}/?action=checkout&petId=${encodeURIComponent(petId)}&tutor=${encodeURIComponent(tutor)}`;
+
       const banner = this.createBaseBanner(bannerId, '#10B981', 'linear-gradient(135deg, #065F46 0%, #0F172A 100%)', 'rgba(16,185,129,0.5)');
+
+      const paymentBlockHtml = !isPaid ? `
+        <div style="margin-top:8px; background:rgba(212,175,55,0.2); border:1px solid #D4AF37; border-radius:8px; padding:8px 10px; font-size:0.78rem; color:#FEF3C7;">
+          <div style="font-weight:900; color:#FDE68A; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+            <span>💳</span> <span>¿Aún no has pagado tu servicio?</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:4px;">
+            <a href="${directPayUrl}" target="_blank" style="color:#0F172A !important; background:#D4AF37; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:900; display:inline-block; font-size:0.75rem;">
+              👉 Pague aquí directamente en el carrito
+            </a>
+          </div>
+        </div>
+      ` : `
+        <div style="margin-top:8px; background:rgba(16,185,129,0.2); border:1px solid #10B981; border-radius:8px; padding:6px 10px; font-size:0.78rem; color:#A7F3D0; font-weight:800;">
+          ✅ Estatus: Pagado con Factura Fiscal Digital SENIAT
+        </div>
+      `;
 
       banner.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
@@ -849,17 +887,18 @@
           <p style="margin:0 0 8px 0; color:#F8FAFC;">
             Estimado(a) <strong>${tutor}</strong>, <strong>${pet}</strong> ya culminó su circuito de Spa. Por favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción.
           </p>
+          ${paymentBlockHtml}
           <div style="margin-top:8px; background:rgba(37,211,102,0.15); border:1px solid #25D366; border-radius:8px; padding:5px 8px; font-size:0.74rem; color:#A7F3D0;">
-            📲 Notificación enviada por WhatsApp al tutor (${waPhone})
+            📲 Notificación con enlace de retiro enviada por WhatsApp al tutor (${waPhone})
           </div>
         </div>
 
         <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" onclick="if(window.petStatusEngine) window.petStatusEngine.triggerPetReadyScreenPop(window.petStatusEngine.pets.find(p=>p.id==='${data.id||'PET-102'}')||'${data.id||'PET-102'}'); liveNotify.dismiss('${bannerId}');" style="flex:1.2; background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; border:none; padding:10px 12px; border-radius:10px; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
-            🔔 Ver Notificación Screen Pop
+          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal'); liveNotify.dismiss('${bannerId}');" style="flex:1.3; background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; border-radius:10px; padding:10px 12px; border:none; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(212,175,55,0.4);">
+            💳 Pague Aquí en el Carrito ➔
           </button>
-          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal'); liveNotify.dismiss('${bannerId}');" style="flex:1; background:#D4AF37; color:#121214; font-weight:900; border-radius:10px; padding:10px 12px; border:none; font-size:0.82rem; cursor:pointer;">
-            💳 Pagar / Cesta
+          <button type="button" onclick="if(window.petStatusEngine) window.petStatusEngine.triggerPetReadyScreenPop(window.petStatusEngine.pets.find(p=>p.id==='${petId}')||'${petId}'); liveNotify.dismiss('${bannerId}');" style="flex:1; background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; border:none; padding:10px 12px; border-radius:10px; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
+            🔔 Ver Screen Pop
           </button>
         </div>
       `;

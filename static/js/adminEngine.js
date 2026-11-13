@@ -5497,8 +5497,23 @@ class AdminEngine {
     const pet = this.patientsStatus.find(p => p.id === petId);
     if (pet) {
       const currentStepName = this.workflows[pet.area][pet.stepIndex];
+      const isPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
+        ? window.location.origin 
+        : 'https://mrspets-portal.onrender.com';
+      const directPayUrl = `${origin}/?action=checkout&petId=${encodeURIComponent(pet.id)}&tutor=${encodeURIComponent(pet.owner || 'Tutor VIP')}`;
+
+      let paymentText = '';
+      if (pet.stepIndex === 6) {
+        if (!isPaid) {
+          paymentText = `\n\n💳 *¿Aún no has pagado tu servicio? Pague aquí directamente en el carrito:*\n👉 ${directPayUrl}\n*(Haz clic en este enlace para abrir tu cesta y pagar con Pago Móvil, Zelle o Tarjeta a Tasa Oficial BCV)*`;
+        } else {
+          paymentText = `\n\n✅ *Estatus de Pago:* Pagado con Factura Fiscal Digital SENIAT.`;
+        }
+      }
+
       app.switchTab('playground');
-      whatsappSim.sendPreset(`Notificación Oficial Mrs. Pets: Estimado(a) ${pet.owner}, tu mascota ${pet.name} se encuentra actualmente en el estado: *${currentStepName}*.`);
+      whatsappSim.sendPreset(`Notificación Oficial Mrs. Pets: Estimado(a) ${pet.owner}, tu mascota ${pet.name} se encuentra actualmente en el estado: *${currentStepName}*.${paymentText}`);
     }
   }
 

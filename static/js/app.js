@@ -48,6 +48,7 @@ class App {
     this.bindQuickActions();
     this.renderActivityStream();
     this.initResizeHandler();
+    this.handleDirectPaymentUrl();
   }
 
   bindNavigation() {
@@ -78,6 +79,10 @@ class App {
 
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '').replace('tab-', '').trim();
+      if (hash === 'cart' || hash === 'checkout' || hash === 'pagueaqui') {
+        this.handleDirectPaymentUrl();
+        return;
+      }
       if (hash) {
         const protectedTabs = ['admin', 'analytics', 'integrations', 'health-dashboard', 'agent-studio', 'marketing-command', 'war-room', 'misipet'];
         if (!protectedTabs.includes(hash) || isUserStaffOrAdmin()) {
@@ -94,6 +99,10 @@ class App {
     });
 
     const initialHash = window.location.hash.replace('#', '').replace('tab-', '').trim();
+    if (initialHash === 'cart' || initialHash === 'checkout' || initialHash === 'pagueaqui') {
+      setTimeout(() => this.handleDirectPaymentUrl(), 50);
+      return;
+    }
     if (initialHash && initialHash !== 'welcome') {
       setTimeout(() => {
         const isAuth = isUserStaffOrAdmin() || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true');
@@ -617,6 +626,14 @@ class App {
   }
 
   openModal(modalId) {
+    if (modalId === 'cart-modal' || modalId === 'quick-cart-modal') {
+      if (window.storeEngine && typeof window.storeEngine.openQuickCartModal === 'function') {
+        window.storeEngine.openQuickCartModal();
+        return;
+      }
+      modalId = 'quick-cart-modal';
+    }
+
     const modal = document.getElementById(modalId);
     if (modal) {
       if (modalId === 'enterprise-login-modal' || modalId === 'vip-client-lookup-modal' || modalId === 'registration-modal' || modalId === 'client-profile-pin-modal') {
@@ -697,6 +714,9 @@ class App {
   }
 
   closeModal(modalId) {
+    if (modalId === 'cart-modal') {
+      modalId = 'quick-cart-modal';
+    }
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.remove('active');
@@ -1003,6 +1023,114 @@ class App {
     if (acc) {
       acc.open = true;
       acc.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  handleDirectPaymentUrl() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = (window.location.hash || '').toLowerCase().replace('#', '').replace('tab-', '').trim();
+
+      const isCheckoutAction = urlParams.get('action') === 'checkout' ||
+                               urlParams.get('action') === 'pay' ||
+                               urlParams.get('pagueAqui') === 'true' ||
+                               urlParams.get('pague_aqui') === 'true' ||
+                               urlParams.get('openCart') === 'true' ||
+                               urlParams.get('open_cart') === 'true' ||
+                               urlParams.get('cart') === 'true' ||
+                               hash === 'cart' ||
+                               hash === 'checkout' ||
+                               hash === 'pagueaqui';
+
+      if (!isCheckoutAction) return;
+
+      const petId = urlParams.get('petId') || urlParams.get('pet_id') || urlParams.get('pet') || 'PET-102';
+      const rawTutor = urlParams.get('tutor') || urlParams.get('owner') || 'Carlos Mendoza';
+      const tutor = decodeURIComponent(rawTutor).trim();
+
+      // 1. Bypass Splash Video & Portal Concierge
+      if (window.authEngine && typeof window.authEngine.hidePortalAndShowApp === 'function') {
+        window.authEngine.hidePortalAndShowApp();
+      }
+      try {
+        localStorage.setItem('mrs_pets_skip_splash', 'true');
+        sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
+      } catch (e) {}
+
+      // 2. Establecer entorno cliente / Customer View Mode
+      if (document.body) {
+        document.body.classList.remove('enterprise-view-mode');
+        document.body.classList.add('customer-view-mode');
+      }
+      if (window.adminEngine && typeof window.adminEngine.setEnvironment === 'function') {
+        window.adminEngine.setEnvironment('customer');
+      }
+
+      // 3. Conmutar al perfil del paciente VIP correspondiente
+      const allPets = (window.adminEngine?.patientsStatus || window.petStatusEngine?.pets || []);
+      let targetPet = allPets.find(p => p.id === petId);
+      if (!targetPet && tutor) {
+        targetPet = allPets.find(p => {
+          const owner = (p.owner || p.ownerName || '').toLowerCase();
+          return owner.includes(tutor.toLowerCase());
+        });
+      }
+
+      const activePetId = targetPet ? targetPet.id : petId;
+      const activeTutor = targetPet ? (targetPet.owner || targetPet.ownerName || tutor) : tutor;
+      const activePetName = targetPet ? (targetPet.name || targetPet.petName || 'Fifi') : 'Fifi';
+
+      try {
+        localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId);
+        localStorage.setItem('mrs_pets_active_customer_name', activeTutor);
+        localStorage.setItem('mrs_pets_auth_role', 'client');
+        localStorage.setItem('mrs_pets_auth_name', `${activeTutor} (Tutor de ${activePetName})`);
+        if (targetPet && targetPet.rif) {
+          localStorage.setItem('mrs_pets_active_customer_rif', targetPet.rif);
+        }
+      } catch (e) {}
+
+      if (window.authEngine) {
+        window.authEngine.currentVipPetId = activePetId;
+        window.authEngine.userRole = 'client';
+        window.authEngine.userName = `${activeTutor} (Tutor de ${activePetName})`;
+      }
+
+      // 4. Cambiar de pestaña al área de tienda
+      if (typeof this.switchTab === 'function') {
+        this.switchTab('tienda', false);
+      }
+
+      // 5. Cargar servicios de grooming a la cesta si no están sincronizados
+      if (window.storeEngine) {
+        if (typeof window.storeEngine.loadCart === 'function') {
+          window.storeEngine.loadCart();
+        }
+        if (typeof window.storeEngine.syncCustomerGroomingServicesToCart === 'function') {
+          window.storeEngine.syncCustomerGroomingServicesToCart();
+        }
+      }
+
+      // 6. Actualizar vistas de Estatus y Pantalla
+      if (window.petStatusEngine && typeof window.petStatusEngine.render === 'function') {
+        window.petStatusEngine.render();
+      }
+
+      // 7. Desplegar de inmediato el Modal de Checkout / Carrito de Compras
+      setTimeout(() => {
+        if (window.storeEngine && typeof window.storeEngine.openQuickCartModal === 'function') {
+          window.storeEngine.openQuickCartModal();
+        } else {
+          this.openModal('quick-cart-modal');
+        }
+
+        if (typeof this.showToast === 'function') {
+          this.showToast(`🛒 Cesta abierta para ${activeTutor}. Selecciona tu método de pago preferido (BCV).`, 'info');
+        }
+      }, 400);
+
+    } catch (err) {
+      console.warn('[app.handleDirectPaymentUrl] Error:', err);
     }
   }
 }
