@@ -46,6 +46,12 @@ class PetStatusEngine {
     this.currentFilter = 'all'; // Area filter: 'all', 'grooming', 'clinica', 'hotel'
     this.currentStatusFilter = 'in_progress'; // Process filter: 'in_progress', 'processed', 'all'
     this.currentDateFilter = 'today'; // Date filter: 'today', 'week', 'fortnight', 'all_dates'
+
+    // Sincronización Multiplataforma en Tiempo Real (Móvil Staff <-> Computadora Cliente)
+    this.currentServerRevision = 0;
+    this._isPolling = false;
+    this.syncTimer = null;
+    this._syncDebounceTimer = null;
   }
 
   getDefaultPets() {
@@ -333,6 +339,238 @@ class PetStatusEngine {
     this.loadPetsFromStorage();
     this.render();
     this.bindEvents();
+
+    // Sincronización Multiplataforma en Tiempo Real (Móvil Staff <-> Computadora Cliente)
+    this.fetchLiveStatusFromServer();
+    this.startRealtimeSyncLoop();
+  }
+
+  async fetchLiveStatusFromServer() {
+    try {
+      const res = await fetch('/api/v1/pet-status/live');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !Array.isArray(data.pets) || data.pets.length === 0) return;
+
+      this.currentServerRevision = data.revision || 1;
+      const changed = this.mergeServerPets(data.pets);
+      if (changed) {
+        this.render();
+        if (window.adminEngine && typeof window.adminEngine.renderStatusManager === 'function') {
+          window.adminEngine.renderStatusManager();
+        }
+      }
+    } catch (e) {
+      console.warn('[PetStatusEngine] Error fetching live status from server:', e);
+    }
+  }
+
+  async pollServerUpdates() {
+    if (this._isPolling) return;
+    this._isPolling = true;
+    try {
+      const since = this.currentServerRevision || 0;
+      const res = await fetch(`/api/v1/pet-status/poll?since=${since}`);
+      if (!res.ok) {
+        this._isPolling = false;
+        return;
+      }
+      const data = await res.json();
+      if (data && data.has_updates && Array.isArray(data.pets)) {
+        this.currentServerRevision = data.revision || (this.currentServerRevision + 1);
+        const changed = this.mergeServerPets(data.pets);
+        if (changed) {
+          this.render();
+          if (window.adminEngine && typeof window.adminEngine.renderStatusManager === 'function') {
+            window.adminEngine.renderStatusManager();
+          }
+        }
+      }
+    } catch (e) {
+      // Supresión de errores silenciosa en background poll
+    } finally {
+      this._isPolling = false;
+    }
+  }
+
+  mergeServerPets(serverPets) {
+    if (!Array.isArray(serverPets) || serverPets.length === 0) return false;
+    let anyChanges = false;
+
+    serverPets.forEach(srvPet => {
+      if (!srvPet || !srvPet.id) return;
+      const local = this.pets.find(p => p.id === srvPet.id || 
+        (p.petName && srvPet.petName && this.normalizePetBaseName(p.petName) === this.normalizePetBaseName(srvPet.petName) && this.normalizeService(p.area) === this.normalizeService(srvPet.area)));
+
+      if (local) {
+        const stepChanged = typeof srvPet.stepIndex === 'number' && local.stepIndex !== srvPet.stepIndex;
+        const staffChanged = srvPet.assignedStaffName && local.assignedStaffName !== srvPet.assignedStaffName;
+        const notesChanged = srvPet.notes && local.notes !== srvPet.notes;
+        const dermalChanged = srvPet.dermalCondition && local.dermalCondition !== srvPet.dermalCondition;
+        const completedChanged = srvPet.isCompleted !== undefined && local.isCompleted !== srvPet.isCompleted;
+
+        if (stepChanged || staffChanged || notesChanged || dermalChanged || completedChanged) {
+          anyChanges = true;
+          local.stepIndex = srvPet.stepIndex !== undefined ? srvPet.stepIndex : local.stepIndex;
+          if (srvPet.assignedStaffId) local.assignedStaffId = srvPet.assignedStaffId;
+          if (srvPet.assignedStaffName) local.assignedStaffName = srvPet.assignedStaffName;
+          if (srvPet.dermalCondition) local.dermalCondition = srvPet.dermalCondition;
+          if (srvPet.dermalConditionLabel) local.dermalConditionLabel = srvPet.dermalConditionLabel;
+          if (srvPet.isContagious !== undefined) local.isContagious = srvPet.isContagious;
+          if (srvPet.sanitaryAlert !== undefined) local.sanitaryAlert = srvPet.sanitaryAlert;
+          if (srvPet.notes) local.notes = srvPet.notes;
+          if (srvPet.updatedAt) local.updatedAt = srvPet.updatedAt;
+          if (Array.isArray(srvPet.traceLogs)) local.traceLogs = srvPet.traceLogs;
+          if (srvPet.isCompleted !== undefined) local.isCompleted = srvPet.isCompleted;
+          if (srvPet.deliveredAt) local.deliveredAt = srvPet.deliveredAt;
+          if (srvPet.deliveredBy) local.deliveredBy = srvPet.deliveredBy;
+        }
+      } else {
+        this.pets.push(srvPet);
+        anyChanges = true;
+      }
+    });
+
+    if (anyChanges) {
+      this.savePetsToStorage({ skipServerSync: true });
+      if (window.adminEngine) {
+        window.adminEngine.patientsStatus = this.pets;
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('mrs_pets_patient_status_synced', {
+          detail: { pets: this.pets }
+        }));
+      } catch (e) {}
+    }
+
+    return anyChanges;
+  }
+
+  async syncPetStatusToServer(pet) {
+    if (!pet || !pet.id) return;
+    try {
+      const payload = {
+        id: pet.id,
+        petName: pet.petName || pet.name,
+        name: pet.name || pet.petName,
+        ownerName: pet.ownerName || pet.owner,
+        owner: pet.owner || pet.ownerName,
+        ownerPhone: pet.ownerPhone,
+        rif: pet.rif,
+        pin: pet.pin,
+        area: pet.area,
+        sector: pet.sector,
+        stepIndex: typeof pet.stepIndex === 'number' ? pet.stepIndex : 0,
+        turnNumber: pet.turnNumber || pet.turno,
+        turno: pet.turno || pet.turnNumber,
+        turnTicket: pet.turnTicket,
+        hasReservation: pet.hasReservation !== false,
+        reservationDate: pet.reservationDate,
+        reservationTime: pet.reservationTime,
+        service: pet.service,
+        price: pet.price,
+        notes: pet.notes,
+        assignedStaffId: pet.assignedStaffId,
+        assignedStaffName: pet.assignedStaffName,
+        dermalCondition: pet.dermalCondition,
+        dermalConditionLabel: pet.dermalConditionLabel,
+        isContagious: Boolean(pet.isContagious),
+        sanitaryAlert: pet.sanitaryAlert,
+        isCompleted: Boolean(pet.isCompleted),
+        deliveredAt: pet.deliveredAt,
+        deliveredBy: pet.deliveredBy,
+        updatedAt: pet.updatedAt || 'Ahora mismo',
+        traceLogs: Array.isArray(pet.traceLogs) ? pet.traceLogs.slice(-10) : []
+      };
+
+      const res = await fetch('/api/v1/pet-status/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.revision) {
+          this.currentServerRevision = data.revision;
+        }
+      }
+    } catch (err) {
+      console.warn('[PetStatusEngine] Error syncing pet status to server:', err);
+    }
+  }
+
+  syncAllPetsToServerDebounced() {
+    if (this._syncDebounceTimer) clearTimeout(this._syncDebounceTimer);
+    this._syncDebounceTimer = setTimeout(() => {
+      this.syncAllPetsToServer();
+    }, 1200);
+  }
+
+  async syncAllPetsToServer() {
+    if (!Array.isArray(this.pets) || this.pets.length === 0) return;
+    try {
+      const petsPayload = this.pets.map(p => ({
+        id: p.id,
+        petName: p.petName || p.name,
+        name: p.name || p.petName,
+        ownerName: p.ownerName || p.owner,
+        owner: p.owner || p.ownerName,
+        ownerPhone: p.ownerPhone,
+        rif: p.rif,
+        pin: p.pin,
+        area: p.area,
+        sector: p.sector,
+        stepIndex: typeof p.stepIndex === 'number' ? p.stepIndex : 0,
+        turnNumber: p.turnNumber || p.turno,
+        turno: p.turno || p.turnNumber,
+        turnTicket: p.turnTicket,
+        hasReservation: p.hasReservation !== false,
+        reservationDate: p.reservationDate,
+        reservationTime: p.reservationTime,
+        service: p.service,
+        price: p.price,
+        notes: p.notes,
+        assignedStaffId: p.assignedStaffId,
+        assignedStaffName: p.assignedStaffName,
+        dermalCondition: p.dermalCondition,
+        dermalConditionLabel: p.dermalConditionLabel,
+        isContagious: Boolean(p.isContagious),
+        sanitaryAlert: p.sanitaryAlert,
+        isCompleted: Boolean(p.isCompleted),
+        deliveredAt: p.deliveredAt,
+        deliveredBy: p.deliveredBy,
+        updatedAt: p.updatedAt || 'Ahora mismo',
+        traceLogs: Array.isArray(p.traceLogs) ? p.traceLogs.slice(-10) : []
+      }));
+
+      const res = await fetch('/api/v1/pet-status/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pets: petsPayload })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.revision) {
+          this.currentServerRevision = data.revision;
+        }
+      }
+    } catch (e) {
+      console.warn('[PetStatusEngine] Error syncing all pets to server:', e);
+    }
+  }
+
+  startRealtimeSyncLoop() {
+    if (this.syncTimer) clearInterval(this.syncTimer);
+    this.syncTimer = setInterval(() => {
+      this.pollServerUpdates();
+    }, 2500);
+
+    window.addEventListener('focus', () => this.pollServerUpdates());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.pollServerUpdates();
+      }
+    });
   }
 
   loadPetsFromStorage() {
@@ -506,7 +744,7 @@ class PetStatusEngine {
     }
   }
 
-  savePetsToStorage() {
+  savePetsToStorage(options = {}) {
     try {
       localStorage.setItem('mrs_pets_registered_pets', JSON.stringify(this.pets));
       localStorage.setItem('mrs_pets_admin_patients', JSON.stringify(this.pets));
@@ -518,6 +756,9 @@ class PetStatusEngine {
       if (typeof window.adminEngine.renderClientDatabaseManager === 'function') {
         window.adminEngine.renderClientDatabaseManager();
       }
+    }
+    if (!options || !options.skipServerSync) {
+      this.syncAllPetsToServerDebounced();
     }
   }
 
@@ -1141,6 +1382,7 @@ class PetStatusEngine {
     }
 
     this.render();
+    this.syncPetStatusToServer(pet);
 
     if (window.app && typeof window.app.showToast === 'function') {
       window.app.showToast(`✨ ${pet.petName || pet.name} cambió a la etapa: ${targetIdx + 1}. ${currentStepName}`, 'success');
@@ -2940,6 +3182,7 @@ class PetStatusEngine {
       this.resequenceTurnsForArea(pet.area);
       this.savePetsToStorage();
       this.render();
+      this.syncPetStatusToServer(pet);
     } catch (e) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn('[PET STATUS] Error during render after advancing step:', e);

@@ -5150,6 +5150,7 @@ class AdminEngine {
           }
           if (typeof window.petStatusEngine.resequenceTurnsForArea === 'function') window.petStatusEngine.resequenceTurnsForArea(normArea);
           if (typeof window.petStatusEngine.savePetsToStorage === 'function') window.petStatusEngine.savePetsToStorage();
+          if (typeof window.petStatusEngine.syncPetStatusToServer === 'function') window.petStatusEngine.syncPetStatusToServer(pSE || pet);
           if (typeof window.petStatusEngine.render === 'function') window.petStatusEngine.render();
         }
 
@@ -5262,6 +5263,7 @@ class AdminEngine {
           }
           if (typeof window.petStatusEngine.resequenceTurnsForArea === 'function') window.petStatusEngine.resequenceTurnsForArea(normArea);
           if (typeof window.petStatusEngine.savePetsToStorage === 'function') window.petStatusEngine.savePetsToStorage();
+          if (typeof window.petStatusEngine.syncPetStatusToServer === 'function') window.petStatusEngine.syncPetStatusToServer(pSE || pet);
         }
 
         this.savePatientsToStorage();
@@ -5375,6 +5377,7 @@ class AdminEngine {
         }
         if (typeof window.petStatusEngine.resequenceTurnsForArea === 'function') window.petStatusEngine.resequenceTurnsForArea(normArea);
         if (typeof window.petStatusEngine.savePetsToStorage === 'function') window.petStatusEngine.savePetsToStorage();
+        if (typeof window.petStatusEngine.syncPetStatusToServer === 'function') window.petStatusEngine.syncPetStatusToServer(pSE || pet);
       }
 
       this.savePatientsToStorage();

@@ -435,6 +435,15 @@ class App {
         }
       }
 
+      if (tabName === 'pet-status' && window.petStatusEngine) {
+        if (typeof window.petStatusEngine.pollServerUpdates === 'function') {
+          window.petStatusEngine.pollServerUpdates();
+        }
+        if (typeof window.petStatusEngine.render === 'function') {
+          window.petStatusEngine.render();
+        }
+      }
+
       if (tabName === 'store' && typeof storeEngine !== 'undefined') {
         storeEngine.loadProductsFromCatalog();
         storeEngine.loadCart();

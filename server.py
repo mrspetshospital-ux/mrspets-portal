@@ -2602,6 +2602,122 @@ async def handle_grooming_qc_photos(request: Request):
     }
 
 
+# =====================================================================
+# LIVE PET STATUS & CROSS-DEVICE REAL-TIME SYNCHRONIZATION
+# =====================================================================
+
+_live_pet_status_lock = threading.Lock()
+_live_pet_status_revision = 1
+_live_pet_status_cache = {}
+
+def _get_live_pet_status_path() -> Path:
+    p = Path(__file__).resolve().parent / "data" / "live_pet_status.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
+
+def _load_live_pet_status_from_disk():
+    global _live_pet_status_cache, _live_pet_status_revision
+    p = _get_live_pet_status_path()
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    _live_pet_status_revision = data.get("revision", 1)
+                    _live_pet_status_cache = data.get("pets", {})
+                    return
+        except Exception as e:
+            log.warning(f"Error loading live_pet_status.json: {e}")
+    _live_pet_status_cache = {}
+    _live_pet_status_revision = 1
+
+def _save_live_pet_status_to_disk():
+    global _live_pet_status_cache, _live_pet_status_revision
+    p = _get_live_pet_status_path()
+    try:
+        payload = {
+            "revision": _live_pet_status_revision,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "pets": _live_pet_status_cache
+        }
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        log.warning(f"Error saving live_pet_status.json: {e}")
+
+_load_live_pet_status_from_disk()
+
+@app.get("/api/v1/pet-status/live")
+def get_live_pet_status():
+    with _live_pet_status_lock:
+        return {
+            "status": "success",
+            "revision": _live_pet_status_revision,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "pets": list(_live_pet_status_cache.values())
+        }
+
+@app.get("/api/v1/pet-status/poll")
+def poll_pet_status(since: int = Query(0)):
+    with _live_pet_status_lock:
+        has_updates = since < _live_pet_status_revision
+        return {
+            "status": "success",
+            "has_updates": has_updates,
+            "revision": _live_pet_status_revision,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "pets": list(_live_pet_status_cache.values()) if has_updates else []
+        }
+
+@app.post("/api/v1/pet-status/update")
+async def update_pet_status(request: Request):
+    global _live_pet_status_revision
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    with _live_pet_status_lock:
+        updated_ids = []
+        if isinstance(body, dict) and "id" in body:
+            pet_id = str(body["id"])
+            current = _live_pet_status_cache.get(pet_id, {})
+            current.update(body)
+            current["serverUpdatedAt"] = datetime.now(timezone.utc).isoformat()
+            _live_pet_status_cache[pet_id] = current
+            updated_ids.append(pet_id)
+        elif isinstance(body, dict) and "pets" in body and isinstance(body["pets"], list):
+            for p in body["pets"]:
+                if isinstance(p, dict) and "id" in p:
+                    pet_id = str(p["id"])
+                    curr = _live_pet_status_cache.get(pet_id, {})
+                    curr.update(p)
+                    curr["serverUpdatedAt"] = datetime.now(timezone.utc).isoformat()
+                    _live_pet_status_cache[pet_id] = curr
+                    updated_ids.append(pet_id)
+        elif isinstance(body, list):
+            for p in body:
+                if isinstance(p, dict) and "id" in p:
+                    pet_id = str(p["id"])
+                    curr = _live_pet_status_cache.get(pet_id, {})
+                    curr.update(p)
+                    curr["serverUpdatedAt"] = datetime.now(timezone.utc).isoformat()
+                    _live_pet_status_cache[pet_id] = curr
+                    updated_ids.append(pet_id)
+
+        if updated_ids:
+            _live_pet_status_revision += 1
+            _save_live_pet_status_to_disk()
+
+        return {
+            "status": "success",
+            "revision": _live_pet_status_revision,
+            "updated_count": len(updated_ids),
+            "updated_ids": updated_ids,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+
 @app.get("/api/agent-studio/config")
 async def get_agent_studio_config():
     default_config = {
