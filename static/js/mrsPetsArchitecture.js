@@ -2871,6 +2871,17 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     this.handleInternalPhotoPreview(e);
   }
 
+  getGroomingMarketingWebhookUrl() {
+    const saved = localStorage.getItem('mrspets_make_grooming_marketing_webhook_url');
+    return (saved && saved.trim()) ? saved.trim() : 'https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j';
+  }
+
+  saveGroomingMarketingWebhookUrl(url) {
+    if (url) {
+      localStorage.setItem('mrspets_make_grooming_marketing_webhook_url', url.trim());
+    }
+  }
+
   getPosWebhookUrl() {
     if (window.agentStudio && typeof window.agentStudio.getPosWebhookUrl === 'function') {
       return window.agentStudio.getPosWebhookUrl();
@@ -2907,9 +2918,13 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     this.triggerMakeWebhook('pos_sale_live_test', { amount: 85.00, items: 'Baño Spa + Profilaxis Dental (Test Live)' });
   }
 
-  // Helper HTTP POST Webhook to Make.com en Vivo con Estructura Plana para Google Sheets
+  // Helper HTTP POST Webhook to Make.com en Vivo con Estructura Plana para Google Sheets / Telegram
   triggerMakeWebhook(eventType, payload) {
-    const webhookUrl = this.getPosWebhookUrl();
+    const isGroomingOrMarketing = eventType === 'grooming_qc_social_media_ready' ||
+                                  eventType.includes('grooming') ||
+                                  eventType.includes('marketing') ||
+                                  eventType.includes('campaign');
+    const webhookUrl = isGroomingOrMarketing ? this.getGroomingMarketingWebhookUrl() : this.getPosWebhookUrl();
     let fullPayload;
 
     if (eventType === 'leia_chat_conversation' || eventType === 'leia_chat_query') {

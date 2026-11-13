@@ -2564,14 +2564,28 @@ async def handle_grooming_qc_photos(request: Request):
         ip=client_ip(request)
     )
 
-    # 2. Despacho a Make.com (vía webhook para procesamiento y publicación en redes sociales)
+    # 2. Despacho a Make.com (vía webhook oficial de marketing & grooming para transferencia a Telegram @mrspets_vip)
     make_result = {"status": "skipped"}
-    make_url = os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+    make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
     try:
         req_data = json.dumps({
             "event": "grooming_qc_social_media_ready",
-            "session": data,
+            "tipo": "GROOMING_QC_4_PHOTOS",
+            "action": "TRANSFER_TO_TELEGRAM",
+            "canal": "telegram",
             "telegramTarget": telegram_target,
+            "telegramBotName": "Mrs. Pets Corporate Telegram Bot",
+            "sessionId": session_id,
+            "petId": pet_id,
+            "petName": pet_name,
+            "tutorName": tutor_name,
+            "breed": data.get("breed") or "Consentido VIP",
+            "station": data.get("station") or "Circuito Grooming Spa 7 Estaciones",
+            "photosCount": photos_count,
+            "photos": photos,
+            "driveFolderUrl": drive_url,
+            "supervisorNotes": data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming",
+            "session": data,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }).encode("utf-8")
         ctx_ssl = ssl.create_default_context()
@@ -2583,7 +2597,7 @@ async def handle_grooming_qc_photos(request: Request):
             headers={"Content-Type": "application/json; charset=utf-8"},
             method="POST"
         )
-        with urllib.request.urlopen(m_req, context=ctx_ssl, timeout=10) as resp:
+        with urllib.request.urlopen(m_req, context=ctx_ssl, timeout=12) as resp:
             make_result = {"status": "dispatched", "code": resp.status}
     except Exception as e:
         make_result = {"status": "error", "error": str(e)}
@@ -2591,15 +2605,190 @@ async def handle_grooming_qc_photos(request: Request):
     return {
         "status": 200,
         "success": True,
-        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito (4 fotos). Notificación enviada a supervisora vía Telegram {telegram_target} y Make.com.",
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito (4 fotos). Notificación enviada a supervisora vía Telegram {telegram_target} y Make.com ({make_url}).",
         "sessionId": session_id,
         "petId": pet_id,
         "photosCount": photos_count,
         "driveFolderUrl": drive_url,
         "telegramTarget": telegram_target,
+        "makeWebhookUrl": make_url,
         "makeStatus": make_result.get("status"),
         "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA"
     }
+
+
+# =====================================================================
+# MARKETING & CAMPAÑAS PUBLICITARIAS (O'NEIL • MAKE.COM WEBHOOK & TELEGRAM)
+# =====================================================================
+MAKE_MARKETING_WEBHOOK_DEFAULT = "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+
+@app.post("/api/v1/marketing/campaigns/dispatch")
+@app.post("/api/marketing/dispatch-campaign")
+async def dispatch_marketing_campaign_oneil(request: Request):
+    """
+    Despacho oficial de campañas publicitarias y directivas de marketing gestionadas por O'Neil hacia Make.com y Telegram.
+    """
+    data = {}
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    campaign_id = data.get("campaignId") or "CMP-001"
+    campaign_name = data.get("campaignName") or data.get("title") or "Project Paul"
+    manager = data.get("manager") or "O'Neil"
+    target_club = data.get("targetClub") or "all"
+    budget_usd = data.get("budgetUSD") or data.get("budgetUsd") or 3500
+    bcv_rate = data.get("bcvRate") or 887.30
+    webhook_url = data.get("webhookUrl") or os.environ.get("MAKE_WEBHOOK_URL_MARKETING") or MAKE_MARKETING_WEBHOOK_DEFAULT
+
+    user = current_user(request) or {"tipo": "staff", "nombre": "O'Neil (Líder de Marketing)"}
+
+    # Auditoría inmutable de despacho de campaña
+    sec.audit(
+        "marketing",
+        "CAMPAIGN_DISPATCH_MAKE",
+        registro_id=campaign_id,
+        despues={
+            "campaignName": campaign_name,
+            "manager": manager,
+            "targetClub": target_club,
+            "budgetUSD": budget_usd,
+            "webhookUrl": webhook_url,
+            "telegramTarget": "@mrspets_vip"
+        },
+        usuario=user,
+        ip=client_ip(request)
+    )
+
+    payload = {
+        "event": "MARKETING_CAMPAIGN_DISPATCH",
+        "tipo": "CAMPANA_PUBLICITARIA_ONEIL",
+        "manager": "O'Neil",
+        "campaignId": campaign_id,
+        "campaignName": campaign_name,
+        "targetClub": target_club,
+        "budgetUSD": budget_usd,
+        "bcvRate": bcv_rate,
+        "telegramTarget": "@mrspets_vip",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": "DISPATCHED_TO_MAKE"
+    }
+
+    try:
+        _async_notify_make_webhook(webhook_url, payload)
+    except Exception:
+        pass
+
+    return ok(
+        status="SUCCESS",
+        campaignId=campaign_id,
+        campaignName=campaign_name,
+        manager=manager,
+        webhookUrl=webhook_url,
+        telegramTarget="@mrspets_vip",
+        mensaje=f"Campaña '{campaign_name}' de O'Neil despachada exitosamente a Make.com y Telegram ({webhook_url})",
+        timestamp=datetime.now(timezone.utc).isoformat()
+    )
+
+
+@app.get("/api/v1/marketing/campaigns")
+def get_marketing_campaigns_list():
+    """Retorna listado de campañas publicitarias activas de O'Neil con su webhook configurado."""
+    camp_path = DATA_DIR / "marketing_campaigns.json"
+    if camp_path.exists():
+        try:
+            with open(camp_path, "r", encoding="utf-8") as f:
+                camps = json.load(f)
+                for c in camps:
+                    c["webhookMakeUrl"] = MAKE_MARKETING_WEBHOOK_DEFAULT
+                return camps
+        except Exception:
+            pass
+    return [
+        {
+            "id": "CMP-001",
+            "name": "Project Paul: Lanzamiento Cachorros & Grooming VIP",
+            "manager": "O'Neil",
+            "targetClub": "all",
+            "status": "active",
+            "budgetUSD": 3500,
+            "webhookMakeUrl": MAKE_MARKETING_WEBHOOK_DEFAULT
+        }
+    ]
+
+
+@app.get("/api/v1/marketing/channels")
+def get_marketing_channels_list():
+    """Retorna los canales publicitarios sincronizados."""
+    chan_path = DATA_DIR / "marketing_channels.json"
+    if chan_path.exists():
+        try:
+            with open(chan_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
+@app.get("/api/v1/marketing/loyalty/config")
+def get_marketing_loyalty_config():
+    p = DATA_DIR / "marketing_loyalty_config.json"
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+@app.get("/api/v1/marketing/benefits")
+def get_marketing_benefits_list():
+    p = DATA_DIR / "marketing_benefits.json"
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
+@app.get("/api/v1/marketing/telemetry/stream")
+def get_marketing_telemetry_stream():
+    p = DATA_DIR / "marketing_time_series.json"
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
+@app.get("/api/v1/marketing/telemetry/normalized")
+def get_marketing_telemetry_normalized():
+    p = DATA_DIR / "marketing_normalized_events.json"
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
+@app.get("/api/v1/marketing/micro-interactions")
+def get_marketing_micro_interactions():
+    p = DATA_DIR / "marketing_micro_interactions.json"
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
 
 
 # =====================================================================

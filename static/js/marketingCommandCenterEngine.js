@@ -348,7 +348,7 @@
           progress: 75,
           status: "active",
           budgetUSD: 3500,
-          webhookMakeUrl: "https://hook.us1.make.com/mrspets_project_paul_live",
+          webhookMakeUrl: "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
           targetClub: "all"
         },
         {
@@ -364,7 +364,7 @@
           progress: 90,
           status: "active",
           budgetUSD: 1200,
-          webhookMakeUrl: "https://hook.us1.make.com/mrspets_dental_octubre",
+          webhookMakeUrl: "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
           targetClub: "club_leal"
         },
         {
@@ -380,7 +380,7 @@
           progress: 30,
           status: "scheduled",
           budgetUSD: 2800,
-          webhookMakeUrl: "https://hook.us1.make.com/mrspets_blackfriday_vip",
+          webhookMakeUrl: "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
           targetClub: "club_vip"
         },
         {
@@ -396,7 +396,7 @@
           progress: 85,
           status: "active",
           budgetUSD: 600,
-          webhookMakeUrl: "https://hook.us1.make.com/mrspets_loyalty_upgrade_alert",
+          webhookMakeUrl: "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
           targetClub: "near_upgrade"
         }
       ];
@@ -2110,7 +2110,7 @@
         details = { sectors: ['La Lago', 'Las Delicias', 'Bella Vista', 'Av. 2 El Milagro'], targetClub: 'VIP_AND_LEGACY' };
       } else if (actionType === 'DISPATCH_MAKE') {
         label = `Directiva táctica transmitida al Webhook Make.com`;
-        details = { webhookUrl: 'https://hook.us1.make.com/mrspets_marketing_cron', latencyMs: 285 };
+        details = { webhookUrl: 'https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j', latencyMs: 285 };
       }
 
       const now = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -2994,7 +2994,7 @@
 
             <div>
               <label style="display:block; font-size:0.75rem; color:#FCD34D; text-transform:uppercase; font-weight:900; margin-bottom:4px;">Webhook Make.com (Endpoint de Despacho)</label>
-              <input id="cfg-campaign-webhook" type="text" value="${cmp.webhookMakeUrl || 'https://hook.us1.make.com/mrspets_project_paul_live'}" style="width:100%; background:#27272A; border:1px solid #3F3F46; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.85rem; font-family:monospace;">
+              <input id="cfg-campaign-webhook" type="text" value="${cmp.webhookMakeUrl || 'https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j'}" style="width:100%; background:#27272A; border:1px solid #3F3F46; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.85rem; font-family:monospace;">
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:14px;">
@@ -3083,7 +3083,7 @@
       )) || this.campaigns[0] || {
         id: "CMP-001",
         title: "Project Paul: Lanzamiento Cachorros & Grooming VIP",
-        webhookMakeUrl: "https://hook.us1.make.com/mrspets_project_paul_live"
+        webhookMakeUrl: "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
       };
 
       const btn = document.getElementById('btn-dispatch-project-paul');
@@ -3109,7 +3109,7 @@
               targetClub: cmp.targetClub || 'all',
               budgetUSD: cmp.budgetUSD || 3500,
               bcvRate: this.whatIfState.bcvRate || 887.30,
-              webhookUrl: cmp.webhookMakeUrl || "https://hook.us1.make.com/mrspets_project_paul_live"
+              webhookUrl: cmp.webhookMakeUrl || "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
             })
           });
 
