@@ -855,9 +855,20 @@
                 }
             }
 
-            // 0.1 Apertura Inmediata del Calendario Grande para Staff
+            // 0.1 Apertura Inmediata del Calendario Grande (Exclusivo Staff / Vista Empresario)
             const isRequestingCalendar = t.includes('calendario grande') || t.includes('abrir calendario') || t.includes('ver calendario') || t.includes('calendario staff') || t === '📅 calendario grande (staff)';
             if (isRequestingCalendar) {
+                const isStaff = (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated && window.adminEngine.viewEnvironment === 'enterprise') ||
+                                (window.authEngine && typeof window.authEngine.isEnterpriseStaffActive === 'function' && window.authEngine.isEnterpriseStaffActive());
+                if (!isStaff) {
+                    this.addMessage({
+                        sender: 'leia',
+                        text: `🎀 **Leia (Concierge VIP):** Estimado tutor, para su comodidad la atención de consentidos se realiza mediante reserva personalizada. ¿Desea agendar cita para **Grooming Spa**, **Consulta Veterinaria** o **Hotel VIP 5★**? ✨🐾`,
+                        buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Médica', '🏨 Hotel Boutique 5★'],
+                        timestamp: new Date()
+                    });
+                    return;
+                }
                 this.addMessage({
                     sender: 'leia',
                     text: `🎀 **Leia (Concierge VIP):** 📅 ¡Abriendo el **Calendario General Operativo** de Mrs. Pets en pantalla grande para el Staff! ✨🐾\n\nAquí puedes revisar la ocupación en tiempo real de las 4 salas, los horarios establecidos por **Dalybell Ramírez & Dra. Margaret** (Lunes a Sábado de 8:00 AM a 6:00 PM, Domingos Cerrado) y la sincronización con Google Calendar.`,

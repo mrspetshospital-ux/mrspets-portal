@@ -2173,6 +2173,11 @@ body.customer-view-mode #btn-sidebar-subir-grooming,
 body.customer-view-mode #btn-card-subir-grooming,
 body.customer-view-mode #btn-store-subir-grooming,
 body.customer-view-mode #btn-pet-status-subir-grooming,
+body.customer-view-mode #btn-sidebar-calendario-agenda,
+body.customer-view-mode #btn-pet-status-calendario-live,
+body.customer-view-mode #btn-leia-header-calendar,
+body.customer-view-mode #modal-large-calendar,
+body.customer-view-mode .calendar-staff-only,
 body.customer-view-mode #employee-camera-modal {
   display: none !important;
   visibility: hidden !important;

@@ -4349,6 +4349,17 @@ class AdminEngine {
   // CALENDARIO GRANDE GENERAL (STAFF & OPERACIONES - MRS. PETS CORP)
   // =========================================================================
   openLargeCalendarModal(weekOffset = 0, selectedArea = 'all') {
+    // 🛡️ REGLA ESTRICTA DE PRIVACIDAD: El calendario operativo de la empresa es exclusivo para la vista empresario / staff
+    const isClientMode = this.viewEnvironment === 'customer' || 
+                         (window.authEngine && window.authEngine.currentUser && window.authEngine.currentUser.role === 'customer') ||
+                         (document.body && document.body.classList.contains('customer-view-mode') && !this.isEnterpriseAuthenticated);
+    if (isClientMode) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('Acceso restringido: El calendario operativo de la empresa es exclusivo para la vista empresarial.', 'warning');
+      }
+      return;
+    }
+
     this.largeCalWeekOffset = (typeof weekOffset === 'number') ? weekOffset : (this.largeCalWeekOffset || 0);
     this.largeCalSelectedArea = selectedArea || this.largeCalSelectedArea || 'all';
 
