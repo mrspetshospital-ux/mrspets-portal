@@ -115,13 +115,17 @@ AGENT_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
     "oneil": {
         "slug": "oneil",
-        "name": "O'Neil (Director de Marketing & Telemercadeo)",
-        "role": "DIRECTOR DE MARKETING & TELEMERCADEO",
+        "name": "O'Neil (Director de Marketing & Telegram Bot @ONEILnewBot)",
+        "role": "DIRECTOR DE MARKETING & TELEGRAM BOT",
         "icon": "📢",
         "avatar": "",
         "domain": "marketing",
-        "description": "Pauta geocercada Maracaibo, telemercadeo VIP y recordatorios de citas.",
-        "voice_prefix": "📢 **O'Neil (Director de Marketing & Telemercadeo):**"
+        "telegram_bot": "@ONEILnewBot",
+        "telegram_bot_url": "https://t.me/ONEILnewBot",
+        "telegram_chat_id": "-1004440607589",
+        "telegram_group": "FOTOS GROOMING HISTORICO",
+        "description": "Pauta geocercada Maracaibo, telemercadeo VIP, recordatorios de citas, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot.",
+        "voice_prefix": "📢 **O'Neil (Director de Marketing & Telegram Bot @ONEILnewBot):**"
     },
     "sebastian": {
         "slug": "sebastian",
@@ -171,7 +175,7 @@ class CentralitaRouter:
             return "charlie", AGENT_REGISTRY["charlie"]["name"]
         if slug in ["vanessa", "rrhh", "talento"]:
             return "valeria", AGENT_REGISTRY["valeria"]["name"]
-        if slug in ["oneal", "mercadeo"]:
+        if slug in ["oneal", "mercadeo", "oneilnewbot", "@oneilnewbot", "telegram_bot", "bot_marketing"]:
             return "oneil", AGENT_REGISTRY["oneil"]["name"]
 
         # 2. Análisis por mención explícita @ en el texto
@@ -189,7 +193,7 @@ class CentralitaRouter:
             return "pandora", AGENT_REGISTRY["pandora"]["name"]
         if any(k in inp_lower for k in ["@mike", "mike"]):
             return "mike", AGENT_REGISTRY["mike"]["name"]
-        if any(k in inp_lower for k in ["@oneil", "@oneal", "oneil", "oneal"]):
+        if any(k in inp_lower for k in ["@oneil", "@oneal", "oneil", "oneal", "@oneilnewbot", "oneilnewbot", "bot marketing", "bot telegram"]):
             return "oneil", AGENT_REGISTRY["oneil"]["name"]
         if any(k in inp_lower for k in ["@sebastian", "sebastian"]):
             return "sebastian", AGENT_REGISTRY["sebastian"]["name"]

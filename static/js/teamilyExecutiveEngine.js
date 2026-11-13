@@ -136,24 +136,29 @@ const DEFAULT_VOLTURI_AGENTS = [
     welcomeMessage: 'Buenas tardes. Soy **Manolo**, Gerente General de Administración y Finanzas en Mrs. Pets (`@9000441148643782`). Superviso la rentabilidad, administración y el cierre estricto de sucursal a las 6:00 p.m. ¿Qué tema directivo revisamos?'
   },
   {
-    id: 'oneal',
-    name: 'O\'Neil — Marketing & Advertising Director',
-    role: 'MARKETING & ADVERTISING DIRECTOR',
+    id: 'oneil',
+    aliasId: 'oneal',
+    name: 'O\'Neil — Marketing, Telemercadeo & Telegram Bot (@ONEILnewBot)',
+    role: 'DIRECTOR DE MARKETING & TELEGRAM BOT',
     icon: '📢',
     avatar: '',
     color: '#FB923C',
     bg: '#2D1808',
     border: '#EA580C',
-    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital y captación de clientes (@9000339468227100).',
+    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot (@9000339468227100).',
+    telegramBot: '@ONEILnewBot',
+    telegramBotUrl: 'https://t.me/ONEILnewBot',
+    telegramChatId: '-1004440607589',
+    telegramGroupTitle: 'FOTOS GROOMING HISTORICO',
     teamlyUserId: '9000339468227100',
     teamlySlug: '@9000339468227100',
     teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Estrategia de marketing digital, optimización de pauta TikTok Spark Ads & Meta Ads y retorno de inversión en publicidad (@9000339468227100).',
+    promptGuideline: 'Estrategia de marketing digital, optimización de pauta TikTok Spark Ads & Meta Ads, envío de fotos Grooming QC y notificaciones a Telegram @ONEILnewBot (@9000339468227100).',
     contextType: 'marketing_ops',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Marketing & Advertising Director de Mrs. Pets (`@9000339468227100`). Gestiono las campañas de pauta digital, tráfico y branding. ¿Deseas evaluar el rendimiento de pauta o nuevas campañas?'
+    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Marketing & Advertising Director de Mrs. Pets (`@9000339468227100`) y responsable del Bot Oficial de Telegram (`@ONEILnewBot`). Gestiono campañas de pauta digital, tráfico, fotos de Grooming QC y branding. ¿Deseas evaluar el rendimiento de pauta o revisar las fotos de hoy?'
   },
   {
     id: 'oneal_mercadeo',
@@ -432,7 +437,10 @@ class TeamilyExecutiveEngine {
                 bg: defAgent.bg || parsed[idx].bg,
                 border: defAgent.border || parsed[idx].border,
                 description: defAgent.description || parsed[idx].description,
-                welcomeMessage: defAgent.welcomeMessage || parsed[idx].welcomeMessage
+                welcomeMessage: defAgent.welcomeMessage || parsed[idx].welcomeMessage,
+                telegramBot: defAgent.telegramBot || parsed[idx].telegramBot,
+                telegramBotUrl: defAgent.telegramBotUrl || parsed[idx].telegramBotUrl,
+                telegramChatId: defAgent.telegramChatId || parsed[idx].telegramChatId
               });
             } else {
               parsed.push(defAgent);
@@ -1167,10 +1175,15 @@ class TeamilyExecutiveEngine {
                 "${cleanSnippet}${cleanSnippet.length >= 75 ? '...' : ''}"
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #94a3b8;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #94a3b8; flex-wrap: wrap;">
               <span style="background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
                 Slug: <code>${a.teamlySlug || 'geo-a'}</code>
               </span>
+              ${a.telegramBot ? `
+                <a href="${a.telegramBotUrl || 'https://t.me/ONEILnewBot'}" target="_blank" onclick="event.stopPropagation();" title="Abrir bot oficial de Telegram" style="background: rgba(34,158,217,0.2); border: 1px solid #229ED9; color: #38BDF8; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  ✈️ ${a.telegramBot}
+                </a>
+              ` : ''}
               <span style="color: #34d399; font-weight: 700;">● Online en Teamly</span>
             </div>
           </div>

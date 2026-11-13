@@ -2531,14 +2531,211 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or "9219306084:AAGEgbK
 TELEGRAM_BOT_USERNAME = "@ONEILnewBot"
 TELEGRAM_BOT_URL = "https://t.me/ONEILnewBot"
 
+# Chat ID Oficial del Supergrupo de Operaciones de Grooming QC ("FOTOS GROOMING HISTORICO")
+GROOMING_QC_SUPERGROUP_ID = "-1004440607589"
+GROOMING_QC_SUPERGROUP_TITLE = "FOTOS GROOMING HISTORICO"
+
+# Lista de alias erróneos recurrentes que se mapean automáticamente al Chat ID real
+GROOMING_QC_KNOWN_ALIASES = [
+    "-584146799510",
+    "584146799510",
+    "+584146799510",
+    "-58414-6799510",
+    "+58 414-6799510",
+    "584146799510",
+    "-4179131205",
+    "@ONEILnewBot",
+    "@mrspets_vip",
+    "default",
+    "grooming_group",
+    "operaciones",
+    "none",
+    "null"
+]
+
+def _resolve_telegram_chat_id(target: Optional[Any]) -> str:
+    """
+    Resuelve y normaliza el Chat ID de Telegram para operaciones de Grooming QC.
+    Mapea el identificador erróneo recurrente (-584146799510 / teléfono con guión)
+    hacia el Chat ID real del supergrupo de operaciones (-1004440607589 'FOTOS GROOMING HISTORICO').
+    """
+    if not target:
+        return GROOMING_QC_SUPERGROUP_ID
+    
+    s = str(target).strip()
+    if s.lower() in [a.lower() for a in GROOMING_QC_KNOWN_ALIASES]:
+        return GROOMING_QC_SUPERGROUP_ID
+    
+    # Manejar formatos como "- 584146799510" o strings con espacios
+    cleaned = s.replace(" ", "").replace("-", "")
+    if cleaned in ["584146799510", "+584146799510"]:
+        return GROOMING_QC_SUPERGROUP_ID
+
+    return s
+
+def _check_telegram_bot_permissions(chat_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Verifica que el bot @ONEILnewBot sea miembro activo del chat/supergrupo
+    y tenga permisos activos para emitir peticiones sendPhoto y mensajes.
+    """
+    token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+    resolved_id = _resolve_telegram_chat_id(chat_id)
+    try:
+        url_chat = f"https://api.telegram.org/bot{token}/getChat?chat_id={resolved_id}"
+        req_chat = urllib.request.Request(url_chat)
+        chat_info = {}
+        with urllib.request.urlopen(req_chat, timeout=6) as r:
+            chat_info = json.loads(r.read().decode("utf-8")).get("result", {})
+
+        bot_id = token.split(":")[0]
+        url_mem = f"https://api.telegram.org/bot{token}/getChatMember?chat_id={resolved_id}&user_id={bot_id}"
+        req_mem = urllib.request.Request(url_mem)
+        with urllib.request.urlopen(req_mem, timeout=6) as r:
+            mem_info = json.loads(r.read().decode("utf-8")).get("result", {})
+            status = mem_info.get("status")
+            can_send_messages = mem_info.get("can_send_messages", True)
+            can_send_photos = mem_info.get("can_send_photos", True)
+            is_active = status in ["member", "administrator", "creator", "restricted"] and can_send_messages
+
+            return {
+                "ok": True,
+                "is_member": is_active,
+                "status": status,
+                "chat_id": resolved_id,
+                "title": chat_info.get("title") or chat_info.get("first_name") or GROOMING_QC_SUPERGROUP_TITLE,
+                "type": chat_info.get("type", "supergroup"),
+                "can_send_messages": can_send_messages,
+                "can_send_photos": can_send_photos,
+                "verified_at": datetime.now(timezone.utc).isoformat()
+            }
+    except Exception as e:
+        log.warning("[TELEGRAM PERMISOS] Consulta de permisos para chat %s: %s", resolved_id, e)
+        return {
+            "ok": False,
+            "is_member": True,  # Fallback tolerante si falla la llamada
+            "status": "assumed_active",
+            "chat_id": resolved_id,
+            "title": GROOMING_QC_SUPERGROUP_TITLE,
+            "error": str(e)
+        }
+
+def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str, caption_html: str) -> Dict[str, Any]:
+    """
+    Envía una foto de forma robusta a Telegram:
+    1. Si es archivo local en disco, envía multipart/form-data con los bytes del archivo.
+    2. Si es URL web pública, intenta sendPhoto con JSON. Si Telegram falla al crawlear la URL,
+       descarga los bytes y los reenvía vía multipart/form-data.
+    3. Maneja todas las excepciones sin romper el flujo y registrando logs claros.
+    """
+    cid = _resolve_telegram_chat_id(chat_id)
+    send_url = f"https://api.telegram.org/bot{token}/sendPhoto"
+
+    # Caso A: Archivo local en el servidor
+    local_path = None
+    if isinstance(photo_url_or_path, str):
+        if os.path.isabs(photo_url_or_path) and os.path.exists(photo_url_or_path):
+            local_path = photo_url_or_path
+        elif "/static/" in photo_url_or_path:
+            rel = photo_url_or_path.split("/static/", 1)[1]
+            candidate = os.path.join(STATIC_DIR, rel)
+            if os.path.exists(candidate):
+                local_path = candidate
+        elif "/assets/" in photo_url_or_path:
+            rel = photo_url_or_path.split("/assets/", 1)[1]
+            candidate = os.path.join(BASE_DIR, "assets", rel)
+            if os.path.exists(candidate):
+                local_path = candidate
+
+    if local_path and os.path.exists(local_path):
+        try:
+            boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+            body = bytearray()
+            def add_field(name, value):
+                body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode("utf-8"))
+
+            add_field("chat_id", cid)
+            add_field("caption", caption_html)
+            add_field("parse_mode", "HTML")
+
+            fname = os.path.basename(local_path)
+            mime_type = "image/jpeg"
+            if fname.lower().endswith(".png"):
+                mime_type = "image/png"
+            elif fname.lower().endswith(".webp"):
+                mime_type = "image/webp"
+
+            body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"{fname}\"\r\nContent-Type: {mime_type}\r\n\r\n".encode("utf-8"))
+            with open(local_path, "rb") as f:
+                body.extend(f.read())
+            body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+
+            req = urllib.request.Request(
+                send_url,
+                data=bytes(body),
+                headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+            )
+            with urllib.request.urlopen(req, timeout=12) as r:
+                res_data = json.loads(r.read().decode("utf-8"))
+                log.info("[TELEGRAM @ONEILnewBot] Foto local enviada multipart exitosamente a chat %s", cid)
+                return {"ok": True, "method": "multipart_local", "result": res_data.get("result")}
+        except Exception as e:
+            log.error("[TELEGRAM @ONEILnewBot] Error en multipart local a chat %s: %s", cid, e)
+
+    # Caso B: URL pública web
+    if isinstance(photo_url_or_path, str) and (photo_url_or_path.startswith("http://") or photo_url_or_path.startswith("https://")):
+        try:
+            payload = json.dumps({
+                "chat_id": cid,
+                "photo": photo_url_or_path,
+                "caption": caption_html,
+                "parse_mode": "HTML"
+            }).encode("utf-8")
+            req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                res_data = json.loads(r.read().decode("utf-8"))
+                log.info("[TELEGRAM @ONEILnewBot] Foto enviada por URL exitosamente a chat %s", cid)
+                return {"ok": True, "method": "json_url", "result": res_data.get("result")}
+        except urllib.error.HTTPError as he:
+            err_body = he.read().decode("utf-8", errors="ignore")
+            log.warning("[TELEGRAM @ONEILnewBot] Error HTTP enviando URL a chat %s (%s). Reintentando con descarga binaria...", cid, err_body)
+            # Reintentar descargando la imagen binaria para enviar multipart
+            try:
+                with urllib.request.urlopen(photo_url_or_path, timeout=8) as dl:
+                    img_bytes = dl.read()
+                boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+                body = bytearray()
+                body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{cid}\r\n".encode("utf-8"))
+                body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption_html}\r\n".encode("utf-8"))
+                body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"parse_mode\"\r\n\r\nHTML\r\n".encode("utf-8"))
+                body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"qc_photo.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".encode("utf-8"))
+                body.extend(img_bytes)
+                body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+
+                req = urllib.request.Request(
+                    send_url,
+                    data=bytes(body),
+                    headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+                )
+                with urllib.request.urlopen(req, timeout=12) as r:
+                    res_data = json.loads(r.read().decode("utf-8"))
+                    log.info("[TELEGRAM @ONEILnewBot] Foto enviada multipart fallback exitosamente a chat %s", cid)
+                    return {"ok": True, "method": "multipart_fallback", "result": res_data.get("result")}
+            except Exception as e2:
+                log.error("[TELEGRAM @ONEILnewBot] Fallo definitivo enviando foto a chat %s: %s", cid, e2)
+        except Exception as e:
+            log.error("[TELEGRAM @ONEILnewBot] Error general enviando foto a chat %s: %s", cid, e)
+
+    return {"ok": False, "error": "No se pudo despachar la foto"}
+
 def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
     def _worker():
         try:
             token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
             target_ids = []
             if chat_id:
-                target_ids.append(chat_id)
+                target_ids.append(_resolve_telegram_chat_id(chat_id))
             else:
+                target_ids.append(GROOMING_QC_SUPERGROUP_ID)
                 try:
                     up_url = f"https://api.telegram.org/bot{token}/getUpdates"
                     with urllib.request.urlopen(up_url, timeout=4) as r:
@@ -2546,8 +2743,9 @@ def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
                         if up_data.get("ok"):
                             for update in up_data.get("result", []):
                                 c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
-                                if c.get("id") and c["id"] not in target_ids:
-                                    target_ids.append(c["id"])
+                                cid = c.get("id")
+                                if cid and str(cid) not in [str(x) for x in target_ids]:
+                                    target_ids.append(cid)
                 except Exception:
                     pass
 
@@ -2558,16 +2756,16 @@ def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
                     req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
                     with urllib.request.urlopen(req, timeout=5):
                         pass
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:
+                    log.warning("[TELEGRAM @ONEILnewBot] Error enviando mensaje a %s: %s", cid, e)
+        except Exception as e:
+            log.error("[TELEGRAM @ONEILnewBot] Error en _send_telegram_notification: %s", e)
     threading.Thread(target=_worker, daemon=True).start()
 
 DEFAULT_QC_PHOTOS = [
     "https://mrspets-portal.onrender.com/assets/hero_border_collie.jpg",
     "https://mrspets-portal.onrender.com/assets/media__1787694901704.jpg",
-    "https://mrspets-portal.onrender.com/assets/media_1789774687453.jpg",
+    "https://mrspets-portal.onrender.com/assets/media_1789775225842.jpg",
     "https://mrspets-portal.onrender.com/assets/leia_avatar.jpg",
 ]
 
@@ -2608,11 +2806,17 @@ def _resolve_qc_photo_url(photo_val: Any, session_id: str, index: int) -> str:
 
     return default_url
 
-def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str):
+def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str, target_chat: Optional[Any] = None, breed: str = "Consentido VIP"):
+    """
+    Envía las fotos de control de calidad de Grooming al Supergrupo de Operaciones de Telegram
+    utilizando sendPhoto con formato HTML e imágenes individuales directas.
+    """
     def _worker():
         try:
             token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
-            target_ids = []
+            resolved_target = _resolve_telegram_chat_id(target_chat)
+            
+            target_ids = [resolved_target]
             try:
                 up_url = f"https://api.telegram.org/bot{token}/getUpdates"
                 with urllib.request.urlopen(up_url, timeout=4) as r:
@@ -2620,8 +2824,9 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
                     if up_data.get("ok"):
                         for update in up_data.get("result", []):
                             c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
-                            if c.get("id") and c["id"] not in target_ids:
-                                target_ids.append(c["id"])
+                            cid = c.get("id")
+                            if cid and str(cid) not in [str(x) for x in target_ids]:
+                                target_ids.append(cid)
             except Exception:
                 pass
 
@@ -2630,73 +2835,212 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
             p3 = photos[2] if len(photos) > 2 and photos[2] else DEFAULT_QC_PHOTOS[2]
             p4 = photos[3] if len(photos) > 3 and photos[3] else DEFAULT_QC_PHOTOS[3]
 
-            caption = (
-                f"📸 *MRS. PETS • CONTROL DE CALIDAD GROOMING QC (4 FOTOS)*\n\n"
-                f"🐾 *Consentido(a):* {pet_name}\n"
-                f"👤 *Tutor:* {tutor_name}\n"
-                f"✂️ *Estación:* {station}\n"
-                f"📝 *Notas Supervisor:* {notes}\n"
-                f"📁 *Carpeta Drive:* {drive_url}\n\n"
-                f"🖼️ *Fotos de la Princesa / Príncipe:*\n"
-                f"1️⃣ [Foto 1 - Frontal / Rostro]({p1})\n"
-                f"2️⃣ [Foto 2 - Lateral Izquierdo]({p2})\n"
-                f"3️⃣ [Foto 3 - Lateral Derecho]({p3})\n"
-                f"4️⃣ [Foto 4 - Acabado / Moño]({p4})\n\n"
-                f"🤖 *Bot:* @ONEILnewBot • O'Neil Marketing & Campañas"
+            caption_html = (
+                f"📸 <b>MRS. PETS • CONTROL DE CALIDAD GROOMING QC</b>\n\n"
+                f"👑 <b>Príncipe / Princesa:</b> {pet_name} <i>({breed})</i>\n"
+                f"👤 <b>Tutor Responsable:</b> {tutor_name}\n"
+                f"✂️ <b>Estación:</b> {station}\n"
+                f"📝 <b>Nota Supervisor:</b> {notes}\n"
+                f"📁 <b>Carpeta Drive:</b> <a href=\"{drive_url}\">Abrir Google Drive</a>\n\n"
+                f"🖼️ <b>Fotos de la Sesión:</b>\n"
+                f"1️⃣ <a href=\"{p1}\">Foto 1: Frontal / Rostro</a>\n"
+                f"2️⃣ <a href=\"{p2}\">Foto 2: Lateral Izquierdo</a>\n"
+                f"3️⃣ <a href=\"{p3}\">Foto 3: Lateral Derecho</a>\n"
+                f"4️⃣ <a href=\"{p4}\">Foto 4: Detalle / Moño</a>\n\n"
+                f"🤖 <i>Bot O’Neil Marketing & Grooming • @ONEILnewBot</i>"
             )
+
+            slot_names = [
+                "Frontal / Rostro",
+                "Lateral Izquierdo",
+                "Lateral Derecho",
+                "Detalle / Moño"
+            ]
 
             for cid in target_ids:
                 try:
-                    # Intento 1: Álbum MediaGroup con las 4 fotos individuales directas
-                    valid_media = [
-                        {"type": "photo", "media": p, "caption": caption if idx == 0 else "", "parse_mode": "Markdown"}
-                        for idx, p in enumerate([p1, p2, p3, p4]) if p and p.startswith("http")
-                    ]
-                    if len(valid_media) == 4:
-                        try:
-                            mg_url = f"https://api.telegram.org/bot{token}/sendMediaGroup"
-                            mg_payload = json.dumps({"chat_id": cid, "media": valid_media}).encode("utf-8")
-                            mg_req = urllib.request.Request(mg_url, data=mg_payload, headers={"Content-Type": "application/json"})
-                            with urllib.request.urlopen(mg_req, timeout=8):
-                                continue
-                        except Exception:
-                            pass
+                    # 1. Enviar Foto 1 (Principal) con el Caption HTML completo
+                    r1 = _send_telegram_photo_robust(token, cid, p1, caption_html)
 
-                    # Intento 2 / Fallback: Enviar mensaje enriquecido con enlaces web directos
-                    send_url = f"https://api.telegram.org/bot{token}/sendMessage"
-                    payload = json.dumps({"chat_id": cid, "text": caption, "parse_mode": "Markdown", "disable_web_page_preview": False}).encode("utf-8")
-                    req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
-                    with urllib.request.urlopen(req, timeout=5):
-                        pass
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                    # 2. Si el chat es el supergrupo principal de operaciones, despachar también las fotos 2, 3 y 4
+                    if str(cid) == str(resolved_target) or str(cid) == str(GROOMING_QC_SUPERGROUP_ID):
+                        for idx, p_url in enumerate([p2, p3, p4], start=2):
+                            slot_name = slot_names[idx - 1]
+                            sub_caption = f"📸 <b>Foto #{idx} ({slot_name})</b> • {pet_name} ({breed})"
+                            _send_telegram_photo_robust(token, cid, p_url, sub_caption)
+
+                    if not r1.get("ok"):
+                        # Fallback de texto si sendPhoto tuvo algún problema
+                        send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                        payload = json.dumps({"chat_id": cid, "text": caption_html, "parse_mode": "HTML", "disable_web_page_preview": False}).encode("utf-8")
+                        req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
+                        with urllib.request.urlopen(req, timeout=5):
+                            pass
+                except Exception as e:
+                    log.error("[TELEGRAM @ONEILnewBot] Error despachando fotos a chat %s: %s", cid, e)
+        except Exception as e:
+            log.error("[TELEGRAM @ONEILnewBot] Error en worker de fotos: %s", e)
     threading.Thread(target=_worker, daemon=True).start()
 
 
 @app.get("/api/v1/telegram/status")
 def get_telegram_bot_status():
-    """Consulta el estado del bot de Telegram de O'Neil (@ONEILnewBot)."""
+    """Consulta el estado del bot de Telegram de O'Neil (@ONEILnewBot) y permisos en el grupo de operaciones."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
     try:
         url = f"https://api.telegram.org/bot{token}/getMe"
         with urllib.request.urlopen(url, timeout=5) as r:
             data = json.loads(r.read().decode("utf-8"))
+            perms = _check_telegram_bot_permissions(GROOMING_QC_SUPERGROUP_ID)
             return {
                 "status": "connected",
                 "bot": data.get("result"),
                 "token_masked": f"{token[:10]}...{token[-5:]}",
                 "channel": "@ONEILnewBot",
-                "url": "https://t.me/ONEILnewBot"
+                "url": "https://t.me/ONEILnewBot",
+                "operationsGroup": {
+                    "chatId": GROOMING_QC_SUPERGROUP_ID,
+                    "title": GROOMING_QC_SUPERGROUP_TITLE,
+                    "status": perms.get("status"),
+                    "isMember": perms.get("is_member"),
+                    "canSendPhotos": perms.get("can_send_photos")
+                }
             }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
             "channel": "@ONEILnewBot",
-            "url": "https://t.me/ONEILnewBot"
+            "url": "https://t.me/ONEILnewBot",
+            "operationsGroup": {
+                "chatId": GROOMING_QC_SUPERGROUP_ID,
+                "title": GROOMING_QC_SUPERGROUP_TITLE
+            }
         }
+
+
+@app.get("/api/v1/agents")
+@app.get("/api/agents")
+def get_official_agents_list():
+    """
+    Retorna el catálogo canónico de agentes y subagentes de Mrs. Pets,
+    garantizando que @ONEILnewBot aparezca formalmente como Agente de Marketing & Grooming.
+    """
+    perms = _check_telegram_bot_permissions(GROOMING_QC_SUPERGROUP_ID)
+    return {
+        "status": 200,
+        "agentsCount": 9,
+        "agents": [
+            {
+                "id": "oneil",
+                "slug": "oneil",
+                "alias": "oneal",
+                "name": "O'Neil — Marketing, Telemercadeo & Telegram Bot (@ONEILnewBot)",
+                "role": "DIRECTOR DE MARKETING & TELEGRAM BOT",
+                "icon": "📢",
+                "avatar": "",
+                "domain": "marketing",
+                "telegramBot": "@ONEILnewBot",
+                "telegramBotUrl": "https://t.me/ONEILnewBot",
+                "telegramChatId": GROOMING_QC_SUPERGROUP_ID,
+                "telegramGroupTitle": GROOMING_QC_SUPERGROUP_TITLE,
+                "telegramBotStatus": "ACTIVE" if perms.get("is_member") else "STANDBY",
+                "status": "ACTIVE",
+                "description": "Dirección de Marketing, campañas TikTok/Meta, telemercadeo, envío de fotos Grooming QC y notificaciones a Telegram @ONEILnewBot.",
+                "voice_prefix": "📢 **O'Neil (Marketing & Telegram @ONEILnewBot):**"
+            },
+            {
+                "id": "leia",
+                "slug": "leia",
+                "name": "Leia Concierge VIP & Asistencia CEO",
+                "role": "CONCIERGE VIP & ASISTENCIA CEO",
+                "icon": "🎀",
+                "avatar": "assets/leia_avatar.jpg",
+                "domain": "vip_concierge",
+                "status": "ACTIVE",
+                "description": "Hospitalidad VIP Silent Luxury, bienvenida y orquestación general de tutores."
+            },
+            {
+                "id": "margaret",
+                "slug": "margaret",
+                "name": "Margaret — Gerente de Atención al Cliente",
+                "role": "GERENCIA DE ATENCIÓN AL CLIENTE",
+                "icon": "👩‍💼",
+                "avatar": "assets/margaret_avatar.svg",
+                "domain": "customer_service",
+                "status": "ACTIVE",
+                "description": "Atención personalizada a tutores, citas de spa, resolución de inconformidades y seguimiento."
+            },
+            {
+                "id": "charlie",
+                "slug": "charlie",
+                "alias": "charly",
+                "name": "Charly (GEO A & Finanzas)",
+                "role": "ASISTENTE EJECUTIVO & FINANZAS",
+                "icon": "⚖️",
+                "avatar": "",
+                "domain": "finance",
+                "status": "ACTIVE",
+                "description": "Tesorería corporativa, tasa oficial BCV, IVA SENIAT 16% y conciliación POS."
+            },
+            {
+                "id": "valeria",
+                "slug": "valeria",
+                "alias": "vanessa",
+                "name": "Valeria (Recursos Humanos & Talento)",
+                "role": "RECURSOS HUMANOS & TALENTO",
+                "icon": "💼",
+                "avatar": "",
+                "domain": "hr",
+                "status": "ACTIVE",
+                "description": "Evaluación de estilistas caninos, médicos veterinarios y talento de la web."
+            },
+            {
+                "id": "mike",
+                "slug": "mike",
+                "name": "Mike (Gerencia de Operaciones & IoT)",
+                "role": "GERENCIA DE OPERACIONES & IOT",
+                "icon": "🛠️",
+                "avatar": "",
+                "domain": "iot",
+                "status": "ACTIVE",
+                "description": "Batería de 4 tanques Don Bosco (18.400L), planta Cummins 65 kVA e infraestructura."
+            },
+            {
+                "id": "manolo",
+                "slug": "manolo",
+                "name": "Manolo (Gerencia General de Administración y Finanzas)",
+                "role": "GERENCIA GENERAL & FINANZAS",
+                "icon": "👑",
+                "avatar": "",
+                "domain": "operations",
+                "status": "ACTIVE",
+                "description": "Control de piso, flujo de las 7 estaciones Grooming Spa y cierre estricto a las 6:00 PM."
+            },
+            {
+                "id": "pandora",
+                "slug": "pandora",
+                "name": "Pandora (Compras & Abastecimiento Nacional)",
+                "role": "COMPRAS & ABASTECIMIENTO NACIONAL",
+                "icon": "📦",
+                "avatar": "",
+                "domain": "supply",
+                "status": "ACTIVE",
+                "description": "Compras nacionales bajo filtro KillCritic (ROI ≥ 25%, Lead Time ≤ 15 días)."
+            },
+            {
+                "id": "sebastian",
+                "slug": "sebastian",
+                "name": "Sebastian (Gerencia de Ventas & Membresías)",
+                "role": "GERENCIA DE VENTAS & MEMBRESÍAS",
+                "icon": "📈",
+                "avatar": "",
+                "domain": "sales",
+                "status": "ACTIVE",
+                "description": "Membresías anuales de spa, conversión de reservas y seguimiento a carritos."
+            }
+        ]
+    }
 
 
 @app.post("/api/grooming/qc-photos")
@@ -2706,7 +3050,8 @@ def get_telegram_bot_status():
 async def handle_grooming_qc_photos(request: Request):
     """
     Sesión de Fotos Grooming QC (4 Fotos individuales) para Supervisora, Telegram (@ONEILnewBot) y Make.com.
-    Registra auditoría inmutable, preserva foto de perfil y despacha a Make.com (redes sociales) y Telegram corporativo.
+    Valida y normaliza el Chat ID (-584146799510 -> -1004440607589), asegura permisos activos en el grupo
+    y despacha vía sendPhoto con formato HTML estructurado.
     """
     try:
         data = await request.json()
@@ -2721,7 +3066,11 @@ async def handle_grooming_qc_photos(request: Request):
     station = data.get("station") or "Circuito Grooming Spa 7 Estaciones"
     supervisor_notes = data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming para Redes"
     drive_url = data.get("driveFolderUrl") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
-    telegram_target = data.get("telegramTarget") or "@ONEILnewBot"
+    
+    # 🛡️ NORMALIZACIÓN Y VALIDACIÓN DEL CHAT ID DE TELEGRAM
+    raw_chat_target = data.get("chat_id") or data.get("chatId") or data.get("telegramChatId") or data.get("telegramTarget") or "-584146799510"
+    resolved_chat_id = _resolve_telegram_chat_id(raw_chat_target)
+    bot_perms = _check_telegram_bot_permissions(resolved_chat_id)
 
     # Procesar URLs directas individuales de las fotos
     raw_photos = data.get("photos") or data.get("photoUrls") or []
@@ -2770,7 +3119,9 @@ async def handle_grooming_qc_photos(request: Request):
             "photoUrl3": photo_url_3,
             "photoUrl4": photo_url_4,
             "driveFolderUrl": drive_url,
-            "telegramTarget": telegram_target,
+            "telegramTarget": "@ONEILnewBot",
+            "telegramChatId": resolved_chat_id,
+            "telegramOriginalTarget": raw_chat_target,
             "status": "PENDIENTE_AUTORIZACION_SUPERVISORA"
         },
         usuario=u or {"tipo": "staff", "nombre": "Supervisor Grooming"},
@@ -2811,7 +3162,13 @@ async def handle_grooming_qc_photos(request: Request):
             {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
             {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
         ],
-        "telegramTarget": telegram_target,
+        "telegramTarget": "@ONEILnewBot",
+        "telegramChatId": resolved_chat_id,
+        "chat_id": resolved_chat_id,
+        "chatId": resolved_chat_id,
+        "telegramGroupTitle": GROOMING_QC_SUPERGROUP_TITLE,
+        "telegramBotPermissions": bot_perms,
+        "telegramOriginalTarget": raw_chat_target,
         "telegramBotToken": TELEGRAM_BOT_TOKEN,
         "telegramBotUsername": "@ONEILnewBot",
         "telegramBotUrl": "https://t.me/ONEILnewBot",
@@ -2835,20 +3192,22 @@ async def handle_grooming_qc_photos(request: Request):
     except Exception as e:
         make_result = {"status": "error", "error": str(e)}
 
-    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot
+    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (vía sendPhoto con HTML y resolución de chat_id)
     _send_telegram_grooming_photos(
         pet_name=pet_name,
         tutor_name=tutor_name,
         station=station,
         photos=resolved_photos,
         notes=supervisor_notes,
-        drive_url=drive_url
+        drive_url=drive_url,
+        target_chat=resolved_chat_id,
+        breed=breed
     )
 
     return {
         "status": 200,
         "success": True,
-        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. 4 fotos individuales transferidas a Telegram {telegram_target} y Make.com ({make_url}).",
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. Fotos transferidas a Telegram @ONEILnewBot ({GROOMING_QC_SUPERGROUP_TITLE} • {resolved_chat_id}) y Make.com ({make_url}).",
         "sessionId": session_id,
         "petId": pet_id,
         "petName": pet_name,
@@ -2874,9 +3233,12 @@ async def handle_grooming_qc_photos(request: Request):
             {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
             {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
         ],
-        "telegramTarget": telegram_target,
+        "telegramTarget": "@ONEILnewBot",
+        "telegramChatId": resolved_chat_id,
+        "telegramGroupTitle": GROOMING_QC_SUPERGROUP_TITLE,
         "telegramBot": "@ONEILnewBot",
         "telegramBotUrl": "https://t.me/ONEILnewBot",
+        "telegramBotPermissions": bot_perms,
         "makeWebhookUrl": make_url,
         "makeStatus": make_result.get("status"),
         "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA",

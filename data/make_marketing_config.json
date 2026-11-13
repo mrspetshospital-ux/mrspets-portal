@@ -8,7 +8,21 @@
     "botName": "FOTOS MARKETING MRSPETS",
     "botId": 9219306084,
     "botToken": "9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4",
-    "email": "mrspetshospital@gmail.com"
+    "email": "mrspetshospital@gmail.com",
+    "operationsGroup": {
+      "chatId": "-1004440607589",
+      "title": "FOTOS GROOMING HISTORICO",
+      "type": "supergroup",
+      "aliases": [
+        "-584146799510",
+        "584146799510",
+        "+584146799510",
+        "-4179131205"
+      ],
+      "status": "ACTIVE_MEMBER",
+      "canSendPhotos": true,
+      "canSendMessages": true
+    }
   },
   "groomingQcPayloadSchema": {
     "event": "grooming_qc_social_media_ready",
@@ -37,6 +51,10 @@
       "photo4",
       "photosDetails",
       "telegramTarget",
+      "telegramChatId",
+      "chat_id",
+      "telegramGroupTitle",
+      "telegramBotPermissions",
       "telegramBotToken",
       "telegramBotUsername",
       "telegramBotUrl",
@@ -44,6 +62,6 @@
       "timestamp"
     ]
   },
-  "savedAt": "2026-11-13T18:25:00.000Z",
+  "savedAt": "2026-11-13T19:50:00.000Z",
   "status": "active"
 }

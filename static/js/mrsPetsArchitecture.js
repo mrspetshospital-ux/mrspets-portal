@@ -2590,7 +2590,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     this.qcSessionPhotos = [
       'assets/hero_border_collie.jpg',
       'assets/media__1787694901704.jpg',
-      'assets/media_1789774687453.jpg',
+      'assets/media_1789775225842.jpg',
       'assets/leia_avatar.jpg'
     ];
     this.updateQcSlotsPreview();
@@ -2722,7 +2722,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     const presets = [
       `${baseUrl}/assets/hero_border_collie.jpg`,
       `${baseUrl}/assets/media__1787694901704.jpg`,
-      `${baseUrl}/assets/media_1789774687453.jpg`,
+      `${baseUrl}/assets/media_1789775225842.jpg`,
       `${baseUrl}/assets/leia_avatar.jpg`
     ];
 
@@ -2997,7 +2997,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       const presets = [
         `${baseUrl}/assets/hero_border_collie.jpg`,
         `${baseUrl}/assets/media__1787694901704.jpg`,
-        `${baseUrl}/assets/media_1789774687453.jpg`,
+        `${baseUrl}/assets/media_1789775225842.jpg`,
         `${baseUrl}/assets/leia_avatar.jpg`
       ];
       const rawPhotos = (payload && (payload.photos || payload.photoUrls)) || [];
