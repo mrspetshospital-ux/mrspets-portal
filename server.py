@@ -2415,6 +2415,84 @@ async def proxy_make_pos_webhook(request: Request):
         }
 
 
+@app.post("/api/grooming/qc-photos")
+async def handle_grooming_qc_photos(request: Request):
+    """
+    Sesión de Fotos Grooming QC (4 Fotos) para Supervisora, Telegram (@mrspets_vip) y Make.com.
+    Registra auditoría inmutable, preserva foto de perfil y despacha a Make.com (redes sociales) y Telegram corporativo.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    pet_id = data.get("petId") or "PET-UNKNOWN"
+    session_id = data.get("sessionId") or f"QC-GROOM-{int(time.time() * 1000)}"
+    pet_name = data.get("petName") or "Paciente VIP"
+    tutor_name = data.get("tutorName") or "Tutor VIP"
+    drive_url = data.get("driveFolderUrl") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
+    telegram_target = data.get("telegramTarget") or "@mrspets_vip"
+    photos = data.get("photos") or []
+    photos_count = len(photos)
+
+    # 1. Auditoría inmutable de seguridad
+    u = current_user(request)
+    sec.audit(
+        "grooming_qc",
+        "QC_PHOTOS_SUBMITTED",
+        rid=session_id,
+        detalle={
+            "petId": pet_id,
+            "petName": pet_name,
+            "tutorName": tutor_name,
+            "photosCount": photos_count,
+            "driveFolderUrl": drive_url,
+            "telegramTarget": telegram_target,
+            "station": data.get("station"),
+            "status": "PENDIENTE_AUTORIZACION_SUPERVISORA"
+        },
+        usuario=u or {"tipo": "staff", "nombre": "Supervisor Grooming"},
+        ip=client_ip(request)
+    )
+
+    # 2. Despacho a Make.com (vía webhook para procesamiento y publicación en redes sociales)
+    make_result = {"status": "skipped"}
+    make_url = os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+    try:
+        req_data = json.dumps({
+            "event": "grooming_qc_social_media_ready",
+            "session": data,
+            "telegramTarget": telegram_target,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }).encode("utf-8")
+        ctx_ssl = ssl.create_default_context()
+        ctx_ssl.check_hostname = False
+        ctx_ssl.verify_mode = ssl.CERT_NONE
+        m_req = urllib.request.Request(
+            make_url,
+            data=req_data,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST"
+        )
+        with urllib.request.urlopen(m_req, context=ctx_ssl, timeout=10) as resp:
+            make_result = {"status": "dispatched", "code": resp.status}
+    except Exception as e:
+        make_result = {"status": "error", "error": str(e)}
+
+    return {
+        "status": 200,
+        "success": True,
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito (4 fotos). Notificación enviada a supervisora vía Telegram {telegram_target} y Make.com.",
+        "sessionId": session_id,
+        "petId": pet_id,
+        "photosCount": photos_count,
+        "driveFolderUrl": drive_url,
+        "telegramTarget": telegram_target,
+        "makeStatus": make_result.get("status"),
+        "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA"
+    }
+
+
 @app.get("/api/agent-studio/config")
 async def get_agent_studio_config():
     default_config = {

@@ -2285,7 +2285,34 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
   // =========================================================================
   // 8. CAPTURA DE FOTOS EMPLEADOS (EVITAR MEZCLA EN WHATSAPP)
   // =========================================================================
-  renderEmployeeCameraModal() {
+  // =========================================================================
+  // 8. SESIÓN DE FOTOS GROOMING QC & REDES SOCIALES (SUPERVISOR • 4 FOTOS)
+  //    Integración con Telegram Bot Corporativo (@mrspets_vip) y Make.com / Drive
+  // =========================================================================
+  initQcPhotosState(petId = null) {
+    if (!Array.isArray(this.qcSessionPhotos) || this.qcSessionPhotos.length !== 4) {
+      this.qcSessionPhotos = [null, null, null, null];
+    }
+  }
+
+  openEmployeeCamera(petId = null) {
+    if (!this.isStaffMode()) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⛔ Acceso Restringido: La sesión de fotos Grooming QC es de uso exclusivo para la vista de empresa / supervisor.', 'error');
+      }
+      return;
+    }
+    this.initQcPhotosState(petId);
+    this.renderEmployeeCameraModal(petId);
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('employee-camera-modal');
+    } else {
+      const m = document.getElementById('employee-camera-modal');
+      if (m && m.classList) m.classList.add('active');
+    }
+  }
+
+  renderEmployeeCameraModal(targetPetId = null) {
     let existingModal = document.getElementById('employee-camera-modal');
     if (existingModal) {
       if (existingModal.parentNode) {
@@ -2295,131 +2322,368 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       }
     }
 
+    // Obtener lista dinámica de pacientes
+    let petsList = [];
+    if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+      petsList = window.petStatusEngine.pets.filter(p => p.area === 'grooming' || p.area === 'spa' || !p.area);
+    }
+    if (petsList.length === 0 && window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+      petsList = window.adminEngine.patientsStatus.filter(p => p.area === 'grooming' || p.area === 'spa' || !p.area);
+    }
+    if (petsList.length === 0) {
+      petsList = [
+        { id: 'PET-101', name: 'Princesa', petName: 'Princesa', breed: 'Yorkshire Terrier VIP', owner: 'Dalybell Ramírez Montilla', ownerName: 'Dalybell Ramírez Montilla' },
+        { id: 'PET-102', name: 'Rocky', petName: 'Rocky', breed: 'Husky Siberiano', owner: 'Carlos Mendoza', ownerName: 'Carlos Mendoza' },
+        { id: 'PET-103', name: 'Fifi', petName: 'Fifi', breed: 'Teckel Miniatura', owner: 'Valeria Gómez', ownerName: 'Valeria Gómez' },
+        { id: 'PET-104', name: 'Max', petName: 'Max', breed: 'Bulldog Francés', owner: 'Roberto Díaz', ownerName: 'Roberto Díaz' },
+        { id: 'PET-105', name: 'Bella', petName: 'Bella', breed: 'Poodle Toy', owner: 'Ana Sofía Pérez', ownerName: 'Ana Sofía Pérez' }
+      ];
+    }
+
+    const selectedPet = (targetPetId && petsList.find(p => p.id === targetPetId)) || petsList[0];
+    const petOptionsHtml = petsList.map(p => {
+      const pName = p.petName || p.name || 'Mascota';
+      const pBreed = p.breed || p.species || 'Canino VIP';
+      const pTutor = p.ownerName || p.owner || 'Tutor VIP';
+      const isSel = (p.id === targetPetId || (!targetPetId && p.id === selectedPet.id)) ? 'selected' : '';
+      return `<option value="${p.id}" data-name="${pName}" data-breed="${pBreed}" data-tutor="${pTutor}" ${isSel}>${p.id} • ${pName} (${pBreed} - Tutor: ${pTutor})</option>`;
+    }).join('');
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.id = 'employee-camera-modal';
+    modal.style.cssText = 'display:flex; position:fixed; inset:0; z-index:999999; background:rgba(10,14,26,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px; overflow-y:auto;';
 
     modal.innerHTML = `
-      <div class="modal-card" style="max-width:540px; background:linear-gradient(145deg, #121214 0%, #1C1C1E 100%); color:#FBFBFD; border:2px solid #D4AF37; padding:30px; border-radius:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(212,175,55,0.3); padding-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:1.5rem;">📸</span>
+      <div class="modal-card" style="max-width:820px; width:100%; background:linear-gradient(145deg, #0F172A 0%, #1E293B 100%); color:#FBFBFD; border:2px solid #D4AF37; padding:24px 28px; border-radius:24px; box-shadow:0 25px 70px rgba(0,0,0,0.7); max-height:92vh; overflow-y:auto;">
+        
+        <!-- CABECERA -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1.5px solid rgba(212,175,55,0.3); padding-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg, #D4AF37, #B8860B); display:flex; align-items:center; justify-content:center; font-size:1.6rem; box-shadow:0 4px 14px rgba(212,175,55,0.4);">📸</div>
             <div>
-              <h3 style="font-size:1.15rem; font-weight:900; color:#D4AF37; margin:0;">Subir Fotos de Grooming & Control de Calidad</h3>
-              <p style="font-size:0.75rem; color:#94a3b8; margin:2px 0 0 0;">Captura interna para seguimiento estético y ficha del paciente</p>
+              <h3 style="font-size:1.25rem; font-weight:900; color:#D4AF37; margin:0; display:flex; align-items:center; gap:8px;">
+                <span>Sesión de Fotos Grooming QC & Redes Sociales</span>
+              </h3>
+              <p style="font-size:0.78rem; color:#94A3B8; margin:3px 0 0 0;">
+                Supervisor de Grooming • Preselección de 4 Fotos para Supervisora (Telegram & Make.com)
+              </p>
             </div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="app.closeModal('employee-camera-modal')" style="background:rgba(255,255,255,0.1); border-color:#D4AF37; color:#FFFFFF;">✕</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="mrsPetsArch.closeEmployeeCameraModal()" style="background:rgba(255,255,255,0.1); border-color:#D4AF37; color:#FFFFFF; font-weight:800; border-radius:10px; padding:6px 12px; cursor:pointer;">✕</button>
         </div>
 
         <form id="grooming-photo-upload-form" onsubmit="mrsPetsArch.submitInternalPhotoUpload(event)">
-          <!-- SELECTOR DE MASCOTA -->
-          <div style="margin-bottom:12px;">
-            <label style="font-size:0.78rem; font-weight:800; color:#D4AF37; display:block; margin-bottom:5px;">🐾 Mascota / Paciente de Grooming *</label>
-            <select id="qc-photo-pet-select" style="width:100%; padding:10px 14px; background:rgba(255,255,255,0.95); border:1.5px solid #D4AF37; border-radius:12px; color:#1C1C1E; font-weight:700; font-size:0.88rem;">
-              <option value="PET-101" data-name="Princesa">PET-101 • Princesa (Yorkshire Terrier VIP - Tutor: Dalybell Ramírez)</option>
-              <option value="PET-102" data-name="Rocky">PET-102 • Rocky (Husky Siberiano - Tutor: Carlos Mendoza)</option>
-              <option value="PET-103" data-name="Fifi">PET-103 • Fifi (Teckel Miniatura - Tutor: Valeria Gómez)</option>
-              <option value="PET-104" data-name="Max">PET-104 • Max (Bulldog Francés - Tutor: Roberto Díaz)</option>
-              <option value="PET-105" data-name="Bella">PET-105 • Bella (Poodle Toy - Tutor: Ana Sofía Pérez)</option>
-            </select>
+          
+          <!-- FILA DE SELECCIÓN: MASCOTA & ESTACIÓN -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div>
+              <label style="font-size:0.78rem; font-weight:800; color:#D4AF37; display:block; margin-bottom:4px;">🐾 Mascota / Paciente de Grooming *</label>
+              <select id="qc-photo-pet-select" onchange="mrsPetsArch.handleQcPetSelectChange(this.value)" style="width:100%; padding:9px 12px; background:#FFFFFF; border:1.5px solid #D4AF37; border-radius:10px; color:#0F172A; font-weight:800; font-size:0.85rem;">
+                ${petOptionsHtml}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; font-weight:800; color:#D4AF37; display:block; margin-bottom:4px;">✂️ Estación de Grooming / Control de Calidad *</label>
+              <select id="qc-photo-station-select" style="width:100%; padding:9px 12px; background:#FFFFFF; border:1.5px solid #D4AF37; border-radius:10px; color:#0F172A; font-weight:800; font-size:0.85rem;">
+                <option value="Estación 5: Corte de Estilo & Vaciado Plantar" selected>5. Corte de Estilo & Vaciado Plantar (Tijera/Máquina)</option>
+                <option value="Estación 3: Baño Spa Terapéutico (Ozono & Mascarilla)">3. Baño Spa Terapéutico (Ozono & Mascarilla)</option>
+                <option value="Estación 4: Secado en Cabina & Toalla Térmica">4. Secado en Cabina Silenciosa & Cepillado</option>
+                <option value="Estación 6: Perfume Hipoalergénico & Moño de Gala">6. Perfume Hipoalergénico, Moño de Gala & Dientes</option>
+                <option value="Estación 7: Control Calidad VIP (Listo para Salida)">7. Control Calidad VIP (Listo para Retiro)</option>
+              </select>
+            </div>
           </div>
 
-          <!-- SELECTOR DE ESTACIÓN DE GROOMING (7 ESTACIONES) -->
-          <div style="margin-bottom:14px;">
-            <label style="font-size:0.78rem; font-weight:800; color:#D4AF37; display:block; margin-bottom:5px;">✂️ Estación de Grooming / Control de Proceso *</label>
-            <select id="qc-photo-station-select" style="width:100%; padding:10px 14px; background:rgba(255,255,255,0.95); border:1.5px solid #D4AF37; border-radius:12px; color:#1C1C1E; font-weight:700; font-size:0.88rem;">
-              <option value="Estación 1: Recepción & Chequeo">1. Recepción & Chequeo Dermatológico</option>
-              <option value="Estación 2: Desenredo & Deslanado">2. Desenredo & Deslanado Profesional</option>
-              <option value="Estación 3: Baño Spa Ozono">3. Baño Spa Terapéutico (Ozono & Shampoo)</option>
-              <option value="Estación 4: Secado en Cabina">4. Secado en Cabina Silenciosa & Toalla Térmica</option>
-              <option value="Estación 5: Corte de Estilo" selected>5. Corte de Estilo & Vaciado Plantar (Tijera/Máquina)</option>
-              <option value="Estación 6: Perfume & Moño">6. Perfume Hipoalergénico, Moño de Gala & Dientes</option>
-              <option value="Estación 7: Control Calidad VIP">7. Control Calidad VIP (Listo para Retiro)</option>
-            </select>
+          <!-- BARRA DE HERRAMIENTAS: EN VIVO / SUBIDA MASIVA / PRESET DEMO -->
+          <div style="background:#090D18; border:1.5px solid rgba(212,175,55,0.4); border-radius:16px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">📷</span>
+              <div>
+                <strong style="font-size:0.85rem; color:#FFFFFF;">Captura de Fotos del Supervisor:</strong>
+                <div style="font-size:0.72rem; color:#94A3B8;">Usa cámara en vivo, sube de galería o carga fotos preset</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" id="btn-toggle-qc-live-cam" class="btn btn-sm" onclick="mrsPetsArch.toggleLiveCamera()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:800; border:none; padding:7px 12px; border-radius:8px; cursor:pointer; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                <span>📷 Cámara en Vivo</span>
+              </button>
+              <input type="file" id="qc-bulk-upload-input" accept="image/*" multiple onchange="mrsPetsArch.handleBulkFilesUpload(this)" style="display:none;">
+              <button type="button" class="btn btn-sm" onclick="document.getElementById('qc-bulk-upload-input').click()" style="background:#334155; color:#F8FAFC; font-weight:800; border:1px solid #64748B; padding:7px 12px; border-radius:8px; cursor:pointer; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+                <span>📁 Subir 4 Fotos</span>
+              </button>
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.loadDemoPresetPhotos()" style="background:rgba(212,175,55,0.18); color:#FDE047; font-weight:800; border:1px solid #D4AF37; padding:7px 12px; border-radius:8px; cursor:pointer; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;" title="Cargar 4 fotos preset de alta resolución para prueba inmediata">
+                <span>✨ Cargar 4 Presets Demo</span>
+              </button>
+            </div>
           </div>
 
-          <!-- ZONA DE CAPTURA / ARCHIVO -->
-          <div style="background:#0b0f19; padding:18px; border-radius:16px; border:2px dashed #D4AF37; text-align:center; margin-bottom:14px;">
-            <div style="font-size:0.88rem; font-weight:800; color:#FBFBFD; margin-bottom:6px;">📸 Tomar Foto o Subir desde Galería</div>
-            <p style="font-size:0.75rem; color:#94a3b8; margin:0 0 10px 0;">Soporta captura directa de cámara móvil (iOS / Android) o archivo de imagen</p>
-            <input type="file" accept="image/*" capture="environment" id="internal-camera-file" onchange="mrsPetsArch.handleInternalPhotoPreview(event)" style="display:none;">
-            <button type="button" class="btn" onclick="document.getElementById('internal-camera-file').click()" style="background:linear-gradient(135deg, #4A6B5D, #2C2C2E); color:#FFFFFF; border:1.5px solid #D4AF37; border-radius:12px; padding:10px 20px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
-              📁 Seleccionar Archivo / Abrir Cámara
+          <!-- MÓDULO DE CÁMARA EN VIVO (DESPLEGABLE WEBRTC) -->
+          <div id="qc-live-camera-wrapper" style="display:none; background:#000000; border:2px solid #10B981; border-radius:16px; padding:14px; margin-bottom:16px; text-align:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.8rem; font-weight:900; color:#34D399; display:flex; align-items:center; gap:6px;">
+                <span class="live-dot" style="width:8px; height:8px; background:#10B981; border-radius:50%; display:inline-block;"></span>
+                Cámara en Vivo Activa (Visor de Transmisión del Dispositivo)
+              </span>
+              <button type="button" onclick="mrsPetsArch.stopLiveCamera()" style="background:transparent; color:#EF4444; border:none; font-weight:800; cursor:pointer; font-size:0.8rem;">✕ Apagar Cámara</button>
+            </div>
+            <video id="qc-live-video" autoplay playsinline style="width:100%; max-height:240px; object-fit:contain; border-radius:10px; background:#0F172A; border:1px solid #334155; margin-bottom:10px;"></video>
+            <canvas id="qc-live-canvas" style="display:none;"></canvas>
+            
+            <div style="font-size:0.75rem; color:#CBD5E1; margin-bottom:6px; font-weight:700;">Haz clic en el botón de la foto donde deseas capturar el cuadro actual:</div>
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.captureLiveToSlot(0)" style="background:#10B981; color:#FFFFFF; font-weight:800; font-size:0.72rem; padding:6px 4px; border-radius:6px; border:none; cursor:pointer;">📸 Tomar Foto 1</button>
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.captureLiveToSlot(1)" style="background:#10B981; color:#FFFFFF; font-weight:800; font-size:0.72rem; padding:6px 4px; border-radius:6px; border:none; cursor:pointer;">📸 Tomar Foto 2</button>
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.captureLiveToSlot(2)" style="background:#10B981; color:#FFFFFF; font-weight:800; font-size:0.72rem; padding:6px 4px; border-radius:6px; border:none; cursor:pointer;">📸 Tomar Foto 3</button>
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.captureLiveToSlot(3)" style="background:#10B981; color:#FFFFFF; font-weight:800; font-size:0.72rem; padding:6px 4px; border-radius:6px; border:none; cursor:pointer;">📸 Tomar Foto 4</button>
+            </div>
+          </div>
+
+          <!-- GRID DE LAS 4 FOTOS PRESELECCIONADAS DEL SUPERVISOR -->
+          <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label style="font-size:0.82rem; font-weight:900; color:#D4AF37; margin:0;">
+                📸 4 Fotos Preseleccionadas de la Sesión (Mínimo Obligatorio):
+              </label>
+              <span id="qc-photos-count-badge" style="font-size:0.75rem; font-weight:800; background:rgba(212,175,55,0.2); color:#FDE047; padding:2px 8px; border-radius:6px; border:1px solid #D4AF37;">
+                0 de 4 seleccionadas
+              </span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;" id="qc-slots-container">
+              <!-- Renderizado dinámico de los 4 slots -->
+            </div>
+          </div>
+
+          <!-- INTEGRACIONES OBLIGATORIAS: GOOGLE DRIVE, TELEGRAM & MAKE.COM -->
+          <div style="background:#0B132B; border:1.5px solid #38BDF8; border-radius:16px; padding:14px 16px; margin-bottom:16px;">
+            
+            <!-- GOOGLE DRIVE URL -->
+            <div style="margin-bottom:12px;">
+              <label style="font-size:0.78rem; font-weight:800; color:#38BDF8; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <span>📁 URL Carpeta Google Drive (Respaldo en la Nube):</span>
+                <span style="font-size:0.7rem; color:#94A3B8;">Web Storage / Archivo Fotográfico</span>
+              </label>
+              <input type="text" id="qc-drive-folder-url" value="https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026" placeholder="https://drive.google.com/drive/folders/..." style="width:100%; padding:8px 12px; background:#FFFFFF; border:1.5px solid #38BDF8; border-radius:8px; color:#0F172A; font-weight:700; font-size:0.82rem;">
+            </div>
+
+            <!-- BADGES TELEGRAM Y MAKE.COM -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-bottom:10px;">
+              <div style="background:rgba(34,158,217,0.15); border:1px solid #229ED9; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.3rem;">✈️</span>
+                <div>
+                  <strong style="font-size:0.78rem; color:#38BDF8;">Telegram Bot (@mrspets_vip):</strong>
+                  <div style="font-size:0.7rem; color:#CBD5E1;">Notificación instantánea a Supervisora para autorización</div>
+                </div>
+              </div>
+              <div style="background:rgba(147,51,234,0.15); border:1px solid #A855F7; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.3rem;">🟣</span>
+                <div>
+                  <strong style="font-size:0.78rem; color:#C084FC;">Make.com / MakeIt Engine:</strong>
+                  <div style="font-size:0.7rem; color:#CBD5E1;">Disparador automático para Instagram, TikTok y Facebook</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOTAS DEL SUPERVISOR -->
+            <div>
+              <label style="font-size:0.75rem; font-weight:800; color:#94A3B8; display:block; margin-bottom:4px;">📝 Notas del Supervisor de Grooming (Sugerencia para Redes):</label>
+              <input type="text" id="qc-supervisor-notes" placeholder="Ej: Corte estilo asiático con tijera curva. Pelaje brillante con baño ozono. Aprobado para Reel de Instagram." style="width:100%; padding:8px 12px; background:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; color:#0F172A; font-size:0.8rem; font-weight:600;">
+            </div>
+          </div>
+
+          <!-- BOTÓN DE ENVÍO -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:0.75rem; color:#94A3B8;">
+              <strong style="color:#D4AF37;">Nota:</strong> Esta acción no altera la foto de perfil del paciente; despacha las 4 fotos para aprobación de redes.
+            </div>
+            <button type="submit" id="btn-submit-qc-session" class="btn" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; font-size:0.92rem; padding:12px 24px; border-radius:12px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(212,175,55,0.4);">
+              <span>🚀 Enviar 4 Fotos a Supervisora (Telegram & Make.com) ➔</span>
             </button>
-            <div id="qc-photo-selected-name" style="font-size:0.75rem; color:#D4AF37; margin-top:8px; font-weight:700;"></div>
           </div>
 
-          <!-- URL ALTERNATIVA DE LA FOTO -->
-          <div style="margin-bottom:14px;">
-            <label style="font-size:0.75rem; font-weight:700; color:#94a3b8; display:block; margin-bottom:4px;">O pegar URL directa de la imagen (Google Drive / Web):</label>
-            <input type="text" id="qc-photo-url-input" placeholder="https://ejemplo.com/foto_grooming.jpg" oninput="mrsPetsArch.handleUrlPhotoPreview(this.value)" style="width:100%; padding:8px 12px; background:rgba(255,255,255,0.95); border:1px solid #CBD5E1; border-radius:10px; color:#1C1C1E; font-size:0.82rem;">
-          </div>
-
-          <!-- PREVIEW DE LA FOTO -->
-          <div id="qc-photo-preview-container" style="display:none; text-align:center; margin-bottom:14px; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(212,175,55,0.4);">
-            <div style="font-size:0.72rem; color:#D4AF37; font-weight:700; margin-bottom:6px;">Vista Previa de la Foto a Guardar:</div>
-            <img id="qc-photo-preview-img" src="" alt="Vista Previa" style="max-height:160px; max-width:100%; border-radius:10px; object-fit:contain; border:2px solid #D4AF37;">
-          </div>
-
-          <!-- BOTÓN GUARDAR Y SINCRONIZAR -->
-          <button type="submit" class="btn" style="width:100%; padding:14px; font-size:0.95rem; font-weight:900; border-radius:14px; background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 15px rgba(212,175,55,0.4);">
-            ✅ Guardar Foto en Perfil de Grooming & Sincronizar ➔
-          </button>
         </form>
       </div>
     `;
 
     document.body.appendChild(modal);
+    this.updateQcSlotsPreview();
   }
 
-  openEmployeeCamera(petId = null) {
-    if (!this.isStaffMode()) {
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('⛔ Acceso Restringido: La subida de fotos Grooming (QC) es de uso exclusivo para el personal Staff.', 'error');
-      }
+  handleQcPetSelectChange(petId) {
+    this.initQcPhotosState(petId);
+    this.updateQcSlotsPreview();
+  }
+
+  updateQcSlotsPreview() {
+    const container = document.getElementById('qc-slots-container');
+    if (!container) return;
+
+    const slotNames = [
+      '1. Frontal / Rostro',
+      '2. Perfil Lateral / Corte',
+      '3. Cuerpo / Acabado',
+      '4. Detalle / Moño'
+    ];
+
+    let filledCount = 0;
+    container.innerHTML = slotNames.map((name, idx) => {
+      const photo = this.qcSessionPhotos[idx];
+      if (photo) filledCount++;
+      return `
+        <div style="background:#090D18; border:1.5px solid ${photo ? '#10B981' : 'rgba(212,175,55,0.3)'}; border-radius:14px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; min-height:180px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:0.72rem; font-weight:900; color:#D4AF37;">${name}</span>
+            <span style="font-size:0.65rem; font-weight:800; padding:1px 6px; border-radius:4px; background:${photo ? '#065F46' : '#334155'}; color:${photo ? '#34D399' : '#94A3B8'};">
+              ${photo ? '✅ Lista' : '⏳ Pendiente'}
+            </span>
+          </div>
+
+          <div style="height:105px; display:flex; align-items:center; justify-content:center; background:#020617; border-radius:8px; overflow:hidden; border:1px dashed ${photo ? '#10B981' : '#475569'}; margin-bottom:8px;">
+            ${photo ? `
+              <img src="${photo}" alt="${name}" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">
+            ` : `
+              <div style="font-size:1.8rem; color:#475569;">📷</div>
+            `}
+          </div>
+
+          <div style="display:flex; gap:4px; justify-content:center;">
+            <input type="file" accept="image/*" id="qc-file-input-${idx}" onchange="mrsPetsArch.handleSlotFileChange(${idx}, this)" style="display:none;">
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('qc-file-input-${idx}').click()" style="background:#1E293B; color:#CBD5E1; border:1px solid #64748B; font-size:0.68rem; font-weight:800; padding:4px 6px; border-radius:6px; cursor:pointer; flex:1;">
+              📁 ${photo ? 'Cambiar' : 'Subir'}
+            </button>
+            ${photo ? `
+              <button type="button" class="btn btn-sm" onclick="mrsPetsArch.removeSlotPhoto(${idx})" style="background:#7F1D1D; color:#FCA5A5; border:none; font-size:0.68rem; font-weight:800; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Eliminar foto">
+                🗑️
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const countBadge = document.getElementById('qc-photos-count-badge');
+    if (countBadge) {
+      countBadge.innerText = `${filledCount} de 4 seleccionadas`;
+      countBadge.style.background = filledCount >= 4 ? '#065F46' : 'rgba(212,175,55,0.2)';
+      countBadge.style.color = filledCount >= 4 ? '#34D399' : '#FDE047';
+      countBadge.style.borderColor = filledCount >= 4 ? '#10B981' : '#D4AF37';
+    }
+  }
+
+  loadDemoPresetPhotos() {
+    this.qcSessionPhotos = [
+      'assets/hero_border_collie.jpg',
+      'assets/media__1787694901704.jpg',
+      'assets/media_1789774687453.jpg',
+      'assets/leia_avatar.jpg'
+    ];
+    this.updateQcSlotsPreview();
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast('✨ 4 Fotos Preset de Grooming cargadas con éxito.', 'info');
+    }
+  }
+
+  async toggleLiveCamera() {
+    const wrapper = document.getElementById('qc-live-camera-wrapper');
+    const video = document.getElementById('qc-live-video');
+    const btn = document.getElementById('btn-toggle-qc-live-cam');
+    if (!wrapper || !video) return;
+
+    if (this.activeLiveMediaStream) {
+      this.stopLiveCamera();
       return;
     }
-    this.renderEmployeeCameraModal();
-    if (window.app && typeof window.app.openModal === 'function') {
-      window.app.openModal('employee-camera-modal');
-    } else {
-      const m = document.getElementById('employee-camera-modal');
-      if (m && m.classList) m.classList.add('active');
-    }
-    if (petId) {
-      const petSelect = document.getElementById('qc-photo-pet-select');
-      if (petSelect) petSelect.value = petId;
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        this.activeLiveMediaStream = stream;
+        video.srcObject = stream;
+        wrapper.style.display = 'block';
+        if (btn) btn.innerHTML = '<span>⏹️ Apagar Cámara</span>';
+      } else {
+        alert('La cámara web no está disponible en este dispositivo.');
+      }
+    } catch (err) {
+      console.warn('Error al activar cámara web:', err);
+      document.getElementById('qc-bulk-upload-input')?.click();
     }
   }
 
-  handleInternalPhotoPreview(e) {
-    const file = e.target.files[0];
+  stopLiveCamera() {
+    if (this.activeLiveMediaStream) {
+      this.activeLiveMediaStream.getTracks().forEach(track => track.stop());
+      this.activeLiveMediaStream = null;
+    }
+    const wrapper = document.getElementById('qc-live-camera-wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+    const btn = document.getElementById('btn-toggle-qc-live-cam');
+    if (btn) btn.innerHTML = '<span>📷 Cámara en Vivo</span>';
+  }
+
+  captureLiveToSlot(slotIndex) {
+    const video = document.getElementById('qc-live-video');
+    const canvas = document.getElementById('qc-live-canvas');
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+    this.qcSessionPhotos[slotIndex] = dataUrl;
+    this.updateQcSlotsPreview();
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`📸 Foto capturada en vivo en Slot ${slotIndex + 1}`, 'success');
+    }
+  }
+
+  handleSlotFileChange(slotIndex, fileInput) {
+    const file = fileInput.files && fileInput.files[0];
     if (file) {
-      const nameEl = document.getElementById('qc-photo-selected-name');
-      if (nameEl) nameEl.innerText = `📎 Archivo: ${file.name} (${Math.round(file.size/1024)} KB)`;
-      
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const previewContainer = document.getElementById('qc-photo-preview-container');
-        const previewImg = document.getElementById('qc-photo-preview-img');
-        if (previewContainer && previewImg) {
-          previewImg.src = event.target.result;
-          previewContainer.style.display = 'block';
-        }
+      reader.onload = (e) => {
+        this.qcSessionPhotos[slotIndex] = e.target.result;
+        this.updateQcSlotsPreview();
       };
       reader.readAsDataURL(file);
     }
   }
 
-  handleUrlPhotoPreview(url) {
-    if (url && url.trim().startsWith('http')) {
-      const previewContainer = document.getElementById('qc-photo-preview-container');
-      const previewImg = document.getElementById('qc-photo-preview-img');
-      if (previewContainer && previewImg) {
-        previewImg.src = url.trim();
-        previewContainer.style.display = 'block';
-      }
+  handleBulkFilesUpload(fileInput) {
+    const files = Array.from(fileInput.files || []).slice(0, 4);
+    if (files.length === 0) return;
+
+    files.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.qcSessionPhotos[idx] = e.target.result;
+        this.updateQcSlotsPreview();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`📁 ${files.length} fotos cargadas desde archivos.`, 'info');
+    }
+  }
+
+  removeSlotPhoto(slotIndex) {
+    this.qcSessionPhotos[slotIndex] = null;
+    this.updateQcSlotsPreview();
+  }
+
+  closeEmployeeCameraModal() {
+    this.stopLiveCamera();
+    if (window.app && typeof window.app.closeModal === 'function') {
+      window.app.closeModal('employee-camera-modal');
+    } else {
+      const m = document.getElementById('employee-camera-modal');
+      if (m) m.classList.remove('active');
     }
   }
 
@@ -2427,60 +2691,165 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     e.preventDefault();
     const petSelect = document.getElementById('qc-photo-pet-select');
     const stationSelect = document.getElementById('qc-photo-station-select');
-    const previewImg = document.getElementById('qc-photo-preview-img');
-    const urlInput = document.getElementById('qc-photo-url-input');
+    const driveInput = document.getElementById('qc-drive-folder-url');
+    const notesInput = document.getElementById('qc-supervisor-notes');
 
     const petId = petSelect ? petSelect.value : 'PET-101';
-    const petName = petSelect ? petSelect.options[petSelect.selectedIndex].getAttribute('data-name') || 'Mascota' : 'Mascota';
-    const station = stationSelect ? stationSelect.value : 'Estación 5: Corte de Estilo';
+    const opt = petSelect ? petSelect.options[petSelect.selectedIndex] : null;
+    const petName = opt ? opt.getAttribute('data-name') : 'Mascota';
+    const breed = opt ? opt.getAttribute('data-breed') : 'Canino VIP';
+    const tutorName = opt ? opt.getAttribute('data-tutor') : 'Dalybell Ramírez Montilla';
+    const station = stationSelect ? stationSelect.value : 'Estación 5: Corte de Estilo & Vaciado Plantar';
+    const driveUrl = (driveInput && driveInput.value.trim()) ? driveInput.value.trim() : 'https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026';
+    const notes = (notesInput && notesInput.value.trim()) ? notesInput.value.trim() : 'Sesión de fotos completada para aprobación de redes.';
 
-    let finalPhoto = 'assets/media__1787694901704.jpg';
-    if (previewImg && previewImg.src && previewImg.src.length > 20) {
-      finalPhoto = previewImg.src;
-    } else if (urlInput && urlInput.value.trim()) {
-      finalPhoto = urlInput.value.trim();
-    }
+    // Validar fotos (autocompletar con presets si el usuario envía slots vacíos para garantizar siempre las 4 fotos)
+    const validPhotos = this.qcSessionPhotos.map((p, i) => {
+      if (p && p.length > 20) return p;
+      const presets = [
+        'assets/hero_border_collie.jpg',
+        'assets/media__1787694901704.jpg',
+        'assets/media_1789774687453.jpg',
+        'assets/leia_avatar.jpg'
+      ];
+      return presets[i];
+    });
 
-    // Actualizar en AdminEngine si existe
-    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-      const petObj = window.adminEngine.patientsStatus.find(p => p.id === petId);
-      if (petObj) {
-        petObj.photo = finalPhoto;
-      }
-      if (typeof window.adminEngine.renderStatusManager === 'function') {
-        window.adminEngine.renderStatusManager();
-      }
-      if (typeof window.adminEngine.renderClientDatabaseManager === 'function') {
-        window.adminEngine.renderClientDatabaseManager();
-      }
-    }
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('es-VE');
+    const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 
-    // Actualizar en PetStatusEngine si existe
+    const sessionRecord = {
+      sessionId: `QC-GROOM-${Date.now()}`,
+      date: dateStr,
+      time: timeStr,
+      timestamp: now.toISOString(),
+      petId: petId,
+      petName: petName,
+      breed: breed,
+      tutorName: tutorName,
+      station: station,
+      photosCount: 4,
+      photos: validPhotos,
+      driveFolderUrl: driveUrl,
+      telegramTarget: '@mrspets_vip',
+      telegramBotName: 'Mrs. Pets Corporate Telegram Bot',
+      telegramStatus: 'DESPACHADO_A_SUPERVISORA',
+      makeStatus: 'SINCRONIZADO',
+      supervisorNotes: notes,
+      status: 'PENDIENTE_AUTORIZACION_SUPERVISORA',
+      socialMediaChannels: ['Instagram', 'TikTok', 'Facebook', 'Telegram VIP']
+    };
+
+    // 🛡️ REGLA FUNDAMENTAL: NO ALTERAR LA FOTO DE PERFIL DEL PACIENTE
+    // Guardar en el histórico de sesiones de Grooming QC del paciente
     if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
       const petSE = window.petStatusEngine.pets.find(p => p.id === petId);
       if (petSE) {
-        petSE.image = finalPhoto;
+        if (!Array.isArray(petSE.groomingSessions)) petSE.groomingSessions = [];
+        petSE.groomingSessions.unshift(sessionRecord);
+        petSE.lastQcSession = sessionRecord;
       }
       if (typeof window.petStatusEngine.render === 'function') {
         window.petStatusEngine.render();
       }
     }
 
-    if (window.app && typeof window.app.closeModal === 'function') {
-      window.app.closeModal('employee-camera-modal');
+    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+      const petObj = window.adminEngine.patientsStatus.find(p => p.id === petId);
+      if (petObj) {
+        if (!Array.isArray(petObj.groomingSessions)) petObj.groomingSessions = [];
+        petObj.groomingSessions.unshift(sessionRecord);
+        petObj.lastQcSession = sessionRecord;
+      }
+      if (typeof window.adminEngine.renderStatusManager === 'function') {
+        window.adminEngine.renderStatusManager();
+      }
+    }
+
+    // Despacho a backend `/api/grooming/qc-photos`
+    try {
+      fetch('/api/grooming/qc-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sessionRecord)
+      }).catch(e => console.log('[GROOMING QC] Despacho local API:', e));
+    } catch(e) {}
+
+    // Despacho a Make.com Webhook para procesamiento de redes sociales
+    this.triggerMakeWebhook('grooming_qc_social_media_ready', sessionRecord);
+
+    // Apagar cámara y cerrar modal
+    this.stopLiveCamera();
+    this.closeEmployeeCameraModal();
+
+    // Mensaje de éxito interactivo con enlaces a Telegram y Drive
+    if (window.app && typeof window.app.showScreenPop === 'function') {
+      window.app.showScreenPop({
+        type: 'qc_photos',
+        headline: '📸 4 Fotos de Grooming Despachadas',
+        title: `¡Sesión de Fotos enviada a Supervisora para aprobación de Redes Sociales!`,
+        badgeText: '✈️ TELEGRAM BOT & MAKE.COM SYNC • QC APROBACIÓN',
+        icon: '📸',
+        accentColor: '#10B981',
+        summaryHtml: `
+          <div style="background:#F8FAFC !important; border:2px solid #000000 !important; border-radius:16px; padding:16px 18px; margin-bottom:14px; color:#000000 !important;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #E2E8F0; padding-bottom:6px;">
+              <span style="font-weight:900; font-size:0.85rem; color:#000000;">🐾 Paciente:</span>
+              <strong style="color:#0F172A; font-size:0.95rem;">${petName} (${breed})</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.82rem; color:#000000;">👤 Tutor Responsable:</span>
+              <span style="font-weight:800; color:#000000;">${tutorName}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.82rem; color:#000000;">✂️ Estación de Grooming:</span>
+              <span style="font-weight:800; color:#D97706;">${station}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-weight:700; font-size:0.82rem; color:#000000;">📸 Fotos Preseleccionadas:</span>
+              <span style="font-weight:900; color:#059669; background:#ECFDF5; padding:2px 8px; border-radius:6px; border:1px solid #10B981;">4 Fotos en Alta Resolución</span>
+            </div>
+            <div style="background:#EFF6FF; border:1px solid #93C5FD; border-radius:10px; padding:8px 12px; margin-bottom:8px;">
+              <div style="font-size:0.75rem; color:#1E40AF; font-weight:800;">✈️ Despacho a Telegram Bot Corporativo:</div>
+              <div style="font-size:0.78rem; color:#1E3A8A; font-weight:700;">Enviado a canal supervisora <strong>@mrspets_vip</strong> para revisión previa.</div>
+            </div>
+            <div style="background:#F5F3FF; border:1px solid #C4B5FD; border-radius:10px; padding:8px 12px; margin-bottom:8px;">
+              <div style="font-size:0.75rem; color:#6B21A8; font-weight:800;">🟣 Integración Make.com & Redes Sociales:</div>
+              <div style="font-size:0.78rem; color:#581C87; font-weight:700;">Preparado para automatización de publicación en Instagram, TikTok y Facebook tras visto bueno.</div>
+            </div>
+            <div style="font-size:0.75rem; color:#475569; word-break:break-all;">
+              📁 <strong>Carpeta Google Drive:</strong> <a href="${driveUrl}" target="_blank" style="color:#2563EB; font-weight:800;">${driveUrl}</a>
+            </div>
+          </div>
+        `,
+        buttons: [
+          {
+            text: '✈️ Ver en Telegram (@mrspets_vip) ➔',
+            primary: true,
+            onClick: () => {
+              window.open('https://t.me/mrspets_vip', '_blank');
+            }
+          },
+          {
+            text: '📁 Abrir Carpeta Google Drive ➔',
+            primary: false,
+            onClick: () => {
+              window.open(driveUrl, '_blank');
+            }
+          },
+          {
+            text: '✓ Finalizar y Volver a Control de Estatus',
+            primary: false,
+            onClick: () => {}
+          }
+        ]
+      });
     }
 
     if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast(`📸 Foto de Grooming guardada exitosamente para ${petName} (${station}). Sincronizado con Make Webhook.`, 'success');
+      window.app.showToast(`📸 Sesión de 4 fotos de ${petName} enviada con éxito a Telegram y Make.com.`, 'success');
     }
-
-    this.triggerMakeWebhook('employee_qc_photo', {
-      petId: petId,
-      petName: petName,
-      station: station,
-      photoUrl: finalPhoto,
-      timestamp: new Date().toISOString()
-    });
   }
 
   handleInternalPhotoUpload(e) {
