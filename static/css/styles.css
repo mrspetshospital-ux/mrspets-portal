@@ -2178,10 +2178,22 @@ body.customer-view-mode #btn-pet-status-calendario-live,
 body.customer-view-mode #btn-leia-header-calendar,
 body.customer-view-mode #modal-large-calendar,
 body.customer-view-mode .calendar-staff-only,
+body:not(.enterprise-view-mode) #btn-sidebar-calendario-agenda,
+body:not(.enterprise-view-mode) #btn-pet-status-calendario-live,
+body:not(.enterprise-view-mode) #btn-leia-header-calendar,
+body:not(.enterprise-view-mode) #modal-large-calendar,
+body:not(.enterprise-view-mode) .calendar-staff-only,
 body.customer-view-mode #employee-camera-modal {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+body.enterprise-view-mode #btn-sidebar-calendario-agenda,
+body.enterprise-view-mode #btn-pet-status-calendario-live {
+  display: inline-flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 /* Acceso directo Staff: Panel Administrativo & CONFIGURACIÓN exclusivo para perfil staff */

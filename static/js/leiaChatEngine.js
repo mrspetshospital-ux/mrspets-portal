@@ -333,6 +333,7 @@
                     sender: 'leia',
                     text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo orientarle hoy?`,
                     buttons: [
+                        '📅 Ver Disponibilidad',
                         '📅 Deseo hacer una reserva',
                         '✂️ Grooming & Spa VIP',
                         '🩺 Consulta Médica',
@@ -361,6 +362,7 @@
                     sender: 'leia',
                     text: `¡Hola! Soy **Leia 🎀** ✨🐾.\n\nQué gusto tenerte aquí. Estoy a tu completa disposición para orientarte sobre nuestro equipo, administración, servicios o resolver cualquier duda de **Mrs. Pets**.\n\n¿Con quién tengo el gusto de hablar y en qué puedo ayudarte hoy?`,
                     buttons: [
+                        '📅 Ver Disponibilidad',
                         '📅 Deseo hacer una reserva',
                         '🐾 Soy Cliente',
                         '✂️ Grooming Spa',
@@ -863,8 +865,8 @@
                 if (!isStaff) {
                     this.addMessage({
                         sender: 'leia',
-                        text: `🎀 **Leia (Concierge VIP):** Estimado tutor, para su comodidad la atención de consentidos se realiza mediante reserva personalizada. ¿Desea agendar cita para **Grooming Spa**, **Consulta Veterinaria** o **Hotel VIP 5★**? ✨🐾`,
-                        buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Médica', '🏨 Hotel Boutique 5★'],
+                        text: `🎀 **Leia (Concierge VIP):** Estimado tutor, la agenda operativa y el calendario staff son confidenciales y de uso exclusivo para el equipo interno de Mrs. Pets.\n\nCon mucho gusto puedo consultar nuestra disponibilidad en vivo y coordinar tu cita: **¿Qué día y en qué horario prefieres traer a tu consentido(a)?** ✨🐾`,
+                        buttons: ['📅 Ver Disponibilidad', '✂️ Cita Grooming Spa', '🩺 Consulta Médica', '🏨 Hotel VIP 5★'],
                         timestamp: new Date()
                     });
                     return;
@@ -889,9 +891,11 @@
                 return;
             }
 
-            // 0.2 Consulta Rápida de Disponibilidad en Vivo
-            const isRequestingAvailability = t === '📅 ver disponibilidad' || t === 'ver disponibilidad' || t === 'consultar disponibilidad' || t === 'disponibilidad' || t.includes('hay disponibilidad');
+            // 0.2 Consulta Rápida de Disponibilidad en Vivo (Asistida por IA - Sin botones staff para clientes)
+            const isRequestingAvailability = t === '📅 ver disponibilidad' || t === 'ver disponibilidad' || t === 'consultar disponibilidad' || t === 'disponibilidad' || t.includes('hay disponibilidad') || t.includes('que dias') || t.includes('qué días') || t.includes('que horario') || t.includes('qué horario');
             if (isRequestingAvailability) {
+                const isStaff = (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated && window.adminEngine.viewEnvironment === 'enterprise') ||
+                                (window.authEngine && typeof window.authEngine.isEnterpriseStaffActive === 'function' && window.authEngine.isEnterpriseStaffActive());
                 this.showTypingIndicator(true);
                 try {
                     const todayStr = new Date().toISOString().split('T')[0];
@@ -900,15 +904,34 @@
                     this.showTypingIndicator(false);
                     const slots = (data && data.slots_available && data.slots_available.length > 0) ? data.slots_available : ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
                     const slotsList = slots.slice(0, 5).join(', ');
-                    this.addMessage({
-                        sender: 'leia',
-                        text: `🎀 **Leia (Disponibilidad en Vivo • Dra. Margaret & Dalybell):**\n\n📅 **Horario Oficial:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00) estrictamente.\n⛔ **Domingos:** Cerrado por descanso médico del personal y spa.\n\n✨ **Turnos disponibles para hoy en Spa & Grooming (Aforo: 4 por hora):**\n• Horas disponibles: **${slotsList}**\n\nPuedes abrir el **Calendario Grande** para ver toda la semana o agendar directamente:`,
-                        buttons: ['📅 Calendario Grande (Staff)', '✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
-                        timestamp: new Date()
-                    });
+
+                    if (isStaff) {
+                        this.addMessage({
+                            sender: 'leia',
+                            text: `🎀 **Leia (Disponibilidad en Vivo • Dra. Margaret & Dalybell):**\n\n📅 **Horario Oficial:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00) estrictamente.\n⛔ **Domingos:** Cerrado por descanso médico del personal y spa.\n\n✨ **Turnos disponibles para hoy en Spa & Grooming (Aforo: 4 por hora):**\n• Horas disponibles: **${slotsList}**\n\nPuedes abrir el **Calendario Grande** para ver toda la semana o agendar directamente:`,
+                            buttons: ['📅 Calendario Grande (Staff)', '✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                            timestamp: new Date()
+                        });
+                    } else {
+                        this.addMessage({
+                            sender: 'leia',
+                            text: `🎀 **Leia (Disponibilidad en Vivo • Mrs. Pets Concierge):**\n\n📅 **Horario de Atención:** Lunes a Sábado de **8:00 a.m. a 6:00 p.m.** (18:00 cierre estricto de sucursal).\n⛔ **Domingos:** Cerrado por descanso médico y spa.\n\n✨ **Turnos sugeridos con cupos para hoy en Spa & Grooming:**\n• Horarios libres: **${slotsList}**\n\nCon mucho amor coordinamos la cita de tu consentido(a): **¿Qué día y a qué hora prefieres traerlo?**\n\nPuedes indicarme tu fecha u horario preferido aquí o seleccionar tu servicio para iniciar tu reserva:`,
+                            buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★', '🤝 Hablar con Administración'],
+                            timestamp: new Date()
+                        });
+                    }
                     return;
                 } catch(e) {
                     this.showTypingIndicator(false);
+                    if (!isStaff) {
+                        this.addMessage({
+                            sender: 'leia',
+                            text: `🎀 **Leia (Concierge VIP):** Atendemos de Lunes a Sábado de **8:00 a.m. a 6:00 p.m.** (Domingos cerrado por descanso médico y spa).\n\n**¿Qué día y a qué hora deseas traer a tu consentido(a)?** Indícame tu preferencia y te agendo de inmediato.`,
+                            buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                            timestamp: new Date()
+                        });
+                        return;
+                    }
                 }
             }
 
@@ -1101,8 +1124,8 @@
                     const slotsList = slots.slice(0, 4).join(', ');
                     this.addMessage({
                         sender: 'leia',
-                        text: `🎀 **Leia (Disponibilidad en Vivo • Dra. Margaret & Dalybell):**\n\n📅 **Horario de Atención:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00) estrictamente.\n⛔ **Domingos:** Cerrado para descanso médico y de spa.\n\n✨ **Turnos disponibles hoy en Spa & Grooming:**\n• Horas: **${slotsList}**\n\n¿En cuál de estos horarios deseas que consintamos a tu mascota?`,
-                        buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★'],
+                        text: `🎀 **Leia (Disponibilidad en Vivo • Mrs. Pets Concierge):**\n\n📅 **Horario de Atención:** Lunes a Sábado de **8:00 a.m. a 6:00 p.m.** (18:00 cierre estricto).\n⛔ **Domingos:** Cerrado para descanso médico y de spa.\n\n✨ **Turnos sugeridos con cupo hoy en Spa & Grooming:**\n• Horas: **${slotsList}**\n\nCon todo el gusto te ayudamos: **¿Qué día y a qué hora deseas traer a tu consentido(a)?**\n\nIndícanos tu preferencia o selecciona tu servicio para comenzar tu reserva:`,
+                        buttons: ['✂️ Abrir Reserva Grooming', '🩺 Abrir Reserva Veterinaria', '🏨 Abrir Reserva Hotel 5★', '🤝 Hablar con Administración'],
                         timestamp: new Date()
                     });
                     return;

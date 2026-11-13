@@ -4370,13 +4370,12 @@ class AdminEngine {
   // CALENDARIO GRANDE GENERAL (STAFF & OPERACIONES - MRS. PETS CORP)
   // =========================================================================
   openLargeCalendarModal(weekOffset = 0, selectedArea = 'all') {
-    // 🛡️ REGLA ESTRICTA DE PRIVACIDAD: El calendario operativo de la empresa es exclusivo para la vista empresario / staff
-    const isClientMode = this.viewEnvironment === 'customer' || 
-                         (window.authEngine && window.authEngine.currentUser && window.authEngine.currentUser.role === 'customer') ||
-                         (document.body && document.body.classList.contains('customer-view-mode') && !this.isEnterpriseAuthenticated);
-    if (isClientMode) {
+    // 🛡️ REGLA ESTRICTA DE PRIVACIDAD: El calendario operativo de la empresa es confidencial y exclusivo para Staff autenticado
+    const isStaff = (this.isEnterpriseAuthenticated && this.viewEnvironment === 'enterprise') ||
+                    (window.authEngine && typeof window.authEngine.isEnterpriseStaffActive === 'function' && window.authEngine.isEnterpriseStaffActive());
+    if (!isStaff) {
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('Acceso restringido: El calendario operativo de la empresa es exclusivo para la vista empresarial.', 'warning');
+        window.app.showToast('Acceso restringido: El calendario operativo es confidencial y exclusivo del Staff de Mrs. Pets.', 'warning');
       }
       return;
     }
