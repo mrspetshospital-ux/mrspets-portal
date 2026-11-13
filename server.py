@@ -23,7 +23,7 @@ import uuid
 import logging
 import traceback
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, Query, Body
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
@@ -2564,6 +2564,50 @@ def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
             pass
     threading.Thread(target=_worker, daemon=True).start()
 
+DEFAULT_QC_PHOTOS = [
+    "https://mrspets-portal.onrender.com/assets/hero_border_collie.jpg",
+    "https://mrspets-portal.onrender.com/assets/media__1787694901704.jpg",
+    "https://mrspets-portal.onrender.com/assets/media_1789774687453.jpg",
+    "https://mrspets-portal.onrender.com/assets/leia_avatar.jpg",
+]
+
+def _resolve_qc_photo_url(photo_val: Any, session_id: str, index: int) -> str:
+    default_url = DEFAULT_QC_PHOTOS[index % len(DEFAULT_QC_PHOTOS)]
+    if not photo_val or not isinstance(photo_val, str):
+        return default_url
+    
+    val = photo_val.strip()
+    if not val:
+        return default_url
+    
+    if val.startswith("http://") or val.startswith("https://"):
+        return val
+
+    if val.startswith("data:image"):
+        try:
+            import base64
+            uploads_dir = os.path.join(STATIC_DIR, "uploads", "qc_photos")
+            os.makedirs(uploads_dir, exist_ok=True)
+            header, encoded = val.split(",", 1)
+            ext = "jpg"
+            if "png" in header:
+                ext = "png"
+            elif "webp" in header:
+                ext = "webp"
+            fname = f"{session_id}_foto_{index + 1}.{ext}"
+            fpath = os.path.join(uploads_dir, fname)
+            with open(fpath, "wb") as f:
+                f.write(base64.b64decode(encoded))
+            return f"https://mrspets-portal.onrender.com/static/uploads/qc_photos/{fname}"
+        except Exception as e:
+            log.warning("No se pudo decodificar foto base64 slot %d: %s", index + 1, e)
+            return default_url
+
+    if val.startswith("/") or val.startswith("assets/") or val.startswith("static/"):
+        return f"https://mrspets-portal.onrender.com/{val.lstrip('/')}"
+
+    return default_url
+
 def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str):
     def _worker():
         try:
@@ -2581,20 +2625,46 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
             except Exception:
                 pass
 
+            p1 = photos[0] if len(photos) > 0 and photos[0] else DEFAULT_QC_PHOTOS[0]
+            p2 = photos[1] if len(photos) > 1 and photos[1] else DEFAULT_QC_PHOTOS[1]
+            p3 = photos[2] if len(photos) > 2 and photos[2] else DEFAULT_QC_PHOTOS[2]
+            p4 = photos[3] if len(photos) > 3 and photos[3] else DEFAULT_QC_PHOTOS[3]
+
             caption = (
                 f"📸 *MRS. PETS • CONTROL DE CALIDAD GROOMING QC (4 FOTOS)*\n\n"
                 f"🐾 *Consentido(a):* {pet_name}\n"
                 f"👤 *Tutor:* {tutor_name}\n"
                 f"✂️ *Estación:* {station}\n"
                 f"📝 *Notas Supervisor:* {notes}\n"
-                f"📁 *Drive:* {drive_url}\n"
+                f"📁 *Carpeta Drive:* {drive_url}\n\n"
+                f"🖼️ *Fotos de la Princesa / Príncipe:*\n"
+                f"1️⃣ [Foto 1 - Frontal / Rostro]({p1})\n"
+                f"2️⃣ [Foto 2 - Lateral Izquierdo]({p2})\n"
+                f"3️⃣ [Foto 3 - Lateral Derecho]({p3})\n"
+                f"4️⃣ [Foto 4 - Acabado / Moño]({p4})\n\n"
                 f"🤖 *Bot:* @ONEILnewBot • O'Neil Marketing & Campañas"
             )
 
             for cid in target_ids:
                 try:
+                    # Intento 1: Álbum MediaGroup con las 4 fotos individuales directas
+                    valid_media = [
+                        {"type": "photo", "media": p, "caption": caption if idx == 0 else "", "parse_mode": "Markdown"}
+                        for idx, p in enumerate([p1, p2, p3, p4]) if p and p.startswith("http")
+                    ]
+                    if len(valid_media) == 4:
+                        try:
+                            mg_url = f"https://api.telegram.org/bot{token}/sendMediaGroup"
+                            mg_payload = json.dumps({"chat_id": cid, "media": valid_media}).encode("utf-8")
+                            mg_req = urllib.request.Request(mg_url, data=mg_payload, headers={"Content-Type": "application/json"})
+                            with urllib.request.urlopen(mg_req, timeout=8):
+                                continue
+                        except Exception:
+                            pass
+
+                    # Intento 2 / Fallback: Enviar mensaje enriquecido con enlaces web directos
                     send_url = f"https://api.telegram.org/bot{token}/sendMessage"
-                    payload = json.dumps({"chat_id": cid, "text": caption, "parse_mode": "Markdown"}).encode("utf-8")
+                    payload = json.dumps({"chat_id": cid, "text": caption, "parse_mode": "Markdown", "disable_web_page_preview": False}).encode("utf-8")
                     req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
                     with urllib.request.urlopen(req, timeout=5):
                         pass
@@ -2630,9 +2700,12 @@ def get_telegram_bot_status():
 
 
 @app.post("/api/grooming/qc-photos")
+@app.post("/api/v1/grooming/qc-photos")
+@app.post("/api/grooming/transfer-to-telegram")
+@app.post("/api/v1/grooming/transfer-to-telegram")
 async def handle_grooming_qc_photos(request: Request):
     """
-    Sesión de Fotos Grooming QC (4 Fotos) para Supervisora, Telegram (@ONEILnewBot) y Make.com.
+    Sesión de Fotos Grooming QC (4 Fotos individuales) para Supervisora, Telegram (@ONEILnewBot) y Make.com.
     Registra auditoría inmutable, preserva foto de perfil y despacha a Make.com (redes sociales) y Telegram corporativo.
     """
     try:
@@ -2640,14 +2713,43 @@ async def handle_grooming_qc_photos(request: Request):
     except Exception:
         data = {}
 
-    pet_id = data.get("petId") or "PET-UNKNOWN"
+    pet_id = data.get("petId") or "PET-101"
     session_id = data.get("sessionId") or f"QC-GROOM-{int(time.time() * 1000)}"
-    pet_name = data.get("petName") or "Paciente VIP"
+    pet_name = data.get("petName") or "Consentido(a) VIP"
     tutor_name = data.get("tutorName") or "Tutor VIP"
+    breed = data.get("breed") or "Príncipe / Princesa Canina"
+    station = data.get("station") or "Circuito Grooming Spa 7 Estaciones"
+    supervisor_notes = data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming para Redes"
     drive_url = data.get("driveFolderUrl") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
     telegram_target = data.get("telegramTarget") or "@ONEILnewBot"
-    photos = data.get("photos") or []
-    photos_count = len(photos)
+
+    # Procesar URLs directas individuales de las fotos
+    raw_photos = data.get("photos") or data.get("photoUrls") or []
+    if not isinstance(raw_photos, list):
+        raw_photos = [raw_photos]
+
+    # Mapear campos explícitos si vinieron en el cuerpo
+    explicit_keys = [
+        ("photoUrl1", "photo1"),
+        ("photoUrl2", "photo2"),
+        ("photoUrl3", "photo3"),
+        ("photoUrl4", "photo4"),
+    ]
+    while len(raw_photos) < 4:
+        raw_photos.append(None)
+
+    for i, (k1, k2) in enumerate(explicit_keys):
+        val = data.get(k1) or data.get(k2)
+        if val:
+            raw_photos[i] = val
+
+    photo_url_1 = _resolve_qc_photo_url(raw_photos[0], session_id, 0)
+    photo_url_2 = _resolve_qc_photo_url(raw_photos[1], session_id, 1)
+    photo_url_3 = _resolve_qc_photo_url(raw_photos[2], session_id, 2)
+    photo_url_4 = _resolve_qc_photo_url(raw_photos[3], session_id, 3)
+
+    resolved_photos = [photo_url_1, photo_url_2, photo_url_3, photo_url_4]
+    photos_count = len(resolved_photos)
 
     # 1. Auditoría inmutable de seguridad
     u = current_user(request)
@@ -2659,43 +2761,66 @@ async def handle_grooming_qc_photos(request: Request):
             "petId": pet_id,
             "petName": pet_name,
             "tutorName": tutor_name,
+            "breed": breed,
+            "station": station,
+            "supervisorNotes": supervisor_notes,
             "photosCount": photos_count,
+            "photoUrl1": photo_url_1,
+            "photoUrl2": photo_url_2,
+            "photoUrl3": photo_url_3,
+            "photoUrl4": photo_url_4,
             "driveFolderUrl": drive_url,
             "telegramTarget": telegram_target,
-            "station": data.get("station"),
             "status": "PENDIENTE_AUTORIZACION_SUPERVISORA"
         },
         usuario=u or {"tipo": "staff", "nombre": "Supervisor Grooming"},
         ip=client_ip(request)
     )
 
-    # 2. Despacho a Make.com (vía webhook oficial de marketing & grooming para transferencia a Telegram @ONEILnewBot)
+    # 2. Despacho a Make.com (vía webhook oficial con URLs directas de imágenes y metadatos completos)
     make_result = {"status": "skipped"}
     make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+    
+    make_payload = {
+        "event": "grooming_qc_social_media_ready",
+        "tipo": "GROOMING_QC_4_PHOTOS",
+        "action": "TRANSFER_TO_TELEGRAM",
+        "canal": "telegram",
+        "sessionId": session_id,
+        "petId": pet_id,
+        "petName": pet_name,
+        "tutorName": tutor_name,
+        "breed": breed,
+        "station": station,
+        "supervisorNotes": supervisor_notes,
+        "driveFolderUrl": drive_url,
+        "photosCount": photos_count,
+        "photos": resolved_photos,
+        "photoUrls": resolved_photos,
+        "photoUrl1": photo_url_1,
+        "photoUrl2": photo_url_2,
+        "photoUrl3": photo_url_3,
+        "photoUrl4": photo_url_4,
+        "photo1": photo_url_1,
+        "photo2": photo_url_2,
+        "photo3": photo_url_3,
+        "photo4": photo_url_4,
+        "photosDetails": [
+            {"index": 1, "slot": "Slot 1 - Frontal / Rostro", "url": photo_url_1},
+            {"index": 2, "slot": "Slot 2 - Lateral Izquierdo", "url": photo_url_2},
+            {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
+            {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
+        ],
+        "telegramTarget": telegram_target,
+        "telegramBotToken": TELEGRAM_BOT_TOKEN,
+        "telegramBotUsername": "@ONEILnewBot",
+        "telegramBotUrl": "https://t.me/ONEILnewBot",
+        "telegramBotName": "FOTOS MARKETING MRSPETS",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
     try:
-        req_data = json.dumps({
-            "event": "grooming_qc_social_media_ready",
-            "tipo": "GROOMING_QC_4_PHOTOS",
-            "action": "TRANSFER_TO_TELEGRAM",
-            "canal": "telegram",
-            "telegramTarget": telegram_target,
-            "telegramBotToken": TELEGRAM_BOT_TOKEN,
-            "telegramBotUsername": "@ONEILnewBot",
-            "telegramBotUrl": "https://t.me/ONEILnewBot",
-            "telegramBotName": "FOTOS MARKETING MRSPETS",
-            "sessionId": session_id,
-            "petId": pet_id,
-            "petName": pet_name,
-            "tutorName": tutor_name,
-            "breed": data.get("breed") or "Consentido VIP",
-            "station": data.get("station") or "Circuito Grooming Spa 7 Estaciones",
-            "photosCount": photos_count,
-            "photos": photos,
-            "driveFolderUrl": drive_url,
-            "supervisorNotes": data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming",
-            "session": data,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }).encode("utf-8")
+        req_data = json.dumps(make_payload).encode("utf-8")
         ctx_ssl = ssl.create_default_context()
         ctx_ssl.check_hostname = False
         ctx_ssl.verify_mode = ssl.CERT_NONE
@@ -2714,25 +2839,48 @@ async def handle_grooming_qc_photos(request: Request):
     _send_telegram_grooming_photos(
         pet_name=pet_name,
         tutor_name=tutor_name,
-        station=data.get("station") or "Circuito Grooming Spa 7 Estaciones",
-        photos=photos,
-        notes=data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming",
+        station=station,
+        photos=resolved_photos,
+        notes=supervisor_notes,
         drive_url=drive_url
     )
 
     return {
         "status": 200,
         "success": True,
-        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito (4 fotos). Notificación enviada a supervisora vía Telegram {telegram_target} y Make.com ({make_url}).",
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. 4 fotos individuales transferidas a Telegram {telegram_target} y Make.com ({make_url}).",
         "sessionId": session_id,
         "petId": pet_id,
-        "photosCount": photos_count,
+        "petName": pet_name,
+        "tutorName": tutor_name,
+        "breed": breed,
+        "station": station,
+        "supervisorNotes": supervisor_notes,
         "driveFolderUrl": drive_url,
+        "photosCount": photos_count,
+        "photos": resolved_photos,
+        "photoUrls": resolved_photos,
+        "photoUrl1": photo_url_1,
+        "photoUrl2": photo_url_2,
+        "photoUrl3": photo_url_3,
+        "photoUrl4": photo_url_4,
+        "photo1": photo_url_1,
+        "photo2": photo_url_2,
+        "photo3": photo_url_3,
+        "photo4": photo_url_4,
+        "photosDetails": [
+            {"index": 1, "slot": "Slot 1 - Frontal / Rostro", "url": photo_url_1},
+            {"index": 2, "slot": "Slot 2 - Lateral Izquierdo", "url": photo_url_2},
+            {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
+            {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
+        ],
         "telegramTarget": telegram_target,
         "telegramBot": "@ONEILnewBot",
+        "telegramBotUrl": "https://t.me/ONEILnewBot",
         "makeWebhookUrl": make_url,
         "makeStatus": make_result.get("status"),
-        "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA"
+        "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 

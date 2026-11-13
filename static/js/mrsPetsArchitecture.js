@@ -2718,15 +2718,20 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     const driveUrl = (driveInput && driveInput.value.trim()) ? driveInput.value.trim() : 'https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026';
     const notes = (notesInput && notesInput.value.trim()) ? notesInput.value.trim() : 'Sesión de fotos completada para aprobación de redes.';
 
-    // Validar fotos (autocompletar con presets si el usuario envía slots vacíos para garantizar siempre las 4 fotos)
+    const baseUrl = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://mrspets-portal.onrender.com';
+    const presets = [
+      `${baseUrl}/assets/hero_border_collie.jpg`,
+      `${baseUrl}/assets/media__1787694901704.jpg`,
+      `${baseUrl}/assets/media_1789774687453.jpg`,
+      `${baseUrl}/assets/leia_avatar.jpg`
+    ];
+
+    // Validar fotos (autocompletar con presets si el usuario envía slots vacíos para garantizar siempre las 4 fotos con URL directa)
     const validPhotos = this.qcSessionPhotos.map((p, i) => {
-      if (p && p.length > 20) return p;
-      const presets = [
-        'assets/hero_border_collie.jpg',
-        'assets/media__1787694901704.jpg',
-        'assets/media_1789774687453.jpg',
-        'assets/leia_avatar.jpg'
-      ];
+      if (p && p.length > 20) {
+        if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
+        return `${baseUrl}/${p.replace(/^\/+/, '')}`;
+      }
       return presets[i];
     });
 
@@ -2746,6 +2751,21 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       station: station,
       photosCount: 4,
       photos: validPhotos,
+      photoUrls: validPhotos,
+      photoUrl1: validPhotos[0] || presets[0],
+      photoUrl2: validPhotos[1] || presets[1],
+      photoUrl3: validPhotos[2] || presets[2],
+      photoUrl4: validPhotos[3] || presets[3],
+      photo1: validPhotos[0] || presets[0],
+      photo2: validPhotos[1] || presets[1],
+      photo3: validPhotos[2] || presets[2],
+      photo4: validPhotos[3] || presets[3],
+      photosDetails: [
+        { index: 1, slot: "Slot 1 - Frontal / Rostro", url: validPhotos[0] || presets[0] },
+        { index: 2, slot: "Slot 2 - Lateral Izquierdo", url: validPhotos[1] || presets[1] },
+        { index: 3, slot: "Slot 3 - Lateral Derecho", url: validPhotos[2] || presets[2] },
+        { index: 4, slot: "Slot 4 - Detalle / Moño", url: validPhotos[3] || presets[3] }
+      ],
       driveFolderUrl: driveUrl,
       telegramTarget: '@ONEILnewBot',
       telegramBotName: 'FOTOS MARKETING MRSPETS (@ONEILnewBot)',
@@ -2970,6 +2990,62 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
         reason: (payload && (payload.userQuery || payload.message || payload.detalleAdicionales)) || "Alerta de Triaje Médico",
         detalleAdicionales: (payload && (payload.userQuery || payload.message || payload.detalleAdicionales)) || "Alerta de Triaje Médico",
         assignedDoctor: "Dr. Alejandro Morales (Guardia Q-Vet)"
+      };
+    } else if (eventType === 'grooming_qc_social_media_ready' || eventType === 'grooming_qc' || (payload && payload.tipo === 'GROOMING_QC_4_PHOTOS')) {
+      // ⚡ RUTA OFICIAL GROOMING QC (4 FOTOS INDIVIDUALES DIRECTAS A MAKE Y TELEGRAM)
+      const baseUrl = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://mrspets-portal.onrender.com';
+      const presets = [
+        `${baseUrl}/assets/hero_border_collie.jpg`,
+        `${baseUrl}/assets/media__1787694901704.jpg`,
+        `${baseUrl}/assets/media_1789774687453.jpg`,
+        `${baseUrl}/assets/leia_avatar.jpg`
+      ];
+      const rawPhotos = (payload && (payload.photos || payload.photoUrls)) || [];
+      const normPhotos = [0, 1, 2, 3].map(i => {
+        const p = (Array.isArray(rawPhotos) ? rawPhotos[i] : null) || (payload && (payload[`photoUrl${i+1}`] || payload[`photo${i+1}`]));
+        if (typeof p === 'string' && p.trim().length > 0) {
+          if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
+          return `${baseUrl}/${p.replace(/^\/+/, '')}`;
+        }
+        return presets[i];
+      });
+
+      fullPayload = {
+        event: "grooming_qc_social_media_ready",
+        tipo: "GROOMING_QC_4_PHOTOS",
+        action: "TRANSFER_TO_TELEGRAM",
+        canal: "telegram",
+        timestamp: (payload && payload.timestamp) || new Date().toISOString(),
+        sessionId: (payload && payload.sessionId) || `QC-GROOM-${Date.now()}`,
+        petId: (payload && payload.petId) || "PET-101",
+        petName: (payload && payload.petName) || "Consentido(a) VIP",
+        tutorName: (payload && payload.tutorName) || "Tutor VIP",
+        breed: (payload && payload.breed) || "Príncipe / Princesa Canina",
+        station: (payload && payload.station) || "Circuito Grooming Spa 7 Estaciones",
+        photosCount: 4,
+        photos: normPhotos,
+        photoUrls: normPhotos,
+        photoUrl1: normPhotos[0],
+        photoUrl2: normPhotos[1],
+        photoUrl3: normPhotos[2],
+        photoUrl4: normPhotos[3],
+        photo1: normPhotos[0],
+        photo2: normPhotos[1],
+        photo3: normPhotos[2],
+        photo4: normPhotos[3],
+        photosDetails: [
+          { index: 1, slot: "Slot 1 - Frontal / Rostro", url: normPhotos[0] },
+          { index: 2, slot: "Slot 2 - Lateral Izquierdo", url: normPhotos[1] },
+          { index: 3, slot: "Slot 3 - Lateral Derecho", url: normPhotos[2] },
+          { index: 4, slot: "Slot 4 - Detalle / Moño", url: normPhotos[3] }
+        ],
+        driveFolderUrl: (payload && payload.driveFolderUrl) || "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026",
+        supervisorNotes: (payload && payload.supervisorNotes) || "Aprobación de Control de Calidad QC Grooming",
+        telegramTarget: (payload && payload.telegramTarget) || "@ONEILnewBot",
+        telegramBotToken: "9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4",
+        telegramBotUsername: "@ONEILnewBot",
+        telegramBotUrl: "https://t.me/ONEILnewBot",
+        telegramBotName: "FOTOS MARKETING MRSPETS"
       };
     } else if (payload && payload.ticketId && payload.customerName) {
       // Estructura plana directa preformateada

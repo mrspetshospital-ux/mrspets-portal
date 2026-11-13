@@ -10,6 +10,40 @@
     "botToken": "9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4",
     "email": "mrspetshospital@gmail.com"
   },
-  "savedAt": "2026-11-13T17:42:00.000Z",
+  "groomingQcPayloadSchema": {
+    "event": "grooming_qc_social_media_ready",
+    "tipo": "GROOMING_QC_4_PHOTOS",
+    "action": "TRANSFER_TO_TELEGRAM",
+    "canal": "telegram",
+    "fields": [
+      "sessionId",
+      "petId",
+      "petName",
+      "tutorName",
+      "breed",
+      "station",
+      "supervisorNotes",
+      "driveFolderUrl",
+      "photosCount",
+      "photos",
+      "photoUrls",
+      "photoUrl1",
+      "photoUrl2",
+      "photoUrl3",
+      "photoUrl4",
+      "photo1",
+      "photo2",
+      "photo3",
+      "photo4",
+      "photosDetails",
+      "telegramTarget",
+      "telegramBotToken",
+      "telegramBotUsername",
+      "telegramBotUrl",
+      "telegramBotName",
+      "timestamp"
+    ]
+  },
+  "savedAt": "2026-11-13T18:25:00.000Z",
   "status": "active"
 }
