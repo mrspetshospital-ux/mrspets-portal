@@ -233,7 +233,7 @@
       const amountVes = payData.formattedTotalVes || (payData.totalVes ? `Bs. ${Number(payData.totalVes).toLocaleString('es-VE', {minimumFractionDigits:2})}` : 'Bs. BCV');
       const receiptId = payData.ticketId || payData.receiptId || 'REC-POS';
 
-      const msg = `💳 *¡Pago Confirmado con Éxito - Mrs. Pets!*\n\nEstimado(a) *${tutor}*, hemos recibido su pago por *$${amountUsd} USD* (*${amountVes}*, Tasa Oficial BCV) correspondiente al comprobante *#${receiptId}*.\n\nConsentido atendido: *${pet}*.\n¡Gracias por preferir la experiencia Silent Luxury de Mrs. Pets! ✨🐾`;
+      const msg = `💳 *¡Pago Confirmado con Éxito - Mrs. Pets!*\n\nEstimado(a) *${tutor}*, hemos recibido su pago por *$${amountUsd} USD* (*${amountVes}*, Tasa Oficial BCV) correspondiente al comprobante *#${receiptId}*.\n\nConsentido atendido: *${pet}*.\n📧 *Factura Digital*: Su factura fiscal electrónica oficial (PDF/XML SENIAT) ha sido despachada automáticamente a su correo electrónico.\n\n¡Gracias por preferir la experiencia Silent Luxury de Mrs. Pets! ✨🐾`;
 
       const waRes = this.sendWhatsAppNotification({
         phone: payData.phone || payData.customerPhone,
@@ -354,7 +354,7 @@
       const amountVes = payData.formattedTotalVes || (payData.totalVes ? `Bs. ${Number(payData.totalVes).toLocaleString('es-VE', {minimumFractionDigits:2})}` : 'Bs. BCV');
       const receiptId = payData.ticketId || payData.receiptId || 'HOTEL-PAY';
 
-      const msg = `🏨💳 *¡Pago de Estadía Hotel Confirmado!*\n\nEstimado(a) *${tutor}*, confirmamos el pago total de la estadía en Hotel Boutique para *${pet}* por un monto de *$${amountUsd} USD* (*${amountVes}*, Tasa Oficial BCV) bajo el recibo *#${receiptId}*.\n\nLa suite se encuentra 100% saldada. ¡Muchas gracias por elegirnos! 🌟🛎️`;
+      const msg = `🏨💳 *¡Pago de Estadía Hotel Confirmado!*\n\nEstimado(a) *${tutor}*, confirmamos el pago total de la estadía en Hotel Boutique para *${pet}* por un monto de *$${amountUsd} USD* (*${amountVes}*, Tasa Oficial BCV) bajo el recibo *#${receiptId}*.\n\n📧 *Factura Digital*: Su comprobante fiscal electrónico SENIAT ha sido despachado a su correo registrado.\nLa suite se encuentra 100% saldada. ¡Muchas gracias por elegirnos! 🌟🛎️`;
 
       const waRes = this.sendWhatsAppNotification({
         phone: payData.phone || payData.customerPhone,

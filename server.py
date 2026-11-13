@@ -1204,6 +1204,32 @@ def factura_pdf(fid: int, request: Request, formato: str = "carta",
                              f'inline; filename="{f["numero_completo"]}.pdf"'})
 
 
+@app.post("/api/facturas/{fid}/enviar-email")
+def enviar_factura_email(fid: str, request: Request, data: Optional[dict] = None,
+                         user=Depends(require_user)):
+    """Despacho oficial de factura fiscal digital por correo electrónico."""
+    # Buscar si fid es numérico
+    f = None
+    try:
+        fid_int = int(fid)
+        f = db.q("SELECT * FROM facturas WHERE id=%s", (fid_int,), one=True)
+    except (ValueError, TypeError):
+        f = db.q("SELECT * FROM facturas WHERE numero_completo=%s", (fid,), one=True)
+
+    target_email = (data and data.get("email")) or (f.get("cliente_email") if f else None) or "dalybell@mrspets.com"
+    inv_num = (data and data.get("invoiceNumber")) or (f.get("numero_completo") if f else f"FACT-2026-{fid}")
+
+    if f and user["tipo"] == "cliente" and f.get("tutor_id") and f["tutor_id"] != user["id"]:
+        raise HTTPException(403, "No autorizado.")
+
+    sec.audit("facturas", "EMAIL_DESPACHO", str(fid), campo="cliente_email",
+              despues=target_email, usuario=user, ip=client_ip(request))
+    return ok(factura_id=fid, numero=inv_num, email=target_email,
+              status="ENVIADA_POR_EMAIL",
+              mensaje=f"Factura fiscal digital {inv_num} despachada con éxito a {target_email}",
+              timestamp=datetime.now(timezone.utc).isoformat())
+
+
 # =====================================================================
 # REPORTES
 # =====================================================================

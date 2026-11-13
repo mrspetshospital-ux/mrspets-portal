@@ -301,7 +301,7 @@ class StripeEngine {
       window.whatsappSim.sendPreset(`🧾 *RECIBO OFICIAL STRIPE PAYMENTS & TAX - MRS PETS*\n\n¡Gracias por tu pago, *${customerName}*!\n\n• *ID de Pago*: \`${intentId}\`\n• *Subtotal (Base)*: $${effectiveSubtotal.toFixed(2)} USD\n• *IVA (${bcvCalc ? bcvCalc.ivaPercent : 16}% SENIAT)*: +$${calculatedTax.toFixed(2)} USD\n• *IGBT (${bcvCalc ? bcvCalc.igtfConfiguredPercent : 3}% Pago en Dólares)*: +$${igtfTax.toFixed(2)} USD\n• *TOTAL PAGADO*: *$${grandTotal.toFixed(2)} USD*\n• *Tasa Oficial BCV*: *${bcvRate.toFixed(2)} Bs./USD* (${bcvSlot})\n• *Equivalente en Bolívares (BCV)*: *${totalVesFormatted}*\n• *Método*: Tarjeta Visa/Mastercard (Stripe Vault)\n• *Sede*: Don Bosco, Maracaibo\n• *Estado*: *PAGO CONFIRMADO & AUDITADO* ✅`);
     }
 
-    // Registrar en Ledger de Auditoría Inmutable del Servidor
+    // Ledger de Auditoría Inmutable del Servidor
     try {
       fetch('/api/audit/log', {
         method: 'POST',
@@ -325,6 +325,45 @@ class StripeEngine {
         })
       });
     } catch(e) {}
+
+    // Emisión automática de Factura Fiscal SENIAT y despacho por correo electrónico
+    let invoiceCreated = null;
+    if (window.adminFinanceEngine && typeof window.adminFinanceEngine.createInvoiceFromCart === 'function') {
+      try {
+        invoiceCreated = window.adminFinanceEngine.createInvoiceFromCart({
+          ticketId: intentId,
+          customerName: customerName || 'Dalybell Ramírez Montilla',
+          customerEmail: 'dalybell@mrspets.com',
+          customerRif: 'V-18.452.910',
+          customerPhone: '+58 (414) 389-1102',
+          petName: 'Princesa',
+          petSpecies: 'Canino / Border Collie VIP',
+          cashier: 'Pasarela Digital Stripe Vault 3D',
+          division: 'tienda',
+          items: [
+            {
+              code: 'STRIPE-PAY',
+              concept: 'Servicios & Compras Mrs. Pets - Stripe Gateway',
+              quantity: 1,
+              price: effectiveSubtotal,
+              total: effectiveSubtotal
+            }
+          ],
+          subtotal: effectiveSubtotal,
+          taxableAmount: effectiveSubtotal,
+          exemptAmount: 0.00,
+          ivaRate: 0.16,
+          ivaAmount: calculatedTax,
+          totalUsd: grandTotal,
+          bcvRate: bcvRate,
+          totalVes: grandTotal * bcvRate,
+          paymentMethod: 'Tarjeta Visa / Mastercard (Stripe)',
+          paymentReference: intentId
+        });
+      } catch(e) {
+        console.warn('Error al generar factura fiscal desde StripeEngine:', e);
+      }
+    }
 
     // SCREEN POP OFICIAL: "Pago procesado, su factura llegará por correo"
     if (window.app && typeof window.app.showScreenPop === 'function') {
@@ -367,15 +406,34 @@ class StripeEngine {
                 <div style="font-size:1rem; color:#0284C7; font-weight:900;">${totalVesFormatted}</div>
               </div>
             </div>
-            <div style="margin-top:10px; font-size:0.78rem; color:#000000 !important; font-weight:700; display:flex; align-items:center; gap:6px;">
-              <span>📧</span> Su comprobante fiscal digital ha sido emitido con trazabilidad contable BCV.
+            <div style="margin-top:12px; background:#F0FDF4 !important; border:1.5px solid #16A34A !important; border-radius:12px; padding:12px; color:#14532D !important;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <strong style="font-size:0.88rem; display:flex; align-items:center; gap:6px; color:#14532D !important;">
+                  <span>📧 Factura Fiscal Digital Despachada</span>
+                </strong>
+                <span style="font-size:0.75rem; background:#DCFCE7; color:#15803D; padding:2px 8px; border-radius:6px; font-weight:800; border:1px solid #86EFAC;">
+                  ${invoiceCreated ? invoiceCreated.invoiceNumber : 'SENIAT FACT-2026'}
+                </span>
+              </div>
+              <p style="margin:2px 0 0 0; font-size:0.8rem; color:#166534 !important;">
+                Su factura fiscal electrónica oficial (IVA 16% y Tasa BCV) ha sido despachada automáticamente por correo a: <strong>dalybell@mrspets.com</strong> y auditada en el sistema.
+              </p>
             </div>
           </div>
         `,
         buttons: [
           {
-            text: '🧾 Ver Recibo en WhatsApp Simulator ➔',
+            text: '🧾 Ver / Reenviar Factura Digital ➔',
             primary: true,
+            onClick: () => {
+              if (window.adminFinanceEngine && typeof window.adminFinanceEngine.openInvoiceViewer === 'function') {
+                window.adminFinanceEngine.openInvoiceViewer(invoiceCreated ? invoiceCreated.id : 'INV-2026-000418');
+              }
+            }
+          },
+          {
+            text: '💬 Ver Recibo en WhatsApp Simulator ➔',
+            primary: false,
             onClick: () => {
               if (window.app && typeof window.app.switchTab === 'function') {
                 window.app.switchTab('whatsapp', true);

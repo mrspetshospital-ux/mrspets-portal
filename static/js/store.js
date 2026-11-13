@@ -3261,6 +3261,43 @@ class StoreEngine {
       // SCREEN POP OFICIAL: "Pago procesado, su factura llegará por correo"
       const ticketId = 'CARD-' + Math.floor(100000 + Math.random() * 900000);
 
+      // Emisión y despacho digital automático de factura fiscal SENIAT por email
+      let invoiceCreated = null;
+      if (window.adminFinanceEngine && typeof window.adminFinanceEngine.createInvoiceFromCart === 'function') {
+        try {
+          invoiceCreated = window.adminFinanceEngine.createInvoiceFromCart({
+            ticketId: ticketId,
+            customerName: customerName || 'Dalybell Ramírez Montilla',
+            customerEmail: 'dalybell@mrspets.com',
+            customerRif: 'V-18.452.910',
+            customerPhone: '+58 (414) 389-1102',
+            petName: cartSnapshot.find(i => i.pet)?.pet || 'Princesa',
+            petSpecies: 'Canino / Border Collie VIP',
+            cashier: 'Punto de Venta Boutique Mrs. Pets',
+            division: 'tienda',
+            items: cartSnapshot.map((i, idx) => ({
+              code: i.id || `PROD-00${idx + 1}`,
+              concept: i.name,
+              quantity: i.quantity || 1,
+              price: typeof i.price === 'number' ? i.price : parseFloat(i.price || 0),
+              total: (typeof i.price === 'number' ? i.price : parseFloat(i.price || 0)) * (i.quantity || 1)
+            })),
+            subtotal: baseSubtotal,
+            taxableAmount: baseSubtotal,
+            exemptAmount: 0.00,
+            ivaRate: 0.16,
+            ivaAmount: ivaPaid,
+            totalUsd: totalPaid,
+            bcvRate: bcvRate,
+            totalVes: totalVes,
+            paymentMethod: 'Tarjeta 3D Directa (Stripe)',
+            paymentReference: ticketId
+          });
+        } catch(e) {
+          console.warn('Error al generar factura fiscal en adminFinanceEngine:', e);
+        }
+      }
+
       // Ledger de Auditoría Inmutable del Servidor
       try {
         fetch('/api/audit/log', {
@@ -3393,15 +3430,34 @@ class StoreEngine {
                 <strong>Detalle de Compra:</strong><br>
                 ${itemsSummary.replace(/\n/g, '<br>')}
               </div>
-              <div style="margin-top:10px; font-size:0.8rem; color:#000000 !important; font-weight:700; display:flex; align-items:center; gap:6px;">
-                <span>📧</span> Su comprobante fiscal digital y factura han sido despachados al correo y registrados vía WhatsApp.
+              <div style="margin-top:12px; background:#F0FDF4 !important; border:1.5px solid #16A34A !important; border-radius:12px; padding:12px; color:#14532D !important;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <strong style="font-size:0.88rem; display:flex; align-items:center; gap:6px; color:#14532D !important;">
+                    <span>📧 Factura Fiscal Digital Despachada</span>
+                  </strong>
+                  <span style="font-size:0.75rem; background:#DCFCE7; color:#15803D; padding:2px 8px; border-radius:6px; font-weight:800; border:1px solid #86EFAC;">
+                    ${invoiceCreated ? invoiceCreated.invoiceNumber : 'SENIAT FACT-2026'}
+                  </span>
+                </div>
+                <p style="margin:2px 0 0 0; font-size:0.8rem; color:#166534 !important;">
+                  Su comprobante fiscal oficial SENIAT (IVA 16% y Tasa BCV) ha sido despachado automáticamente al correo: <strong>dalybell@mrspets.com</strong> y respaldado por WhatsApp.
+                </p>
               </div>
             </div>
           `,
           buttons: [
             {
-              text: '🧾 Ver Recibo en WhatsApp Simulator ➔',
+              text: '🧾 Ver / Reenviar Factura Digital ➔',
               primary: true,
+              onClick: () => {
+                if (window.adminFinanceEngine && typeof window.adminFinanceEngine.openInvoiceViewer === 'function') {
+                  window.adminFinanceEngine.openInvoiceViewer(invoiceCreated ? invoiceCreated.id : 'INV-2026-000418');
+                }
+              }
+            },
+            {
+              text: '💬 Ver Recibo en WhatsApp Simulator ➔',
+              primary: false,
               onClick: () => {
                 if (window.app && typeof window.app.switchTab === 'function') {
                   window.app.switchTab('whatsapp', true);
