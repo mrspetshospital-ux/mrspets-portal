@@ -2695,8 +2695,8 @@ async def dispatch_marketing_campaign_oneil(request: Request):
 @app.get("/api/v1/marketing/campaigns")
 def get_marketing_campaigns_list():
     """Retorna listado de campañas publicitarias activas de O'Neil con su webhook configurado."""
-    camp_path = DATA_DIR / "marketing_campaigns.json"
-    if camp_path.exists():
+    camp_path = os.path.join(DATA_DIR, "marketing_campaigns.json")
+    if os.path.exists(camp_path):
         try:
             with open(camp_path, "r", encoding="utf-8") as f:
                 camps = json.load(f)
@@ -2721,8 +2721,8 @@ def get_marketing_campaigns_list():
 @app.get("/api/v1/marketing/channels")
 def get_marketing_channels_list():
     """Retorna los canales publicitarios sincronizados."""
-    chan_path = DATA_DIR / "marketing_channels.json"
-    if chan_path.exists():
+    chan_path = os.path.join(DATA_DIR, "marketing_channels.json")
+    if os.path.exists(chan_path):
         try:
             with open(chan_path, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -2733,8 +2733,8 @@ def get_marketing_channels_list():
 
 @app.get("/api/v1/marketing/loyalty/config")
 def get_marketing_loyalty_config():
-    p = DATA_DIR / "marketing_loyalty_config.json"
-    if p.exists():
+    p = os.path.join(DATA_DIR, "marketing_loyalty_config.json")
+    if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -2745,8 +2745,8 @@ def get_marketing_loyalty_config():
 
 @app.get("/api/v1/marketing/benefits")
 def get_marketing_benefits_list():
-    p = DATA_DIR / "marketing_benefits.json"
-    if p.exists():
+    p = os.path.join(DATA_DIR, "marketing_benefits.json")
+    if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -2757,8 +2757,8 @@ def get_marketing_benefits_list():
 
 @app.get("/api/v1/marketing/telemetry/stream")
 def get_marketing_telemetry_stream():
-    p = DATA_DIR / "marketing_time_series.json"
-    if p.exists():
+    p = os.path.join(DATA_DIR, "marketing_time_series.json")
+    if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -2769,8 +2769,8 @@ def get_marketing_telemetry_stream():
 
 @app.get("/api/v1/marketing/telemetry/normalized")
 def get_marketing_telemetry_normalized():
-    p = DATA_DIR / "marketing_normalized_events.json"
-    if p.exists():
+    p = os.path.join(DATA_DIR, "marketing_normalized_events.json")
+    if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -2781,8 +2781,8 @@ def get_marketing_telemetry_normalized():
 
 @app.get("/api/v1/marketing/micro-interactions")
 def get_marketing_micro_interactions():
-    p = DATA_DIR / "marketing_micro_interactions.json"
-    if p.exists():
+    p = os.path.join(DATA_DIR, "marketing_micro_interactions.json")
+    if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
