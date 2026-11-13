@@ -1,0 +1,134 @@
+[
+  {
+    "channel_id": "meta_instagram_mrspets",
+    "platform_name": "Instagram",
+    "account_handle": "@mrspets",
+    "api_endpoint_url": "https://graph.facebook.com/v18.0/IG_BUSINESS_ACCOUNT_ID/insights",
+    "auth_type": "Bearer Token",
+    "credentials_vault_ref": "env://META_ACCESS_TOKEN_SECRET",
+    "status": "active",
+    "polling_interval_minutes": 60,
+    "metric_mappings": {
+      "reach_metric": "impressions_and_reach",
+      "engagement_metric": "engagement_rate",
+      "clicks_metric": "website_clicks"
+    },
+    "last_sync": "2026-10-27T17:35:00Z",
+    "latest_insights": {
+      "reach": 28450,
+      "engagement_rate": 7.4,
+      "website_clicks": 312,
+      "stimulus_active": "Reel Protocolo Hidratación Pulpejos & Ozonoterapia Canina"
+    }
+  },
+  {
+    "channel_id": "meta_retargeting_princesas",
+    "platform_name": "Meta Ads (Facebook & IG)",
+    "account_handle": "Mrs. Pets VIP Retargeting",
+    "api_endpoint_url": "https://graph.facebook.com/v18.0/act_MRSPETS_ADS/insights",
+    "auth_type": "Bearer Token",
+    "credentials_vault_ref": "env://META_ACCESS_TOKEN_SECRET",
+    "status": "active",
+    "polling_interval_minutes": 60,
+    "metric_mappings": {
+      "reach_metric": "reach",
+      "engagement_metric": "frequency",
+      "clicks_metric": "inline_link_clicks"
+    },
+    "last_sync": "2026-10-27T17:30:00Z",
+    "latest_insights": {
+      "reach": 12800,
+      "engagement_rate": 5.8,
+      "website_clicks": 184,
+      "stimulus_active": "Carrousel Suites Presidenciales & Chauffeur Canino"
+    }
+  },
+  {
+    "channel_id": "whatsapp_broadcast_vip",
+    "platform_name": "WhatsApp Cloud API",
+    "account_handle": "+58 412 MRS-PETS",
+    "api_endpoint_url": "https://graph.facebook.com/v18.0/WHATSAPP_PHONE_ID/messages",
+    "auth_type": "Bearer Token",
+    "credentials_vault_ref": "env://META_ACCESS_TOKEN_SECRET",
+    "status": "active",
+    "polling_interval_minutes": 30,
+    "metric_mappings": {
+      "reach_metric": "messages_delivered",
+      "engagement_metric": "read_ratio",
+      "clicks_metric": "button_reply_clicks"
+    },
+    "last_sync": "2026-10-27T17:38:00Z",
+    "latest_insights": {
+      "reach": 4200,
+      "engagement_rate": 18.2,
+      "website_clicks": 428,
+      "stimulus_active": "Notificación Personalizada Príncipes/Princesas Cercanos a Ascenso"
+    }
+  },
+  {
+    "channel_id": "google_pmax_clinica",
+    "platform_name": "Google Ads Performance Max",
+    "account_handle": "Mrs Pets Maracaibo PMax",
+    "api_endpoint_url": "https://googleads.googleapis.com/v16/customers/MRSPETS_CID/googleAds:searchStream",
+    "auth_type": "OAuth2 Bearer",
+    "credentials_vault_ref": "env://GOOGLE_ADS_REFRESH_TOKEN",
+    "status": "active",
+    "polling_interval_minutes": 120,
+    "metric_mappings": {
+      "reach_metric": "impressions",
+      "engagement_metric": "interaction_rate",
+      "clicks_metric": "clicks"
+    },
+    "last_sync": "2026-10-27T16:00:00Z",
+    "latest_insights": {
+      "reach": 16900,
+      "engagement_rate": 4.9,
+      "website_clicks": 240,
+      "stimulus_active": "Búsqueda de Emergencias Veterinarias & Cirugía Especializada"
+    }
+  },
+  {
+    "channel_id": "tiktok_mrspets",
+    "platform_name": "TikTok (TikTok for Business & Spark Ads)",
+    "account_handle": "@mrspets",
+    "api_endpoint_url": "https://business-api.tiktok.com/open_api/v1.3/",
+    "auth_type": "Bearer Token",
+    "credentials_vault_ref": "env://TIKTOK_ACCESS_TOKEN_SECRET",
+    "status": "active",
+    "polling_interval_minutes": 60,
+    "metric_mappings": {
+      "reach_metric": "video_views_and_reach",
+      "engagement_metric": "engagement_rate",
+      "clicks_metric": "profile_and_link_clicks"
+    },
+    "last_sync": "2026-10-28T07:00:00Z",
+    "latest_insights": {
+      "reach": 15400,
+      "engagement_rate": 8.9,
+      "website_clicks": 380,
+      "stimulus_active": "TikTok Viral: Transformación Grooming VIP & Cachorros Felices"
+    }
+  },
+  {
+    "channel_id": "telegram_vip_mrspets",
+    "platform_name": "Telegram VIP Broadcast",
+    "account_handle": "@mrspets_vip",
+    "api_endpoint_url": "https://api.telegram.org/bot_mrspets_test",
+    "auth_type": "Bearer Token / Webhook",
+    "credentials_vault_ref": "env://TELEGRAM_VIP_MRSPETS_TOKEN",
+    "status": "active",
+    "polling_interval_minutes": 60,
+    "metric_mappings": {
+      "reach_metric": "impressions_or_views",
+      "engagement_metric": "engagement_rate",
+      "clicks_metric": "link_clicks"
+    },
+    "last_sync": "2026-10-28T16:36:48.297480Z",
+    "latest_insights": {
+      "reach": 500,
+      "engagement_rate": 5.0,
+      "website_clicks": 25,
+      "stimulus_active": "Campaña Activa en Telegram VIP Broadcast"
+    }
+  }
+]

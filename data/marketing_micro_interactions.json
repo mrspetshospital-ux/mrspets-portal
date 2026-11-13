@@ -1,0 +1,252 @@
+[
+  {
+    "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+    "channel_id": "meta_instagram_mrspets",
+    "channel_name": "Instagram (@mrspets)",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "launch_time": "11:27:00",
+    "campaign_title": "Campaña Camp Grooming Vip Oct",
+    "creative_instrument": "Estímulo Normalizado en Instagram",
+    "target_segment": "Audiencia Segmentada Omnicanal",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "t_plus_20s": {
+      "concurrent_visitors_delta": "+45 visitas tras estímulo",
+      "latency_to_first_action_ms": 520,
+      "first_click_breakdown": [
+        {
+          "destination": "Perfil de Príncipe / Princesa (Club de Lealtad)",
+          "target_id": "nav-item-soy-chico-pet",
+          "clicks": 18,
+          "share_percent": 40.0,
+          "icon": "👑"
+        },
+        {
+          "destination": "Salto Directo a WhatsApp VIP Concierge",
+          "target_id": "btn-whatsapp-concierge",
+          "clicks": 12,
+          "share_percent": 26.7,
+          "icon": "💬"
+        },
+        {
+          "destination": "Visor Médico DICOM / Rayos X Clínicos",
+          "target_id": "tab-clinic-dicom-viewer",
+          "clicks": 10,
+          "share_percent": 22.2,
+          "icon": "🔬"
+        },
+        {
+          "destination": "Otras Secciones (Boutique / Spa)",
+          "target_id": "tab-hotel",
+          "clicks": 5,
+          "share_percent": 11.1,
+          "icon": "🐾"
+        }
+      ]
+    },
+    "t_plus_2h": {
+      "cumulative_visits": 320,
+      "avg_session_duration_sec": 215,
+      "retention_rate_percent": 88.0,
+      "direct_conversions": [
+        {
+          "type": "Reservaciones Directas",
+          "count": 10,
+          "revenue_usd": 384
+        },
+        {
+          "type": "Consultas Preventivas Agendadas",
+          "count": 6,
+          "revenue_usd": 300
+        }
+      ],
+      "total_generated_usd": 684,
+      "roas": 9.12,
+      "cac_usd": 4.81
+    }
+  },
+  {
+    "stimulus_id": "STM-IG-1715",
+    "channel_id": "meta_instagram_mrspets",
+    "channel_name": "Instagram Ads (@mrspets)",
+    "launch_time": "17:15:00",
+    "campaign_title": "Protocolo Hidratación Pulpejos & Ozonoterapia Canina",
+    "creative_instrument": "Reel Vertical 4K + CTA Bio Link con UTM utm_source=ig_mrspets&utm_campaign=ozono_pulpejos",
+    "target_segment": "Tutores Razas Braquicéfalas y Pelaje Denso (Bella Vista & El Milagro)",
+    "t_plus_20s": {
+      "concurrent_visitors_delta": "+84 visitas en vivo",
+      "latency_to_first_action_ms": 680,
+      "first_click_breakdown": [
+        {
+          "destination": "Perfil de Príncipe / Princesa (Club de Lealtad)",
+          "target_id": "nav-item-soy-chico-pet",
+          "clicks": 46,
+          "share_percent": 54.8,
+          "icon": "👑"
+        },
+        {
+          "destination": "Visor Médico DICOM / Rayos X Clínicos",
+          "target_id": "tab-clinic-dicom-viewer",
+          "clicks": 21,
+          "share_percent": 25.0,
+          "icon": "🔬"
+        },
+        {
+          "destination": "Salto Directo a WhatsApp VIP Concierge",
+          "target_id": "btn-whatsapp-concierge",
+          "clicks": 14,
+          "share_percent": 16.7,
+          "icon": "💬"
+        },
+        {
+          "destination": "Otras Secciones (Hotel / Boutique)",
+          "target_id": "tab-hotel",
+          "clicks": 3,
+          "share_percent": 3.5,
+          "icon": "🐾"
+        }
+      ]
+    },
+    "t_plus_2h": {
+      "cumulative_visits": 520,
+      "avg_session_duration_sec": 248,
+      "retention_rate_percent": 82.5,
+      "direct_conversions": [
+        {
+          "type": "Reservaciones de Ozonoterapia & Spa Pulpejos",
+          "count": 28,
+          "revenue_usd": 840
+        },
+        {
+          "type": "Consultas Médicas Clínicas Agendadas",
+          "count": 12,
+          "revenue_usd": 600
+        },
+        {
+          "type": "Nuevas Afiliaciones a Club VIP",
+          "count": 6,
+          "revenue_usd": 480
+        }
+      ],
+      "total_generated_usd": 1920,
+      "roas": 5.48,
+      "cac_usd": 2.85
+    }
+  },
+  {
+    "stimulus_id": "STM-WA-1640",
+    "channel_id": "whatsapp_broadcast_vip",
+    "channel_name": "WhatsApp VIP Broadcast",
+    "launch_time": "16:40:00",
+    "campaign_title": "Alerta Proactiva: Tutores a 1 Visita de Ascenso Club VIP",
+    "creative_instrument": "Plantilla HSM Verificada con Botón Dinámico de Redención Inmediata",
+    "target_segment": "Tutores con 5 meses continuos (Club Leal $\\to$ VIP)",
+    "t_plus_20s": {
+      "concurrent_visitors_delta": "+112 visitas en vivo",
+      "latency_to_first_action_ms": 520,
+      "first_click_breakdown": [
+        {
+          "destination": "Perfil de Príncipe / Princesa (Club de Lealtad)",
+          "target_id": "nav-item-soy-chico-pet",
+          "clicks": 78,
+          "share_percent": 69.6,
+          "icon": "👑"
+        },
+        {
+          "destination": "Salto Directo a WhatsApp VIP Concierge",
+          "target_id": "btn-whatsapp-concierge",
+          "clicks": 26,
+          "share_percent": 23.2,
+          "icon": "💬"
+        },
+        {
+          "destination": "Visor Médico DICOM / Rayos X Clínicos",
+          "target_id": "tab-clinic-dicom-viewer",
+          "clicks": 8,
+          "share_percent": 7.2,
+          "icon": "🔬"
+        }
+      ]
+    },
+    "t_plus_2h": {
+      "cumulative_visits": 380,
+      "avg_session_duration_sec": 310,
+      "retention_rate_percent": 91.0,
+      "direct_conversions": [
+        {
+          "type": "Citas de Grooming Spa Confirmadas (Ascenso)",
+          "count": 34,
+          "revenue_usd": 1360
+        },
+        {
+          "type": "Upgrades Efectivos a Club VIP",
+          "count": 31,
+          "revenue_usd": 2480
+        }
+      ],
+      "total_generated_usd": 3840,
+      "roas": 8.53,
+      "cac_usd": 0.98
+    }
+  },
+  {
+    "stimulus_id": "STM-META-1600",
+    "channel_id": "meta_retargeting_princesas",
+    "channel_name": "Meta Retargeting (Príncipes y Princesas)",
+    "launch_time": "16:00:00",
+    "campaign_title": "Suites Presidenciales Hotel Canino",
+    "creative_instrument": "Carrousel Dinámico: Suite con Aromaterapia y Menú Gourmet",
+    "target_segment": "Tutores Legacy y VIP de Maracaibo (Alta Frecuencia)",
+    "t_plus_20s": {
+      "concurrent_visitors_delta": "+55 visitas en vivo",
+      "latency_to_first_action_ms": 740,
+      "first_click_breakdown": [
+        {
+          "destination": "Perfil de Príncipe / Princesa (Club de Lealtad)",
+          "target_id": "nav-item-soy-chico-pet",
+          "clicks": 29,
+          "share_percent": 52.7,
+          "icon": "👑"
+        },
+        {
+          "destination": "Salto Directo a WhatsApp VIP Concierge",
+          "target_id": "btn-whatsapp-concierge",
+          "clicks": 16,
+          "share_percent": 29.1,
+          "icon": "💬"
+        },
+        {
+          "destination": "Visor Médico DICOM / Rayos X Clínicos",
+          "target_id": "tab-clinic-dicom-viewer",
+          "clicks": 10,
+          "share_percent": 18.2,
+          "icon": "🔬"
+        }
+      ]
+    },
+    "t_plus_2h": {
+      "cumulative_visits": 290,
+      "avg_session_duration_sec": 195,
+      "retention_rate_percent": 76.0,
+      "direct_conversions": [
+        {
+          "type": "Reservaciones de Hotel 5 Estrellas (Noches VIP)",
+          "count": 14,
+          "revenue_usd": 980
+        }
+      ],
+      "total_generated_usd": 980,
+      "roas": 4.12,
+      "cac_usd": 4.2
+    }
+  }
+]

@@ -1,0 +1,71 @@
+{
+  "processed_record_ids": [
+    "QVET-SYNC-BATCH-1001",
+    "QVET-SYNC-BATCH-1792588602863",
+    "QVET-SYNC-BATCH-1792588836760",
+    "QVET-SYNC-BATCH-1792589525751",
+    "QVET-SYNC-BATCH-1792590836109",
+    "QVET-SYNC-BATCH-1792592170935",
+    "QVET-SYNC-BATCH-1793051827535",
+    "QVET-SYNC-BATCH-1793413118760"
+  ],
+  "inventory": {},
+  "synced_appointments": [
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    },
+    {
+      "qvetAppointmentId": "QVT-9912",
+      "patientCode": "PET-101",
+      "date": "2026-10-22",
+      "status": "CONFIRMED_IN_QVET",
+      "service": "Cirugía Profiláctica"
+    }
+  ]
+}

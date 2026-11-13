@@ -1679,10 +1679,24 @@ class AuthEngine {
     this.currentVipPetId = petId;
     localStorage.setItem('mrs_pets_active_vip_patient_id', petId);
     localStorage.setItem('mrs_pets_active_customer_name', ownerName);
+    if (patient && patient.rif) {
+      localStorage.setItem('mrs_pets_active_customer_rif', patient.rif);
+    } else {
+      localStorage.removeItem('mrs_pets_active_customer_rif');
+    }
     localStorage.setItem('mrs_pets_auth_role', 'client');
     localStorage.setItem('mrs_pets_auth_name', `${ownerName} (Tutor de ${petName})`);
     sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
     localStorage.setItem('mrs_pets_skip_splash', 'true');
+
+    // Limpieza de banderas de popups previos de otras mascotas para evitar colisiones
+    try {
+      Object.keys(sessionStorage).forEach(k => {
+        if (k.startsWith('mrs_pets_ready_pop_seen_') && !k.includes(petId)) {
+          sessionStorage.removeItem(k);
+        }
+      });
+    } catch(e) {}
 
     // Limpieza de modales de reservación y deduplicación estricta de citas pendientes
     ['booking-modal-grooming', 'booking-modal-clinica', 'booking-modal-hotel', 'booking-confirmation-pop'].forEach(mId => {

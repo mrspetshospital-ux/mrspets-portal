@@ -270,11 +270,11 @@
     }
 
     notifyPetReady(petData) {
-      const tutor = petData.ownerName || petData.owner || petData.tutor || 'Carlos Mendoza';
-      const pet = petData.petName || petData.name || petData.pet || 'Fifi';
+      const tutor = petData.ownerName || petData.owner || petData.tutor || 'Tutor VIP';
+      const pet = petData.petName || petData.name || petData.pet || 'Consentido VIP';
       const area = (petData.area || 'Grooming').toUpperCase();
-      const turn = petData.turnNumber || '02';
-      const petId = petData.id || petData.petId || 'PET-102';
+      const turn = petData.turnNumber || petData.turno || '01';
+      const petId = petData.id || petData.petId || 'PET-100';
 
       const isPaid = Boolean(petData.paymentStatus === 'paid' || petData.hasPaid === true || petData.isPaid === true);
       const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
@@ -426,6 +426,40 @@
       const isStaff = this.isCurrentUserStaff();
       const type = eventObj.type;
       const data = eventObj.payload || {};
+
+      // AISLAMIENTO MULTI-TENANT: En vista cliente, filtrar estrictamente eventos ajenos
+      if (!isStaff) {
+        let clientTutor = '';
+        let clientPetId = '';
+        if (window.petStatusEngine && typeof window.petStatusEngine.getActiveCustomerInfo === 'function') {
+          const info = window.petStatusEngine.getActiveCustomerInfo();
+          clientTutor = info.activeCustomerName;
+          clientPetId = info.activePetId;
+        } else if (window.authEngine) {
+          clientTutor = window.authEngine.userName ? window.authEngine.userName.split('(')[0].trim() : '';
+          clientPetId = window.authEngine.currentVipPetId;
+        }
+
+        const eventPetId = data.id || data.petId;
+        const eventTutor = data.ownerName || data.owner || data.tutor || data.customerName || '';
+
+        // Solo permitir si coincide el ID de mascota o hay coincidencia con el cliente activo
+        let isMatch = false;
+        if (clientPetId && eventPetId && String(clientPetId).trim() === String(eventPetId).trim()) {
+          isMatch = true;
+        } else if (window.petStatusEngine && typeof window.petStatusEngine.isClientMatch === 'function' && clientTutor) {
+          isMatch = window.petStatusEngine.isClientMatch(data, clientTutor, '', clientPetId);
+        } else if (clientTutor && eventTutor) {
+          const normA = clientTutor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          const normB = eventTutor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+          isMatch = normA.includes(normB) || normB.includes(normA);
+        }
+
+        // Si el evento pertenece a otro cliente y esta pantalla es de un cliente específico, suprimir
+        if (!isMatch && (clientPetId || clientTutor)) {
+          return;
+        }
+      }
 
       switch(type) {
         case 'RESERVATION_CREATED':
@@ -833,9 +867,9 @@
       const bannerId = `banner-ready-${eventId || Date.now()}`;
       if (document.getElementById(bannerId)) return;
 
-      const tutor = data.ownerName || data.owner || data.tutor || 'Carlos Mendoza';
-      const pet = data.petName || data.name || data.pet || 'Fifi';
-      const petId = data.id || data.petId || 'PET-102';
+      const tutor = data.ownerName || data.owner || data.tutor || 'Tutor VIP';
+      const pet = data.petName || data.name || data.pet || 'Consentido VIP';
+      const petId = data.id || data.petId || 'PET-100';
       const area = (data.area || 'Grooming').toUpperCase();
       const waUrl = data.waUrl || `https://wa.me/584146799510`;
       const waPhone = data.waPhone || '+58 412-5551234';

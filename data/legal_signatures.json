@@ -1,0 +1,33 @@
+[
+  {
+    "id": "SIG-1793034920273",
+    "timestamp": "2026-10-26T13:15:20.273412",
+    "email": "carlos.mendoza@mrspets.com",
+    "ownerName": "Carlos Mendoza",
+    "petName": "Max",
+    "petId": "PET-TEST-2026",
+    "rif": "V-18452102",
+    "clientIp": "190.202.45.12",
+    "termsAccepted": true,
+    "terms_accepted": true,
+    "contractVersion": "v2026.1_CONTRATO_MAESTRO",
+    "contractDocUrl": "https://docs.google.com/document/d/1akCTaDndHVTDYBDk86h32VDxcRDtNx0UD8x8I_-0r0k/edit",
+    "userAgent": "Unknown"
+  },
+  {
+    "id": "SIG-1793492816049",
+    "timestamp": "2026-11-01T00:26:56.031Z",
+    "email": "marina@gmail.com",
+    "ownerName": "Teamily IA",
+    "petName": "toto",
+    "petId": "PET-1793492816031-167",
+    "rif": "12123123",
+    "sector": "Las Delicias",
+    "clientIp": "127.0.0.1",
+    "termsAccepted": true,
+    "terms_accepted": true,
+    "contractVersion": "v2026.1_CONTRATO_MAESTRO",
+    "contractDocUrl": "https://docs.google.com/document/d/1akCTaDndHVTDYBDk86h32VDxcRDtNx0UD8x8I_-0r0k/edit",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Antigravity/2.28.2 Chrome/152.0.7977.130 Electron/44.5.1 Safari/537.36"
+  }
+]

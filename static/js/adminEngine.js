@@ -1296,16 +1296,26 @@ class AdminEngine {
             : 'Dalybell Ramírez Montilla');
       try { localStorage.setItem('mrs_pets_active_customer_name', activeCustomer); } catch(e) {}
 
-      let activePetId = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_vip_patient_id') : 'PET-101';
-      // Validar si activePetId existe en patientsStatus, sino buscar el primer paciente de activeCustomer
+      let activePetId = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_vip_patient_id') : null;
+      // Validar si activePetId existe en patientsStatus y pertenece a activeCustomer
       if (Array.isArray(this.patientsStatus)) {
-        const foundP = this.patientsStatus.find(p => p.id === activePetId);
-        if (!foundP) {
-          const ownerMatch = this.patientsStatus.find(p => {
-            const o = (p.owner || p.ownerName || '').toLowerCase();
-            return o && (o.includes('dalybell') || activeCustomer.toLowerCase().includes(o));
-          });
-          if (ownerMatch) activePetId = ownerMatch.id;
+        const ownerMatches = (p) => {
+          if (!p) return false;
+          const o = (p.owner || p.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const a = (activeCustomer || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return o && a && (o.includes(a) || a.includes(o) || (a.includes('bellita') && o.includes('bellita')) || (a.includes('dalybell') && o.includes('dalybell')) || (a.includes('carlos') && o.includes('carlos')));
+        };
+        const foundP = activePetId ? this.patientsStatus.find(p => p.id === activePetId) : null;
+        if (!foundP || !ownerMatches(foundP)) {
+          const ownerMatch = this.patientsStatus.find(p => ownerMatches(p));
+          if (ownerMatch) {
+            activePetId = ownerMatch.id;
+          } else {
+            const cleanA = (activeCustomer || '').toLowerCase();
+            if (cleanA.includes('bellita') || cleanA.includes('bella')) activePetId = 'PET-106';
+            else if (cleanA.includes('carlos') || cleanA.includes('fifi')) activePetId = 'PET-102';
+            else activePetId = 'PET-101';
+          }
         }
       }
       try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId || 'PET-101'); } catch(e) {}
@@ -1431,12 +1441,20 @@ class AdminEngine {
 
       if (Array.isArray(this.patientsStatus)) {
         if (activePetId) {
-          matchedPatient = this.patientsStatus.find(p => p.id === activePetId);
+          const cand = this.patientsStatus.find(p => p.id === activePetId);
+          if (cand) {
+            const o = (cand.owner || cand.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const a = (accountName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (o.includes(a) || a.includes(o) || (a.includes('bellita') && o.includes('bellita')) || (a.includes('dalybell') && o.includes('dalybell')) || (a.includes('carlos') && o.includes('carlos'))) {
+              matchedPatient = cand;
+            }
+          }
         }
         if (!matchedPatient) {
           matchedPatient = this.patientsStatus.find(p => {
-            const owner = (p.owner || p.ownerName || '').toLowerCase();
-            return owner && (accountName.toLowerCase().includes(owner) || owner.includes(accountName.toLowerCase()));
+            const owner = (p.owner || p.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const a = (accountName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return owner && (a.includes(owner) || owner.includes(a) || (a.includes('bellita') && owner.includes('bellita')) || (a.includes('carlos') && owner.includes('carlos')) || (a.includes('dalybell') && owner.includes('dalybell')));
           });
         }
       }

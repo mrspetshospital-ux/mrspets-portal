@@ -1080,9 +1080,10 @@ window.openDirectCheckout = function(petId, tutorName) {
       popOverlay.style.setProperty('pointer-events', 'none', 'important');
     }
 
-    // 2. Resolver datos del paciente (Fifi / Carlos Mendoza)
-    const targetPetId = petId || 'PET-102';
+    // 2. Resolver datos del paciente
     const allPets = (window.adminEngine?.patientsStatus || window.petStatusEngine?.pets || []);
+    const activeInfo = (window.petStatusEngine && typeof window.petStatusEngine.getActiveCustomerInfo === 'function') ? window.petStatusEngine.getActiveCustomerInfo() : {};
+    const targetPetId = petId || activeInfo.activePetId || 'PET-101';
     let matchedPet = allPets.find(p => p.id === targetPetId);
     if (!matchedPet && tutorName) {
       matchedPet = allPets.find(p => {
@@ -1092,9 +1093,9 @@ window.openDirectCheckout = function(petId, tutorName) {
     }
 
     const resolvedPetId = matchedPet ? matchedPet.id : targetPetId;
-    const resolvedTutor = matchedPet ? (matchedPet.owner || matchedPet.ownerName || tutorName || 'Carlos Mendoza') : (tutorName || 'Carlos Mendoza');
-    const resolvedPetName = matchedPet ? (matchedPet.name || matchedPet.petName || 'Fifi') : 'Fifi';
-    const resolvedRif = matchedPet ? (matchedPet.rif || 'V-14.882.109') : 'V-14.882.109';
+    const resolvedTutor = matchedPet ? (matchedPet.owner || matchedPet.ownerName || tutorName || 'Tutor VIP') : (tutorName || activeInfo.activeCustomerName || 'Tutor VIP');
+    const resolvedPetName = matchedPet ? (matchedPet.name || matchedPet.petName || 'Consentido VIP') : 'Consentido VIP';
+    const resolvedRif = matchedPet ? (matchedPet.rif || 'V-Registrado') : 'V-Registrado';
     const resolvedPrice = (matchedPet && typeof matchedPet.price === 'number') ? matchedPet.price : 25.00;
     const resolvedService = matchedPet?.service || 'Circuito Grooming Spa (7 Estaciones)';
 

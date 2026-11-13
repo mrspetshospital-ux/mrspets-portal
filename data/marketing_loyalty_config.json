@@ -1,0 +1,35 @@
+{
+  "club_leal": {
+    "id": "club_leal",
+    "name": "Club Leal",
+    "badge": "🐾 Club Leal",
+    "minMonths": 3,
+    "description": "Tutores y sus príncipes/princesas con 3 meses continuos de recurrencia al circuito de grooming o tienda.",
+    "color": "#10B981",
+    "bgColor": "rgba(16, 185, 129, 0.15)",
+    "borderColor": "#10B981",
+    "min_consecutive_months": 3
+  },
+  "club_vip": {
+    "id": "club_vip",
+    "name": "Club VIP",
+    "badge": "✨ Club VIP",
+    "minMonths": 6,
+    "description": "Tutores y sus príncipes/princesas con 6 meses continuos de recurrencia activa.",
+    "color": "#6366F1",
+    "bgColor": "rgba(99, 102, 241, 0.15)",
+    "borderColor": "#6366F1",
+    "min_consecutive_months": 6
+  },
+  "club_legacy": {
+    "id": "club_legacy",
+    "name": "Club Legacy",
+    "badge": "👑 Club Legacy (Estatus Máximo)",
+    "minMonths": 8,
+    "description": "Tutores y sus príncipes/princesas con 8 meses continuos de lealtad absoluta (Estatus Máximo).",
+    "color": "#D4AF37",
+    "bgColor": "linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(180, 83, 9, 0.2) 100%)",
+    "borderColor": "#D4AF37",
+    "min_consecutive_months": 8
+  }
+}

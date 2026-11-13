@@ -1,0 +1,363 @@
+{
+  "updated_at": "2026-10-27T17:35:00Z",
+  "active_granularity": "minute",
+  "operational_summary": {
+    "current_real_velocity": 45,
+    "current_target_velocity": 50,
+    "current_historical_mean": 38,
+    "delta_vs_target_percent": -10.0,
+    "alert_threshold_percent": -15.0,
+    "status": "active_monitoring",
+    "active_stimulus_count": 6
+  },
+  "stimulus_events": [
+    {
+      "id": "STM-IG-1715",
+      "timestamp": "17:15",
+      "channel_id": "meta_instagram_mrspets",
+      "channel_name": "Instagram (@mrspets)",
+      "campaign_title": "Protocolo Hidratación Pulpejos & Ozonoterapia Canina",
+      "instrument": "Reel Vertical 4K + CTA a Perfil de Príncipes",
+      "boost_usd": 120,
+      "color": "#E1306C"
+    },
+    {
+      "id": "STM-WA-1640",
+      "timestamp": "16:40",
+      "channel_id": "whatsapp_broadcast_vip",
+      "channel_name": "WhatsApp VIP Broadcast",
+      "campaign_title": "Beneficio Exclusivo Club Leal / VIP",
+      "instrument": "Mensaje Interactivo con Botones de Cita Inmediata",
+      "boost_usd": 30,
+      "color": "#25D366"
+    },
+    {
+      "id": "STM-META-1600",
+      "timestamp": "16:00",
+      "channel_id": "meta_retargeting_princesas",
+      "channel_name": "Meta Retargeting",
+      "campaign_title": "Suites Presidenciales Hotel Canino",
+      "instrument": "Carrousel Dinámico Tutores Recurrentes",
+      "boost_usd": 85,
+      "color": "#0668E1"
+    },
+    {
+      "id": "STM-CAMP_GROOMING_VIP_OCT",
+      "timestamp": "11:27",
+      "channel_id": "meta_instagram_mrspets",
+      "channel_name": "Instagram (@mrspets)",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "platform": "Instagram",
+      "campaign_title": "Campaña Camp Grooming Vip Oct",
+      "instrument": "Estímulo Normalizado en Instagram",
+      "boost_usd": 75,
+      "color": "#E1306C",
+      "real_metrics": {
+        "reach": 320,
+        "clicks": 45,
+        "whatsapp_redirects": 12,
+        "website_visits": 28
+      },
+      "target_metrics": {
+        "reach_goal": 350,
+        "clicks_goal": 50
+      }
+    },
+    {
+      "id": "STM-SIM-1793138599",
+      "timestamp": "18:03",
+      "channel_id": "meta_instagram_mrspets",
+      "channel_name": "Instagram (@mrspets)",
+      "campaign_title": "Lanzamiento Flash Protocolo Spa Real",
+      "instrument": "Instagram Story con Sticker Enlace",
+      "boost_usd": 150,
+      "color": "#E1306C"
+    },
+    {
+      "id": "STM-SIM-1793186369",
+      "timestamp": "07:19",
+      "channel_id": "meta_instagram_mrspets",
+      "channel_name": "Instagram (@mrspets)",
+      "campaign_title": "Lanzamiento Flash Protocolo Spa Real",
+      "instrument": "Instagram Story con Sticker Enlace",
+      "boost_usd": 150,
+      "color": "#E1306C"
+    }
+  ],
+  "series_minute": [
+    {
+      "time": "16:30",
+      "real": 180,
+      "target": 220,
+      "historical_7d": 165
+    },
+    {
+      "time": "16:35",
+      "real": 195,
+      "target": 230,
+      "historical_7d": 170
+    },
+    {
+      "time": "16:40",
+      "real": 390,
+      "target": 310,
+      "historical_7d": 175,
+      "stimulus_id": "STM-WA-1640"
+    },
+    {
+      "time": "16:45",
+      "real": 460,
+      "target": 380,
+      "historical_7d": 185
+    },
+    {
+      "time": "16:50",
+      "real": 415,
+      "target": 395,
+      "historical_7d": 190
+    },
+    {
+      "time": "16:55",
+      "real": 360,
+      "target": 400,
+      "historical_7d": 195
+    },
+    {
+      "time": "17:00",
+      "real": 330,
+      "target": 405,
+      "historical_7d": 200
+    },
+    {
+      "time": "17:05",
+      "real": 305,
+      "target": 410,
+      "historical_7d": 205
+    },
+    {
+      "time": "17:10",
+      "real": 285,
+      "target": 415,
+      "historical_7d": 208
+    },
+    {
+      "time": "17:15",
+      "real": 510,
+      "target": 450,
+      "historical_7d": 210,
+      "stimulus_id": "STM-IG-1715"
+    },
+    {
+      "time": "17:20",
+      "real": 490,
+      "target": 460,
+      "historical_7d": 212
+    },
+    {
+      "time": "17:25",
+      "real": 435,
+      "target": 455,
+      "historical_7d": 215
+    },
+    {
+      "time": "17:30",
+      "real": 410,
+      "target": 440,
+      "historical_7d": 218
+    },
+    {
+      "time": "17:35",
+      "real": 384,
+      "target": 420,
+      "historical_7d": 210
+    },
+    {
+      "time": "22:02",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "Instagram",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "18:03",
+      "real": 540,
+      "target": 450,
+      "historical_7d": 210,
+      "stimulus_id": "STM-SIM-1793138599"
+    },
+    {
+      "time": "22:03",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "X",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "22:03",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "X",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "22:03",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "X",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "07:19",
+      "real": 540,
+      "target": 450,
+      "historical_7d": 210,
+      "stimulus_id": "STM-SIM-1793186369"
+    },
+    {
+      "time": "11:27",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "Instagram",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "11:27",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "Instagram",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "11:27",
+      "real": 45,
+      "target": 50,
+      "historical_7d": 38,
+      "stimulus_id": "STM-CAMP_GROOMING_VIP_OCT",
+      "platform": "Instagram",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    }
+  ],
+  "series_hour": [
+    {
+      "time": "08:00",
+      "real": 120,
+      "target": 140,
+      "historical_7d": 110
+    },
+    {
+      "time": "09:00",
+      "real": 240,
+      "target": 250,
+      "historical_7d": 195
+    },
+    {
+      "time": "10:00",
+      "real": 380,
+      "target": 350,
+      "historical_7d": 270,
+      "stimulus_id": "STM-CAMP-GROOMING-VIP",
+      "platform": "Instagram",
+      "campaign_id": "CAMP_GROOMING_VIP_OCT",
+      "reach": 320,
+      "reach_goal": 350,
+      "clicks": 45,
+      "clicks_goal": 50,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    {
+      "time": "11:00",
+      "real": 510,
+      "target": 480,
+      "historical_7d": 360
+    },
+    {
+      "time": "12:00",
+      "real": 460,
+      "target": 520,
+      "historical_7d": 390
+    },
+    {
+      "time": "13:00",
+      "real": 340,
+      "target": 410,
+      "historical_7d": 310
+    },
+    {
+      "time": "14:00",
+      "real": 420,
+      "target": 430,
+      "historical_7d": 330
+    },
+    {
+      "time": "15:00",
+      "real": 490,
+      "target": 470,
+      "historical_7d": 375
+    },
+    {
+      "time": "16:00",
+      "real": 620,
+      "target": 550,
+      "historical_7d": 420
+    },
+    {
+      "time": "17:00",
+      "real": 780,
+      "target": 710,
+      "historical_7d": 490
+    },
+    {
+      "time": "18:00 (Proy)",
+      "real": null,
+      "target": 650,
+      "historical_7d": 460
+    },
+    {
+      "time": "19:00 (Proy)",
+      "real": null,
+      "target": 580,
+      "historical_7d": 410
+    }
+  ]
+}

@@ -1,0 +1,494 @@
+{
+  "sheetId": "1BCV_OFFICIAL_MRS_PETS_MARACAIBO_2026",
+  "sheetTitle": "Control Interno Tasa Oficial BCV - Mrs Pets Maracaibo",
+  "lastSynced": "2026-10-27T18:35:00Z",
+  "activeBlock": "BLOQUE_17_00_PM_CIERRE",
+  "slot": "05:00 PM",
+  "latestVerifiedRate": 887.3,
+  "closingValueRate": 888.12,
+  "currency": "VES/USD",
+  "compliance": "ESTRICTO_BCV_SIN_PARALELO",
+  "verifiedBy": "Administración Central & Make.com POS",
+  "historyRecords": [
+    {
+      "date": "2026-10-21",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-21T15:00:26.927147Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-22",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-22T21:00:08.217177Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-23",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-24T00:01:48.575160Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-24",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-24T12:00:01.607501Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-24",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-24T15:00:03.961103Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-24",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-24T21:00:08.916716Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-25",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T01:04:47.734503Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T15:00:00.363992Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T15:00:15.074834Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T17:48:23.750688Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T19:48:46.976354Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T21:00:06.282209Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T21:00:24.825817Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T21:00:54.639558Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T21:57:07.514611Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.95,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T21:57:07.528463Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-26T22:21:01.371855Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-26T22:28:10.806055Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-26T22:35:31.011013Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-26T22:35:36.687977Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T02:12:01.156872Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-26",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T02:32:20.880799Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:21:45.194399Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:22:18.576020Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:22:18.623826Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:27:58.000905Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:27:58.063170Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:29:15.828299Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:29:15.881252Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:40:04.228285Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:40:04.309963Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:49:43.946948Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T11:49:44.010846Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T12:00:04.938295Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "timestamp": "2026-10-27T12:00:15.692410Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T12:19:01.841509Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T12:55:37.536609Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T12:55:37.546796Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T12:56:18.805469Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T12:56:18.816061Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T13:03:20.925054Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:04:29.970018Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:04:29.980107Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:26:41.613211Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:26:41.633816Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 49.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:41:49.321476Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela",
+      "timestamp": "2026-10-27T13:41:49.333001Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "08:00 AM",
+      "block": "BLOQUE_08_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T14:07:23.241249Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T15:00:15.857374Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "11:00 AM",
+      "block": "BLOQUE_11_00_AM",
+      "rate": 48.5,
+      "source": "Instagram @bcv.org.ve / Banco Central de Venezuela (Configurado en Panel)",
+      "timestamp": "2026-10-27T16:37:06.715415Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 49.5,
+      "source": "Banco Central de Venezuela (BCV)",
+      "timestamp": "2026-10-27T18:00:00Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 877.0,
+      "source": "Banco Central de Venezuela (BCV)",
+      "timestamp": "2026-10-27T18:29:17Z",
+      "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-10-27",
+      "slot": "05:00 PM",
+      "block": "BLOQUE_17_00_PM_CIERRE",
+      "rate": 887.3,
+      "closingValueRate": 888.12,
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)",
+      "timestamp": "2026-10-27T18:35:00Z",
+      "status": "CONSOLIDADO_FIJO"
+    }
+  ],
+  "latestSlot": "05:00 PM",
+  "latestSource": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)"
+}

@@ -446,11 +446,18 @@ class PetStatusEngine {
           if (srvPet.deliveredAt) local.deliveredAt = srvPet.deliveredAt;
           if (srvPet.deliveredBy) local.deliveredBy = srvPet.deliveredBy;
 
-          // Detección de avance en tiempo real a Nivel 7 ("Listo ✨" / stepIndex: 6) para el cliente
-          if (srvPet.stepIndex === 6 && prevStep !== 6 && (!this.isStaffMode())) {
+          // Detección y notificación de avance en tiempo real de etapas para el cliente
+          if (stepChanged && (!this.isStaffMode())) {
             const { activeCustomerName, activeCustomerPhone, activePetId } = this.getActiveCustomerInfo();
             if (this.isClientMatch(local, activeCustomerName, activeCustomerPhone, activePetId)) {
-              this.triggerPetReadyScreenPop(local);
+              if (srvPet.stepIndex === 6) {
+                this.triggerPetReadyScreenPop(local);
+              } else if (window.app && typeof window.app.showToast === 'function') {
+                const areaKey = this.normalizeService(local.area || 'grooming');
+                const steps = (this.workflows && (this.workflows[areaKey] || this.workflows[local.area])) || (this.workflows.grooming || []);
+                const stepName = steps[srvPet.stepIndex] || 'En Proceso';
+                window.app.showToast(`🐾 ¡${local.petName || local.name || 'Tu consentido'} avanzó a: Etapa ${srvPet.stepIndex + 1}. ${stepName}!`, 'info');
+              }
             }
           }
         }
@@ -534,9 +541,9 @@ class PetStatusEngine {
       pet = this.pets.find(p => p.id === pet) || { id: pet };
     }
 
-    const petName = pet.petName || pet.name || 'Fifi';
-    const tutor = pet.ownerName || pet.owner || 'Carlos Mendoza';
-    const species = pet.species || 'Teckel / Dachshund VIP';
+    const petName = pet.petName || pet.name || 'Consentido VIP';
+    const tutor = pet.ownerName || pet.owner || 'Tutor VIP';
+    const species = pet.species || 'Canino VIP';
     const area = this.normalizeService(pet.area || 'grooming');
     const areaDisplayName = this.getAreaDisplayName(area);
     const serviceName = pet.service || 'Circuito Grooming Spa (7 Estaciones)';
@@ -556,7 +563,7 @@ class PetStatusEngine {
     const totalVes = (priceUsd * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const isPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
-    const petId = pet.id || 'PET-102';
+    const petId = pet.id || 'PET-100';
     const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
       ? window.location.origin 
       : 'https://mrspets-portal.onrender.com';
@@ -608,7 +615,7 @@ class PetStatusEngine {
           <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:10px;">
             <div style="font-size:0.7rem; color:#64748B; font-weight:800; text-transform:uppercase;">Tutor Titular</div>
             <div style="font-weight:900; color:#1E293B;">${tutor}</div>
-            <div style="font-size:0.75rem; color:#64748B;">${pet.rif || 'V-14.882.109'}</div>
+            <div style="font-size:0.75rem; color:#64748B;">${pet.rif || 'V-Registrado'}</div>
           </div>
           <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:10px;">
             <div style="font-size:0.7rem; color:#64748B; font-weight:800; text-transform:uppercase;">Servicio Realizado</div>
@@ -741,7 +748,7 @@ class PetStatusEngine {
     if (this.syncTimer) clearInterval(this.syncTimer);
     this.syncTimer = setInterval(() => {
       this.pollServerUpdates();
-    }, 2500);
+    }, 1500);
 
     window.addEventListener('focus', () => this.pollServerUpdates());
     document.addEventListener('visibilitychange', () => {
@@ -2232,21 +2239,60 @@ class PetStatusEngine {
       activeCustomerName = 'Dalybell Ramírez Montilla';
     }
 
-    // 5. Garantizar teléfono de contacto para WhatsApp
-    if (!activeCustomerPhone && activeCustomerName && activeCustomerName.toLowerCase().includes('dalybell')) {
-      activeCustomerPhone = '+58 (414) 389-1102';
-    }
-    if (!activeCustomerPhone && activeCustomerName && activeCustomerName.toLowerCase().includes('carlos')) {
-      activeCustomerPhone = '+58 (412) 555-1234';
+    // 5. Validación Anti-Contaminación de activePetId contra el cliente activo
+    let validPet = null;
+    if (activePetId && Array.isArray(this.pets)) {
+      const candidate = this.pets.find(p => p.id === activePetId);
+      if (candidate && this.isClientMatch(candidate, activeCustomerName, activeCustomerPhone, null)) {
+        validPet = candidate;
+      } else {
+        // ID huérfano o contaminado de otra sesión cliente previa: descartar
+        activePetId = null;
+      }
     }
 
-    // 6. Si no hay activePetId, resolver al ID correspondiente (Dalybell -> PET-101 Princesa, Carlos Mendoza -> PET-102 Fifi)
-    if (!activePetId && activeCustomerName.toLowerCase().includes('dalybell')) {
-      activePetId = 'PET-101';
-      try { localStorage.setItem('mrs_pets_active_vip_patient_id', 'PET-101'); } catch(e) {}
-    } else if (!activePetId && activeCustomerName.toLowerCase().includes('carlos')) {
-      activePetId = 'PET-102';
-      try { localStorage.setItem('mrs_pets_active_vip_patient_id', 'PET-102'); } catch(e) {}
+    // 6. Si no hay activePetId válido, resolver dinámicamente según activeCustomerName
+    if (!validPet && Array.isArray(this.pets)) {
+      validPet = this.pets.find(p => this.isClientMatch(p, activeCustomerName, activeCustomerPhone, null));
+      if (validPet) {
+        activePetId = validPet.id;
+        try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId); } catch(e) {}
+      } else {
+        const lowerName = activeCustomerName.toLowerCase();
+        if (lowerName.includes('bellita') || lowerName.includes('bella')) {
+          activePetId = 'PET-106';
+        } else if (lowerName.includes('carlos') || lowerName.includes('mendoza') || lowerName.includes('fifi')) {
+          activePetId = 'PET-102';
+        } else if (lowerName.includes('dalybell') || lowerName.includes('montilla') || lowerName.includes('princesa') || lowerName.includes('sofia')) {
+          activePetId = 'PET-101';
+        } else if (lowerName.includes('andres') || lowerName.includes('buddy')) {
+          activePetId = 'PET-103';
+        } else if (lowerName.includes('mariana') || lowerName.includes('colina') || lowerName.includes('buga') || lowerName.includes('cuga')) {
+          activePetId = 'PET-109';
+        } else if (lowerName.includes('ivonne') || lowerName.includes('ivi')) {
+          activePetId = 'PET-111';
+        }
+        if (activePetId) {
+          try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId); } catch(e) {}
+          validPet = this.pets.find(p => p.id === activePetId);
+        }
+      }
+    }
+
+    // 7. Auto-completar teléfono oficial para contacto y WhatsApp
+    if (!activeCustomerPhone) {
+      if (validPet && (validPet.ownerPhone || validPet.phone)) {
+        activeCustomerPhone = validPet.ownerPhone || validPet.phone;
+      } else {
+        const lowerName = activeCustomerName.toLowerCase();
+        if (lowerName.includes('bellita') || lowerName.includes('bella')) {
+          activeCustomerPhone = '+58 (412) 334-4556';
+        } else if (lowerName.includes('carlos') || lowerName.includes('mendoza')) {
+          activeCustomerPhone = '+58 (412) 555-1234';
+        } else if (lowerName.includes('dalybell') || lowerName.includes('montilla')) {
+          activeCustomerPhone = '+58 (414) 389-1102';
+        }
+      }
     }
 
     return { activePetId, activeCustomerName, activeCustomerPhone };
@@ -2255,51 +2301,86 @@ class PetStatusEngine {
   isClientMatch(pet, activeCustomerName, activeCustomerPhone, activePetId) {
     if (!pet) return false;
 
-    const norm = (s) => (s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const norm = (s) => (s || '')
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .trim();
+
     const cleanActiveName = norm(activeCustomerName);
     const cleanOwnerName = norm(pet.ownerName || pet.owner);
+    const cleanPetName = norm(pet.petName || pet.name);
 
-    // CRITICAL SECURITY ISOLATION: Strict Cross-Tenant Block
-    // Carlos Mendoza must NEVER match Dalybell Ramírez Montilla
-    if ((cleanActiveName.includes('dalybell') || cleanActiveName.includes('montilla')) && 
-        (cleanOwnerName.includes('carlos') || cleanOwnerName.includes('mendoza'))) {
-      return false;
-    }
-    if ((cleanActiveName.includes('carlos') || cleanActiveName.includes('mendoza')) && 
-        (cleanOwnerName.includes('dalybell') || cleanOwnerName.includes('montilla'))) {
-      return false;
-    }
+    // Stopwords no distintivas
+    const stopWords = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', 'tutor', 'tutora', 'vip', 'dr', 'dra', 'sr', 'sra', 'chico', 'cliente']);
+    const getTokens = (str) => str.split(/\s+/).filter(w => w.length >= 3 && !stopWords.has(w));
 
-    // Explicit active pet ID match (unless cross-tenant name conflict)
-    if (activePetId && pet.id === activePetId) {
-      if (cleanActiveName.includes('dalybell') && (cleanOwnerName.includes('carlos') || cleanOwnerName.includes('mendoza'))) {
+    const activeTokens = getTokens(cleanActiveName);
+    const ownerTokens = getTokens(cleanOwnerName);
+
+    // AISLAMIENTO MULTI-TENANT ESTRICTO:
+    // Si activeCustomerName y pet.owner son de personas distintas, PROHIBIR match
+    if (activeTokens.length > 0 && ownerTokens.length > 0) {
+      const hasNameOverlap = activeTokens.some(t => ownerTokens.includes(t) || cleanOwnerName.includes(t)) ||
+                             ownerTokens.some(t => activeTokens.includes(t) || cleanActiveName.includes(t));
+      
+      const petNameMatch = cleanPetName && (cleanActiveName.includes(cleanPetName) || activeTokens.includes(cleanPetName));
+
+      // Bloqueos explícitos de pares para garantizar seguridad cero fugas
+      const isCarlosActive = cleanActiveName.includes('carlos') || cleanActiveName.includes('mendoza');
+      const isCarlosOwner = cleanOwnerName.includes('carlos') || cleanOwnerName.includes('mendoza');
+      const isBellaActive = cleanActiveName.includes('bellita') || cleanActiveName.includes('bella');
+      const isBellaOwner = cleanOwnerName.includes('bellita') || cleanPetName.includes('bella');
+      const isDalybellActive = cleanActiveName.includes('dalybell') || cleanActiveName.includes('montilla');
+      const isDalybellOwner = cleanOwnerName.includes('dalybell') || cleanOwnerName.includes('montilla');
+
+      if ((isCarlosActive && !isCarlosOwner) || (!isCarlosActive && isCarlosOwner)) {
+        if (!petNameMatch) return false;
+      }
+      if ((isBellaActive && !isBellaOwner) || (!isBellaActive && isBellaOwner && !isCarlosActive && !isDalybellActive)) {
+        if (!hasNameOverlap && !petNameMatch) return false;
+      }
+      if ((isDalybellActive && !isDalybellOwner) || (!isDalybellActive && isDalybellOwner)) {
+        if (!petNameMatch) return false;
+      }
+
+      if (!hasNameOverlap && !petNameMatch) {
+        // Discrepancia total de tutor y de mascota: NUNCA coincidir
         return false;
       }
+    }
+
+    // 1. Coincidencia por ID de mascota verificado (solo si no hubo veto multi-tenant previo)
+    if (activePetId && pet.id === activePetId) {
       return true;
     }
 
-    // Name matching
+    // 2. Coincidencia por nombre de tutor o nombre de la mascota
     if (cleanActiveName && cleanOwnerName) {
-      if (cleanActiveName.includes('dalybell') && cleanOwnerName.includes('dalybell')) {
-        return true;
-      }
       if (cleanActiveName === cleanOwnerName || cleanOwnerName.includes(cleanActiveName) || cleanActiveName.includes(cleanOwnerName)) {
         return true;
       }
+      if (activeTokens.some(t => ownerTokens.includes(t))) {
+        return true;
+      }
+    }
+    if (cleanPetName && (cleanActiveName.includes(cleanPetName) || activeTokens.includes(cleanPetName))) {
+      return true;
     }
 
-    // Phone matching (with first-name safety check to avoid false collisions)
-    const cleanPPhone = (pet.ownerPhone || '').replace(/\D/g, '');
+    // 3. Coincidencia por RIF de identidad
+    const cleanPRIF = (pet.rif || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const activeStoredRIF = (typeof localStorage !== 'undefined' ? (localStorage.getItem('mrs_pets_active_customer_rif') || '') : '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (cleanPRIF && activeStoredRIF && cleanPRIF === activeStoredRIF) {
+      return true;
+    }
+
+    // 4. Coincidencia por teléfono verificado
+    const cleanPPhone = (pet.ownerPhone || pet.phone || '').replace(/\D/g, '');
     const cleanCPhone = (activeCustomerPhone || '').replace(/\D/g, '');
     if (cleanPPhone && cleanCPhone && cleanPPhone.length >= 7 && cleanCPhone.length >= 7) {
       if (cleanPPhone === cleanCPhone || cleanPPhone.endsWith(cleanCPhone) || cleanCPhone.endsWith(cleanPPhone)) {
-        if (cleanOwnerName && cleanActiveName) {
-          const ownerFirst = cleanOwnerName.split(' ')[0];
-          const activeFirst = cleanActiveName.split(' ')[0];
-          if (ownerFirst && activeFirst && ownerFirst !== activeFirst) {
-            return false;
-          }
-        }
         return true;
       }
     }
@@ -2765,7 +2846,7 @@ class PetStatusEngine {
           const payOrigin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
             ? window.location.origin 
             : 'https://mrspets-portal.onrender.com';
-          const petPayUrl = `${payOrigin}/?action=checkout&petId=${encodeURIComponent(pet.id)}&tutor=${encodeURIComponent(pet.ownerName || pet.owner || 'Carlos Mendoza')}`;
+          const petPayUrl = `${payOrigin}/?action=checkout&petId=${encodeURIComponent(pet.id)}&tutor=${encodeURIComponent(pet.ownerName || pet.owner || 'Tutor VIP')}`;
 
           actionControlsHTML = `
             ${isGroomingReady ? `
@@ -2779,7 +2860,7 @@ class PetStatusEngine {
                 ${!isPetPaid ? `
                   <div style="background:rgba(212,175,55,0.2); border:1px solid #D4AF37; border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:0.78rem; color:#78350F;">
                     <div style="font-weight:900; margin-bottom:6px;">💳 ¿Aún no has pagado tu servicio?</div>
-                    <button type="button" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Carlos Mendoza'}');" style="background:#0F172A; color:#D4AF37 !important; padding:6px 14px; border-radius:6px; font-weight:900; font-size:0.76rem; display:inline-block; border:1px solid #D4AF37; cursor:pointer;">
+                    <button type="button" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Tutor VIP'}');" style="background:#0F172A; color:#D4AF37 !important; padding:6px 14px; border-radius:6px; font-weight:900; font-size:0.76rem; display:inline-block; border:1px solid #D4AF37; cursor:pointer;">
                       👉 Pague aquí directamente en el carrito
                     </button>
                   </div>
@@ -2792,7 +2873,7 @@ class PetStatusEngine {
                   <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); petStatusEngine.triggerPetReadyScreenPop(petStatusEngine.pets.find(p=>p.id==='${pet.id}')||'${pet.id}')" style="background:#10B981; color:white; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
                     🔔 Ver Notificación de Retiro
                   </button>
-                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Carlos Mendoza'}');" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.35);">
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Tutor VIP'}');" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.35);">
                     💳 Pagar con Tarjeta o BCV ➔
                   </button>
                 </div>

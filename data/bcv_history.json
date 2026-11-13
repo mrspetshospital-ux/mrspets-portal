@@ -1,0 +1,304 @@
+{
+  "last_sync": {
+    "rate": 887.3,
+    "currency": "VES/USD",
+    "slot": "11:00 AM",
+    "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+    "trigger": "CRON_SCHEDULED",
+    "caracas_time": "2026-11-02 11:00:29 AM",
+    "timestamp": "2026-11-02T15:00:29.303565Z",
+    "next_scheduled_sync": "2026-11-02 05:00 PM"
+  },
+  "history": [
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-21 09:36:42 AM",
+      "timestamp": "2026-10-21T13:36:42.614903Z",
+      "next_scheduled_sync": "2026-10-21 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-21 09:36:50 AM",
+      "timestamp": "2026-10-21T13:36:50.403742Z",
+      "next_scheduled_sync": "2026-10-21 11:00 AM"
+    },
+    {
+      "rate": 49.1,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Make.com Webhook / Instagram @bcv.org.ve",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-21 09:53:56 AM",
+      "timestamp": "2026-10-21T13:53:56.103015Z",
+      "next_scheduled_sync": "2026-10-21 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-21 10:27:41 AM",
+      "timestamp": "2026-10-21T14:27:41.480311Z",
+      "next_scheduled_sync": "2026-10-21 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-21 11:00:26 AM",
+      "timestamp": "2026-10-21T15:00:26.927619Z",
+      "next_scheduled_sync": "2026-10-21 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-22 12:54:08 PM",
+      "timestamp": "2026-10-22T16:54:08.051597Z",
+      "next_scheduled_sync": "2026-10-22 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "WEBHOOK_API",
+      "caracas_time": "2026-10-22 12:54:11 PM",
+      "timestamp": "2026-10-22T16:54:11.713078Z",
+      "next_scheduled_sync": "2026-10-22 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-22 05:00:08 PM",
+      "timestamp": "2026-10-22T21:00:08.217660Z",
+      "next_scheduled_sync": "2026-10-23 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-23 05:00:24 PM",
+      "timestamp": "2026-10-23T21:00:24.331227Z",
+      "next_scheduled_sync": "2026-10-24 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-24 08:00:01 AM",
+      "timestamp": "2026-10-24T12:00:01.608877Z",
+      "next_scheduled_sync": "2026-10-24 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-24 11:00:03 AM",
+      "timestamp": "2026-10-24T15:00:03.961775Z",
+      "next_scheduled_sync": "2026-10-24 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-24 05:00:08 PM",
+      "timestamp": "2026-10-24T21:00:08.918362Z",
+      "next_scheduled_sync": "2026-10-25 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-25 11:00:05 AM",
+      "timestamp": "2026-10-25T15:00:05.095209Z",
+      "next_scheduled_sync": "2026-10-25 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-25 05:00:07 PM",
+      "timestamp": "2026-10-25T21:00:07.285222Z",
+      "next_scheduled_sync": "2026-10-26 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-26 11:00:00 AM",
+      "timestamp": "2026-10-26T15:00:00.366082Z",
+      "next_scheduled_sync": "2026-10-26 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-26 05:00:04 PM",
+      "timestamp": "2026-10-26T21:00:04.095914Z",
+      "next_scheduled_sync": "2026-10-27 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-27 08:00:15 AM",
+      "timestamp": "2026-10-27T12:00:15.693374Z",
+      "next_scheduled_sync": "2026-10-27 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-27 11:00:17 AM",
+      "timestamp": "2026-10-27T15:00:17.678853Z",
+      "next_scheduled_sync": "2026-10-27 05:00 PM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-27 05:00:21 PM",
+      "timestamp": "2026-10-27T21:00:21.553045Z",
+      "next_scheduled_sync": "2026-10-28 08:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-28 08:00:09 AM",
+      "timestamp": "2026-10-28T12:00:09.070727Z",
+      "next_scheduled_sync": "2026-10-28 11:00 AM"
+    },
+    {
+      "rate": 48.5,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Instagram @bcv.org.ve (Feed Oficial Verificado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-28 11:00:15 AM",
+      "timestamp": "2026-10-28T15:00:15.202973Z",
+      "next_scheduled_sync": "2026-10-28 05:00 PM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-29 05:00:12 PM",
+      "timestamp": "2026-10-29T21:00:12.194778Z",
+      "next_scheduled_sync": "2026-10-30 08:00 AM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-30 08:00:03 AM",
+      "timestamp": "2026-10-30T12:00:03.768578Z",
+      "next_scheduled_sync": "2026-10-30 11:00 AM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-31 11:00:02 AM",
+      "timestamp": "2026-10-31T15:00:02.855882Z",
+      "next_scheduled_sync": "2026-10-31 05:00 PM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-10-31 05:00:07 PM",
+      "timestamp": "2026-10-31T21:00:07.084657Z",
+      "next_scheduled_sync": "2026-11-01 08:00 AM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "08:00 AM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-11-01 08:00:21 AM",
+      "timestamp": "2026-11-01T12:00:21.540537Z",
+      "next_scheduled_sync": "2026-11-01 11:00 AM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-11-01 11:00:23 AM",
+      "timestamp": "2026-11-01T15:00:23.494153Z",
+      "next_scheduled_sync": "2026-11-01 05:00 PM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "05:00 PM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-11-01 05:00:09 PM",
+      "timestamp": "2026-11-01T21:00:09.423400Z",
+      "next_scheduled_sync": "2026-11-02 08:00 AM"
+    },
+    {
+      "rate": 887.3,
+      "currency": "VES/USD",
+      "slot": "11:00 AM",
+      "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve) (Ajuste Manual Fijado)",
+      "trigger": "CRON_SCHEDULED",
+      "caracas_time": "2026-11-02 11:00:29 AM",
+      "timestamp": "2026-11-02T15:00:29.303565Z",
+      "next_scheduled_sync": "2026-11-02 05:00 PM"
+    }
+  ]
+}

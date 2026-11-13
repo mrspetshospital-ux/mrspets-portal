@@ -1,0 +1,1155 @@
+[
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-31T02:18:38.759544Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-31T02:18:38.757725Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-31T02:18:38.754431Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-SIM-3260",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal & Hepático IDEXX",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 19.2,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "ALT",
+        "value": 38,
+        "unit": "U/L",
+        "refRange": "10 - 100",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN",
+      "ALT"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.5,
+    "vetNotes": "Chequeo automatizado de laboratorio in-house Mrs. Pets.",
+    "receivedAt": "2026-10-27T02:15:03.263272Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-26T21:57:07.533764Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-26T21:57:07.532146Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-26T21:57:07.530685Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-SIM-2608",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal & Hepático IDEXX",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 19.2,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "ALT",
+        "value": 38,
+        "unit": "U/L",
+        "refRange": "10 - 100",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN",
+      "ALT"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.5,
+    "vetNotes": "Chequeo automatizado de laboratorio in-house Mrs. Pets.",
+    "receivedAt": "2026-10-21T14:27:52.611246Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:53:56.107970Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:53:56.106257Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:53:56.104791Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:32:05.750270Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:32:05.749420Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:32:05.748599Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:20:36.760116Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:20:36.759230Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:20:36.758270Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:42.862896Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:42.862171Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:16:42.861453Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:26.300387Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:26.299730Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:16:26.299049Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:02.519599Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T13:16:02.518722Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T13:16:02.518267Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-XML-998",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "ProCyte_Dx",
+    "testPanel": "Panel IDEXX XML In-House",
+    "results": [
+      {
+        "biomarker": "RBC",
+        "value": 6.8,
+        "unit": "M/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "WBC",
+        "value": 9.4,
+        "unit": "K/uL",
+        "refRange": "",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "SDMA",
+        "value": 12.4,
+        "unit": "ug/dL",
+        "refRange": "",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "RBC",
+      "WBC",
+      "SDMA"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 12.4,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T12:13:06.037187Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-002",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Panel Renal Avanzado",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 18.5,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "ELEVADO_ALERTA_RENAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.8,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina"
+    ],
+    "sdmaAlert": true,
+    "sdmaValue": 18.5,
+    "vetNotes": "Resultados sincronizados automáticamente desde estación IDEXX.",
+    "receivedAt": "2026-10-21T12:13:06.036365Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  },
+  {
+    "accessionId": "IDX-2026-001",
+    "patientCode": "PET-101",
+    "patientName": "Princesa",
+    "species": "Canino - Yorkshire Terrier VIP",
+    "tutor": "Dalybell Ramírez Montilla",
+    "instrument": "Catalyst_One",
+    "testPanel": "Química Sanguínea & Biomarcadores Renales",
+    "results": [
+      {
+        "biomarker": "SDMA",
+        "value": 11.2,
+        "unit": "ug/dL",
+        "refRange": "0.0 - 14.0",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "Creatinina",
+        "value": 1.1,
+        "unit": "mg/dL",
+        "refRange": "0.5 - 1.5",
+        "status": "NORMAL"
+      },
+      {
+        "biomarker": "BUN",
+        "value": 18.0,
+        "unit": "mg/dL",
+        "refRange": "7.0 - 27.0",
+        "status": "NORMAL"
+      }
+    ],
+    "biomarkers": [
+      "SDMA",
+      "Creatinina",
+      "BUN"
+    ],
+    "sdmaAlert": false,
+    "sdmaValue": 11.2,
+    "vetNotes": "Control anual preventivo",
+    "receivedAt": "2026-10-21T12:13:06.036021Z",
+    "status": "ASOCIADO_A_EXPEDIENTE"
+  }
+]

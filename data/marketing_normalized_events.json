@@ -1,0 +1,194 @@
+[
+  {
+    "id": "EVT-NORM-001",
+    "timestamp": "2026-10-27T10:00:00Z",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-27T17:40:00Z"
+  },
+  {
+    "id": "EVT-NORM-1793138542",
+    "timestamp": "2026-10-27T22:02:22.728Z",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-27T22:02:22Z"
+  },
+  {
+    "id": "EVT-NORM-1793138627",
+    "timestamp": "2026-10-27T22:03:47.693Z",
+    "platform": "X",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-27T22:03:47Z"
+  },
+  {
+    "id": "EVT-NORM-1793138629",
+    "timestamp": "2026-10-27T22:03:49.127Z",
+    "platform": "X",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-27T22:03:49Z"
+  },
+  {
+    "id": "EVT-NORM-1793138631",
+    "timestamp": "2026-10-27T22:03:51.362Z",
+    "platform": "X",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-27T22:03:51Z"
+  },
+  {
+    "id": "EVT-NORM-1793186828",
+    "timestamp": "2026-10-28T11:27:08.902Z",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-28T11:27:08Z"
+  },
+  {
+    "id": "EVT-NORM-1793186830",
+    "timestamp": "2026-10-28T11:27:10.100Z",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-28T11:27:10Z"
+  },
+  {
+    "id": "EVT-NORM-1793186830",
+    "timestamp": "2026-10-28T11:27:10.833Z",
+    "platform": "Instagram",
+    "campaign_id": "CAMP_GROOMING_VIP_OCT",
+    "real_metrics": {
+      "reach": 320,
+      "clicks": 45,
+      "whatsapp_redirects": 12,
+      "website_visits": 28
+    },
+    "target_metrics": {
+      "reach_goal": 350,
+      "clicks_goal": 50
+    },
+    "computed_telemetry": {
+      "reach_delta_percent": -8.57,
+      "clicks_delta_percent": -10.0,
+      "whatsapp_cvr_percent": 26.67,
+      "status": "MONITORING_OPTIMAL",
+      "alert_required": false
+    },
+    "ingested_at": "2026-10-28T11:27:10Z"
+  }
+]
