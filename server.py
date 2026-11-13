@@ -2440,8 +2440,8 @@ async def handle_grooming_qc_photos(request: Request):
     sec.audit(
         "grooming_qc",
         "QC_PHOTOS_SUBMITTED",
-        rid=session_id,
-        detalle={
+        registro_id=session_id,
+        despues={
             "petId": pet_id,
             "petName": pet_name,
             "tutorName": tutor_name,
