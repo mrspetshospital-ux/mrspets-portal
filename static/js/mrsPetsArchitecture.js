@@ -2487,8 +2487,8 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
               <div style="background:rgba(34,158,217,0.15); border:1px solid #229ED9; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:1.3rem;">✈️</span>
                 <div>
-                  <strong style="font-size:0.78rem; color:#38BDF8;">Telegram Bot (@mrspets_vip):</strong>
-                  <div style="font-size:0.7rem; color:#CBD5E1;">Notificación instantánea a Supervisora para autorización</div>
+                  <strong style="font-size:0.78rem; color:#38BDF8;">Telegram Bot (@ONEILnewBot):</strong>
+                  <div style="font-size:0.7rem; color:#CBD5E1;">Recepción instantánea de fotos y marketing para O'Neil</div>
                 </div>
               </div>
               <div style="background:rgba(147,51,234,0.15); border:1px solid #A855F7; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
@@ -2747,9 +2747,10 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       photosCount: 4,
       photos: validPhotos,
       driveFolderUrl: driveUrl,
-      telegramTarget: '@mrspets_vip',
-      telegramBotName: 'Mrs. Pets Corporate Telegram Bot',
-      telegramStatus: 'DESPACHADO_A_SUPERVISORA',
+      telegramTarget: '@ONEILnewBot',
+      telegramBotName: 'FOTOS MARKETING MRSPETS (@ONEILnewBot)',
+      telegramBotUrl: 'https://t.me/ONEILnewBot',
+      telegramStatus: 'DESPACHADO_A_TELEGRAM',
       makeStatus: 'SINCRONIZADO',
       supervisorNotes: notes,
       status: 'PENDIENTE_AUTORIZACION_SUPERVISORA',
@@ -2826,8 +2827,8 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
               <span style="font-weight:900; color:#059669; background:#ECFDF5; padding:2px 8px; border-radius:6px; border:1px solid #10B981;">4 Fotos en Alta Resolución</span>
             </div>
             <div style="background:#EFF6FF; border:1px solid #93C5FD; border-radius:10px; padding:8px 12px; margin-bottom:8px;">
-              <div style="font-size:0.75rem; color:#1E40AF; font-weight:800;">✈️ Despacho a Telegram Bot Corporativo:</div>
-              <div style="font-size:0.78rem; color:#1E3A8A; font-weight:700;">Enviado a canal supervisora <strong>@mrspets_vip</strong> para revisión previa.</div>
+              <div style="font-size:0.75rem; color:#1E40AF; font-weight:800;">✈️ Despacho a Telegram Bot O'Neil (@ONEILnewBot):</div>
+              <div style="font-size:0.78rem; color:#1E3A8A; font-weight:700;">Transmitido a <strong>@ONEILnewBot</strong> y Make.com para marketing y redes sociales.</div>
             </div>
             <div style="background:#F5F3FF; border:1px solid #C4B5FD; border-radius:10px; padding:8px 12px; margin-bottom:8px;">
               <div style="font-size:0.75rem; color:#6B21A8; font-weight:800;">🟣 Integración Make.com & Redes Sociales:</div>
@@ -2840,10 +2841,10 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
         `,
         buttons: [
           {
-            text: '✈️ Ver en Telegram (@mrspets_vip) ➔',
+            text: '✈️ Ver en Telegram (@ONEILnewBot) ➔',
             primary: true,
             onClick: () => {
-              window.open('https://t.me/mrspets_vip', '_blank');
+              window.open('https://t.me/ONEILnewBot', '_blank');
             }
           },
           {
@@ -2863,7 +2864,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     }
 
     if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast(`📸 Sesión de 4 fotos de ${petName} enviada con éxito a Telegram y Make.com.`, 'success');
+      window.app.showToast(`📸 Sesión de 4 fotos de ${petName} enviada con éxito a Telegram (@ONEILnewBot) y Make.com.`, 'success');
     }
   }
 

@@ -2524,10 +2524,115 @@ async def proxy_make_pos_webhook(request: Request):
         }
 
 
+# =====================================================================
+# INTEGRACIÓN TELEGRAM BOT OFICIAL (O'NEIL & GROOMING QC @ONEILnewBot)
+# =====================================================================
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or "9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4"
+TELEGRAM_BOT_USERNAME = "@ONEILnewBot"
+TELEGRAM_BOT_URL = "https://t.me/ONEILnewBot"
+
+def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
+    def _worker():
+        try:
+            token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+            target_ids = []
+            if chat_id:
+                target_ids.append(chat_id)
+            else:
+                try:
+                    up_url = f"https://api.telegram.org/bot{token}/getUpdates"
+                    with urllib.request.urlopen(up_url, timeout=4) as r:
+                        up_data = json.loads(r.read().decode("utf-8"))
+                        if up_data.get("ok"):
+                            for update in up_data.get("result", []):
+                                c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
+                                if c.get("id") and c["id"] not in target_ids:
+                                    target_ids.append(c["id"])
+                except Exception:
+                    pass
+
+            for cid in target_ids:
+                try:
+                    send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                    payload = json.dumps({"chat_id": cid, "text": text, "parse_mode": "Markdown"}).encode("utf-8")
+                    req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=5):
+                        pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    threading.Thread(target=_worker, daemon=True).start()
+
+def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str):
+    def _worker():
+        try:
+            token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+            target_ids = []
+            try:
+                up_url = f"https://api.telegram.org/bot{token}/getUpdates"
+                with urllib.request.urlopen(up_url, timeout=4) as r:
+                    up_data = json.loads(r.read().decode("utf-8"))
+                    if up_data.get("ok"):
+                        for update in up_data.get("result", []):
+                            c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
+                            if c.get("id") and c["id"] not in target_ids:
+                                target_ids.append(c["id"])
+            except Exception:
+                pass
+
+            caption = (
+                f"📸 *MRS. PETS • CONTROL DE CALIDAD GROOMING QC (4 FOTOS)*\n\n"
+                f"🐾 *Consentido(a):* {pet_name}\n"
+                f"👤 *Tutor:* {tutor_name}\n"
+                f"✂️ *Estación:* {station}\n"
+                f"📝 *Notas Supervisor:* {notes}\n"
+                f"📁 *Drive:* {drive_url}\n"
+                f"🤖 *Bot:* @ONEILnewBot • O'Neil Marketing & Campañas"
+            )
+
+            for cid in target_ids:
+                try:
+                    send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                    payload = json.dumps({"chat_id": cid, "text": caption, "parse_mode": "Markdown"}).encode("utf-8")
+                    req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=5):
+                        pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+@app.get("/api/v1/telegram/status")
+def get_telegram_bot_status():
+    """Consulta el estado del bot de Telegram de O'Neil (@ONEILnewBot)."""
+    token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+    try:
+        url = f"https://api.telegram.org/bot{token}/getMe"
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            return {
+                "status": "connected",
+                "bot": data.get("result"),
+                "token_masked": f"{token[:10]}...{token[-5:]}",
+                "channel": "@ONEILnewBot",
+                "url": "https://t.me/ONEILnewBot"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "channel": "@ONEILnewBot",
+            "url": "https://t.me/ONEILnewBot"
+        }
+
+
 @app.post("/api/grooming/qc-photos")
 async def handle_grooming_qc_photos(request: Request):
     """
-    Sesión de Fotos Grooming QC (4 Fotos) para Supervisora, Telegram (@mrspets_vip) y Make.com.
+    Sesión de Fotos Grooming QC (4 Fotos) para Supervisora, Telegram (@ONEILnewBot) y Make.com.
     Registra auditoría inmutable, preserva foto de perfil y despacha a Make.com (redes sociales) y Telegram corporativo.
     """
     try:
@@ -2540,7 +2645,7 @@ async def handle_grooming_qc_photos(request: Request):
     pet_name = data.get("petName") or "Paciente VIP"
     tutor_name = data.get("tutorName") or "Tutor VIP"
     drive_url = data.get("driveFolderUrl") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
-    telegram_target = data.get("telegramTarget") or "@mrspets_vip"
+    telegram_target = data.get("telegramTarget") or "@ONEILnewBot"
     photos = data.get("photos") or []
     photos_count = len(photos)
 
@@ -2564,7 +2669,7 @@ async def handle_grooming_qc_photos(request: Request):
         ip=client_ip(request)
     )
 
-    # 2. Despacho a Make.com (vía webhook oficial de marketing & grooming para transferencia a Telegram @mrspets_vip)
+    # 2. Despacho a Make.com (vía webhook oficial de marketing & grooming para transferencia a Telegram @ONEILnewBot)
     make_result = {"status": "skipped"}
     make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
     try:
@@ -2574,7 +2679,10 @@ async def handle_grooming_qc_photos(request: Request):
             "action": "TRANSFER_TO_TELEGRAM",
             "canal": "telegram",
             "telegramTarget": telegram_target,
-            "telegramBotName": "Mrs. Pets Corporate Telegram Bot",
+            "telegramBotToken": TELEGRAM_BOT_TOKEN,
+            "telegramBotUsername": "@ONEILnewBot",
+            "telegramBotUrl": "https://t.me/ONEILnewBot",
+            "telegramBotName": "FOTOS MARKETING MRSPETS",
             "sessionId": session_id,
             "petId": pet_id,
             "petName": pet_name,
@@ -2602,6 +2710,16 @@ async def handle_grooming_qc_photos(request: Request):
     except Exception as e:
         make_result = {"status": "error", "error": str(e)}
 
+    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot
+    _send_telegram_grooming_photos(
+        pet_name=pet_name,
+        tutor_name=tutor_name,
+        station=data.get("station") or "Circuito Grooming Spa 7 Estaciones",
+        photos=photos,
+        notes=data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming",
+        drive_url=drive_url
+    )
+
     return {
         "status": 200,
         "success": True,
@@ -2611,6 +2729,7 @@ async def handle_grooming_qc_photos(request: Request):
         "photosCount": photos_count,
         "driveFolderUrl": drive_url,
         "telegramTarget": telegram_target,
+        "telegramBot": "@ONEILnewBot",
         "makeWebhookUrl": make_url,
         "makeStatus": make_result.get("status"),
         "authorizationStatus": "PENDIENTE_AUTORIZACION_SUPERVISORA"
@@ -2626,7 +2745,7 @@ MAKE_MARKETING_WEBHOOK_DEFAULT = "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zj
 @app.post("/api/marketing/dispatch-campaign")
 async def dispatch_marketing_campaign_oneil(request: Request):
     """
-    Despacho oficial de campañas publicitarias y directivas de marketing gestionadas por O'Neil hacia Make.com y Telegram.
+    Despacho oficial de campañas publicitarias y directivas de marketing gestionadas por O'Neil hacia Make.com y Telegram (@ONEILnewBot).
     """
     data = {}
     try:
@@ -2641,6 +2760,7 @@ async def dispatch_marketing_campaign_oneil(request: Request):
     budget_usd = data.get("budgetUSD") or data.get("budgetUsd") or 3500
     bcv_rate = data.get("bcvRate") or 887.30
     webhook_url = data.get("webhookUrl") or os.environ.get("MAKE_WEBHOOK_URL_MARKETING") or MAKE_MARKETING_WEBHOOK_DEFAULT
+    telegram_target = data.get("telegramTarget") or "@ONEILnewBot"
 
     user = current_user(request) or {"tipo": "staff", "nombre": "O'Neil (Líder de Marketing)"}
 
@@ -2655,7 +2775,8 @@ async def dispatch_marketing_campaign_oneil(request: Request):
             "targetClub": target_club,
             "budgetUSD": budget_usd,
             "webhookUrl": webhook_url,
-            "telegramTarget": "@mrspets_vip"
+            "telegramTarget": telegram_target,
+            "telegramBot": "@ONEILnewBot"
         },
         usuario=user,
         ip=client_ip(request)
@@ -2664,13 +2785,16 @@ async def dispatch_marketing_campaign_oneil(request: Request):
     payload = {
         "event": "MARKETING_CAMPAIGN_DISPATCH",
         "tipo": "CAMPANA_PUBLICITARIA_ONEIL",
-        "manager": "O'Neil",
+        "manager": manager,
         "campaignId": campaign_id,
         "campaignName": campaign_name,
         "targetClub": target_club,
         "budgetUSD": budget_usd,
         "bcvRate": bcv_rate,
-        "telegramTarget": "@mrspets_vip",
+        "telegramTarget": telegram_target,
+        "telegramBotToken": TELEGRAM_BOT_TOKEN,
+        "telegramBotUsername": "@ONEILnewBot",
+        "telegramBotUrl": "https://t.me/ONEILnewBot",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "status": "DISPATCHED_TO_MAKE"
     }
@@ -2680,14 +2804,28 @@ async def dispatch_marketing_campaign_oneil(request: Request):
     except Exception:
         pass
 
+    # Despacho directo concurrente al bot de Telegram @ONEILnewBot
+    tg_text = (
+        f"📢 *MRS. PETS • DESPACHO DE CAMPAÑA DE MARKETING*\n\n"
+        f"🚀 *Campaña:* {campaign_name} (`{campaign_id}`)\n"
+        f"👤 *Líder Responsable:* {manager}\n"
+        f"🎯 *Audiencia / Club:* {target_club}\n"
+        f"💰 *Presupuesto:* ${budget_usd} USD (Ref BCV: {bcv_rate} Bs/$)\n"
+        f"🤖 *Bot O'Neil:* @ONEILnewBot\n"
+        f"⚡ *Make.com Webhook:* Conectado"
+    )
+    _send_telegram_notification(tg_text)
+
     return ok(
         status="SUCCESS",
         campaignId=campaign_id,
         campaignName=campaign_name,
         manager=manager,
         webhookUrl=webhook_url,
-        telegramTarget="@mrspets_vip",
-        mensaje=f"Campaña '{campaign_name}' de O'Neil despachada exitosamente a Make.com y Telegram ({webhook_url})",
+        telegramTarget=telegram_target,
+        telegramBot="@ONEILnewBot",
+        telegramBotUrl="https://t.me/ONEILnewBot",
+        mensaje=f"Campaña '{campaign_name}' de O'Neil despachada exitosamente a Make.com y Telegram (@ONEILnewBot)",
         timestamp=datetime.now(timezone.utc).isoformat()
     )
 

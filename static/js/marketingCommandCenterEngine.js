@@ -1751,10 +1751,11 @@
           endpoint: 'https://business-api.tiktok.com/open_api/v1.3/'
         },
         'telegram': {
-          platform: 'Telegram VIP Broadcast (@mrspets_vip)',
-          id: 'telegram_vip_mrspets',
-          handle: '@mrspets_vip',
-          endpoint: 'https://api.telegram.org/botTOKEN/sendMessage'
+          platform: 'Telegram Bot O\'Neil (@ONEILnewBot)',
+          id: 'telegram_oneil_marketing',
+          handle: '@ONEILnewBot',
+          url: 'https://t.me/ONEILnewBot',
+          endpoint: 'https://api.telegram.org/bot9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4/sendMessage'
         },
         'threads': {
           platform: 'Threads Meta (@mrspets)',

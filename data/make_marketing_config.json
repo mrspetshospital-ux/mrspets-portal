@@ -1,8 +1,15 @@
 {
   "webhookUrl": "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
-  "purpose": "Marketing & Campañas Publicitarias (O'Neil) y 4 Fotos Grooming QC para Telegram (@mrspets_vip)",
+  "purpose": "Marketing & Campañas Publicitarias (O'Neil) y 4 Fotos Grooming QC para Telegram",
   "manager": "O'Neil",
-  "telegramTarget": "@mrspets_vip",
-  "savedAt": "2026-11-13T17:05:00.000Z",
+  "telegram": {
+    "botUsername": "@ONEILnewBot",
+    "botUrl": "https://t.me/ONEILnewBot",
+    "botName": "FOTOS MARKETING MRSPETS",
+    "botId": 9219306084,
+    "botToken": "9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4",
+    "email": "mrspetshospital@gmail.com"
+  },
+  "savedAt": "2026-11-13T17:42:00.000Z",
   "status": "active"
 }

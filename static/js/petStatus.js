@@ -2800,7 +2800,7 @@ class PetStatusEngine {
 
             ${pet.lastQcSession ? `
               <div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; padding:6px 10px; font-size:0.72rem; display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:#065f46; font-weight:800;">📸 Sesión 4 Fotos QC Enviada (${pet.lastQcSession.time || 'Hoy'}) • Telegram @mrspets_vip</span>
+                <span style="color:#065f46; font-weight:800;">📸 Sesión 4 Fotos QC Enviada (${pet.lastQcSession.time || 'Hoy'}) • Telegram @ONEILnewBot</span>
                 <span style="color:#2563eb; font-weight:800; cursor:pointer;" onclick="event.stopPropagation(); window.open('${pet.lastQcSession.driveFolderUrl || 'https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026'}', '_blank')" title="Abrir carpeta Google Drive">📁 Drive</span>
               </div>
             ` : ''}
@@ -2822,7 +2822,7 @@ class PetStatusEngine {
                 </button>
               `}
               ${(isStaff && (pet.area === 'grooming' || pet.area === 'spa' || !pet.area)) ? `
-                <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.mrsPetsArch) mrsPetsArch.openEmployeeCamera('${pet.id}');" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214; font-weight:800; border:none; padding:6px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; box-shadow:0 2px 6px rgba(212,175,55,0.3); cursor:pointer;" title="Sesión de Fotos Grooming QC (4 Fotos) para Supervisora, Telegram (@mrspets_vip), Drive y Redes Sociales">
+                <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.mrsPetsArch) mrsPetsArch.openEmployeeCamera('${pet.id}');" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214; font-weight:800; border:none; padding:6px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; box-shadow:0 2px 6px rgba(212,175,55,0.3); cursor:pointer;" title="Sesión de Fotos Grooming QC (4 Fotos) para O'Neil / Supervisora, Telegram (@ONEILnewBot), Drive y Redes Sociales">
                   📸 Fotos QC (4 Fotos)
                   ${(pet.groomingSessions && pet.groomingSessions.length > 0) ? `<span style="background:#10B981; color:white; font-size:0.65rem; padding:1px 5px; border-radius:10px; margin-left:2px;">${pet.groomingSessions.length}</span>` : ''}
                 </button>

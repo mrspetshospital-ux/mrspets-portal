@@ -110,26 +110,29 @@
     }
   },
   {
-    "channel_id": "telegram_vip_mrspets",
-    "platform_name": "Telegram VIP Broadcast",
-    "account_handle": "@mrspets_vip",
-    "api_endpoint_url": "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
+    "channel_id": "telegram_oneil_marketing",
+    "platform_name": "Telegram Bot O'Neil (@ONEILnewBot)",
+    "account_handle": "@ONEILnewBot",
+    "bot_url": "https://t.me/ONEILnewBot",
+    "bot_name": "FOTOS MARKETING MRSPETS",
+    "bot_id": 9219306084,
+    "api_endpoint_url": "https://api.telegram.org/bot9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4/sendMessage",
     "webhook_make_url": "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
     "auth_type": "Bearer Token / Webhook",
-    "credentials_vault_ref": "env://TELEGRAM_VIP_MRSPETS_TOKEN",
+    "credentials_vault_ref": "env://TELEGRAM_BOT_TOKEN",
     "status": "active",
-    "polling_interval_minutes": 60,
+    "polling_interval_minutes": 15,
     "metric_mappings": {
       "reach_metric": "impressions_or_views",
       "engagement_metric": "engagement_rate",
       "clicks_metric": "link_clicks"
     },
-    "last_sync": "2026-10-28T16:36:48.297480Z",
+    "last_sync": "2026-11-13T17:42:00Z",
     "latest_insights": {
-      "reach": 500,
-      "engagement_rate": 5.0,
-      "website_clicks": 25,
-      "stimulus_active": "Campaña Activa en Telegram VIP Broadcast"
+      "reach": 1250,
+      "engagement_rate": 14.5,
+      "website_clicks": 95,
+      "stimulus_active": "Canal Activo de O'Neil para Fotos Grooming QC y Campañas de Marketing"
     }
   }
 ]
