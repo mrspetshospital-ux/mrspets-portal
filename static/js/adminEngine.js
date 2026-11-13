@@ -314,10 +314,10 @@ class AdminEngine {
         iviPet.owner = 'Ivonne Montilla';
         iviPet.ownerName = 'Ivonne Montilla';
         iviPet.rif = 'V-14.238.991';
-        iviPet.stepIndex = 1;
-        iviPet.turnNumber = 8;
-        iviPet.turno = 8;
-        iviPet.turnTicket = 'G-008';
+        if (typeof iviPet.stepIndex !== 'number') iviPet.stepIndex = 1;
+        if (!iviPet.turnNumber) iviPet.turnNumber = 8;
+        if (!iviPet.turno) iviPet.turno = 8;
+        if (!iviPet.turnTicket) iviPet.turnTicket = 'G-008';
       }
       const bugaPet = this.patientsStatus.find(p => p.id === 'PET-109');
       if (bugaPet) {
@@ -394,6 +394,9 @@ class AdminEngine {
     }
     if (window.petStatusEngine) {
       window.petStatusEngine.pets = this.patientsStatus;
+      if (typeof window.petStatusEngine.syncAllPetsToServerDebounced === 'function') {
+        window.petStatusEngine.syncAllPetsToServerDebounced();
+      }
     }
   }
 
@@ -5266,6 +5269,38 @@ class AdminEngine {
           if (typeof window.petStatusEngine.syncPetStatusToServer === 'function') window.petStatusEngine.syncPetStatusToServer(pSE || pet);
         }
 
+        // Direct cross-device sync to server endpoint
+        try {
+          fetch('/api/v1/pet-status/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: pet.id,
+              petName: pet.petName || pet.name,
+              name: pet.name || pet.petName,
+              ownerName: pet.ownerName || pet.owner,
+              owner: pet.owner || pet.ownerName,
+              ownerPhone: pet.ownerPhone,
+              rif: pet.rif,
+              pin: pet.pin,
+              area: pet.area,
+              sector: pet.sector,
+              stepIndex: pet.stepIndex,
+              turnNumber: pet.turnNumber || pet.turno,
+              turno: pet.turno || pet.turnNumber,
+              turnTicket: pet.turnTicket,
+              hasReservation: pet.hasReservation,
+              isCompleted: pet.isCompleted,
+              deliveredAt: pet.deliveredAt,
+              updatedAt: 'Ahora mismo'
+            })
+          }).catch(() => {});
+        } catch(e) {}
+
+        if (pet.stepIndex === 6 && normArea === 'grooming' && window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyPetReady === 'function') {
+          window.liveNotificationEngine.notifyPetReady(pet);
+        }
+
         this.savePatientsToStorage();
         this.refreshAllOperationalViews();
         const toastType = isDischarged ? 'info' : 'success';
@@ -5378,6 +5413,38 @@ class AdminEngine {
         if (typeof window.petStatusEngine.resequenceTurnsForArea === 'function') window.petStatusEngine.resequenceTurnsForArea(normArea);
         if (typeof window.petStatusEngine.savePetsToStorage === 'function') window.petStatusEngine.savePetsToStorage();
         if (typeof window.petStatusEngine.syncPetStatusToServer === 'function') window.petStatusEngine.syncPetStatusToServer(pSE || pet);
+      }
+
+      // Direct cross-device sync to server endpoint
+      try {
+        fetch('/api/v1/pet-status/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: pet.id,
+            petName: pet.petName || pet.name,
+            name: pet.name || pet.petName,
+            ownerName: pet.ownerName || pet.owner,
+            owner: pet.owner || pet.ownerName,
+            ownerPhone: pet.ownerPhone,
+            rif: pet.rif,
+            pin: pet.pin,
+            area: pet.area,
+            sector: pet.sector,
+            stepIndex: pet.stepIndex,
+            turnNumber: pet.turnNumber || pet.turno,
+            turno: pet.turno || pet.turnNumber,
+            turnTicket: pet.turnTicket,
+            hasReservation: pet.hasReservation,
+            isCompleted: pet.isCompleted,
+            deliveredAt: pet.deliveredAt,
+            updatedAt: 'Ahora mismo'
+          })
+        }).catch(() => {});
+      } catch(e) {}
+
+      if (pet.stepIndex === 6 && normArea === 'grooming' && window.liveNotificationEngine && typeof window.liveNotificationEngine.notifyPetReady === 'function') {
+        window.liveNotificationEngine.notifyPetReady(pet);
       }
 
       this.savePatientsToStorage();

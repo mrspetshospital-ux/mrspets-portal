@@ -1,5 +1,5 @@
 {
-  "revision": 1,
+  "revision": 2,
   "last_updated": "2026-11-13T14:15:00Z",
   "pets": {
     "PET-101": {
@@ -35,7 +35,7 @@
       "pin": "1234",
       "area": "grooming",
       "sector": "Bella Vista",
-      "stepIndex": 1,
+      "stepIndex": 6,
       "turnNumber": 2,
       "turno": 2,
       "turnTicket": "G-002",
@@ -46,7 +46,7 @@
       "price": 25.0,
       "notes": "Circuito Grooming Spa (7 Estaciones) para Fifi (Carlos Mendoza).",
       "image": "assets/media__1787695254613.jpg",
-      "updatedAt": "Hace 10 min"
+      "updatedAt": "Ahora mismo"
     },
     "PET-103": {
       "id": "PET-103",

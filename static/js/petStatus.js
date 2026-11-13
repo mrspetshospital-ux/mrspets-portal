@@ -360,6 +360,20 @@ class PetStatusEngine {
           window.adminEngine.renderStatusManager();
         }
       }
+
+      // Al cargar inicialmente, si la mascota activa del cliente está en Nivel 7 ("Listo ✨" / stepIndex 6)
+      // disparar el screen pop si no ha sido visto en esta sesión
+      if (!this.isStaffMode()) {
+        const { activeCustomerName, activeCustomerPhone, activePetId } = this.getActiveCustomerInfo();
+        const activePet = this.pets.find(p => this.isClientMatch(p, activeCustomerName, activeCustomerPhone, activePetId));
+        if (activePet && activePet.stepIndex === 6) {
+          const popKey = `mrs_pets_ready_pop_seen_${activePet.id}_step_6`;
+          if (!sessionStorage.getItem(popKey)) {
+            sessionStorage.setItem(popKey, 'true');
+            this.triggerPetReadyScreenPop(activePet);
+          }
+        }
+      }
     } catch (e) {
       console.warn('[PetStatusEngine] Error fetching live status from server:', e);
     }
@@ -403,6 +417,7 @@ class PetStatusEngine {
         (p.petName && srvPet.petName && this.normalizePetBaseName(p.petName) === this.normalizePetBaseName(srvPet.petName) && this.normalizeService(p.area) === this.normalizeService(srvPet.area)));
 
       if (local) {
+        const prevStep = local.stepIndex;
         const stepChanged = typeof srvPet.stepIndex === 'number' && local.stepIndex !== srvPet.stepIndex;
         const staffChanged = srvPet.assignedStaffName && local.assignedStaffName !== srvPet.assignedStaffName;
         const notesChanged = srvPet.notes && local.notes !== srvPet.notes;
@@ -424,6 +439,14 @@ class PetStatusEngine {
           if (srvPet.isCompleted !== undefined) local.isCompleted = srvPet.isCompleted;
           if (srvPet.deliveredAt) local.deliveredAt = srvPet.deliveredAt;
           if (srvPet.deliveredBy) local.deliveredBy = srvPet.deliveredBy;
+
+          // Detección de avance en tiempo real a Nivel 7 ("Listo ✨" / stepIndex: 6) para el cliente
+          if (srvPet.stepIndex === 6 && prevStep !== 6 && (!this.isStaffMode())) {
+            const { activeCustomerName, activeCustomerPhone, activePetId } = this.getActiveCustomerInfo();
+            if (this.isClientMatch(local, activeCustomerName, activeCustomerPhone, activePetId)) {
+              this.triggerPetReadyScreenPop(local);
+            }
+          }
         }
       } else {
         this.pets.push(srvPet);
@@ -496,6 +519,114 @@ class PetStatusEngine {
       }
     } catch (err) {
       console.warn('[PetStatusEngine] Error syncing pet status to server:', err);
+    }
+  }
+
+  triggerPetReadyScreenPop(pet) {
+    if (!pet) return;
+    if (typeof pet === 'string') {
+      pet = this.pets.find(p => p.id === pet) || { id: pet };
+    }
+
+    const petName = pet.petName || pet.name || 'Fifi';
+    const tutor = pet.ownerName || pet.owner || 'Carlos Mendoza';
+    const species = pet.species || 'Teckel / Dachshund VIP';
+    const area = this.normalizeService(pet.area || 'grooming');
+    const areaDisplayName = this.getAreaDisplayName(area);
+    const serviceName = pet.service || 'Circuito Grooming Spa (7 Estaciones)';
+    const priceUsd = typeof pet.price === 'number' ? pet.price : 25.00;
+
+    // Registrar en sessionStorage para evitar pops repetitivos no deseados en la misma sesión
+    const popKey = `mrs_pets_ready_pop_seen_${pet.id}_step_6`;
+    sessionStorage.setItem(popKey, 'true');
+
+    // Tasa BCV
+    let bcvRate = 45.00;
+    if (window.adminFinanceEngine && typeof window.adminFinanceEngine.getBcvRate === 'function') {
+      bcvRate = window.adminFinanceEngine.getBcvRate();
+    } else if (window.adminEngine && typeof window.adminEngine.getBcvRate === 'function') {
+      bcvRate = window.adminEngine.getBcvRate();
+    }
+    const totalVes = (priceUsd * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const summaryHtml = `
+      <div style="background:#F8FAFC; border:2px solid #10B981; border-radius:18px; padding:18px 20px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <div>
+            <span style="font-size:0.75rem; text-transform:uppercase; font-weight:900; color:#059669; letter-spacing:0.04em;">Paciente VIP • Circuito Culminado</span>
+            <div style="font-size:1.25rem; font-weight:900; color:#0F172A;">${petName} <span style="font-size:0.85rem; font-weight:600; color:#64748B;">(${species})</span></div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge" style="background:#10B981; color:#FFFFFF; font-weight:900; font-size:0.82rem; padding:6px 12px; border-radius:8px;">
+              ✨ Nivel 7: Listo
+            </span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:12px; font-size:0.84rem;">
+          <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:10px;">
+            <div style="font-size:0.7rem; color:#64748B; font-weight:800; text-transform:uppercase;">Tutor Titular</div>
+            <div style="font-weight:900; color:#1E293B;">${tutor}</div>
+            <div style="font-size:0.75rem; color:#64748B;">${pet.rif || 'V-14.882.109'}</div>
+          </div>
+          <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:10px;">
+            <div style="font-size:0.7rem; color:#64748B; font-weight:800; text-transform:uppercase;">Servicio Realizado</div>
+            <div style="font-weight:900; color:#1E293B;">${serviceName}</div>
+            <div style="font-size:0.75rem; color:#059669; font-weight:800;">$${priceUsd.toFixed(2)} USD (Bs. ${totalVes} BCV)</div>
+          </div>
+        </div>
+
+        <div style="background:#ECFDF5; border:1.5px solid #10B981; border-radius:12px; padding:12px 14px; color:#065F46; font-size:0.85rem; line-height:1.45;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:900; margin-bottom:3px; font-size:0.92rem;">
+            <span>ℹ️</span> <strong>Indicación Importante de Recepción:</strong>
+          </div>
+          <strong>${petName}</strong> ha completado con excelencia su circuito y se encuentra reposando en la Sala de Espera VIP.
+          <br>
+          <strong style="color:#047857;">Por favor confirme que se ha realizado el pago de su servicio</strong> para agilizar la entrega inmediata de su consentido en recepción sin tiempos de espera.
+        </div>
+      </div>
+    `;
+
+    if (window.app && typeof window.app.showScreenPop === 'function') {
+      window.app.showScreenPop({
+        headline: `🎉 ¡${petName} está lista para que sea buscada!`,
+        title: `Estimado(a) ${tutor}, su consentido(a) ha completado su atención en ${areaDisplayName} y ya puede retirarlo(a).`,
+        badgeText: '✨ PACIENTE LISTO PARA ENTREGA • MRS. PETS VIP',
+        icon: '🐾',
+        accentColor: '#10B981',
+        summaryHtml: summaryHtml,
+        buttons: [
+          {
+            text: '💳 Confirmar Pago / Ver Cesta',
+            primary: true,
+            onClick: () => {
+              if (window.app && typeof window.app.openModal === 'function') {
+                window.app.openModal('cart-modal');
+              }
+            }
+          },
+          {
+            text: '🚗 Solicitar Retiro / Limusina VIP',
+            primary: false,
+            onClick: () => {
+              if (window.limusinaVipEngine && typeof window.limusinaVipEngine.openBookingModal === 'function') {
+                window.limusinaVipEngine.openBookingModal();
+              } else if (window.app) {
+                window.app.switchTab('limusina');
+              }
+            }
+          },
+          {
+            text: '✅ Entendido / Voy en Camino',
+            primary: false,
+            onClick: () => {
+              if (window.app && typeof window.app.showToast === 'function') {
+                window.app.showToast(`✨ Recepción notificada. ¡Te esperamos para entregar a ${petName}!`, 'success');
+              }
+            }
+          }
+        ]
+      });
     }
   }
 
@@ -665,17 +796,17 @@ class PetStatusEngine {
       });
       this.pets = dedupedPets;
 
-      // Enforce correct area for PET-102 (Fifi) as Grooming Spa
+      // Enforce correct area for PET-102 (Fifi) as Grooming Spa without resetting progressive state
       const fifiPet = this.pets.find(p => p.id === 'PET-102');
       if (fifiPet) {
         fifiPet.area = 'grooming';
-        fifiPet.stepIndex = 1;
-        fifiPet.turnNumber = 2;
-        fifiPet.turno = 2;
-        fifiPet.turnTicket = 'G-002';
+        if (typeof fifiPet.stepIndex !== 'number') fifiPet.stepIndex = 1;
+        if (!fifiPet.turnNumber) fifiPet.turnNumber = 2;
+        if (!fifiPet.turno) fifiPet.turno = 2;
+        if (!fifiPet.turnTicket) fifiPet.turnTicket = 'G-002';
         fifiPet.service = 'Circuito Grooming Spa (7 Estaciones)';
         fifiPet.price = 25.00;
-        fifiPet.notes = 'Circuito Grooming Spa (7 Estaciones) para Fifi (Carlos Mendoza).';
+        if (!fifiPet.notes) fifiPet.notes = 'Circuito Grooming Spa (7 Estaciones) para Fifi (Carlos Mendoza).';
       }
       // Ensure Ivi, Cuga and Max are synchronized so their Turno 8, 9, 10 appear continuously in active view
       const iviPet = this.pets.find(p => p.id === 'PET-105');
@@ -683,10 +814,10 @@ class PetStatusEngine {
         iviPet.owner = 'Ivonne Montilla';
         iviPet.ownerName = 'Ivonne Montilla';
         iviPet.rif = 'V-14.238.991';
-        iviPet.stepIndex = 1;
-        iviPet.turnNumber = 8;
-        iviPet.turno = 8;
-        iviPet.turnTicket = 'G-008';
+        if (typeof iviPet.stepIndex !== 'number') iviPet.stepIndex = 1;
+        if (!iviPet.turnNumber) iviPet.turnNumber = 8;
+        if (!iviPet.turno) iviPet.turno = 8;
+        if (!iviPet.turnTicket) iviPet.turnTicket = 'G-008';
       }
       const bugaPet = this.pets.find(p => p.id === 'PET-109');
       if (bugaPet) {
@@ -738,7 +869,7 @@ class PetStatusEngine {
         if (!p.pin) p.pin = '1234';
       });
 
-      this.savePetsToStorage();
+      this.savePetsToStorage({ skipServerSync: true });
     } catch (e) {
       console.warn("Could not load pets from localStorage:", e);
     }
@@ -1368,6 +1499,10 @@ class PetStatusEngine {
           } else if (typeof window.liveNotificationEngine.notifyPetReceived === 'function') {
             window.liveNotificationEngine.notifyPetReceived(pet);
           }
+        } else if (targetIdx === 6 && (normArea === 'grooming' || pet.area === 'grooming')) {
+          if (typeof window.liveNotificationEngine.notifyPetReady === 'function') {
+            window.liveNotificationEngine.notifyPetReady(pet);
+          }
         } else if (targetIdx >= steps.length - 1) {
           if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReadyHome === 'function') {
             window.liveNotificationEngine.notifyHotelPetReadyHome(pet);
@@ -1807,12 +1942,16 @@ class PetStatusEngine {
 
       let turnStatusLabel = `📋 REGISTRADO EN ${clientAreaDisplayName.toUpperCase()}`;
       let turnBadgeColor = '#FBBF24';
+      const isClientPetReady = (clientStepIdx === 6 || clientStepIdx === steps.length - 2);
       if (clientStepIdx === 1) {
         turnStatusLabel = `👉 ¡TU TURNO ES EL PRÓXIMO EN ${clientAreaDisplayName.toUpperCase()}!`;
         turnBadgeColor = '#10B981';
-      } else if (clientStepIdx > 1 && clientStepIdx < steps.length - 1) {
+      } else if (clientStepIdx > 1 && !isClientPetReady && clientStepIdx < steps.length - 1) {
         turnStatusLabel = `💈 PACIENTE EN ATENCIÓN (${clientAreaDisplayName.toUpperCase()})`;
         turnBadgeColor = '#D4AF37';
+      } else if (isClientPetReady) {
+        turnStatusLabel = `🎉 ¡${clientPetName.toUpperCase()} ESTÁ LISTA PARA QUE SEA BUSCADA! (CONFIRMAR PAGO)`;
+        turnBadgeColor = '#10B981';
       } else if (clientStepIdx >= steps.length - 1) {
         turnStatusLabel = `🎉 ATENCIÓN FINALIZADA Y ENTREGADO`;
         turnBadgeColor = '#059669';
@@ -1856,15 +1995,24 @@ class PetStatusEngine {
             </div>
 
             <!-- CARD 2: ESTACIÓN ACTUAL EN TIEMPO REAL -->
-            <div style="background:rgba(212, 175, 55, 0.12); border:1.5px solid #D4AF37; border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:14px;">
-              <div style="background:#D4AF37; color:#0F172A; padding:8px 12px; border-radius:12px; font-weight:900; font-size:1.15rem; text-align:center; min-width:64px; box-shadow:0 4px 12px rgba(212,175,55,0.3);">
+            <div style="background:${isClientPetReady ? 'rgba(16, 185, 129, 0.18)' : 'rgba(212, 175, 55, 0.12)'}; border:1.5px solid ${isClientPetReady ? '#10B981' : '#D4AF37'}; border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:14px;">
+              <div style="background:${isClientPetReady ? '#10B981' : '#D4AF37'}; color:${isClientPetReady ? '#FFFFFF' : '#0F172A'}; padding:8px 12px; border-radius:12px; font-weight:900; font-size:1.15rem; text-align:center; min-width:64px; box-shadow:0 4px 12px ${isClientPetReady ? 'rgba(16,185,129,0.4)' : 'rgba(212,175,55,0.3)'};">
                 ${progressPercent}%
               </div>
               <div style="flex:1;">
-                <div style="font-size:0.72rem; font-weight:800; color:#FBBF24; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">💈 ESTACIÓN • TIEMPO EN VIVO (${clientAreaDisplayName.toUpperCase()})</div>
+                <div style="font-size:0.72rem; font-weight:800; color:${isClientPetReady ? '#10B981' : '#FBBF24'}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">
+                  ${isClientPetReady ? '✨ LISTA PARA RETIRO • CONFIRMAR PAGO' : `💈 ESTACIÓN • TIEMPO EN VIVO (${clientAreaDisplayName.toUpperCase()})`}
+                </div>
                 <div style="font-size:1rem; font-weight:900; color:#FFFFFF;">Etapa ${clientStepIdx + 1}: ${currentStepName}</div>
-                <div style="font-size:0.75rem; color:#FDE68A; margin-top:2px;">Avance en ${clientAreaDisplayName}: <strong>${progressPercent}% completado</strong></div>
+                <div style="font-size:0.75rem; color:${isClientPetReady ? '#A7F3D0' : '#FDE68A'}; margin-top:2px;">
+                  ${isClientPetReady ? `🎉 ${clientPetName} ha culminado su circuito. Por favor confirme pago para retirar en recepción.` : `Avance en ${clientAreaDisplayName}: <strong>${progressPercent}% completado</strong>`}
+                </div>
               </div>
+              ${isClientPetReady ? `
+                <button type="button" class="btn btn-sm" onclick="petStatusEngine.triggerPetReadyScreenPop(petStatusEngine.pets.find(p=>p.id==='${clientPet.id}')||'${clientPet.id}')" style="background:#10B981; color:white; font-weight:900; border:none; padding:8px 14px; border-radius:10px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.4); white-space:nowrap;">
+                  🔔 Ver Notificación
+                </button>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -2041,11 +2189,17 @@ class PetStatusEngine {
     if (!activeCustomerPhone && activeCustomerName && activeCustomerName.toLowerCase().includes('dalybell')) {
       activeCustomerPhone = '+58 (414) 389-1102';
     }
+    if (!activeCustomerPhone && activeCustomerName && activeCustomerName.toLowerCase().includes('carlos')) {
+      activeCustomerPhone = '+58 (412) 555-1234';
+    }
 
-    // 6. Si no hay activePetId, resolver al ID predeterminado de Dalybell (PET-101 Princesa)
+    // 6. Si no hay activePetId, resolver al ID correspondiente (Dalybell -> PET-101 Princesa, Carlos Mendoza -> PET-102 Fifi)
     if (!activePetId && activeCustomerName.toLowerCase().includes('dalybell')) {
       activePetId = 'PET-101';
       try { localStorage.setItem('mrs_pets_active_vip_patient_id', 'PET-101'); } catch(e) {}
+    } else if (!activePetId && activeCustomerName.toLowerCase().includes('carlos')) {
+      activePetId = 'PET-102';
+      try { localStorage.setItem('mrs_pets_active_vip_patient_id', 'PET-102'); } catch(e) {}
     }
 
     return { activePetId, activeCustomerName, activeCustomerPhone };
@@ -2559,7 +2713,27 @@ class PetStatusEngine {
             </div>
           `;
         } else {
+          const isGroomingReady = (pet.stepIndex === 6 && (cleanPetArea === 'grooming' || pet.area === 'grooming'));
           actionControlsHTML = `
+            ${isGroomingReady ? `
+              <div style="background:linear-gradient(135deg, #ECFDF5, #D1FAE5); border:2px solid #10B981; border-radius:14px; padding:12px 14px; margin-bottom:8px; box-shadow:0 4px 14px rgba(16,185,129,0.2);">
+                <div style="display:flex; align-items:center; gap:8px; font-weight:900; color:#065F46; font-size:0.88rem; margin-bottom:4px;">
+                  <span style="font-size:1.2rem;">🎉</span> ¡${pet.petName || pet.name || 'Su consentido'} está lista para que sea buscada!
+                </div>
+                <div style="font-size:0.78rem; color:#047857; line-height:1.4; margin-bottom:8px;">
+                  Ha culminado su Circuito Spa (7 Estaciones) y se encuentra en Sala de Espera VIP. Por favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción.
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); petStatusEngine.triggerPetReadyScreenPop(petStatusEngine.pets.find(p=>p.id==='${pet.id}')||'${pet.id}')" style="background:#10B981; color:white; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
+                    🔔 Ver Notificación de Retiro
+                  </button>
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.app) app.openModal('cart-modal')" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer;">
+                    💳 Confirmar Pago
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+
             <div style="font-size:0.78rem; color:var(--text-muted); background:#f8fafc; padding:10px 14px; border-radius:12px; border:1px solid rgba(212, 175, 55, 0.25);">
               <div style="font-weight:700; color:#2C2C2E; margin-bottom:2px;">📝 Indicaciones del Especialista:</div>
               <em>${pet.notes}</em>
@@ -2600,13 +2774,17 @@ class PetStatusEngine {
           ? `<span class="badge" style="background:linear-gradient(135deg, #10b981, #059669); color:white; font-weight:900; font-size:0.72rem; padding:2px 8px; border-radius:8px; box-shadow:0 2px 8px rgba(16,185,129,0.4); display:inline-block; margin-left:4px;">👉 ¡SIGUIENTE EN ATENCIÓN!</span>` 
           : '';
 
+        const isPetReadyStep = (pet.stepIndex === 6 && cleanPetArea === 'grooming');
         const statusBadgeHTML = isPendingApproval
           ? `<span class="badge" style="background:#3B82F6; color:white; font-weight:800; padding:6px 12px; box-shadow:0 2px 8px rgba(59,130,246,0.35);">⏳ Cita Solicitada • En Espera de Staff</span>`
           : (isCompleted
               ? `<span class="badge badge-success" style="font-weight:800; padding:6px 12px; background:#10b981; color:white;">✅ Entregado</span>`
-              : (hasReservation
-                  ? `<span class="badge badge-success" style="font-weight:800; padding:6px 12px;">${currentStepName}</span>`
-                  : `<span class="badge" style="background:#f59e0b; color:white; font-weight:800; padding:6px 12px;">⚠️ Cita Pendiente</span>`
+              : (isPetReadyStep
+                  ? `<span class="badge" style="background:linear-gradient(135deg, #10B981, #059669); color:white; font-weight:900; padding:6px 14px; border-radius:10px; box-shadow:0 4px 12px rgba(16,185,129,0.4);">🎉 Nivel 7: Listo ✨</span>`
+                  : (hasReservation
+                      ? `<span class="badge badge-success" style="font-weight:800; padding:6px 12px;">${currentStepName}</span>`
+                      : `<span class="badge" style="background:#f59e0b; color:white; font-weight:800; padding:6px 12px;">⚠️ Cita Pendiente</span>`
+                    )
                 )
             );
 
@@ -3161,6 +3339,10 @@ class PetStatusEngine {
             window.liveNotificationEngine.notifyHotelPetReceived(pet);
           } else if (typeof window.liveNotificationEngine.notifyPetReceived === 'function') {
             window.liveNotificationEngine.notifyPetReceived(pet);
+          }
+        } else if (targetIdx === 6 && (normArea === 'grooming' || pet.area === 'grooming')) {
+          if (typeof window.liveNotificationEngine.notifyPetReady === 'function') {
+            window.liveNotificationEngine.notifyPetReady(pet);
           }
         } else if (targetIdx >= steps.length - 1) {
           if (isHotel && typeof window.liveNotificationEngine.notifyHotelPetReadyHome === 'function') {

@@ -269,6 +269,27 @@
       return this.broadcastEvent('PET_RECEIVED', petData);
     }
 
+    notifyPetReady(petData) {
+      const tutor = petData.ownerName || petData.owner || petData.tutor || 'Carlos Mendoza';
+      const pet = petData.petName || petData.name || petData.pet || 'Fifi';
+      const area = (petData.area || 'Grooming').toUpperCase();
+      const turn = petData.turnNumber || '02';
+
+      const msg = `🎉 *¡${pet} está lista para que sea buscada! (Mrs. Pets ${area})*\n\nHola *${tutor}*, te confirmamos con gran alegría que *${pet}* ya completó su circuito en *${area}* (Nivel 7: Listo ✨) y ha quedado hermosa, perfumada y radiante.\n\nPor favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción o solicite traslado con nuestra Limusina VIP. ¡Te esperamos! 🐾💙`;
+
+      const waRes = this.sendWhatsAppNotification({
+        phone: petData.ownerPhone || petData.phone,
+        tutor: tutor,
+        pet: pet,
+        message: msg,
+        eventType: 'PET_READY'
+      });
+
+      petData.waUrl = waRes.waUrl;
+      petData.waPhone = waRes.cleanPhone;
+      return this.broadcastEvent('PET_READY', petData);
+    }
+
     notifyPetDelivered(petData) {
       const tutor = petData.ownerName || petData.owner || petData.tutor || 'Tutor VIP';
       const pet = petData.petName || petData.name || petData.pet || 'Consentido VIP';
@@ -415,6 +436,10 @@
         case 'PET_RECEIVED':
           this.showPetReceivedBanner(data, eventObj.id);
           this.playChime('staff');
+          break;
+        case 'PET_READY':
+          this.showPetReadyBanner(data, eventObj.id);
+          this.playChime('celebration');
           break;
         case 'PET_DELIVERED':
           this.showPetDeliveredBanner(data, eventObj.id);
@@ -779,6 +804,63 @@
           <a href="${waUrl}" target="_blank" style="flex:1; background:#25D366; color:#FFFFFF; font-weight:900; border-radius:10px; padding:10px 12px; font-size:0.82rem; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 3px 10px rgba(37,211,102,0.35);">
             💬 WhatsApp
           </a>
+        </div>
+      `;
+
+      document.body.appendChild(banner);
+      this.activeBanners.set(bannerId, banner);
+      setTimeout(() => this.dismiss(bannerId), 30000);
+    }
+
+    /**
+     * 5.5 BANNER: Mascota Lista para Entrega (Nivel 7 Grooming)
+     */
+    showPetReadyBanner(data, eventId) {
+      const bannerId = `banner-ready-${eventId || Date.now()}`;
+      if (document.getElementById(bannerId)) return;
+
+      const tutor = data.ownerName || data.owner || data.tutor || 'Carlos Mendoza';
+      const pet = data.petName || data.name || data.pet || 'Fifi';
+      const area = (data.area || 'Grooming').toUpperCase();
+      const waUrl = data.waUrl || `https://wa.me/584146799510`;
+      const waPhone = data.waPhone || '+58 412-5551234';
+
+      const banner = this.createBaseBanner(bannerId, '#10B981', 'linear-gradient(135deg, #065F46 0%, #0F172A 100%)', 'rgba(16,185,129,0.5)');
+
+      banner.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #10B981, #34D399); display:flex; align-items:center; justify-content:center; font-size:1.6rem; box-shadow:0 0 16px rgba(16,185,129,0.6);">
+              🎉
+            </div>
+            <div>
+              <div style="font-weight:900; font-size:1.05rem; color:#A7F3D0;">
+                ¡${pet} está lista para que sea buscada!
+              </div>
+              <div style="font-size:0.75rem; color:#D1FAE5; font-weight:700;">
+                Circuito ${area} • Nivel 7: Listo ✨
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="liveNotify.dismiss('${bannerId}')" style="background:none; border:none; color:#94A3B8; font-size:1.2rem; cursor:pointer;">✕</button>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.08); border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid rgba(16,185,129,0.3); font-size:0.86rem; line-height:1.5;">
+          <p style="margin:0 0 8px 0; color:#F8FAFC;">
+            Estimado(a) <strong>${tutor}</strong>, <strong>${pet}</strong> ya culminó su circuito de Spa. Por favor confirme que se ha realizado el pago de su servicio para agilizar la entrega en recepción.
+          </p>
+          <div style="margin-top:8px; background:rgba(37,211,102,0.15); border:1px solid #25D366; border-radius:8px; padding:5px 8px; font-size:0.74rem; color:#A7F3D0;">
+            📲 Notificación enviada por WhatsApp al tutor (${waPhone})
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" onclick="if(window.petStatusEngine) window.petStatusEngine.triggerPetReadyScreenPop(window.petStatusEngine.pets.find(p=>p.id==='${data.id||'PET-102'}')||'${data.id||'PET-102'}'); liveNotify.dismiss('${bannerId}');" style="flex:1.2; background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; border:none; padding:10px 12px; border-radius:10px; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
+            🔔 Ver Notificación Screen Pop
+          </button>
+          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal'); liveNotify.dismiss('${bannerId}');" style="flex:1; background:#D4AF37; color:#121214; font-weight:900; border-radius:10px; padding:10px 12px; border:none; font-size:0.82rem; cursor:pointer;">
+            💳 Pagar / Cesta
+          </button>
         </div>
       `;
 
