@@ -368,7 +368,13 @@ class PetStatusEngine {
         const activePet = this.pets.find(p => this.isClientMatch(p, activeCustomerName, activeCustomerPhone, activePetId));
         if (activePet && activePet.stepIndex === 6) {
           const popKey = `mrs_pets_ready_pop_seen_${activePet.id}_step_6`;
-          if (!sessionStorage.getItem(popKey)) {
+          const isDirectPayUrl = typeof window !== 'undefined' && window.location && (
+            (window.location.search && (window.location.search.includes('action=checkout') || window.location.search.includes('action=pay') || window.location.search.includes('pagueAqui'))) ||
+            (window.location.hash && (window.location.hash.includes('cart') || window.location.hash.includes('checkout') || window.location.hash.includes('pagueaqui')))
+          );
+          if (isDirectPayUrl) {
+            sessionStorage.setItem(popKey, 'true');
+          } else if (!sessionStorage.getItem(popKey)) {
             sessionStorage.setItem(popKey, 'true');
             this.triggerPetReadyScreenPop(activePet);
           }
@@ -570,11 +576,11 @@ class PetStatusEngine {
           Para agilizar la entrega en recepción sin esperas, puedes pagar directamente en línea con Pago Móvil, Zelle o Tarjeta a Tasa Oficial BCV:
         </p>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <a href="${directPayUrl}" target="_blank" style="background:#0F172A; color:#D4AF37 !important; font-weight:900; padding:9px 16px; border-radius:10px; text-decoration:none; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; border:1.5px solid #D4AF37; box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+          <button type="button" onclick="event.preventDefault(); window.openDirectCheckout('${pet.id}', '${tutor}');" style="background:#0F172A; color:#D4AF37 !important; font-weight:900; padding:10px 18px; border-radius:10px; font-size:0.84rem; display:inline-flex; align-items:center; gap:6px; border:1.5px solid #D4AF37; box-shadow:0 2px 8px rgba(0,0,0,0.25); cursor:pointer;">
             👉 Pague aquí directamente en el carrito
-          </a>
-          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal');" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:9px 16px; border-radius:10px; border:none; font-size:0.82rem; cursor:pointer; box-shadow:0 2px 8px rgba(212,175,55,0.4);">
-            🛒 Abrir Cesta de Compras
+          </button>
+          <button type="button" onclick="event.preventDefault(); window.openDirectCheckout('${pet.id}', '${tutor}');" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; padding:10px 18px; border-radius:10px; border:none; font-size:0.84rem; cursor:pointer; box-shadow:0 2px 8px rgba(212,175,55,0.4);">
+            💳 Pagar con Tarjeta o BCV ➔
           </button>
         </div>
       </div>
@@ -634,11 +640,15 @@ class PetStatusEngine {
         summaryHtml: summaryHtml,
         buttons: [
           {
-            text: isPaid ? '🧾 Ver Factura / Cesta' : '💳 Pague Aquí en el Carrito ➔',
+            text: isPaid ? '🧾 Ver Factura / Cesta' : '💳 Pagar con Tarjeta o BCV ➔',
             primary: true,
             onClick: () => {
-              if (window.app && typeof window.app.openModal === 'function') {
-                window.app.openModal('cart-modal');
+              if (window.openDirectCheckout) {
+                window.openDirectCheckout(pet.id, tutor);
+              } else if (window.storeEngine && typeof window.storeEngine.openCheckout === 'function') {
+                window.storeEngine.openCheckout('stripe');
+              } else if (window.app) {
+                window.app.openModal('checkout-modal');
               }
             }
           },
@@ -2768,10 +2778,10 @@ class PetStatusEngine {
                 </div>
                 ${!isPetPaid ? `
                   <div style="background:rgba(212,175,55,0.2); border:1px solid #D4AF37; border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:0.78rem; color:#78350F;">
-                    <div style="font-weight:900; margin-bottom:4px;">💳 ¿Aún no has pagado tu servicio?</div>
-                    <a href="${petPayUrl}" target="_blank" style="background:#0F172A; color:#D4AF37 !important; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:900; font-size:0.75rem; display:inline-block; border:1px solid #D4AF37;">
+                    <div style="font-weight:900; margin-bottom:6px;">💳 ¿Aún no has pagado tu servicio?</div>
+                    <button type="button" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Carlos Mendoza'}');" style="background:#0F172A; color:#D4AF37 !important; padding:6px 14px; border-radius:6px; font-weight:900; font-size:0.76rem; display:inline-block; border:1px solid #D4AF37; cursor:pointer;">
                       👉 Pague aquí directamente en el carrito
-                    </a>
+                    </button>
                   </div>
                 ` : `
                   <div style="background:rgba(16,185,129,0.2); border:1px solid #10B981; border-radius:8px; padding:6px 10px; margin-bottom:10px; font-size:0.76rem; color:#065F46; font-weight:800;">
@@ -2782,8 +2792,8 @@ class PetStatusEngine {
                   <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); petStatusEngine.triggerPetReadyScreenPop(petStatusEngine.pets.find(p=>p.id==='${pet.id}')||'${pet.id}')" style="background:#10B981; color:white; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
                     🔔 Ver Notificación de Retiro
                   </button>
-                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.app) app.openModal('cart-modal')" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.35);">
-                    💳 Pague Aquí en el Carrito ➔
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); window.openDirectCheckout('${pet.id}', '${pet.ownerName || pet.owner || 'Carlos Mendoza'}');" style="background:#D4AF37; color:#121214; font-weight:900; border:none; padding:7px 14px; border-radius:8px; font-size:0.78rem; cursor:pointer; box-shadow:0 2px 6px rgba(212,175,55,0.35);">
+                    💳 Pagar con Tarjeta o BCV ➔
                   </button>
                 </div>
               </div>

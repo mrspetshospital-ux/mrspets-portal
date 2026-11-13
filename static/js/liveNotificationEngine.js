@@ -854,9 +854,9 @@
             <span>💳</span> <span>¿Aún no has pagado tu servicio?</span>
           </div>
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:4px;">
-            <a href="${directPayUrl}" target="_blank" style="color:#0F172A !important; background:#D4AF37; padding:4px 10px; border-radius:6px; text-decoration:none; font-weight:900; display:inline-block; font-size:0.75rem;">
+            <button type="button" onclick="window.openDirectCheckout('${petId}', '${tutor}'); liveNotify.dismiss('${bannerId}');" style="color:#0F172A !important; background:#D4AF37; padding:5px 12px; border-radius:6px; font-weight:900; display:inline-block; font-size:0.75rem; border:none; cursor:pointer;">
               👉 Pague aquí directamente en el carrito
-            </a>
+            </button>
           </div>
         </div>
       ` : `
@@ -894,8 +894,8 @@
         </div>
 
         <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" onclick="if(window.app) window.app.openModal('cart-modal'); liveNotify.dismiss('${bannerId}');" style="flex:1.3; background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; border-radius:10px; padding:10px 12px; border:none; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(212,175,55,0.4);">
-            💳 Pague Aquí en el Carrito ➔
+          <button type="button" onclick="window.openDirectCheckout('${petId}', '${tutor}'); liveNotify.dismiss('${bannerId}');" style="flex:1.3; background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0F172A; font-weight:900; border-radius:10px; padding:10px 12px; border:none; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(212,175,55,0.4);">
+            💳 Pagar con Tarjeta o BCV ➔
           </button>
           <button type="button" onclick="if(window.petStatusEngine) window.petStatusEngine.triggerPetReadyScreenPop(window.petStatusEngine.pets.find(p=>p.id==='${petId}')||'${petId}'); liveNotify.dismiss('${bannerId}');" style="flex:1; background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; border:none; padding:10px 12px; border-radius:10px; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">
             🔔 Ver Screen Pop

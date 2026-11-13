@@ -97,8 +97,46 @@ class AuthEngine {
     } catch(e) {}
 
     const urlParams = new URLSearchParams(window.location.search);
-    const hasSearchTab = urlParams.has('tab') || urlParams.has('warroom') || urlParams.has('chat') || urlParams.has('volturi');
     const rawHash = (window.location.hash || '').replace('#', '').replace('tab-', '').trim();
+
+    const isDirectCheckout = urlParams.get('action') === 'checkout' ||
+                             urlParams.get('action') === 'pay' ||
+                             urlParams.get('pagueAqui') === 'true' ||
+                             urlParams.get('pague_aqui') === 'true' ||
+                             urlParams.get('openCart') === 'true' ||
+                             urlParams.get('cart') === 'true' ||
+                             rawHash === 'cart' ||
+                             rawHash === 'checkout' ||
+                             rawHash === 'pagueaqui';
+
+    if (isDirectCheckout) {
+      const petId = urlParams.get('petId') || urlParams.get('pet_id') || urlParams.get('pet') || 'PET-102';
+      const rawTutor = urlParams.get('tutor') || urlParams.get('owner') || 'Carlos Mendoza';
+      const tutor = decodeURIComponent(rawTutor).trim();
+
+      sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
+      localStorage.setItem('mrs_pets_active_vip_patient_id', petId);
+      localStorage.setItem('mrs_pets_active_customer_name', tutor);
+      localStorage.setItem('mrs_pets_auth_role', 'client');
+      localStorage.setItem('mrs_pets_auth_name', `${tutor} (Tutor VIP)`);
+
+      this.isAuthenticated = true;
+      this.userRole = 'client';
+      this.currentVipPetId = petId;
+      this.userName = `${tutor} (Tutor VIP)`;
+
+      if (document.body) {
+        document.body.classList.remove('enterprise-view-mode');
+        document.body.classList.add('customer-view-mode');
+      }
+
+      console.log("[AuthEngine] Enlace directo de Checkout detectado. Omitiendo video splash e iniciando pasarela...");
+      this.hidePortalAndShowApp();
+      return;
+    }
+
+    const hasSearchTab = urlParams.has('tab') || urlParams.has('warroom') || urlParams.has('chat') || urlParams.has('volturi') || isDirectCheckout;
     const hasHash = (rawHash.length > 0 && rawHash !== 'welcome') || hasSearchTab;
     const alreadyBypassed = localStorage.getItem('mrs_pets_skip_splash') === 'true' ||
                             sessionStorage.getItem('mrs_pets_skip_splash') === 'true';

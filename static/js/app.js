@@ -626,12 +626,12 @@ class App {
   }
 
   openModal(modalId) {
-    if (modalId === 'cart-modal' || modalId === 'quick-cart-modal') {
-      if (window.storeEngine && typeof window.storeEngine.openQuickCartModal === 'function') {
-        window.storeEngine.openQuickCartModal();
+    if (modalId === 'cart-modal') {
+      if (window.storeEngine && typeof window.storeEngine.openCheckout === 'function') {
+        window.storeEngine.openCheckout('stripe');
         return;
       }
-      modalId = 'quick-cart-modal';
+      modalId = 'checkout-modal';
     }
 
     const modal = document.getElementById(modalId);
@@ -715,7 +715,9 @@ class App {
 
   closeModal(modalId) {
     if (modalId === 'cart-modal') {
-      modalId = 'quick-cart-modal';
+      this.closeModal('checkout-modal');
+      this.closeModal('quick-cart-modal');
+      return;
     }
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -1048,92 +1050,150 @@ class App {
       const rawTutor = urlParams.get('tutor') || urlParams.get('owner') || 'Carlos Mendoza';
       const tutor = decodeURIComponent(rawTutor).trim();
 
-      // 1. Bypass Splash Video & Portal Concierge
-      if (window.authEngine && typeof window.authEngine.hidePortalAndShowApp === 'function') {
-        window.authEngine.hidePortalAndShowApp();
-      }
-      try {
-        localStorage.setItem('mrs_pets_skip_splash', 'true');
-        sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
-      } catch (e) {}
+      sessionStorage.setItem(`mrs_pets_ready_pop_seen_${petId}_step_6`, 'true');
 
-      // 2. Establecer entorno cliente / Customer View Mode
-      if (document.body) {
-        document.body.classList.remove('enterprise-view-mode');
-        document.body.classList.add('customer-view-mode');
-      }
-      if (window.adminEngine && typeof window.adminEngine.setEnvironment === 'function') {
-        window.adminEngine.setEnvironment('customer');
-      }
-
-      // 3. Conmutar al perfil del paciente VIP correspondiente
-      const allPets = (window.adminEngine?.patientsStatus || window.petStatusEngine?.pets || []);
-      let targetPet = allPets.find(p => p.id === petId);
-      if (!targetPet && tutor) {
-        targetPet = allPets.find(p => {
-          const owner = (p.owner || p.ownerName || '').toLowerCase();
-          return owner.includes(tutor.toLowerCase());
-        });
-      }
-
-      const activePetId = targetPet ? targetPet.id : petId;
-      const activeTutor = targetPet ? (targetPet.owner || targetPet.ownerName || tutor) : tutor;
-      const activePetName = targetPet ? (targetPet.name || targetPet.petName || 'Fifi') : 'Fifi';
-
-      try {
-        localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId);
-        localStorage.setItem('mrs_pets_active_customer_name', activeTutor);
-        localStorage.setItem('mrs_pets_auth_role', 'client');
-        localStorage.setItem('mrs_pets_auth_name', `${activeTutor} (Tutor de ${activePetName})`);
-        if (targetPet && targetPet.rif) {
-          localStorage.setItem('mrs_pets_active_customer_rif', targetPet.rif);
-        }
-      } catch (e) {}
-
-      if (window.authEngine) {
-        window.authEngine.currentVipPetId = activePetId;
-        window.authEngine.userRole = 'client';
-        window.authEngine.userName = `${activeTutor} (Tutor de ${activePetName})`;
-      }
-
-      // 4. Cambiar de pestaña al área de tienda
-      if (typeof this.switchTab === 'function') {
-        this.switchTab('tienda', false);
-      }
-
-      // 5. Cargar servicios de grooming a la cesta si no están sincronizados
-      if (window.storeEngine) {
-        if (typeof window.storeEngine.loadCart === 'function') {
-          window.storeEngine.loadCart();
-        }
-        if (typeof window.storeEngine.syncCustomerGroomingServicesToCart === 'function') {
-          window.storeEngine.syncCustomerGroomingServicesToCart();
-        }
-      }
-
-      // 6. Actualizar vistas de Estatus y Pantalla
-      if (window.petStatusEngine && typeof window.petStatusEngine.render === 'function') {
-        window.petStatusEngine.render();
-      }
-
-      // 7. Desplegar de inmediato el Modal de Checkout / Carrito de Compras
       setTimeout(() => {
-        if (window.storeEngine && typeof window.storeEngine.openQuickCartModal === 'function') {
-          window.storeEngine.openQuickCartModal();
-        } else {
-          this.openModal('quick-cart-modal');
+        if (typeof window.openDirectCheckout === 'function') {
+          window.openDirectCheckout(petId, tutor);
         }
-
-        if (typeof this.showToast === 'function') {
-          this.showToast(`🛒 Cesta abierta para ${activeTutor}. Selecciona tu método de pago preferido (BCV).`, 'info');
-        }
-      }, 400);
+      }, 150);
 
     } catch (err) {
       console.warn('[app.handleDirectPaymentUrl] Error:', err);
     }
   }
 }
+
+window.openDirectCheckout = function(petId, tutorName) {
+  try {
+    // 1. Cerrar cualquier popup o screen pop que pudiera estar bloqueando la pantalla
+    if (window.app && typeof window.app.closeModal === 'function') {
+      window.app.closeModal('transaction-screen-pop-modal');
+      window.app.closeModal('quick-cart-modal');
+    }
+    const popOverlay = document.getElementById('transaction-screen-pop-modal');
+    if (popOverlay) {
+      popOverlay.classList.remove('active');
+      popOverlay.style.setProperty('display', 'none', 'important');
+      popOverlay.style.setProperty('opacity', '0', 'important');
+      popOverlay.style.setProperty('visibility', 'hidden', 'important');
+      popOverlay.style.setProperty('pointer-events', 'none', 'important');
+    }
+
+    // 2. Resolver datos del paciente (Fifi / Carlos Mendoza)
+    const targetPetId = petId || 'PET-102';
+    const allPets = (window.adminEngine?.patientsStatus || window.petStatusEngine?.pets || []);
+    let matchedPet = allPets.find(p => p.id === targetPetId);
+    if (!matchedPet && tutorName) {
+      matchedPet = allPets.find(p => {
+        const owner = (p.owner || p.ownerName || '').toLowerCase();
+        return owner.includes(tutorName.toLowerCase());
+      });
+    }
+
+    const resolvedPetId = matchedPet ? matchedPet.id : targetPetId;
+    const resolvedTutor = matchedPet ? (matchedPet.owner || matchedPet.ownerName || tutorName || 'Carlos Mendoza') : (tutorName || 'Carlos Mendoza');
+    const resolvedPetName = matchedPet ? (matchedPet.name || matchedPet.petName || 'Fifi') : 'Fifi';
+    const resolvedRif = matchedPet ? (matchedPet.rif || 'V-14.882.109') : 'V-14.882.109';
+    const resolvedPrice = (matchedPet && typeof matchedPet.price === 'number') ? matchedPet.price : 25.00;
+    const resolvedService = matchedPet?.service || 'Circuito Grooming Spa (7 Estaciones)';
+
+    // Marcar que ya se vio el screen pop para que no reaparezca interrumpiendo el checkout
+    try {
+      sessionStorage.setItem(`mrs_pets_ready_pop_seen_${resolvedPetId}_step_6`, 'true');
+      sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
+      localStorage.setItem('mrs_pets_skip_splash', 'true');
+      localStorage.setItem('mrs_pets_active_vip_patient_id', resolvedPetId);
+      localStorage.setItem('mrs_pets_active_customer_name', resolvedTutor);
+      localStorage.setItem('mrs_pets_active_customer_rif', resolvedRif);
+      localStorage.setItem('mrs_pets_auth_role', 'client');
+      localStorage.setItem('mrs_pets_auth_name', `${resolvedTutor} (Tutor de ${resolvedPetName})`);
+    } catch(e) {}
+
+    // 3. Establecer entorno de sesión de cliente
+    if (window.authEngine) {
+      window.authEngine.currentVipPetId = resolvedPetId;
+      window.authEngine.userRole = 'client';
+      window.authEngine.userName = `${resolvedTutor} (Tutor de ${resolvedPetName})`;
+      window.authEngine.isAuthenticated = true;
+    }
+    if (document.body) {
+      document.body.classList.remove('enterprise-view-mode');
+      document.body.classList.add('customer-view-mode');
+    }
+    if (window.adminEngine && typeof window.adminEngine.setEnvironment === 'function') {
+      window.adminEngine.setEnvironment('customer');
+    }
+
+    // 4. Cambiar a la pestaña de Tienda / Carrito
+    if (window.app && typeof window.app.switchTab === 'function') {
+      window.app.switchTab('tienda', false);
+    }
+
+    // 5. Garantizar sincronización del concepto de Grooming en el Carrito de Compras
+    if (window.storeEngine) {
+      if (!Array.isArray(window.storeEngine.cart)) {
+        window.storeEngine.loadCart();
+      }
+      if (typeof window.storeEngine.syncCustomerGroomingServicesToCart === 'function') {
+        window.storeEngine.syncCustomerGroomingServicesToCart();
+      }
+
+      // Verificación estricta de que el servicio está en la cesta
+      const cleanId = resolvedPetId.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cartItemId = `SERV-GROOMING-${cleanId}`;
+      const hasItem = Array.isArray(window.storeEngine.cart) && window.storeEngine.cart.some(c => 
+        c.id === cartItemId || 
+        (c.isGroomingService && c.pet && c.pet.toLowerCase().includes(resolvedPetName.toLowerCase()))
+      );
+
+      if (!hasItem) {
+        if (!Array.isArray(window.storeEngine.cart)) window.storeEngine.cart = [];
+        window.storeEngine.cart.push({
+          id: cartItemId,
+          name: resolvedService,
+          category: 'Servicio Grooming',
+          price: resolvedPrice,
+          quantity: 1,
+          pet: resolvedPetName,
+          petId: resolvedPetId,
+          tutor: resolvedTutor,
+          tutorRif: resolvedRif,
+          refId: resolvedPetId,
+          isService: true,
+          isGroomingService: true,
+          image: 'assets/mrs_pets_official_logo.png',
+          status: 'Recibido',
+          chargedAt: new Date().toISOString()
+        });
+        window.storeEngine.saveCart();
+      }
+
+      if (typeof window.storeEngine.renderCart === 'function') {
+        window.storeEngine.renderCart();
+      }
+
+      // 6. Abrir DIRECTAMENTE la pasarela de pago (Stripe, Tarjeta 3D, PayPal, Zinli, BCV)
+      if (typeof window.storeEngine.openCheckout === 'function') {
+        window.storeEngine.openCheckout('stripe');
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`💳 Pasarela de pago abierta para ${resolvedTutor}.`, 'info');
+        }
+        return;
+      }
+    }
+
+    // Fallback de emergencia
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('checkout-modal');
+    }
+  } catch (err) {
+    console.error('[openDirectCheckout] Error:', err);
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('checkout-modal');
+    }
+  }
+};
 
 const app = new App();
 window.app = app;
