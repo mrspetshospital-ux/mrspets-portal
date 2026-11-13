@@ -3134,7 +3134,7 @@ class PetStatusEngine {
     }) : [];
 
     const totals = window.storeSalesEngine ? window.storeSalesEngine.calculateTotals(salesList) : {
-      count: 0, totalUsd: 0, subtotalUsd: 0, ivaUsd: 0, totalVes: 0, formattedTotalVes: 'Bs. 0,00', ticketPromedioUsd: 0, bcvRate: 48.50, byPaymentMethod: {}
+      count: 0, totalUsd: 0, subtotalUsd: 0, ivaUsd: 0, totalVes: 0, formattedTotalVes: 'Bs. 0,00', ticketPromedioUsd: 0, bcvRate: 887.30, byPaymentMethod: {}
     };
 
     const dateLabels = {
@@ -3315,8 +3315,8 @@ class PetStatusEngine {
                 <strong style="font-size:1.15rem; font-weight:900; color:#0F172A;">$${(sale.total || 0).toFixed(2)} USD</strong>
               </div>
               <div style="display:flex; justify-content:space-between; font-size:0.78rem; font-weight:800; color:#047857; background:#ECFDF5; padding:4px 8px; border-radius:6px; border:1px solid #10B981;">
-                <span>Total Bs. (BCV ${sale.bcvRate || 48.50}):</span>
-                <span>${sale.formattedTotalVes || `Bs. ${((sale.total || 0) * (sale.bcvRate || 48.50)).toFixed(2)}`}</span>
+                <span>Total Bs. (BCV ${sale.bcvRate || 887.30}):</span>
+                <span>${sale.formattedTotalVes || `Bs. ${((sale.total || 0) * (sale.bcvRate || 887.30)).toFixed(2)}`}</span>
               </div>
             </div>
 
@@ -3434,7 +3434,7 @@ class PetStatusEngine {
     if (!sale) return;
 
     const itemsSummary = (sale.items || []).map(i => `• ${i.name} (x${i.quantity || 1}) - $${(i.subtotal || (i.price * (i.quantity || 1))).toFixed(2)} USD`).join('\n');
-    const msg = `🧾 *COMPROBANTE DE COMPRA EN TIENDA - MRS. PETS MARACAIBO*\n\nHola *${sale.customerName}*,\n\nConfirmamos tu compra:\n• *Ticket*: \`${sale.ticketId}\`\n• *Fecha*: ${sale.date} • ${sale.time}\n• *Subtotal*: $${(sale.subtotal || 0).toFixed(2)} USD\n• *IVA (16% Legal SENIAT)*: +$${(sale.iva || 0).toFixed(2)} USD\n• *TOTAL PAGADO*: *$${(sale.total || 0).toFixed(2)} USD*\n• *Tasa Oficial BCV*: *${sale.bcvRate || 48.50} Bs./USD*\n• *Total en Bolívares*: *${sale.formattedTotalVes}*\n\n*Detalle de Productos:*\n${itemsSummary}\n\n• Estado: *${sale.status === 'completed' ? 'ENTREGADO / DESPACHADO' : 'PENDIENTE POR ENTREGAR (MOSTRADOR)'}* ✅\n• Sede: *Av. 2 El Milagro, diagonal a C.C. Lago Mall*\n• WA Oficial: *+58 414-6799510*`;
+    const msg = `🧾 *COMPROBANTE DE COMPRA EN TIENDA - MRS. PETS MARACAIBO*\n\nHola *${sale.customerName}*,\n\nConfirmamos tu compra:\n• *Ticket*: \`${sale.ticketId}\`\n• *Fecha*: ${sale.date} • ${sale.time}\n• *Subtotal*: $${(sale.subtotal || 0).toFixed(2)} USD\n• *IVA (16% Legal SENIAT)*: +$${(sale.iva || 0).toFixed(2)} USD\n• *TOTAL PAGADO*: *$${(sale.total || 0).toFixed(2)} USD*\n• *Tasa Oficial BCV*: *${sale.bcvRate || 887.30} Bs./USD*\n• *Total en Bolívares*: *${sale.formattedTotalVes}*\n\n*Detalle de Productos:*\n${itemsSummary}\n\n• Estado: *${sale.status === 'completed' ? 'ENTREGADO / DESPACHADO' : 'PENDIENTE POR ENTREGAR (MOSTRADOR)'}* ✅\n• Sede: *Av. 2 El Milagro, diagonal a C.C. Lago Mall*\n• WA Oficial: *+58 414-6799510*`;
 
     if (window.whatsappSim && typeof window.whatsappSim.sendMessage === 'function') {
       window.whatsappSim.sendMessage(msg);

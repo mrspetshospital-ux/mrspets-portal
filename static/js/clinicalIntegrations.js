@@ -472,7 +472,7 @@
         // DEFINICIÓN DE TODAS LAS TARJETAS DE APIS INDIVIDUALES
         // =====================================================================
         getApiCardDefinitions() {
-            const currentBcv = window.FinancialEngine ? window.FinancialEngine.config.bcvRate.toFixed(2) : '48.50';
+            const currentBcv = window.FinancialEngine ? window.FinancialEngine.config.bcvRate.toFixed(2) : '887.30';
             const idexxCount = this.idexxResults ? this.idexxResults.length : 0;
             const banplusLatency = this.banplusStatus ? this.banplusStatus.latency : 14;
 

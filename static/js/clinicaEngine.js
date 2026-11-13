@@ -304,6 +304,60 @@ class ClinicaEngine {
     this.renderClinicalAccordion();
     this.renderStaff();
     this.renderPrivatePatientPortal();
+
+    // Sincronización reactiva con cambios de tasa en el panel administrativo
+    window.addEventListener('mrs_pets_financial_config_updated', () => {
+      this.updateBudgetVesDisplay();
+    });
+  }
+
+  getBcvRateInfo() {
+    let rate = 887.30;
+    let slot = '11:00 AM';
+    let block = 'BLOQUE_11_00_AM';
+
+    if (window.FinancialEngine) {
+      if (typeof window.FinancialEngine.getOfficialBcvRate === 'function') {
+        const fRate = window.FinancialEngine.getOfficialBcvRate();
+        if (fRate > 0) rate = fRate;
+      } else if (window.FinancialEngine.config && window.FinancialEngine.config.bcvRate > 0) {
+        rate = window.FinancialEngine.config.bcvRate;
+      } else if (window.FinancialEngine.bcvRate > 0) {
+        rate = window.FinancialEngine.bcvRate;
+      }
+
+      if (window.FinancialEngine.config && window.FinancialEngine.config.bcvSlot) {
+        slot = window.FinancialEngine.config.bcvSlot;
+      } else if (window.FinancialEngine.bcvSlot) {
+        slot = window.FinancialEngine.bcvSlot;
+      }
+
+      if (window.FinancialEngine.config && window.FinancialEngine.config.bcvBlock) {
+        block = window.FinancialEngine.config.bcvBlock;
+      } else if (window.FinancialEngine.bcvBlock) {
+        block = window.FinancialEngine.bcvBlock;
+      }
+    }
+
+    if (window.integrations && window.integrations.bcvCachedConfig) {
+      const cfgRate = parseFloat(window.integrations.bcvCachedConfig.manual_rate || window.integrations.bcvCachedConfig.current_rate);
+      if (cfgRate > 0) rate = cfgRate;
+      if (window.integrations.bcvCachedConfig.slot) slot = window.integrations.bcvCachedConfig.slot;
+    }
+
+    try {
+      const saved = localStorage.getItem('mrs_pets_financial_config');
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p && p.bcvRate > 0) {
+          rate = parseFloat(p.bcvRate);
+          if (p.bcvSlot) slot = p.bcvSlot;
+          if (p.bcvBlock) block = p.bcvBlock;
+        }
+      }
+    } catch (e) {}
+
+    return { rate, slot, block };
   }
 
   // Alias retrocompatible
@@ -1659,8 +1713,9 @@ class ClinicaEngine {
     const amountInput = document.getElementById('booking-clinica-amount');
     const displayEl = document.getElementById('booking-clinica-bcv-display');
     const amount = (amountInput && parseFloat(amountInput.value)) ? parseFloat(amountInput.value) : 45.00;
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) ? window.FinancialEngine.bcvRate : 48.50;
-    const bcvSlot = (window.FinancialEngine && window.FinancialEngine.bcvSlot) ? window.FinancialEngine.bcvSlot : '11:00 AM';
+    const bcvInfo = this.getBcvRateInfo();
+    const bcvRate = bcvInfo.rate;
+    const bcvSlot = bcvInfo.slot;
     const totalVes = amount * bcvRate;
     const formattedVes = totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1740,8 +1795,9 @@ class ClinicaEngine {
     const targetRif = existing?.rif || 'V-18.452.910';
     const speciesVal = existing?.species || (rawPet.includes('(') ? rawPet.split('(')[1].replace(')', '') : 'Canino/Felino VIP');
 
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) ? window.FinancialEngine.bcvRate : 48.50;
-    const bcvSlot = (window.FinancialEngine && window.FinancialEngine.bcvSlot) ? window.FinancialEngine.bcvSlot : '11:00 AM';
+    const bcvInfo = this.getBcvRateInfo();
+    const bcvRate = bcvInfo.rate;
+    const bcvSlot = bcvInfo.slot;
     const totalVes = amountVal * bcvRate;
     const formattedVes = totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1989,9 +2045,10 @@ class ClinicaEngine {
     const clinicaTurn = existing?.turnNumber || (window.adminEngine && window.adminEngine.getNextTurnNumber ? window.adminEngine.getNextTurnNumber('clinica', date) : (window.petStatusEngine && window.petStatusEngine.getNextTurnNumber ? window.petStatusEngine.getNextTurnNumber('clinica', date) : 1));
     const clinicaTicket = (window.adminEngine?.formatTurnTicket ? window.adminEngine.formatTurnTicket('clinica', clinicaTurn) : (window.petStatusEngine?.formatTurnTicket ? window.petStatusEngine.formatTurnTicket('clinica', clinicaTurn) : `C-${String(clinicaTurn).padStart(3, '0')}`));
 
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) ? window.FinancialEngine.bcvRate : 48.50;
-    const bcvSlot = (window.FinancialEngine && window.FinancialEngine.bcvSlot) ? window.FinancialEngine.bcvSlot : '11:00 AM';
-    const bcvBlock = (window.FinancialEngine && window.FinancialEngine.bcvBlock) ? window.FinancialEngine.bcvBlock : 'BLOQUE_11_00_AM';
+    const bcvInfo = this.getBcvRateInfo();
+    const bcvRate = bcvInfo.rate;
+    const bcvSlot = bcvInfo.slot;
+    const bcvBlock = bcvInfo.block;
     const priceVes = parseFloat((amountVal * bcvRate).toFixed(2));
 
     // Persistencia asíncrona en Backend API Database
@@ -2879,9 +2936,10 @@ class ClinicaEngine {
       ? `${existing.id}-RES-${Date.now()}`
       : (existing ? existing.id : `PET-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`);
 
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) ? window.FinancialEngine.bcvRate : 48.50;
-    const bcvSlot = (window.FinancialEngine && window.FinancialEngine.bcvSlot) ? window.FinancialEngine.bcvSlot : '11:00 AM';
-    const bcvBlock = (window.FinancialEngine && window.FinancialEngine.bcvBlock) ? window.FinancialEngine.bcvBlock : 'BLOQUE_11_00_AM';
+    const bcvInfo = this.getBcvRateInfo();
+    const bcvRate = bcvInfo.rate;
+    const bcvSlot = bcvInfo.slot;
+    const bcvBlock = bcvInfo.block;
     const spaPrice = 45.00;
     const spaPriceVes = parseFloat((spaPrice * bcvRate).toFixed(2));
 

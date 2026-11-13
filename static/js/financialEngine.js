@@ -40,8 +40,9 @@
                 const res = await fetch('/api/v1/bcv/rate');
                 if (res.ok) {
                     const data = await res.json();
-                    if (data && data.currentRate > 0) {
-                        this.config.bcvRate = Math.round(data.currentRate * 100) / 100;
+                    const rateVal = parseFloat(data.currentRate || data.rate || data.effective_rate);
+                    if (data && rateVal > 0) {
+                        this.config.bcvRate = Math.round(rateVal * 100) / 100;
                         this.config.bcvSlot = data.slot || '11:00 AM';
                         this.config.bcvBlock = data.activeBlock || 'BLOQUE_11_00_AM';
                         this.config.bcvSource = data.source || 'Banco Central de Venezuela (Oficial)';
@@ -267,6 +268,18 @@
          */
         getOfficialBcvRate() {
             return (this.config && this.config.bcvRate > 0) ? this.config.bcvRate : DEFAULT_CONFIG.bcvRate;
+        },
+
+        get bcvRate() {
+            return this.getOfficialBcvRate();
+        },
+
+        get bcvSlot() {
+            return (this.config && this.config.bcvSlot) || '11:00 AM';
+        },
+
+        get bcvBlock() {
+            return (this.config && this.config.bcvBlock) || 'BLOQUE_11_00_AM';
         },
 
         /**

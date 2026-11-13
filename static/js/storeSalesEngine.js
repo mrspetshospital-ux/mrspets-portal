@@ -65,7 +65,7 @@ class StoreSalesEngine {
     const tomorrow = this.getDateWithOffset(1);
     const in3Days = this.getDateWithOffset(3);
 
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const bcvSlot = (window.FinancialEngine && window.FinancialEngine.bcvSlot) || '11:00 AM';
 
     this.sales = [
@@ -551,7 +551,7 @@ class StoreSalesEngine {
     const today = this.getTodayDateStr();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const bcvRate = saleData.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = saleData.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const bcvSlot = saleData.bcvSlot || (window.FinancialEngine && window.FinancialEngine.bcvSlot) || '11:00 AM';
 
     const subtotal = typeof saleData.subtotal === 'number' ? saleData.subtotal : parseFloat(saleData.subtotal || 0);
@@ -744,7 +744,7 @@ class StoreSalesEngine {
 
     const count = salesList.length;
     const ticketPromedio = count > 0 ? (totalUsd / count) : 0;
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
 
     return {
       count,

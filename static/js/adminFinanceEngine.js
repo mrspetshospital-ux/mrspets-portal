@@ -288,7 +288,7 @@ class AdminFinanceEngine {
 
   seedInitialInvoices() {
     const today = this.getTodayDateStr();
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
 
     this.invoices = [
       // 1. FACTURACIÓN DEL DÍA (HOY)
@@ -932,7 +932,7 @@ class AdminFinanceEngine {
       return;
     }
 
-    const bcvRate = inv.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = inv.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const itemsHtml = (inv.items || []).map((it, idx) => `
       <tr style="border-bottom:1px solid #E2E8F0; font-size:0.83rem;">
         <td style="padding:10px 8px; text-align:center; font-weight:800; color:#475569;">${idx + 1}</td>
@@ -1188,7 +1188,7 @@ class AdminFinanceEngine {
     if (!inv) return;
 
     const phoneClean = (inv.customer.phone || '').replace(/[^0-9]/g, '');
-    const bcvRate = inv.bcvRate || 48.50;
+    const bcvRate = inv.bcvRate || 887.30;
     const msg = `🐾 *FACTURA FISCAL DIGITAL - MRS. PETS MARACAIBO* 🐾
 ` +
                 `*Factura N°:* ${inv.invoiceNumber}
@@ -1269,7 +1269,7 @@ class AdminFinanceEngine {
 
   // ==================== MÓDULO GENERAR NUEVA FACTURA FISCAL ====================
   openCreateInvoiceModal() {
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const nextNum = 419 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0);
     const invNumStr = `FACT-2026-000${nextNum}`;
     const ctrlNumStr = `00-0089${39 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0)}`;
@@ -1452,7 +1452,7 @@ class AdminFinanceEngine {
     const price = parseFloat(priceEl.value) || 0;
     const iva = price * 0.16;
     const totalUsd = price + iva;
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const totalVes = totalUsd * bcvRate;
 
     usdEl.textContent = `$${totalUsd.toFixed(2)} USD`;
@@ -1475,7 +1475,7 @@ class AdminFinanceEngine {
     const itemPrice = parseFloat(fd.get('itemPrice')) || 50.00;
     const paymentMethod = fd.get('paymentMethod') || 'Pago Móvil Banplus C2P';
 
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const subtotal = itemPrice;
     const taxableAmount = itemPrice;
     const exemptAmount = 0.00;
@@ -1560,7 +1560,7 @@ class AdminFinanceEngine {
 
   // ==================== GENERACIÓN AUTOMÁTICA DESDE POS / STRIPE (DESPACHO POR CORREO) ====================
   createInvoiceFromCart(saleData = {}) {
-    const bcvRate = saleData.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = saleData.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
     const nextNum = 419 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0);
     const invNumStr = `FACT-2026-000${nextNum}`;
     const ctrlNumStr = `00-0089${39 + (this.invoices.length >= 12 ? (this.invoices.length - 12) : 0)}`;
@@ -1698,7 +1698,7 @@ class AdminFinanceEngine {
 
   // ==================== CÁLCULOS FINANCIEROS Y MATRICES ====================
   getFinancialData(dateRange = 'month') {
-    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 48.50;
+    const bcvRate = (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
 
     // Ingresos base estimados y ventas reales de tienda
     let storeSalesTotal = 0;

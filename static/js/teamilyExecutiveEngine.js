@@ -796,7 +796,7 @@ class TeamilyExecutiveEngine {
         console.warn('[TeamilyExecutiveEngine] Error cargando contexto Mike:', e);
       }
     } else if (agentId === 'charlie') {
-      const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 48.50;
+      const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 887.30;
       context.finanzas = {
         tasa_oficial_bcv: bcvRate,
         alicuota_iva_seniat: '16.0%',
@@ -1857,7 +1857,7 @@ class TeamilyExecutiveEngine {
 
     if (agent.id === 'charlie') {
       const fin = context.finanzas || {};
-      return `⚖️ **Charlie Finance:**\n\nTasa Oficial del Banco Central de Venezuela (BCV): **${fin.tasa_oficial_bcv || '48.50'} VES/USD** • IVA SENIAT: **16.0%**.\n\nTodas las transacciones en mostrador POS se concilian bajo tasa oficial única sin distorsión.${creditNotice}`;
+      return `⚖️ **Charlie Finance:**\n\nTasa Oficial del Banco Central de Venezuela (BCV): **${fin.tasa_oficial_bcv || '887.30'} VES/USD** • IVA SENIAT: **16.0%**.\n\nTodas las transacciones en mostrador POS se concilian bajo tasa oficial única sin distorsión.${creditNotice}`;
     }
 
     if (agent.id === 'margaret' || (agent.name && agent.name.toLowerCase().includes('margaret')) || (agent.role && (agent.role.includes('ATENCIÓN') || agent.role.includes('ATENCION')))) {

@@ -1234,7 +1234,7 @@
                 }
                 const results = matches.slice(0, 4);
                 if (results.length > 0) {
-                    const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 48.50;
+                    const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 887.30;
                     const itemsText = results.map(p => {
                         const priceBs = (Number(p.price || 0) * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         return `• 🛍️ **${p.name}**\n  💵 **$${Number(p.price || 0).toFixed(2)} USD** (${priceBs} Bs. BCV)`;
@@ -1267,8 +1267,8 @@
             }
 
             if (t.includes('precio') || t.includes('tasa') || t.includes('bcv') || t.includes('dolar') || t.includes('bolivar') || t.includes('costo') || t.includes('cuanto') || t.includes('cuánto')) {
-                const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 48.50;
-                const formattedRate = window.FinancialEngine ? window.FinancialEngine.formatVenezuelanNumber(bcvRate) : '48,50';
+                const bcvRate = window.FinancialEngine ? window.FinancialEngine.getConfig().bcvRate : 887.30;
+                const formattedRate = window.FinancialEngine ? window.FinancialEngine.formatVenezuelanNumber(bcvRate) : '887,30';
                 this.addMessage({
                     sender: 'leia',
                     text: `🎀 **Leia:** 💵 **Precios Transparentes & Tasa Oficial BCV:**\n\nEn Mrs. Pets todas nuestras tarifas en Bolívares se calculan con exactitud matemática bajo la **Tasa Oficial del Banco Central de Venezuela (BCV)**:\n• **1 USD = ${formattedRate} Bs. (BCV)** con IVA 16.0% SENIAT debidamente respaldado.\n• Métodos Aceptados: Stripe Terminal WisePOS E, Zelle corporativo, Pago Móvil y Efectivo USD en bóveda.\n\nPuedes alternar los precios en el botón superior **[USD / Bs. BCV]**.`,

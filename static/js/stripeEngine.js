@@ -290,7 +290,7 @@ class StripeEngine {
     const bcvCalc = window.FinancialEngine && typeof window.FinancialEngine.calculateWithTax === 'function'
       ? window.FinancialEngine.calculateWithTax(effectiveSubtotal, 'USD')
       : null;
-    const bcvRate = bcvCalc ? bcvCalc.bcvRate : 48.50;
+    const bcvRate = bcvCalc ? bcvCalc.bcvRate : 887.30;
     const bcvSlot = bcvCalc?.bcvSlot || '11:00 AM';
     const bcvBlock = bcvCalc?.bcvBlock || 'BLOQUE_11_00_AM';
     const totalVesFormatted = bcvCalc ? bcvCalc.formattedTotalVes : `Bs. ${(grandTotal * bcvRate).toFixed(2)} (BCV)`;

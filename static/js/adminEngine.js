@@ -2939,7 +2939,7 @@ class AdminEngine {
         doctor: appt.doctor || appt.doctorName || 'Dr. Carlos Mendoza - Imagenología & Rayos X',
         price: typeof appt.price === 'number' ? appt.price : (targetArea === 'clinica' ? 45.00 : (targetArea === 'hotel' ? 45.00 : 25.00)),
         priceVes: typeof appt.priceVes === 'number' ? appt.priceVes : 0,
-        bcvRateApplied: appt.bcvRateApplied || 48.50,
+        bcvRateApplied: appt.bcvRateApplied || 887.30,
         turnNumber: nextTurn,
         turno: nextTurn,
         turnTicket: turnTicket,
@@ -3103,7 +3103,7 @@ class AdminEngine {
       const docName = appt.doctor || appt.doctorName || (existingPatient ? existingPatient.doctor : '') || 'Dr. Carlos Mendoza (Imagenología & Rayos X)';
       const studyName = appt.study || appt.service || 'Radiología digital de alta resolución (Rayos X)';
       const amountUsd = typeof appt.price === 'number' ? appt.price : 45.00;
-      const bcvVal = appt.bcvRateApplied || (window.FinancialEngine?.bcvRate || 48.50);
+      const bcvVal = appt.bcvRateApplied || (window.FinancialEngine?.bcvRate || 887.30);
       const vesTotal = (amountUsd * bcvVal).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const tutorPhone = appt.phone || (existingPatient ? (existingPatient.ownerPhone || existingPatient.phone) : '+58 414-6799510');
       const tutorEmail = appt.email || (existingPatient ? existingPatient.email : 'cliente@mrspets.com');
@@ -3174,7 +3174,7 @@ class AdminEngine {
     const date = appt.date || patient?.reservationDate || new Date().toISOString().split('T')[0];
     const time = appt.time || patient?.reservationTime || '09:00 AM';
     const price = typeof appt.price === 'number' ? appt.price : (typeof patient?.price === 'number' ? patient.price : 45.00);
-    const bcvRate = appt.bcvRateApplied || (window.FinancialEngine && window.FinancialEngine.bcvRate ? window.FinancialEngine.bcvRate : 48.50);
+    const bcvRate = appt.bcvRateApplied || (window.FinancialEngine && window.FinancialEngine.bcvRate ? window.FinancialEngine.bcvRate : 887.30);
     const priceVes = (price * bcvRate).toFixed(2);
     const formattedVes = Number(priceVes).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
