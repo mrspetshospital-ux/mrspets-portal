@@ -343,6 +343,7 @@ class PetStatusEngine {
     // Sincronización Multiplataforma en Tiempo Real (Móvil Staff <-> Computadora Cliente)
     this.fetchLiveStatusFromServer();
     this.startRealtimeSyncLoop();
+    this.initQcAlertsWebSocket();
   }
 
   async fetchLiveStatusFromServer() {
@@ -446,6 +447,20 @@ class PetStatusEngine {
           if (srvPet.deliveredAt) local.deliveredAt = srvPet.deliveredAt;
           if (srvPet.deliveredBy) local.deliveredBy = srvPet.deliveredBy;
 
+          // Detección de alerta de rechazo QC emitida por Dalybell desde Telegram
+          if (srvPet.qcRejectionAlert !== undefined) {
+            const wasAlertActive = local.qcRejectionAlert && local.qcRejectionAlert.active;
+            local.qcRejectionAlert = srvPet.qcRejectionAlert;
+            if (local.qcRejectionAlert && local.qcRejectionAlert.active) {
+              anyChanges = true;
+              if (this.isStaffMode()) {
+                this.showQcRejectionScreenPop(local);
+              }
+            } else if (wasAlertActive && !local.qcRejectionAlert.active) {
+              anyChanges = true;
+            }
+          }
+
           // Detección y notificación de avance en tiempo real de etapas para el cliente
           if (stepChanged && (!this.isStaffMode())) {
             const { activeCustomerName, activeCustomerPhone, activePetId } = this.getActiveCustomerInfo();
@@ -532,6 +547,113 @@ class PetStatusEngine {
       }
     } catch (err) {
       console.warn('[PetStatusEngine] Error syncing pet status to server:', err);
+    }
+  }
+
+  // 🚨 SCREEN POP ROJO EN ESTACIÓN: RECHAZO DE FOTOS DE GROOMING QC POR DALYBELL
+  showQcRejectionScreenPop(pet) {
+    if (!pet) return;
+    if (typeof pet === 'string') {
+      pet = this.pets.find(p => p.id === pet) || { id: pet };
+    }
+    const alertData = pet.qcRejectionAlert;
+    if (!alertData || !alertData.active) return;
+
+    const alertKey = `qc_rejection_pop_seen_${pet.id}_${alertData.rejectedAt || 'active'}`;
+    if (sessionStorage.getItem(alertKey)) return;
+    sessionStorage.setItem(alertKey, 'true');
+
+    const petName = pet.petName || pet.name || 'Príncipe/Princesa';
+    const breed = pet.species || pet.breed || 'Canino VIP';
+    const stylist = alertData.stylistName || 'Estilista Asignado';
+    const reason = alertData.reason || 'Ángulos no cumplen estándar Silent Luxury';
+    const exactMessage = `⚠️ FOTOS RECHAZADAS POR GERENCIA. Motivo: ${reason}. Por favor, vuelva a capturar los 4 ángulos comerciales requeridos y reenvíe.`;
+
+    // Reproducir aviso sonoro
+    try {
+      const audio = new Audio('assets/ticker_bell_chime.mp3');
+      audio.play().catch(() => {});
+    } catch(e) {}
+
+    // Modal / Screen Pop destacado
+    if (window.app && typeof window.app.showScreenPop === 'function') {
+      window.app.showScreenPop({
+        type: 'qc_rejection',
+        headline: '🚨 ALERTA ROJA EN ESTACIÓN • GROOMING QC',
+        title: `Fotos Rechazadas por Gerencia (Dalybell) • ${petName}`,
+        badgeText: '⚠️ FOTOS RECHAZADAS POR GERENCIA',
+        icon: '🚨',
+        accentColor: '#DC2626',
+        summaryHtml: `
+          <div style="background:#FEF2F2 !important; border:2.5px solid #DC2626 !important; border-radius:16px; padding:18px 20px; color:#1E293B !important; box-shadow:0 8px 30px rgba(220,38,38,0.35);">
+            <div style="font-weight:900; color:#B91C1C; font-size:1.02rem; line-height:1.45; margin-bottom:12px; background:#FFFFFF; padding:12px 14px; border-radius:10px; border-left:5px solid #DC2626; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+              ${exactMessage}
+            </div>
+            <div style="font-size:0.85rem; color:#475569; margin-bottom:14px; line-height:1.5;">
+              • 👑 <strong>Príncipe / Princesa:</strong> ${petName} (${breed} • ID: <code>${pet.id}</code>)<br>
+              • 👤 <strong>Estilista Responsable:</strong> <strong style="color:#B91C1C;">${stylist}</strong><br>
+              • 🏢 <strong>Estación:</strong> ${alertData.station || 'Circuito Grooming Spa 7 Estaciones'}<br>
+              • 👤 <strong>Revisado por:</strong> <strong>${alertData.rejectedBy || 'Dalybell'}</strong> (Vía Telegram @ONEILnewBot)
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="button" class="btn btn-primary" onclick="if(window.app && typeof window.app.closeScreenPop === 'function') window.app.closeScreenPop(); if(window.mrsPetsArch) mrsPetsArch.openEmployeeCamera('${pet.id}');" style="flex:1; padding:12px; font-weight:900; font-size:0.88rem; background:linear-gradient(135deg, #DC2626, #991B1B); color:white; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(220,38,38,0.4);">
+                📸 Recapturar los 4 Ángulos Comerciales Ahora ➔
+              </button>
+            </div>
+          </div>
+        `
+      });
+    } else if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(exactMessage, 'error');
+    }
+  }
+
+  // ⚡ CONEXIÓN WEBSOCKET DE ALERTAS GROOMING QC EN TIEMPO REAL (<50ms)
+  initQcAlertsWebSocket() {
+    try {
+      const loc = window.location;
+      if (!loc || !loc.host) return;
+      const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${loc.host}/api/v1/ws/grooming-qc-alerts`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'QC_REJECTION_ALERT') {
+            const pet = (this.pets || []).find(p => p.id === data.petId || (p.petName && p.petName.toLowerCase() === (data.petName || '').toLowerCase()));
+            if (pet) {
+              pet.qcRejectionAlert = {
+                active: true,
+                status: 'REJECTED_BY_MANAGEMENT',
+                reason: data.reason,
+                stylistName: data.stylistName,
+                station: data.station,
+                bannerText: data.bannerText,
+                rejectedAt: data.timestamp
+              };
+              if (this.isStaffMode()) {
+                this.showQcRejectionScreenPop(pet);
+              }
+              this.render();
+            }
+          } else if (data.type === 'QC_ALERT_RESOLVED') {
+            const pet = (this.pets || []).find(p => p.id === data.petId);
+            if (pet && pet.qcRejectionAlert) {
+              pet.qcRejectionAlert.active = false;
+              this.render();
+            }
+          }
+        } catch (err) {
+          console.warn('[WS QC ALERTS] Error procesando mensaje WebSocket:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(() => this.initQcAlertsWebSocket(), 5000);
+      };
+    } catch (e) {
+      console.warn('[WS QC ALERTS] WebSocket no disponible, operando en modo polling HTTP');
     }
   }
 
@@ -2802,6 +2924,30 @@ class PetStatusEngine {
               <div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; padding:6px 10px; font-size:0.72rem; display:flex; justify-content:space-between; align-items:center;">
                 <span style="color:#065f46; font-weight:800;">📸 Sesión 4 Fotos QC Enviada (${pet.lastQcSession.time || 'Hoy'}) • Telegram @ONEILnewBot</span>
                 <span style="color:#2563eb; font-weight:800; cursor:pointer;" onclick="event.stopPropagation(); window.open('${pet.lastQcSession.driveFolderUrl || 'https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026'}', '_blank')" title="Abrir carpeta Google Drive">📁 Drive</span>
+              </div>
+            ` : ''}
+
+            ${(pet.qcRejectionAlert && pet.qcRejectionAlert.active) ? `
+              <div class="qc-rejection-alert-card" style="background:linear-gradient(135deg, rgba(254,242,242,0.98), rgba(254,226,226,0.95)); border:2.5px solid #DC2626; border-radius:12px; padding:12px 14px; color:#991B1B; box-shadow:0 4px 16px rgba(220,38,38,0.25);">
+                <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                  <span style="font-size:1.3rem; line-height:1;">⚠️</span>
+                  <div style="flex:1;">
+                    <div style="font-weight:900; color:#B91C1C; font-size:0.84rem; text-transform:uppercase; letter-spacing:0.03em;">
+                      CONTROL DE CALIDAD • ALERTA EN ESTACIÓN
+                    </div>
+                    <div style="font-size:0.82rem; font-weight:800; color:#7F1D1D; line-height:1.45; margin-top:4px; background:#FFFFFF; padding:8px 10px; border-radius:8px; border:1.5px solid #FCA5A5;">
+                      ⚠️ FOTOS RECHAZADAS POR GERENCIA. Motivo: ${pet.qcRejectionAlert.reason || 'Ángulos no cumplen estándar Silent Luxury'}. Por favor, vuelva a capturar los 4 ángulos comerciales requeridos y reenvíe.
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; border-top:1px dashed #FCA5A5; padding-top:6px;">
+                  <span style="font-size:0.73rem; color:#991B1B; font-weight:700;">
+                    👤 Estilista: <strong>${pet.qcRejectionAlert.stylistName || 'Estilista Asignado'}</strong>
+                  </span>
+                  <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.mrsPetsArch) mrsPetsArch.openEmployeeCamera('${pet.id}');" style="background:linear-gradient(135deg, #DC2626, #991B1B); color:#FFFFFF; font-weight:900; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.74rem; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(220,38,38,0.35);">
+                    📸 Recapturar 4 Ángulos Comerciales ➔
+                  </button>
+                </div>
               </div>
             ` : ''}
 

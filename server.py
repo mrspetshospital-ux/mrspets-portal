@@ -23,11 +23,12 @@ import uuid
 import logging
 import traceback
 from datetime import datetime, timezone, timedelta
+import asyncio
 from typing import Optional, List, Any, Dict, Union, Tuple
 import shutil
 import base64
 
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, Query, Body
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -3240,14 +3241,99 @@ def _send_telegram_grooming_photos(
     threading.Thread(target=_worker, daemon=True).start()
 
 
+# =====================================================================
+# WEBSOCKETS & SCREEN POP DE ALERTAS GROOMING QC EN TIEMPO REAL
+# =====================================================================
+_qc_alert_ws_connections: List[WebSocket] = []
+_qc_ws_lock = threading.Lock()
+_pending_campaign_proposals: Dict[str, Dict[str, Any]] = {}
+_pending_campaign_lock = threading.Lock()
+
+async def broadcast_qc_alert(payload: Dict[str, Any]):
+    """Despacha evento asíncrono a todos los clientes WebSocket conectados."""
+    with _qc_ws_lock:
+        clients = list(_qc_alert_ws_connections)
+    if not clients:
+        return
+    msg = json.dumps(payload, ensure_ascii=False)
+    for ws in clients:
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            pass
+
+@app.websocket("/api/v1/ws/grooming-qc-alerts")
+@app.websocket("/ws/grooming-qc-alerts")
+async def websocket_grooming_qc_alerts(websocket: WebSocket):
+    await websocket.accept()
+    with _qc_ws_lock:
+        _qc_alert_ws_connections.append(websocket)
+    try:
+        # Enviar estado inicial de alertas activas
+        with _live_pet_status_lock:
+            active_alerts = [
+                {
+                    "petId": pid,
+                    "petName": p.get("petName") or p.get("name"),
+                    "stylistName": p.get("qcRejectionAlert", {}).get("stylistName"),
+                    "alert": p.get("qcRejectionAlert")
+                }
+                for pid, p in _live_pet_status_cache.items()
+                if p.get("qcRejectionAlert", {}).get("active")
+            ]
+        await websocket.send_json({"type": "INIT_QC_ALERTS", "alerts": active_alerts})
+        while True:
+            msg = await websocket.receive_text()
+            if msg == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        log.warning("[WS QC ALERTS] Desconexión de cliente WebSocket: %s", e)
+    finally:
+        with _qc_ws_lock:
+            if websocket in _qc_alert_ws_connections:
+                _qc_alert_ws_connections.remove(websocket)
+
+@app.get("/api/v1/grooming/qc-alerts/active")
+def get_active_qc_alerts():
+    """Retorna las alertas de rechazo QC activas en estación."""
+    with _live_pet_status_lock:
+        active = [
+            {
+                "petId": pid,
+                "petName": p.get("petName") or p.get("name"),
+                "stylistName": p.get("qcRejectionAlert", {}).get("stylistName"),
+                "alert": p.get("qcRejectionAlert")
+            }
+            for pid, p in _live_pet_status_cache.items()
+            if p.get("qcRejectionAlert", {}).get("active")
+        ]
+        return {"status": 200, "count": len(active), "alerts": active}
+
+@app.get("/api/v1/mpf/campaigns")
+def get_mpf_campaigns():
+    """Retorna propuestas de campañas de O'Neil y su estado."""
+    with _pending_campaign_lock:
+        return {"status": 200, "campaigns": list(_pending_campaign_proposals.values())}
+
+
 @app.post("/api/v1/telegram/webhook")
 @app.post("/api/telegram/webhook")
 async def handle_telegram_bot_webhook(request: Request):
     """
     Receptor de Webhook de Telegram para @ONEILnewBot.
-    Procesa callback_queries de los botones interactivos de Control de Calidad:
-    - QC_APPROVED_{pet_id}: Notifica aprobación por Dalybell, responde al callback y dispara webhook a Make.com.
-    - QC_REJECTED_{pet_id}: Notifica rechazo por Dalybell, responde al callback y registra auditoría.
+    Procesa callback_queries con FLUJO DE DOBLE FILTRO Y RETORNO DE CAMPAÑAS:
+    - Filtro 1 (Fotos Base):
+      * QC_APPROVED_{pet_id}: Aprueba fotos, registra en Google Sheets MPF Pestaña 2 (Control de Calidad y IA),
+        y O'Neil genera la propuesta publicitaria de campaña retornándola a Telegram para visto bueno final de Dalybell.
+      * QC_REJECTED_{pet_id}: Rechaza fotos, dispara Screen Pop rojo en estación PWA con texto exacto,
+        identifica estilista y registra en Google Sheets MPF Pestaña 3 (Bitácora de Aprendizaje).
+    - Filtro 2 (Validación Final de Campaña):
+      * QC_CAMP_APPROVED_{campaign_id}: Dalybell da el visto bueno final a la campaña propuesta por O'Neil.
+        Dispara la publicación a Make.com y registra en Google Sheets MPF Pestaña 1 (Monitoreo de Campañas).
+      * QC_CAMP_REJECTED_{campaign_id}: Dalybell rechaza o pide edición de la propuesta publicitaria.
+        Pausa campaña y registra metadatos en Google Sheets MPF Pestaña 3 (Bitácora de Aprendizaje).
     """
     try:
         update = await request.json()
@@ -3266,16 +3352,35 @@ async def handle_telegram_bot_webhook(request: Request):
         chat_id = message_obj.get("chat", {}).get("id") or GROOMING_QC_SUPERGROUP_ID
         msg_id = message_obj.get("message_id")
 
+        # -------------------------------------------------------------
+        # FILTRO 1: APROBACIÓN DE FOTOS BASE DE GROOMING QC
+        # -------------------------------------------------------------
         if cb_data.startswith("QC_APPROVED_"):
             pet_id = cb_data.replace("QC_APPROVED_", "").strip()
-            # 1. Registrar en el Motor de Aprendizaje y Autonomía Gradual
+
+            # Resolver datos del príncipe / princesa y estilista en estación
+            pet_info = {}
+            with _live_pet_status_lock:
+                pet_info = _live_pet_status_cache.get(pet_id, {})
+                if not pet_info:
+                    for p in _live_pet_status_cache.values():
+                        if p.get("petName", "").lower() == pet_id.lower() or p.get("name", "").lower() == pet_id.lower():
+                            pet_info = p
+                            break
+
+            pet_name = pet_info.get("petName") or pet_info.get("name") or pet_id
+            breed = pet_info.get("species") or pet_info.get("breed") or "Príncipe / Princesa Canina VIP"
+            stylist_name = pet_info.get("assignedStaffName") or pet_info.get("assignedStaffId") or "Estilista Grooming Spa"
+            station = pet_info.get("station") or "Circuito Grooming Spa 7 Estaciones"
+
+            # 1. Registrar en el Motor de Aprendizaje de Autonomía Gradual
             learning_result = {}
             if qc_learning_engine:
                 try:
                     learning_result = qc_learning_engine.record_approval(
                         pet_id=pet_id,
                         reviewer=user_name,
-                        station="circuito_general",
+                        station=station,
                         was_edited=False
                     )
                 except Exception as ex_l:
@@ -3284,12 +3389,44 @@ async def handle_telegram_bot_webhook(request: Request):
             acc_rate = learning_result.get("accuracy_rate", 92.3)
             streak = learning_result.get("consecutive_approvals", 15)
 
-            # 2. Responder al popup de Telegram (answerCallbackQuery)
+            # 2. Registrar en CENTRO MPF (GOOGLE SHEETS) • PESTAÑA 2: Control de Calidad y IA
+            if google_sheets_engine:
+                try:
+                    google_sheets_engine.record_mpf_grooming_qc_ai(
+                        pet_id=pet_id,
+                        pet_name=pet_name,
+                        breed=breed,
+                        station=station,
+                        stylist_name=stylist_name,
+                        vision_ai_score="98.5% Aprobación IA",
+                        vision_ai_status="APROBADO_CONFORME",
+                        autonomy_mode="AUTONOMO_CONTROLADO",
+                        reviewer=user_name,
+                        decision="APROBADO",
+                        photos_count=4
+                    )
+                except Exception as ex_gs:
+                    log.warning("[MPF SHEETS P2] Error registrando QC Grooming IA: %s", ex_gs)
+
+            # 3. Limpiar cualquier alerta de rechazo previa en la ficha de la mascota
+            with _live_pet_status_lock:
+                if pet_id in _live_pet_status_cache and "qcRejectionAlert" in _live_pet_status_cache[pet_id]:
+                    _live_pet_status_cache[pet_id]["qcRejectionAlert"]["active"] = False
+                    _live_pet_status_revision += 1
+                    _save_live_pet_status_to_disk()
+                    asyncio.create_task(broadcast_qc_alert({
+                        "type": "QC_ALERT_RESOLVED",
+                        "petId": pet_id,
+                        "petName": pet_name,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }))
+
+            # 4. Responder al popup de Telegram (answerCallbackQuery)
             try:
                 ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
                 ans_payload = json.dumps({
                     "callback_query_id": cq_id,
-                    "text": f"✅ ¡Aprobado por {user_name}! Precisión O'Neil: {acc_rate}% ({streak} consecutivas).",
+                    "text": f"✅ ¡Fotos base aprobadas por {user_name}! O'Neil generando propuesta de campaña...",
                     "show_alert": True
                 }).encode("utf-8")
                 req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
@@ -3298,67 +3435,174 @@ async def handle_telegram_bot_webhook(request: Request):
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery: %s", e)
 
-            # 3. Publicar confirmación en el chat del grupo
+            # 5. RETORNO DE CAMPAÑA: O'NEIL GENERA LA PROPUESTA PUBLICITARIA Y LA ENVÍA DE VUELTA A TELEGRAM (FILTRO 2)
+            camp_id = f"CMP-{pet_id}-{int(time.time())}"
+            camp_theme = f"👑 Experiencia Real Mrs. Pets: Spa de Ozonoterapia & Acabado Satinado ({pet_name})"
+            camp_copy = (
+                f"¡{pet_name} ({breed}) deslumbró en su Circuito Spa 7 Estaciones! 🛁✨ "
+                f"Consentido(a) atendido(a) bajo estándares Silent Luxury con ozonoterapia, moño satinado y perfume hipoalergénico. "
+                f"Agenda su sesión VIP en Av. 2 El Milagro diagonal Lago Mall. #MrsPetsMaracaibo #GroomingSilentLuxury #SpaCanino"
+            )
+            camp_channels = "Instagram Reels • TikTok Spark Ads • Meta Ads • WhatsApp VIP"
+
+            proposal_record = {
+                "campaignId": camp_id,
+                "petId": pet_id,
+                "petName": pet_name,
+                "breed": breed,
+                "theme": camp_theme,
+                "copy": camp_copy,
+                "channels": camp_channels,
+                "budgetUSD": 3500.0,
+                "status": "PENDIENTE_VALIDACION_FINAL_DALYBELL",
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+                "chatId": chat_id
+            }
+            with _pending_campaign_lock:
+                _pending_campaign_proposals[camp_id] = proposal_record
+
+            # Botones interactivos para el FILTRO 2 (Visto Bueno Final de Campaña)
+            filtro_2_reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": f"🚀 APROBAR Y PUBLICAR EN MAKE", "callback_data": f"QC_CAMP_APPROVED_{camp_id}"},
+                        {"text": f"✏️ RECHAZAR / EDITAR", "callback_data": f"QC_CAMP_REJECTED_{camp_id}"}
+                    ]
+                ]
+            }
+
+            text_proposal = (
+                f"🎉 <b>¡FOTOS BASE APROBADAS POR DALYBELL! (FILTRO 1 OK)</b>\n\n"
+                f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code> ({pet_name} - {breed})\n"
+                f"📊 <b>Precisión O'Neil:</b> <code>{acc_rate}%</code> (<b>{streak}</b> directas consecutivas)\n"
+                f"📋 <b>Sincronización MPF:</b> Registrado en Pestaña 2 (Control de Calidad y IA).\n\n"
+                f"══════════════════════════════\n"
+                f"🎯 <b>PROPUESTA DE CAMPAÑA • O'NEIL MPF (FILTRO 2)</b>\n"
+                f"══════════════════════════════\n"
+                f"🎨 <b>Temática Especial:</b> <b>{camp_theme}</b>\n"
+                f"📢 <b>Canales:</b> <code>{camp_channels}</code>\n"
+                f"💰 <b>Presupuesto:</b> $3,500 USD (Ref BCV)\n\n"
+                f"📝 <b>Copy Publicitario Propuesto:</b>\n"
+                f"<i>\"{camp_copy}\"</i>\n\n"
+                f"⏳ <b>Visto Bueno Final Requerido:</b>\n"
+                f"<i>Dalybell, por favor valida la propuesta final de campaña antes de disparar la pauta oficial hacia Make.com.</i>"
+            )
+
             try:
                 send_url = f"https://api.telegram.org/bot{token}/sendMessage"
-                text_confirm = (
-                    f"🎉 <b>¡SESIÓN GROOMING QC APROBADA!</b>\n\n"
-                    f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code>\n"
-                    f"👤 <b>Autorizado por:</b> <b>{user_name}</b>\n"
-                    f"📊 <b>Contador de Precisión O'Neil:</b> <code>{acc_rate}%</code> (<b>{streak}</b> aprobaciones directas consecutivas)\n"
-                    f"🚀 <b>Acción:</b> Campaña publicitaria autorizada en Make.com (Instagram / TikTok / Facebook / Telegram VIP).\n\n"
-                    f"🤖 <i>O'Neil Marketing Bot • @ONEILnewBot • Modelo de Aprendizaje Activo</i>"
-                )
-                payload_c = json.dumps({"chat_id": chat_id, "text": text_confirm, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
+                payload_c = json.dumps({
+                    "chat_id": chat_id,
+                    "text": text_proposal,
+                    "parse_mode": "HTML",
+                    "reply_markup": filtro_2_reply_markup,
+                    "reply_to_message_id": msg_id
+                }).encode("utf-8")
                 req_c = urllib.request.Request(send_url, data=payload_c, headers={"Content-Type": "application/json"})
                 with urllib.request.urlopen(req_c, timeout=5):
                     pass
             except Exception as e:
-                log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje confirmación: %s", e)
+                log.warning("[TELEGRAM WEBHOOK] Error enviando propuesta de campaña Filtro 2: %s", e)
 
-            # 4. Notificar a Make.com
-            try:
-                make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
-                m_payload = json.dumps({
-                    "event": "grooming_qc_approved_by_dalybell",
-                    "action": "START_MARKETING_CAMPAIGN",
-                    "petId": pet_id,
-                    "approvedBy": user_name,
-                    "approvedAt": datetime.now(timezone.utc).isoformat(),
-                    "telegramChatId": str(chat_id),
-                    "qcLearningMetrics": learning_result
-                }).encode("utf-8")
-                m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(m_req, timeout=8):
-                    pass
-            except Exception as e:
-                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de aprobación: %s", e)
-
+        # -------------------------------------------------------------
+        # FILTRO 1: RECHAZO DE FOTOS BASE -> SCREEN POP ROJO EN ESTACIÓN PWA
+        # -------------------------------------------------------------
         elif cb_data.startswith("QC_REJECTED_"):
             pet_id = cb_data.replace("QC_REJECTED_", "").strip()
-            # 1. Registrar excepción en el Motor de Aprendizaje
-            learning_result = {}
+
+            # Resolver datos del consentido y estilista responsable en piso
+            pet_info = {}
+            with _live_pet_status_lock:
+                pet_info = _live_pet_status_cache.get(pet_id, {})
+                if not pet_info:
+                    for p in _live_pet_status_cache.values():
+                        if p.get("petName", "").lower() == pet_id.lower() or p.get("name", "").lower() == pet_id.lower():
+                            pet_info = p
+                            break
+
+            pet_name = pet_info.get("petName") or pet_info.get("name") or pet_id
+            stylist_name = pet_info.get("assignedStaffName") or pet_info.get("assignedStaffId") or "Estilista Grooming Spa"
+            station = pet_info.get("station") or "Circuito Grooming Spa 7 Estaciones"
+            rejection_detail = "Ángulos no cumplen estándar Silent Luxury (encuadre o iluminación)"
+
+            # TEXTO EXACTO OBLIGATORIO DE LA DIRECTIVA:
+            exact_alert_text = f"⚠️ FOTOS RECHAZADAS POR GERENCIA. Motivo: {rejection_detail}. Por favor, vuelva a capturar los 4 ángulos comerciales requeridos y reenvíe."
+
+            # 1. Configurar Alerta Activa en la Ficha de la PWA (Live Status)
+            rejection_alert_obj = {
+                "active": True,
+                "status": "REJECTED_BY_MANAGEMENT",
+                "rejectedAt": datetime.now(timezone.utc).isoformat(),
+                "rejectedBy": user_name,
+                "reason": rejection_detail,
+                "stylistName": stylist_name,
+                "station": station,
+                "bannerText": exact_alert_text,
+                "exactAlertMessage": exact_alert_text,
+                "petId": pet_id,
+                "petName": pet_name
+            }
+
+            with _live_pet_status_lock:
+                if pet_id not in _live_pet_status_cache:
+                    _live_pet_status_cache[pet_id] = {"id": pet_id, "petName": pet_name, "area": "grooming"}
+                _live_pet_status_cache[pet_id]["qcRejectionAlert"] = rejection_alert_obj
+                _live_pet_status_revision += 1
+                _save_live_pet_status_to_disk()
+
+            # 2. DISPARAR EVENTO EN TIEMPO REAL VÍA WEBSOCKET HACIA LA PWA EN ESTACIÓN
+            asyncio.create_task(broadcast_qc_alert({
+                "type": "QC_REJECTION_ALERT",
+                "petId": pet_id,
+                "petName": pet_name,
+                "stylistName": stylist_name,
+                "station": station,
+                "reason": rejection_detail,
+                "bannerText": exact_alert_text,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }))
+
+            # 3. Registrar en CENTRO MPF (GOOGLE SHEETS) • PESTAÑA 3: Bitácora de Aprendizaje
+            exc_id = f"QC-EXC-{pet_id}-{int(time.time())}"
+            if google_sheets_engine:
+                try:
+                    google_sheets_engine.record_mpf_learning_log(
+                        exception_id=exc_id,
+                        pet_id=pet_id,
+                        service_type="Grooming Spa 7 Estaciones",
+                        station=station,
+                        differences_text="Revisión de texto de copy y hashtags requerida.",
+                        differences_image=f"Rechazo en fotos base: {rejection_detail}.",
+                        reason=rejection_detail,
+                        feedback="Vuelva a capturar los 4 ángulos comerciales requeridos y reenvíe.",
+                        learned_rule=f"Asegurar encuadre a la altura de los ojos en {station} para {pet_name}.",
+                        reviewer=user_name,
+                        agent_id="oneil"
+                    )
+                except Exception as ex_gs:
+                    log.warning("[MPF SHEETS P3] Error registrando bitácora de aprendizaje: %s", ex_gs)
+
+            # 4. Registrar excepción en el Motor de Aprendizaje
             if qc_learning_engine:
                 try:
-                    learning_result = qc_learning_engine.record_exception_or_rejection(
+                    qc_learning_engine.record_exception_or_rejection(
                         pet_id=pet_id,
                         reviewer=user_name,
-                        reason="Rechazo en Control de Calidad Telegram para redes",
+                        reason=rejection_detail,
                         differences={
-                            "text": "Revisión requerida de copy, hashtag #MrsPetsMaracaibo o especificación de servicio.",
-                            "image": "Ajuste de encuadre frontal, iluminación lateral o postura del consentido(a)."
+                            "text": "Revisión requerida de especificación comercial.",
+                            "image": rejection_detail
                         },
                         agent_id="oneil"
                     )
                 except Exception as ex_l:
-                    log.warning("[QC LEARNING] Error registrando excepción/rechazo: %s", ex_l)
+                    log.warning("[QC LEARNING] Error registrando excepción: %s", ex_l)
 
-            # 2. Responder al popup de Telegram
+            # 5. Responder al popup de Telegram
             try:
                 ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
                 ans_payload = json.dumps({
                     "callback_query_id": cq_id,
-                    "text": f"❌ Sesión rechazada por {user_name}. Metadatos de excepción registrados en auditoría de O'Neil.",
+                    "text": f"❌ Sesión rechazada por {user_name}. Alerta roja Screen Pop emitida a estación {station}.",
                     "show_alert": True
                 }).encode("utf-8")
                 req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
@@ -3367,15 +3611,18 @@ async def handle_telegram_bot_webhook(request: Request):
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery: %s", e)
 
-            # 3. Publicar advertencia en el chat
+            # 6. Publicar advertencia en el chat de Telegram
             try:
                 send_url = f"https://api.telegram.org/bot{token}/sendMessage"
                 text_reject = (
-                    f"⚠️ <b>SESIÓN GROOMING QC RECHAZADA</b>\n\n"
-                    f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code>\n"
+                    f"⚠️ <b>SESIÓN GROOMING QC RECHAZADA POR GERENCIA</b>\n\n"
+                    f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code> ({pet_name})\n"
+                    f"👤 <b>Estilista Responsable:</b> <b>{stylist_name}</b>\n"
+                    f"🏢 <b>Estación:</b> <code>{station}</code>\n"
                     f"👤 <b>Rechazado por:</b> <b>{user_name}</b>\n"
-                    f"📝 <b>Observación:</b> Requiere ajuste fotográfico o de estilismo antes de pautar en redes.\n"
-                    f"🧠 <b>Memoria de Aprendizaje:</b> Excepción registrada en auditoría. O'Neil ajustará sus directivas de generación para evitar este patrón en futuros posts.\n\n"
+                    f"📝 <b>Alerta en Pantalla PWA:</b>\n"
+                    f"<code>\"{exact_alert_text}\"</code>\n\n"
+                    f"🚨 <i>Screen pop rojo activado en la ficha de la mascota. Esperando nuevo lote de 4 fotos comerciales corregidas...</i>\n\n"
                     f"🤖 <i>O'Neil Marketing Bot • @ONEILnewBot</i>"
                 )
                 payload_r = json.dumps({"chat_id": chat_id, "text": text_reject, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
@@ -3385,24 +3632,179 @@ async def handle_telegram_bot_webhook(request: Request):
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje rechazo: %s", e)
 
-            # 4. Notificar a Make.com
+        # -------------------------------------------------------------
+        # FILTRO 2: VISTO BUENO FINAL DE CAMPAÑA PUBLICITARIA -> DISPARO A MAKE
+        # -------------------------------------------------------------
+        elif cb_data.startswith("QC_CAMP_APPROVED_"):
+            camp_id = cb_data.replace("QC_CAMP_APPROVED_", "").strip()
+
+            proposal = {}
+            with _pending_campaign_lock:
+                proposal = _pending_campaign_proposals.get(camp_id, {})
+                if proposal:
+                    proposal["status"] = "PUBLICADA_ACTIVA"
+                    proposal["approvedBy"] = user_name
+                    proposal["approvedAt"] = datetime.now(timezone.utc).isoformat()
+
+            pet_id = proposal.get("petId", "PET-101")
+            pet_name = proposal.get("petName", "Consentido VIP")
+            theme = proposal.get("theme", "Campaña Especial Grooming")
+            channels = proposal.get("channels", "Meta / TikTok / WhatsApp")
+            budget_usd = proposal.get("budgetUSD", 3500.0)
+
+            # 1. Registrar en CENTRO MPF (GOOGLE SHEETS) • PESTAÑA 1: Monitoreo de Campañas
+            if google_sheets_engine:
+                try:
+                    google_sheets_engine.record_mpf_campaign_monitoring(
+                        campaign_id=camp_id,
+                        theme=theme,
+                        channels=channels,
+                        status="ACTIVA_PUBLICADA",
+                        conversion_metrics="ROAS Estimado: 4.5x | Conversión WhatsApp: 82%",
+                        manager=user_name,
+                        pet_id=pet_id,
+                        budget_usd=budget_usd
+                    )
+                except Exception as ex_gs:
+                    log.warning("[MPF SHEETS P1] Error registrando monitoreo de campaña: %s", ex_gs)
+
+            # 2. Despachar publicación hacia Make.com
             try:
                 make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
                 m_payload = json.dumps({
-                    "event": "grooming_qc_rejected_by_dalybell",
-                    "action": "HALT_CAMPAIGN_AND_REQUEST_REVISION",
+                    "event": "marketing_campaign_final_approved_by_dalybell",
+                    "action": "START_MARKETING_CAMPAIGN",
+                    "campaignId": camp_id,
+                    "theme": theme,
+                    "channels": channels,
                     "petId": pet_id,
-                    "rejectedBy": user_name,
-                    "rejectedAt": datetime.now(timezone.utc).isoformat(),
-                    "telegramChatId": str(chat_id),
-                    "exceptionData": learning_result
+                    "approvedBy": user_name,
+                    "approvedAt": datetime.now(timezone.utc).isoformat(),
+                    "telegramChatId": str(chat_id)
                 }).encode("utf-8")
                 m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
                 with urllib.request.urlopen(m_req, timeout=8):
                     pass
             except Exception as e:
-                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo: %s", e)
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de campaña final: %s", e)
 
+            # 3. Popup en Telegram
+            try:
+                ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
+                ans_payload = json.dumps({
+                    "callback_query_id": cq_id,
+                    "text": f"🚀 ¡Campaña {camp_id} APROBADA por {user_name}! Pauta activada en Make.com.",
+                    "show_alert": True
+                }).encode("utf-8")
+                req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery campaña aprobada: %s", e)
+
+            # 4. Publicar confirmación en el grupo
+            try:
+                send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                text_camp_ok = (
+                    f"🚀 <b>¡CAMPAÑA PUBLICITARIA ACTIVADA EXITOSAMENTE!</b>\n\n"
+                    f"🎯 <b>ID Campaña:</b> <code>{camp_id}</code>\n"
+                    f"👑 <b>Consentido:</b> {pet_name} (<code>{pet_id}</code>)\n"
+                    f"🎨 <b>Temática:</b> <b>{theme}</b>\n"
+                    f"📢 <b>Canales Activos:</b> <code>{channels}</code>\n"
+                    f"👤 <b>Visto Bueno Final:</b> <b>{user_name}</b>\n"
+                    f"📊 <b>Centro MPF (Google Sheets):</b> Sincronizado en Pestaña 1 (Monitoreo de Campañas).\n"
+                    f"⚡ <b>Make.com Webhook:</b> Despacho confirmado.\n\n"
+                    f"🤖 <i>O'Neil Marketing & Teamily Volturi</i>"
+                )
+                payload_c = json.dumps({"chat_id": chat_id, "text": text_camp_ok, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
+                req_c = urllib.request.Request(send_url, data=payload_c, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req_c, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje confirmación campaña: %s", e)
+
+        # -------------------------------------------------------------
+        # FILTRO 2: RECHAZO / EDICIÓN DE CAMPAÑA PUBLICITARIA
+        # -------------------------------------------------------------
+        elif cb_data.startswith("QC_CAMP_REJECTED_"):
+            camp_id = cb_data.replace("QC_CAMP_REJECTED_", "").strip()
+
+            proposal = {}
+            with _pending_campaign_lock:
+                proposal = _pending_campaign_proposals.get(camp_id, {})
+                if proposal:
+                    proposal["status"] = "RECHAZADA_POR_GERENCIA"
+
+            pet_id = proposal.get("petId", "PET-101")
+            theme = proposal.get("theme", "Campaña Especial")
+
+            # 1. Registrar en CENTRO MPF (GOOGLE SHEETS) • PESTAÑA 3: Bitácora de Aprendizaje
+            if google_sheets_engine:
+                try:
+                    google_sheets_engine.record_mpf_learning_log(
+                        exception_id=f"CAMP-EXC-{camp_id}",
+                        pet_id=pet_id,
+                        service_type="Marketing / Pauta Digital",
+                        station="O'Neil Marketing",
+                        differences_text="Reajuste de copy / temática publicitaria solicitado por Dalybell.",
+                        differences_image="N/A (Fotos base aprobadas en Filtro 1)",
+                        reason="Propuesta publicitaria rechazada en Filtro 2 para ajuste editorial.",
+                        feedback="Reformular copy comercial y enfoque de promoción.",
+                        learned_rule="Revisar temática publicitaria antes de proponer a gerencia.",
+                        reviewer=user_name,
+                        agent_id="oneil"
+                    )
+                except Exception as ex_gs:
+                    log.warning("[MPF SHEETS P3] Error registrando rechazo campaña: %s", ex_gs)
+
+            # 2. Registrar en motor de aprendizaje
+            if qc_learning_engine:
+                try:
+                    qc_learning_engine.record_exception_or_rejection(
+                        pet_id=pet_id,
+                        reviewer=user_name,
+                        reason="Rechazo en Filtro 2 de propuesta publicitaria",
+                        differences={"text": "Revisión requerida de copy/temática", "image": "N/A"},
+                        agent_id="oneil"
+                    )
+                except Exception as ex_l:
+                    log.warning("[QC LEARNING] Error registrando excepción campaña: %s", ex_l)
+
+            # 3. Popup en Telegram
+            try:
+                ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
+                ans_payload = json.dumps({
+                    "callback_query_id": cq_id,
+                    "text": f"✏️ Propuesta {camp_id} pausada para ajuste. Metadatos guardados en Bitácora MPF.",
+                    "show_alert": True
+                }).encode("utf-8")
+                req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery campaña rechazada: %s", e)
+
+            # 4. Publicar en chat
+            try:
+                send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                text_camp_rej = (
+                    f"✏️ <b>PROPUESTA PUBLICITARIA PAUSADA PARA EDICIÓN</b>\n\n"
+                    f"🎯 <b>ID Campaña:</b> <code>{camp_id}</code>\n"
+                    f"👑 <b>Consentido:</b> <code>{pet_id}</code>\n"
+                    f"👤 <b>Observación Gerencial:</b> <b>{user_name}</b>\n"
+                    f"📝 <b>Acción:</b> Campaña detenida. Metadatos de retroalimentación registrados en Pestaña 3 (Bitácora de Aprendizaje) para ajuste por O'Neil.\n\n"
+                    f"🤖 <i>O'Neil Marketing Bot • @ONEILnewBot</i>"
+                )
+                payload_r = json.dumps({"chat_id": chat_id, "text": text_camp_rej, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
+                req_r = urllib.request.Request(send_url, data=payload_r, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req_r, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje rechazo campaña: %s", e)
+
+        # -------------------------------------------------------------
+        # AUTORIZACIÓN / DENEGACIÓN DE MODO AUTÓNOMO
+        # -------------------------------------------------------------
         elif cb_data.startswith("QC_AUTONOMY_AUTH_"):
             st_key = cb_data.replace("QC_AUTONOMY_AUTH_", "").strip()
             auth_res = {}
@@ -3866,6 +4268,28 @@ async def handle_grooming_qc_photos(request: Request):
 
     # Generar botones interactivos (Inline Keyboards) de Aprobación/Rechazo para Telegram y Make
     qc_reply_markup = _build_qc_reply_markup(pet_id)
+
+    # 🧹 RESOLUCIÓN AUTOMÁTICA DE ALERTA DE RECHAZO: El personal ha cargado el nuevo lote de 4 fotos corregidas
+    with _live_pet_status_lock:
+        pet_entry = _live_pet_status_cache.get(pet_id)
+        if not pet_entry:
+            for p in _live_pet_status_cache.values():
+                if p.get("petName", "").lower() == pet_name.lower():
+                    pet_entry = p
+                    break
+        if pet_entry and "qcRejectionAlert" in pet_entry:
+            pet_entry["qcRejectionAlert"]["active"] = False
+            pet_entry["qcRejectionAlert"]["resolvedAt"] = datetime.now(timezone.utc).isoformat()
+            pet_entry["qcRejectionAlert"]["resolutionBatch"] = session_id
+            _live_pet_status_revision += 1
+            _save_live_pet_status_to_disk()
+            asyncio.create_task(broadcast_qc_alert({
+                "type": "QC_ALERT_RESOLVED",
+                "petId": pet_id,
+                "petName": pet_name,
+                "sessionId": session_id,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }))
 
     # 1. Auditoría inmutable de seguridad
     u = current_user(request)

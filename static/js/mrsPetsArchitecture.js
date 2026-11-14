@@ -2795,6 +2795,10 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
         if (!Array.isArray(petSE.groomingSessions)) petSE.groomingSessions = [];
         petSE.groomingSessions.unshift(sessionRecord);
         petSE.lastQcSession = sessionRecord;
+        if (petSE.qcRejectionAlert) {
+          petSE.qcRejectionAlert.active = false;
+          petSE.qcRejectionAlert.resolvedAt = new Date().toISOString();
+        }
       }
       if (typeof window.petStatusEngine.render === 'function') {
         window.petStatusEngine.render();
