@@ -3335,6 +3335,7 @@ async def handle_telegram_bot_webhook(request: Request):
       * QC_CAMP_REJECTED_{campaign_id}: Dalybell rechaza o pide edición de la propuesta publicitaria.
         Pausa campaña y registra metadatos en Google Sheets MPF Pestaña 3 (Bitácora de Aprendizaje).
     """
+    global _live_pet_status_revision
     try:
         update = await request.json()
     except Exception:
@@ -4178,6 +4179,7 @@ async def handle_grooming_qc_photos(request: Request):
     Garantiza 4 archivos físicos únicos en Render para foto_1, foto_2, foto_3 y foto_4,
     sin solapamientos entre estaciones y soportando tanto JSON como Multipart Form-Data.
     """
+    global _live_pet_status_revision
     content_type = request.headers.get("content-type", "").lower()
     data: Dict[str, Any] = {}
     uploaded_files: Dict[str, Any] = {}
