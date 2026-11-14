@@ -2738,9 +2738,29 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     const now = new Date();
     const dateStr = now.toLocaleDateString('es-VE');
     const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    const sessionIdGen = `QC-GROOM-${Date.now()}`;
+    const thematicName = `${petName} - ${breed} - ${station}`;
 
     const sessionRecord = {
-      sessionId: `QC-GROOM-${Date.now()}`,
+      // 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
+      campaign_id: sessionIdGen,
+      session_id: sessionIdGen,
+      campaignId: sessionIdGen,
+      sessionId: sessionIdGen,
+      fecha_lanzamiento: now.toISOString(),
+      fechaLanzamiento: now.toISOString(),
+      nombre_tematica: thematicName,
+      nombreTematica: thematicName,
+      estado: "Pendiente de Revisión",
+      canal: "Telegram Bot / PWA - Mrs. Pets",
+      veredicto_dalybell: "Pendiente",
+      alcance: 0,
+      clics: 0,
+      conversiones: 0,
+      tasa_conversion: 0,
+      responsable: tutorName || "Supervisor de Grooming",
+
+      // Metadatos y colecciones de fotos
       date: dateStr,
       time: timeStr,
       timestamp: now.toISOString(),
@@ -3024,18 +3044,55 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
         return presets[i];
       });
 
+      const sId = (payload && (payload.campaign_id || payload.session_id || payload.sessionId || payload.campaignId)) || `QC-GROOM-${Date.now()}`;
+      const pName = (payload && (payload.petName || payload.pet_name)) || "Consentido(a) VIP";
+      const bBreed = (payload && (payload.breed || payload.species)) || "Príncipe / Princesa Canina";
+      const sStation = (payload && payload.station) || "Circuito Grooming Spa 7 Estaciones";
+      const tTutor = (payload && (payload.tutorName || payload.tutor_name)) || "Tutor VIP";
+      const respName = (payload && (payload.responsable || payload.tutorName || payload.tutor_name || payload.supervisorNotes)) || tTutor;
+      const themName = (payload && payload.nombre_tematica) || `${pName} - ${bBreed} - ${sStation}`;
+      const fLaunch = (payload && (payload.fecha_lanzamiento || payload.timestamp)) || new Date().toISOString();
+      const stStatus = (payload && (payload.estado || payload.status)) || "Pendiente de Revisión";
+      const chChannel = (payload && payload.canal) || "Telegram Bot / PWA - Mrs. Pets";
+      const verdDaly = (payload && payload.veredicto_dalybell) || "Pendiente";
+      const alcVal = (payload && typeof payload.alcance === 'number') ? payload.alcance : 0;
+      const clkVal = (payload && typeof payload.clics === 'number') ? payload.clics : 0;
+      const convVal = (payload && typeof payload.conversiones === 'number') ? payload.conversiones : 0;
+      const rateVal = (payload && typeof payload.tasa_conversion === 'number') ? payload.tasa_conversion : 0;
+
       fullPayload = {
+        // 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
+        campaign_id: sId,
+        session_id: sId,
+        campaignId: sId,
+        sessionId: sId,
+        fecha_lanzamiento: fLaunch,
+        fechaLanzamiento: fLaunch,
+        nombre_tematica: themName,
+        nombreTematica: themName,
+        estado: stStatus,
+        status: stStatus,
+        canal: chChannel,
+        channel: chChannel,
+        veredicto_dalybell: verdDaly,
+        veredictoDalybell: verdDaly,
+        alcance: alcVal,
+        clics: clkVal,
+        conversiones: convVal,
+        tasa_conversion: rateVal,
+        tasaConversion: rateVal,
+        responsable: respName,
+
+        // Metadatos adicionales y álbum de fotos
         event: "grooming_qc_social_media_ready",
         tipo: "GROOMING_QC_4_PHOTOS",
         action: "TRANSFER_TO_TELEGRAM",
-        canal: "telegram",
-        timestamp: (payload && payload.timestamp) || new Date().toISOString(),
-        sessionId: (payload && payload.sessionId) || `QC-GROOM-${Date.now()}`,
+        timestamp: fLaunch,
         petId: (payload && payload.petId) || "PET-101",
-        petName: (payload && payload.petName) || "Consentido(a) VIP",
-        tutorName: (payload && payload.tutorName) || "Tutor VIP",
-        breed: (payload && payload.breed) || "Príncipe / Princesa Canina",
-        station: (payload && payload.station) || "Circuito Grooming Spa 7 Estaciones",
+        petName: pName,
+        tutorName: tTutor,
+        breed: bBreed,
+        station: sStation,
         photosCount: 4,
         photos: normPhotos,
         photoUrls: normPhotos,

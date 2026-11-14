@@ -3436,6 +3436,41 @@ async def handle_telegram_bot_webhook(request: Request):
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery: %s", e)
 
+            # 4.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
+            try:
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_appr_payload = json.dumps({
+                    "campaign_id": f"QC-{pet_id}-{int(time.time())}",
+                    "session_id": f"QC-{pet_id}-{int(time.time())}",
+                    "campaignId": f"QC-{pet_id}-{int(time.time())}",
+                    "sessionId": f"QC-{pet_id}-{int(time.time())}",
+                    "fecha_lanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "fechaLanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "nombre_tematica": f"{pet_name} - {breed} - {station}",
+                    "nombreTematica": f"{pet_name} - {breed} - {station}",
+                    "estado": "Fotos Base Aprobadas (Filtro 1 OK)",
+                    "status": "Fotos Base Aprobadas (Filtro 1 OK)",
+                    "canal": "Telegram Bot / PWA - Mrs. Pets",
+                    "channel": "Telegram Bot / PWA - Mrs. Pets",
+                    "veredicto_dalybell": "✅ APROBADO - Proceder a Campaña",
+                    "veredictoDalybell": "✅ APROBADO - Proceder a Campaña",
+                    "alcance": 0,
+                    "clics": 0,
+                    "conversiones": 0,
+                    "tasa_conversion": 0,
+                    "tasaConversion": 0,
+                    "responsable": stylist_name or user_name,
+                    "event": "grooming_qc_approved_by_dalybell",
+                    "petId": pet_id,
+                    "petName": pet_name,
+                    "approvedBy": user_name
+                }).encode("utf-8")
+                m_req_appr = urllib.request.Request(make_url_base, data=make_appr_payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(m_req_appr, timeout=5):
+                    pass
+            except Exception as e_mk:
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de aprobación Filtro 1: %s", e_mk)
+
             # 5. RETORNO DE CAMPAÑA: O'NEIL GENERA LA PROPUESTA PUBLICITARIA Y LA ENVÍA DE VUELTA A TELEGRAM (FILTRO 2)
             camp_id = f"CMP-{pet_id}-{int(time.time())}"
             camp_theme = f"👑 Experiencia Real Mrs. Pets: Spa de Ozonoterapia & Acabado Satinado ({pet_name})"
@@ -3633,6 +3668,42 @@ async def handle_telegram_bot_webhook(request: Request):
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje rechazo: %s", e)
 
+            # 7. Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
+            try:
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_rej_payload = json.dumps({
+                    "campaign_id": f"QC-{pet_id}-{int(time.time())}",
+                    "session_id": f"QC-{pet_id}-{int(time.time())}",
+                    "campaignId": f"QC-{pet_id}-{int(time.time())}",
+                    "sessionId": f"QC-{pet_id}-{int(time.time())}",
+                    "fecha_lanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "fechaLanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "nombre_tematica": f"{pet_name} - {breed} - {station}",
+                    "nombreTematica": f"{pet_name} - {breed} - {station}",
+                    "estado": "Rechazado por Gerencia (Screen Pop Estación)",
+                    "status": "Rechazado por Gerencia (Screen Pop Estación)",
+                    "canal": "Telegram Bot / PWA - Mrs. Pets",
+                    "channel": "Telegram Bot / PWA - Mrs. Pets",
+                    "veredicto_dalybell": "❌ RECHAZADO",
+                    "veredictoDalybell": "❌ RECHAZADO",
+                    "alcance": 0,
+                    "clics": 0,
+                    "conversiones": 0,
+                    "tasa_conversion": 0,
+                    "tasaConversion": 0,
+                    "responsable": stylist_name or user_name,
+                    "event": "grooming_qc_rejected_by_dalybell",
+                    "reason": rejection_detail,
+                    "petId": pet_id,
+                    "petName": pet_name,
+                    "rejectedBy": user_name
+                }).encode("utf-8")
+                m_req_rej = urllib.request.Request(make_url_base, data=make_rej_payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(m_req_rej, timeout=5):
+                    pass
+            except Exception as e_mk:
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo Filtro 1: %s", e_mk)
+
         # -------------------------------------------------------------
         # FILTRO 2: VISTO BUENO FINAL DE CAMPAÑA PUBLICITARIA -> DISPARO A MAKE
         # -------------------------------------------------------------
@@ -3649,6 +3720,7 @@ async def handle_telegram_bot_webhook(request: Request):
 
             pet_id = proposal.get("petId", "PET-101")
             pet_name = proposal.get("petName", "Consentido VIP")
+            breed_camp = proposal.get("breed", "Príncipe VIP")
             theme = proposal.get("theme", "Campaña Especial Grooming")
             channels = proposal.get("channels", "Meta / TikTok / WhatsApp")
             budget_usd = proposal.get("budgetUSD", 3500.0)
@@ -3669,20 +3741,42 @@ async def handle_telegram_bot_webhook(request: Request):
                 except Exception as ex_gs:
                     log.warning("[MPF SHEETS P1] Error registrando monitoreo de campaña: %s", ex_gs)
 
-            # 2. Despachar publicación hacia Make.com
+            # 2. Despachar publicación hacia Make.com con las 11 variables obligatorias
             try:
                 make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
                 m_payload = json.dumps({
+                    # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
+                    "campaign_id": camp_id,
+                    "session_id": camp_id,
+                    "campaignId": camp_id,
+                    "sessionId": camp_id,
+                    "fecha_lanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "fechaLanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "nombre_tematica": f"{pet_name} - {breed_camp} - {theme}",
+                    "nombreTematica": f"{pet_name} - {breed_camp} - {theme}",
+                    "estado": "Activa / Publicada",
+                    "status": "Activa / Publicada",
+                    "canal": "Telegram Bot / PWA - Mrs. Pets",
+                    "channel": "Telegram Bot / PWA - Mrs. Pets",
+                    "veredicto_dalybell": "🚀 APROBADO Y PUBLICAR EN MAKE",
+                    "veredictoDalybell": "🚀 APROBADO Y PUBLICAR EN MAKE",
+                    "alcance": 0,
+                    "clics": 0,
+                    "conversiones": 0,
+                    "tasa_conversion": 0,
+                    "tasaConversion": 0,
+                    "responsable": user_name,
+
+                    # Metadatos adicionales de campaña
                     "event": "marketing_campaign_final_approved_by_dalybell",
                     "action": "START_MARKETING_CAMPAIGN",
-                    "campaignId": camp_id,
                     "theme": theme,
                     "channels": channels,
                     "petId": pet_id,
                     "approvedBy": user_name,
                     "approvedAt": datetime.now(timezone.utc).isoformat(),
                     "telegramChatId": str(chat_id)
-                }).encode("utf-8")
+                }, ensure_ascii=False).encode("utf-8")
                 m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
                 with urllib.request.urlopen(m_req, timeout=8):
                     pass
@@ -3771,8 +3865,40 @@ async def handle_telegram_bot_webhook(request: Request):
                 except Exception as ex_l:
                     log.warning("[QC LEARNING] Error registrando excepción campaña: %s", ex_l)
 
-            # 3. Popup en Telegram
+            # 2.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_camp_rej_payload = json.dumps({
+                    "campaign_id": camp_id,
+                    "session_id": camp_id,
+                    "campaignId": camp_id,
+                    "sessionId": camp_id,
+                    "fecha_lanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "fechaLanzamiento": datetime.now(timezone.utc).isoformat(),
+                    "nombre_tematica": f"{proposal.get('petName', pet_id)} - {theme}",
+                    "nombreTematica": f"{proposal.get('petName', pet_id)} - {theme}",
+                    "estado": "Rechazada para Edición",
+                    "status": "Rechazada para Edición",
+                    "canal": "Telegram Bot / PWA - Mrs. Pets",
+                    "channel": "Telegram Bot / PWA - Mrs. Pets",
+                    "veredicto_dalybell": "✏️ RECHAZAR / EDITAR",
+                    "veredictoDalybell": "✏️ RECHAZAR / EDITAR",
+                    "alcance": 0,
+                    "clics": 0,
+                    "conversiones": 0,
+                    "tasa_conversion": 0,
+                    "tasaConversion": 0,
+                    "responsable": user_name,
+                    "event": "marketing_campaign_rejected_by_dalybell",
+                    "action": "PAUSE_CAMPAIGN_FOR_EDITS",
+                    "theme": theme,
+                    "petId": pet_id
+                }).encode("utf-8")
+                m_req_crej = urllib.request.Request(make_url_base, data=make_camp_rej_payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(m_req_crej, timeout=5):
+                    pass
+            except Exception as e_mk:
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo campaña Filtro 2: %s", e_mk)
                 ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
                 ans_payload = json.dumps({
                     "callback_query_id": cq_id,
@@ -4334,12 +4460,46 @@ async def handle_grooming_qc_photos(request: Request):
     make_result = {"status": "skipped"}
     make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
     
+    # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
+    launch_timestamp = data.get("fecha_lanzamiento") or datetime.now(timezone.utc).isoformat()
+    thematic_name = data.get("nombre_tematica") or f"{pet_name} - {breed} - {station}"
+    operational_status = data.get("estado") or "Pendiente de Revisión"
+    origin_channel = data.get("canal") or "Telegram Bot / PWA - Mrs. Pets"
+    dalybell_verdict = data.get("veredicto_dalybell") or "Pendiente"
+    reach_val = int(data.get("alcance") or 0)
+    clicks_val = int(data.get("clics") or 0)
+    conv_val = int(data.get("conversiones") or 0)
+    conv_rate_val = float(data.get("tasa_conversion") or 0.0)
+    responsible_person = data.get("responsable") or tutor_name or "Supervisor de Grooming"
+
     make_payload = {
+        # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
+        "campaign_id": session_id,
+        "session_id": session_id,
+        "campaignId": session_id,
+        "sessionId": session_id,
+        "fecha_lanzamiento": launch_timestamp,
+        "fechaLanzamiento": launch_timestamp,
+        "nombre_tematica": thematic_name,
+        "nombreTematica": thematic_name,
+        "estado": operational_status,
+        "status": operational_status,
+        "canal": origin_channel,
+        "channel": origin_channel,
+        "veredicto_dalybell": dalybell_verdict,
+        "veredictoDalybell": dalybell_verdict,
+        "alcance": reach_val,
+        "clics": clicks_val,
+        "conversiones": conv_val,
+        "tasa_conversion": conv_rate_val,
+        "tasaConversion": conv_rate_val,
+        "responsable": responsible_person,
+
+        # Metadatos del evento y plataforma
         "event": "grooming_qc_social_media_ready",
         "tipo": "GROOMING_QC_4_PHOTOS",
         "action": "TRANSFER_TO_TELEGRAM",
-        "canal": "telegram",
-        "sessionId": session_id,
+        "timestamp": launch_timestamp,
         "petId": pet_id,
         "petName": pet_name,
         "tutorName": tutor_name,
