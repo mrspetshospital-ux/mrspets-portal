@@ -2621,10 +2621,35 @@ def _check_telegram_bot_permissions(chat_id: Optional[str] = None) -> Dict[str, 
             "error": str(e)
         }
 
-def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str, caption_html: str) -> Dict[str, Any]:
+def _build_qc_reply_markup(pet_id: str) -> Dict[str, Any]:
     """
-    Envía una foto de forma robusta a Telegram:
-    1. Si es archivo local en disco, envía multipart/form-data con los bytes del archivo.
+    Construye los botones interactivos (Inline Keyboard) de Telegram para aprobación QC de Grooming.
+    1. Botón Aprobado: "✅ APROBADO - Proceder a Campaña" (callback_data: QC_APPROVED_{pet_id})
+    2. Botón Rechazado: "❌ RECHAZADO" (callback_data: QC_REJECTED_{pet_id})
+    """
+    cleaned_id = str(pet_id or "PET-101").strip()
+    return {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "✅ APROBADO - Proceder a Campaña",
+                    "callback_data": f"QC_APPROVED_{cleaned_id}"
+                }
+            ],
+            [
+                {
+                    "text": "❌ RECHAZADO",
+                    "callback_data": f"QC_REJECTED_{cleaned_id}"
+                }
+            ]
+        ]
+    }
+
+
+def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str, caption_html: str, reply_markup: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Envía una foto de forma robusta a Telegram incorporando reply_markup interactivo:
+    1. Si es archivo local en disco, envía multipart/form-data con los bytes del archivo y reply_markup.
     2. Si es URL web pública, intenta sendPhoto con JSON. Si Telegram falla al crawlear la URL,
        descarga los bytes y los reenvía vía multipart/form-data.
     3. Maneja todas las excepciones sin romper el flujo y registrando logs claros.
@@ -2671,6 +2696,8 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
             add_field("chat_id", cid)
             add_field("caption", caption_html)
             add_field("parse_mode", "HTML")
+            if reply_markup:
+                add_field("reply_markup", json.dumps(reply_markup))
 
             fname = os.path.basename(local_path)
             mime_type = "image/jpeg"
@@ -2691,7 +2718,7 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
             )
             with urllib.request.urlopen(req, timeout=12) as r:
                 res_data = json.loads(r.read().decode("utf-8"))
-                log.info("[TELEGRAM @ONEILnewBot] Foto local enviada multipart exitosamente a chat %s", cid)
+                log.info("[TELEGRAM @ONEILnewBot] Foto local enviada multipart exitosamente a chat %s con reply_markup", cid)
                 return {"ok": True, "method": "multipart_local", "result": res_data.get("result")}
         except Exception as e:
             log.error("[TELEGRAM @ONEILnewBot] Error en multipart local a chat %s: %s", cid, e)
@@ -2699,16 +2726,19 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
     # Caso B: URL pública web
     if isinstance(photo_url_or_path, str) and (photo_url_or_path.startswith("http://") or photo_url_or_path.startswith("https://")):
         try:
-            payload = json.dumps({
+            payload = {
                 "chat_id": cid,
                 "photo": photo_url_or_path,
                 "caption": caption_html,
                 "parse_mode": "HTML"
-            }).encode("utf-8")
-            req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
+            }
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
+
+            req = urllib.request.Request(send_url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=12) as r:
                 res_data = json.loads(r.read().decode("utf-8"))
-                log.info("[TELEGRAM @ONEILnewBot] Foto enviada por URL exitosamente a chat %s", cid)
+                log.info("[TELEGRAM @ONEILnewBot] Foto enviada por URL exitosamente a chat %s con reply_markup", cid)
                 return {"ok": True, "method": "json_url", "result": res_data.get("result")}
         except urllib.error.HTTPError as he:
             err_body = he.read().decode("utf-8", errors="ignore")
@@ -2726,6 +2756,8 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
                 body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{cid}\r\n".encode("utf-8"))
                 body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption_html}\r\n".encode("utf-8"))
                 body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"parse_mode\"\r\n\r\nHTML\r\n".encode("utf-8"))
+                if reply_markup:
+                    body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"reply_markup\"\r\n\r\n{json.dumps(reply_markup)}\r\n".encode("utf-8"))
                 body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"qc_photo.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".encode("utf-8"))
                 body.extend(img_bytes)
                 body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
@@ -2747,11 +2779,23 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
     return {"ok": False, "error": "No se pudo despachar la foto"}
 
 
-def _send_telegram_media_group_robust(token: str, chat_id: Any, photo_sources: List[str], caption_html: str) -> Dict[str, Any]:
+def _send_telegram_media_group_robust(
+    token: str,
+    chat_id: Any,
+    photo_sources: List[str],
+    caption_html: str,
+    reply_markup: Optional[Dict[str, Any]] = None,
+    pet_name: str = "Consentido VIP",
+    breed: str = "Canino VIP",
+    tutor_name: str = "Tutor VIP",
+    station: str = "Grooming Spa"
+) -> Dict[str, Any]:
     """
     Envía un álbum nativo (sendMediaGroup) de hasta 4 fotos agrupadas a Telegram.
-    Adjunta archivos binarios locales en multipart/form-data y asigna el caption HTML
-    a la foto principal para visualización premium en el grupo de operaciones.
+    Adjunta archivos binarios locales en multipart/form-data.
+    Telegram API no soporta inline keyboards directamente anclados al álbum de fotos,
+    por lo que este método despacha inmediatamente el mensaje de control de aprobación
+    con los botones interactivos (Inline Keyboard) asociados a la sesión.
     """
     cid = _resolve_telegram_chat_id(chat_id)
     send_url = f"https://api.telegram.org/bot{token}/sendMediaGroup"
@@ -2810,6 +2854,8 @@ def _send_telegram_media_group_robust(token: str, chat_id: Any, photo_sources: L
     body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{cid}\r\n".encode("utf-8"))
     media_json = json.dumps(media_descriptors)
     body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"media\"\r\n\r\n{media_json}\r\n".encode("utf-8"))
+    if reply_markup:
+        body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"reply_markup\"\r\n\r\n{json.dumps(reply_markup)}\r\n".encode("utf-8"))
     body.extend(f"--{boundary}--\r\n".encode("utf-8"))
 
     try:
@@ -2821,6 +2867,28 @@ def _send_telegram_media_group_robust(token: str, chat_id: Any, photo_sources: L
         with urllib.request.urlopen(req, timeout=16) as r:
             res_data = json.loads(r.read().decode("utf-8"))
             log.info("[TELEGRAM @ONEILnewBot] Álbum de %d fotos Grooming QC enviado exitosamente a chat %s", len(media_descriptors), cid)
+
+            # Enviar mensaje de control interactivo con los botones de aprobación para el álbum
+            if reply_markup:
+                try:
+                    ctrl_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                    ctrl_text = (
+                        f"🎛️ <b>CONTROL DE APROBACIÓN GROOMING QC — {pet_name}</b> <i>({breed})</i>\n"
+                        f"👤 <b>Tutor:</b> {tutor_name} • ✂️ <b>Estación:</b> {station}\n\n"
+                        f"<i>Dalybell, por favor valida las 4 fotos del álbum anterior y selecciona una acción para iniciar la campaña:</i>"
+                    )
+                    ctrl_payload = json.dumps({
+                        "chat_id": cid,
+                        "text": ctrl_text,
+                        "parse_mode": "HTML",
+                        "reply_markup": reply_markup
+                    }).encode("utf-8")
+                    ctrl_req = urllib.request.Request(ctrl_url, data=ctrl_payload, headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(ctrl_req, timeout=8):
+                        log.info("[TELEGRAM @ONEILnewBot] Botones de aprobación QC despachados tras álbum a chat %s", cid)
+                except Exception as ex_ctrl:
+                    log.warning("[TELEGRAM @ONEILnewBot] Error enviando control message de botones: %s", ex_ctrl)
+
             return {"ok": True, "method": "sendMediaGroup_multipart", "result": res_data.get("result")}
     except Exception as e:
         log.warning("[TELEGRAM @ONEILnewBot] Fallo en sendMediaGroup para chat %s: %s", cid, e)
@@ -3053,16 +3121,30 @@ def _resolve_qc_photo_url(photo_val: Any, session_id: str, index: int) -> str:
     return url
 
 
-def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str, target_chat: Optional[Any] = None, breed: str = "Consentido VIP", filepaths: Optional[list] = None):
+def _send_telegram_grooming_photos(
+    pet_name: str,
+    tutor_name: str,
+    station: str,
+    photos: list,
+    notes: str,
+    drive_url: str,
+    target_chat: Optional[Any] = None,
+    breed: str = "Consentido VIP",
+    filepaths: Optional[list] = None,
+    pet_id: str = "PET-101",
+    reply_markup: Optional[Dict[str, Any]] = None
+):
     """
     Envía las 4 fotos de control de calidad de Grooming al Supergrupo de Operaciones de Telegram.
     Intenta prioritariamente sendMediaGroup como álbum de 4 fotos unificadas.
-    Si falla, ejecuta fallback a envíos individuales sendPhoto y finalmente sendMessage.
+    Incorpora botones interactivos Inline Keyboards para aprobación y rechazo directo desde Telegram.
+    Si falla el álbum, ejecuta fallback a envíos individuales sendPhoto y finalmente sendMessage.
     """
     def _worker():
         try:
             token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
             resolved_target = _resolve_telegram_chat_id(target_chat)
+            qc_reply_markup = reply_markup or _build_qc_reply_markup(pet_id)
             
             target_ids = [resolved_target]
             try:
@@ -3110,13 +3192,23 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
 
             for cid in target_ids:
                 try:
-                    # Intento 1: Álbum unificado (sendMediaGroup)
-                    album_res = _send_telegram_media_group_robust(token, cid, media_sources, caption_html)
+                    # Intento 1: Álbum unificado (sendMediaGroup con despacho de botones de aprobación)
+                    album_res = _send_telegram_media_group_robust(
+                        token=token,
+                        chat_id=cid,
+                        photo_sources=media_sources,
+                        caption_html=caption_html,
+                        reply_markup=qc_reply_markup,
+                        pet_name=pet_name,
+                        breed=breed,
+                        tutor_name=tutor_name,
+                        station=station
+                    )
                     if album_res.get("ok"):
                         continue
 
-                    # Intento 2: Fallback a fotos individuales (sendPhoto)
-                    r1 = _send_telegram_photo_robust(token, cid, media_sources[0], caption_html)
+                    # Intento 2: Fallback a fotos individuales (sendPhoto con botones en Foto 1)
+                    r1 = _send_telegram_photo_robust(token, cid, media_sources[0], caption_html, reply_markup=qc_reply_markup)
                     if str(cid) == str(resolved_target) or str(cid) == str(GROOMING_QC_SUPERGROUP_ID):
                         for idx, p_item in enumerate(media_sources[1:], start=2):
                             slot_name = slot_names[idx - 1]
@@ -3126,7 +3218,13 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
                     if not r1.get("ok"):
                         # Intento 3: Fallback a mensaje de texto si falla la imagen
                         send_url = f"https://api.telegram.org/bot{token}/sendMessage"
-                        payload = json.dumps({"chat_id": cid, "text": caption_html, "parse_mode": "HTML", "disable_web_page_preview": False}).encode("utf-8")
+                        payload = json.dumps({
+                            "chat_id": cid,
+                            "text": caption_html,
+                            "parse_mode": "HTML",
+                            "disable_web_page_preview": False,
+                            "reply_markup": qc_reply_markup
+                        }).encode("utf-8")
                         req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
                         with urllib.request.urlopen(req, timeout=5):
                             pass
@@ -3135,6 +3233,135 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
         except Exception as e:
             log.error("[TELEGRAM @ONEILnewBot] Error en worker de fotos: %s", e)
     threading.Thread(target=_worker, daemon=True).start()
+
+
+@app.post("/api/v1/telegram/webhook")
+@app.post("/api/telegram/webhook")
+async def handle_telegram_bot_webhook(request: Request):
+    """
+    Receptor de Webhook de Telegram para @ONEILnewBot.
+    Procesa callback_queries de los botones interactivos de Control de Calidad:
+    - QC_APPROVED_{pet_id}: Notifica aprobación por Dalybell, responde al callback y dispara webhook a Make.com.
+    - QC_REJECTED_{pet_id}: Notifica rechazo por Dalybell, responde al callback y registra auditoría.
+    """
+    try:
+        update = await request.json()
+    except Exception:
+        return {"ok": True}
+
+    token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
+    callback_query = update.get("callback_query")
+
+    if callback_query:
+        cq_id = callback_query.get("id")
+        cb_data = str(callback_query.get("data") or "")
+        from_user = callback_query.get("from", {})
+        user_name = from_user.get("first_name") or from_user.get("username") or "Dalybell"
+        message_obj = callback_query.get("message", {})
+        chat_id = message_obj.get("chat", {}).get("id") or GROOMING_QC_SUPERGROUP_ID
+        msg_id = message_obj.get("message_id")
+
+        if cb_data.startswith("QC_APPROVED_"):
+            pet_id = cb_data.replace("QC_APPROVED_", "").strip()
+            # 1. Responder al popup de Telegram (answerCallbackQuery)
+            try:
+                ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
+                ans_payload = json.dumps({
+                    "callback_query_id": cq_id,
+                    "text": f"✅ ¡Aprobado por {user_name}! La campaña de redes ha sido autorizada.",
+                    "show_alert": True
+                }).encode("utf-8")
+                req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery: %s", e)
+
+            # 2. Publicar confirmación en el chat del grupo
+            try:
+                send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                text_confirm = (
+                    f"🎉 <b>¡SESIÓN GROOMING QC APROBADA!</b>\n\n"
+                    f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code>\n"
+                    f"👤 <b>Autorizado por:</b> <b>{user_name}</b>\n"
+                    f"🚀 <b>Acción:</b> Campaña publicitaria autorizada en Make.com (Instagram / TikTok / Facebook / Telegram VIP).\n\n"
+                    f"🤖 <i>O'Neil Marketing Bot • @ONEILnewBot</i>"
+                )
+                payload_c = json.dumps({"chat_id": chat_id, "text": text_confirm, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
+                req_c = urllib.request.Request(send_url, data=payload_c, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req_c, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje confirmación: %s", e)
+
+            # 3. Notificar a Make.com
+            try:
+                make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                m_payload = json.dumps({
+                    "event": "grooming_qc_approved_by_dalybell",
+                    "action": "START_MARKETING_CAMPAIGN",
+                    "petId": pet_id,
+                    "approvedBy": user_name,
+                    "approvedAt": datetime.now(timezone.utc).isoformat(),
+                    "telegramChatId": str(chat_id)
+                }).encode("utf-8")
+                m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(m_req, timeout=8):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de aprobación: %s", e)
+
+        elif cb_data.startswith("QC_REJECTED_"):
+            pet_id = cb_data.replace("QC_REJECTED_", "").strip()
+            # 1. Responder al popup de Telegram
+            try:
+                ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
+                ans_payload = json.dumps({
+                    "callback_query_id": cq_id,
+                    "text": f"❌ Sesión rechazada por {user_name}. Notificando al equipo.",
+                    "show_alert": True
+                }).encode("utf-8")
+                req = urllib.request.Request(ans_url, data=ans_payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error en answerCallbackQuery: %s", e)
+
+            # 2. Publicar advertencia en el chat
+            try:
+                send_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                text_reject = (
+                    f"⚠️ <b>SESIÓN GROOMING QC RECHAZADA</b>\n\n"
+                    f"👑 <b>Príncipe / Princesa:</b> <code>{pet_id}</code>\n"
+                    f"👤 <b>Rechazado por:</b> <b>{user_name}</b>\n"
+                    f"📝 <b>Observación:</b> Requiere ajuste fotográfico o de estilismo antes de pautar en redes.\n\n"
+                    f"🤖 <i>O'Neil Marketing Bot • @ONEILnewBot</i>"
+                )
+                payload_r = json.dumps({"chat_id": chat_id, "text": text_reject, "parse_mode": "HTML", "reply_to_message_id": msg_id}).encode("utf-8")
+                req_r = urllib.request.Request(send_url, data=payload_r, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req_r, timeout=5):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error enviando mensaje rechazo: %s", e)
+
+            # 3. Notificar a Make.com
+            try:
+                make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                m_payload = json.dumps({
+                    "event": "grooming_qc_rejected_by_dalybell",
+                    "action": "HALT_CAMPAIGN_AND_REQUEST_REVISION",
+                    "petId": pet_id,
+                    "rejectedBy": user_name,
+                    "rejectedAt": datetime.now(timezone.utc).isoformat(),
+                    "telegramChatId": str(chat_id)
+                }).encode("utf-8")
+                m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(m_req, timeout=8):
+                    pass
+            except Exception as e:
+                log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo: %s", e)
+
+    return {"ok": True}
 
 
 @app.get("/api/v1/telegram/status")
@@ -3395,6 +3622,9 @@ async def handle_grooming_qc_photos(request: Request):
         {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4, "filename": fname_4, "filepath": fpath_4}
     ]
 
+    # Generar botones interactivos (Inline Keyboards) de Aprobación/Rechazo para Telegram y Make
+    qc_reply_markup = _build_qc_reply_markup(pet_id)
+
     # 1. Auditoría inmutable de seguridad
     u = current_user(request)
     sec.audit(
@@ -3425,6 +3655,7 @@ async def handle_grooming_qc_photos(request: Request):
             "telegramTarget": "@ONEILnewBot",
             "telegramChatId": resolved_chat_id,
             "telegramOriginalTarget": raw_chat_target,
+            "replyMarkup": qc_reply_markup,
             "status": "PENDIENTE_AUTORIZACION_SUPERVISORA"
         },
         usuario=u or {"tipo": "staff", "nombre": "Supervisor Grooming"},
@@ -3497,6 +3728,11 @@ async def handle_grooming_qc_photos(request: Request):
         "photoUrls": resolved_urls,
         "fotoUrls": resolved_urls,
         "photosDetails": photos_details,
+        # Botones Interactivos (Inline Keyboards) para Telegram y Make.com
+        "reply_markup": qc_reply_markup,
+        "replyMarkup": qc_reply_markup,
+        "inline_keyboard": qc_reply_markup.get("inline_keyboard"),
+        "inlineKeyboard": qc_reply_markup.get("inline_keyboard"),
         # Identidad Telegram & O'Neil
         "telegramTarget": "@ONEILnewBot",
         "telegramChatId": resolved_chat_id,
@@ -3528,7 +3764,7 @@ async def handle_grooming_qc_photos(request: Request):
     except Exception as e:
         make_result = {"status": "error", "error": str(e)}
 
-    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (Álbum nativo sendMediaGroup con fallback robusto)
+    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (Álbum nativo sendMediaGroup con fallback robusto y botones de aprobación)
     _send_telegram_grooming_photos(
         pet_name=pet_name,
         tutor_name=tutor_name,
@@ -3538,13 +3774,15 @@ async def handle_grooming_qc_photos(request: Request):
         drive_url=drive_url,
         target_chat=resolved_chat_id,
         breed=breed,
-        filepaths=resolved_fpaths
+        filepaths=resolved_fpaths,
+        pet_id=pet_id,
+        reply_markup=qc_reply_markup
     )
 
     return {
         "status": 200,
         "success": True,
-        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. 4 fotos físicas generadas e indexadas para Telegram @ONEILnewBot ({GROOMING_QC_SUPERGROUP_TITLE} • {resolved_chat_id}) y Make.com ({make_url}).",
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. 4 fotos físicas generadas e indexadas con botones interactivos de aprobación para Telegram @ONEILnewBot ({GROOMING_QC_SUPERGROUP_TITLE} • {resolved_chat_id}) y Make.com ({make_url}).",
         "sessionId": session_id,
         "petId": pet_id,
         "petName": pet_name,
@@ -3596,6 +3834,10 @@ async def handle_grooming_qc_photos(request: Request):
         "photoUrls": resolved_urls,
         "fotoUrls": resolved_urls,
         "photosDetails": photos_details,
+        # Botones Interactivos de Telegram (reply_markup)
+        "reply_markup": qc_reply_markup,
+        "replyMarkup": qc_reply_markup,
+        "inline_keyboard": qc_reply_markup.get("inline_keyboard"),
         "telegramTarget": "@ONEILnewBot",
         "telegramChatId": resolved_chat_id,
         "telegramGroupTitle": GROOMING_QC_SUPERGROUP_TITLE,
