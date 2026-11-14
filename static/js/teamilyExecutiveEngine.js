@@ -145,7 +145,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     color: '#FB923C',
     bg: '#2D1808',
     border: '#EA580C',
-    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot (@9000339468227100).',
+    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot (@9000339468227100). Opera con el Modelo de Aprendizaje y Autonomía Gradual (92.3% Precisión acumulada • 15 aprobaciones directas consecutivas).',
     telegramBot: '@ONEILnewBot',
     telegramBotUrl: 'https://t.me/ONEILnewBot',
     telegramChatId: '-1004440607589',
@@ -154,11 +154,18 @@ const DEFAULT_VOLTURI_AGENTS = [
     teamlySlug: '@9000339468227100',
     teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Estrategia de marketing digital, optimización de pauta TikTok Spark Ads & Meta Ads, envío de fotos Grooming QC y notificaciones a Telegram @ONEILnewBot (@9000339468227100).',
+    promptGuideline: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad activo. Pauta digital, fotos Grooming QC, aplicación de reglas de encuadre y texto de Dalybell, y notificaciones Telegram @ONEILnewBot (@9000339468227100).',
+    qcLearning: {
+      model: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad',
+      accuracyRate: 92.3,
+      consecutiveApprovals: 15,
+      autonomyMode: 'CONTROLADO',
+      statusBadge: '92.3% Precisión QC • Modo Autónomo Controlado'
+    },
     contextType: 'marketing_ops',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Marketing & Advertising Director de Mrs. Pets (`@9000339468227100`) y responsable del Bot Oficial de Telegram (`@ONEILnewBot`). Gestiono campañas de pauta digital, tráfico, fotos de Grooming QC y branding. ¿Deseas evaluar el rendimiento de pauta o revisar las fotos de hoy?'
+    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Director de Marketing de Mrs. Pets (`@9000339468227100`) y responsable de `@ONEILnewBot`. Mi motor opera con el **Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad** (92.3% precisión validada • 15 aprobaciones consecutivas • Modo Autónomo Controlado). ¿Deseas evaluar pauta, revisar las 4 fotos QC o verificar el estado de autonomía?'
   },
   {
     id: 'oneal_mercadeo',

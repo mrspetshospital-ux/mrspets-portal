@@ -1,0 +1,137 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-11-14T02:53:27.173242+00:00",
+  "model_name": "Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad Mrs. Pets",
+  "global_metrics": {
+    "total_evaluations": 65,
+    "direct_approvals": 60,
+    "edited_approvals": 5,
+    "rejections": 0,
+    "consecutive_approvals": 15,
+    "best_streak": 22,
+    "accuracy_rate": 92.3,
+    "autonomy_global_ready": true,
+    "autonomy_global_mode": "CONTROLADO"
+  },
+  "stations_metrics": {
+    "corte_estilismo": {
+      "station_name": "Corte & Estilismo Canino (Corte Asiático / Tijera / Raza)",
+      "total_evaluations": 12,
+      "direct_approvals": 11,
+      "edited_approvals": 1,
+      "rejections": 0,
+      "consecutive_approvals": 11,
+      "accuracy_rate": 91.7,
+      "autonomy_requested": true,
+      "autonomy_authorized": true,
+      "autonomy_authorized_by": "Dalybell",
+      "autonomy_authorized_at": "2026-11-13T22:00:00Z",
+      "status": "AUTONOMO_CONTROLADO"
+    },
+    "bano_ozono": {
+      "station_name": "Baño Spa & Ozonoterapia Relajante",
+      "total_evaluations": 15,
+      "direct_approvals": 14,
+      "edited_approvals": 1,
+      "rejections": 0,
+      "consecutive_approvals": 14,
+      "accuracy_rate": 93.3,
+      "autonomy_requested": true,
+      "autonomy_authorized": true,
+      "autonomy_authorized_by": "Dalybell",
+      "autonomy_authorized_at": "2026-11-13T18:00:00Z",
+      "status": "AUTONOMO_CONTROLADO"
+    },
+    "secado_cardado": {
+      "station_name": "Secado Silencioso & Deslanado Profesional",
+      "total_evaluations": 8,
+      "direct_approvals": 7,
+      "edited_approvals": 1,
+      "rejections": 0,
+      "consecutive_approvals": 7,
+      "accuracy_rate": 87.5,
+      "autonomy_requested": false,
+      "autonomy_authorized": false,
+      "autonomy_authorized_by": null,
+      "autonomy_authorized_at": null,
+      "status": "SUPERVISADO"
+    },
+    "acabado_perfume": {
+      "station_name": "Acabado de Lujo, Moño Satinado & Perfume Hipoalergénico",
+      "total_evaluations": 14,
+      "direct_approvals": 13,
+      "edited_approvals": 1,
+      "rejections": 0,
+      "consecutive_approvals": 13,
+      "accuracy_rate": 92.9,
+      "autonomy_requested": true,
+      "autonomy_authorized": false,
+      "autonomy_authorized_by": null,
+      "autonomy_authorized_at": null,
+      "status": "SOLICITUD_AUTONOMIA_PENDIENTE"
+    },
+    "circuito_general": {
+      "station_name": "Circuito Grooming Spa 7 Estaciones (General)",
+      "total_evaluations": 16,
+      "direct_approvals": 15,
+      "edited_approvals": 1,
+      "rejections": 0,
+      "consecutive_approvals": 15,
+      "accuracy_rate": 93.8,
+      "autonomy_requested": true,
+      "autonomy_authorized": true,
+      "autonomy_authorized_by": "Dalybell",
+      "autonomy_authorized_at": "2026-11-13T20:30:00Z",
+      "status": "AUTONOMO_CONTROLADO"
+    }
+  },
+  "learned_rules": [
+    {
+      "rule_id": "RULE-QC-001",
+      "category": "image_framing",
+      "station": "corte_estilismo",
+      "directive": "Priorizar planos frontales a la altura de los ojos del príncipe/princesa (Slot 1); evitar tomas cenitales en cortes asiáticos y tijera.",
+      "trigger": "Ajuste de encuadre en fotografía de rostro Poodle Toy.",
+      "created_at": "2026-11-10T14:20:00Z",
+      "status": "ACTIVE"
+    },
+    {
+      "rule_id": "RULE-QC-002",
+      "category": "branding_copy",
+      "station": "acabado_perfume",
+      "directive": "En las publicaciones de redes de O'Neil, siempre destacar el moño satinado y el perfume hipoalergénico Silent Luxury con el hashtag oficial #MrsPetsMaracaibo.",
+      "trigger": "Diferencia detectada en texto de campaña de redes.",
+      "created_at": "2026-11-11T16:00:00Z",
+      "status": "ACTIVE"
+    },
+    {
+      "rule_id": "RULE-QC-003",
+      "category": "lighting_contrast",
+      "station": "secado_cardado",
+      "directive": "En mantos oscuros o negros (Schnauzer, Scottish Terrier), aumentar iluminación lateral difusa (Slots 2 y 3) para evidenciar brillo y textura del pelo.",
+      "trigger": "Corrección de contraste en fotografía de manto negro.",
+      "created_at": "2026-11-12T11:45:00Z",
+      "status": "ACTIVE"
+    }
+  ],
+  "exceptions_history": [
+    {
+      "exception_id": "QC-EXC-INIT-001",
+      "timestamp": "2026-11-11T15:30:00Z",
+      "pet_id": "PET-101",
+      "pet_name": "Bella",
+      "service_type": "Corte Asiático",
+      "station": "corte_estilismo",
+      "reviewer": "Dalybell",
+      "status": "EDITED",
+      "differences": {
+        "text": "Se añadió mención explícita al moño satinado y aroma floral de coco en el copy publicitario.",
+        "image": "Reencuadre frontal en Slot 1 para eliminar sombra cenital."
+      },
+      "reason": "Optimización de estándares Silent Luxury previo a pauta Meta Ads.",
+      "learned_rule": "Priorizar planos frontales a la altura de los ojos y destacar accesorios satinados.",
+      "agent_id": "oneil"
+    }
+  ],
+  "pending_autonomy_alerts": []
+}

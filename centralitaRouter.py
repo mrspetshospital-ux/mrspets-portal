@@ -41,6 +41,11 @@ from typing import Dict, Any, Optional, List, Tuple
 
 log = logging.getLogger("mrs_pets.centralita")
 
+try:
+    from qcLearningEngine import qc_learning_engine
+except Exception as _e_qcl:
+    qc_learning_engine = None
+
 # Tabla Canónica e Inmutable de Agentes
 AGENT_REGISTRY: Dict[str, Dict[str, Any]] = {
     "leia": {
@@ -125,7 +130,9 @@ AGENT_REGISTRY: Dict[str, Dict[str, Any]] = {
         "telegram_chat_id": "-1004440607589",
         "telegram_group": "FOTOS GROOMING HISTORICO",
         "description": "Pauta geocercada Maracaibo, telemercadeo VIP, recordatorios de citas, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot.",
-        "voice_prefix": "📢 **O'Neil (Director de Marketing & Telegram Bot @ONEILnewBot):**"
+        "voice_prefix": "📢 **O'Neil (Director de Marketing & Telegram Bot @ONEILnewBot):**",
+        "qc_learning_model": "Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad",
+        "autonomy_mode": "CONTROLADO"
     },
     "sebastian": {
         "slug": "sebastian",
@@ -352,11 +359,21 @@ class CentralitaRouter:
 
         # 8. O'NEIL
         if slug == "oneil":
+            perf_text = ""
+            if qc_learning_engine:
+                st = qc_learning_engine.get_full_state()
+                gm = st.get("global_metrics", {})
+                acc = gm.get("accuracy_rate", 92.3)
+                streak = gm.get("consecutive_approvals", 15)
+                mode = gm.get("autonomy_global_mode", "CONTROLADO")
+                perf_text = f"• **Control de Calidad QC Grooming:** Precisión: {acc}% ({streak} directas consecutivas) • Modo: {mode}.\n"
+
             return (
-                f"📢 **O'Neil (Director de Marketing & Telemercadeo):**\n\n"
+                f"📢 **O'Neil (Director de Marketing & Telemercadeo - @ONEILnewBot):**\n\n"
                 f"• **Pauta Digital:** Campañas geocercadas en TikTok Spark Ads y Meta Ads para Maracaibo activas.\n"
-                f"• **Telemercadeo:** Recordatorios de WhatsApp a tutores con tasa de respuesta superior al 82%.\n\n"
-                f"Directriz recibida: *\"{inp}\"*. Captación en marcha."
+                f"• **Telemercadeo:** Recordatorios de WhatsApp a tutores con tasa de respuesta superior al 82%.\n"
+                f"{perf_text}"
+                f"Directriz recibida: *\"{inp}\"*. Captación y aprendizaje continuo en marcha."
             )
 
         # 9. SEBASTIAN

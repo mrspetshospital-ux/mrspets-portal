@@ -411,6 +411,28 @@ class TeamilyGeoAClient:
         )
         return self.send_message(req)
 
+    def ask_oneil(self, prompt: str, station: Optional[str] = None, thread_mode: str = "new", wait: bool = True) -> TeamilyGeoAResponse:
+        """
+        Invoca al Agente O'Neil (Marketing & QC Grooming) inyectando el Modelo de Aprendizaje
+        y Autonomía Gradual con el historial de directivas de Dalybell.
+        """
+        learning_injection = ""
+        try:
+            from qcLearningEngine import qc_learning_engine
+            if qc_learning_engine:
+                learning_injection = qc_learning_engine.get_system_prompt_learning_injection("oneil", station=station)
+        except Exception:
+            pass
+
+        full_prompt = f"{learning_injection}\n\n[INSTRUCCIÓN DIRECTIVA EJECUTIVA]: {prompt}" if learning_injection else prompt
+        req = TeamilyGeoARequest(
+            input=full_prompt,
+            thread=TeamilyThreadConfig(mode=thread_mode),
+            wait=wait,
+            board_id=self.board_id
+        )
+        return self.send_message(req)
+
 # Instancia canónica singleton
 teamily_geo_a_client = TeamilyGeoAClient()
 
