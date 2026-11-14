@@ -24,6 +24,8 @@ import logging
 import traceback
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Any, Dict, Union, Tuple
+import shutil
+import base64
 
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, Query, Body
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
@@ -2635,6 +2637,16 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
     if isinstance(photo_url_or_path, str):
         if os.path.isabs(photo_url_or_path) and os.path.exists(photo_url_or_path):
             local_path = photo_url_or_path
+        elif "/static/uploads/" in photo_url_or_path:
+            rel = photo_url_or_path.split("/static/uploads/", 1)[1]
+            candidate = os.path.join(STATIC_DIR, "uploads", rel)
+            if os.path.exists(candidate):
+                local_path = candidate
+        elif "/uploads/" in photo_url_or_path:
+            rel = photo_url_or_path.split("/uploads/", 1)[1]
+            candidate = os.path.join(STATIC_DIR, "uploads", rel)
+            if os.path.exists(candidate):
+                local_path = candidate
         elif "/static/" in photo_url_or_path:
             rel = photo_url_or_path.split("/static/", 1)[1]
             candidate = os.path.join(STATIC_DIR, rel)
@@ -2642,9 +2654,12 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
                 local_path = candidate
         elif "/assets/" in photo_url_or_path:
             rel = photo_url_or_path.split("/assets/", 1)[1]
-            candidate = os.path.join(BASE_DIR, "assets", rel)
-            if os.path.exists(candidate):
-                local_path = candidate
+            candidate1 = os.path.join(STATIC_DIR, "assets", rel)
+            candidate2 = os.path.join(BASE_DIR, "assets", rel)
+            if os.path.exists(candidate1):
+                local_path = candidate1
+            elif os.path.exists(candidate2):
+                local_path = candidate2
 
     if local_path and os.path.exists(local_path):
         try:
@@ -2700,7 +2715,11 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
             log.warning("[TELEGRAM @ONEILnewBot] Error HTTP enviando URL a chat %s (%s). Reintentando con descarga binaria...", cid, err_body)
             # Reintentar descargando la imagen binaria para enviar multipart
             try:
-                with urllib.request.urlopen(photo_url_or_path, timeout=8) as dl:
+                ctx_ssl = ssl.create_default_context()
+                ctx_ssl.check_hostname = False
+                ctx_ssl.verify_mode = ssl.CERT_NONE
+                dl_req = urllib.request.Request(photo_url_or_path, headers={"User-Agent": "MrsPets-GroomingQC/2.0"})
+                with urllib.request.urlopen(dl_req, context=ctx_ssl, timeout=8) as dl:
                     img_bytes = dl.read()
                 boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
                 body = bytearray()
@@ -2726,6 +2745,87 @@ def _send_telegram_photo_robust(token: str, chat_id: Any, photo_url_or_path: str
             log.error("[TELEGRAM @ONEILnewBot] Error general enviando foto a chat %s: %s", cid, e)
 
     return {"ok": False, "error": "No se pudo despachar la foto"}
+
+
+def _send_telegram_media_group_robust(token: str, chat_id: Any, photo_sources: List[str], caption_html: str) -> Dict[str, Any]:
+    """
+    Envía un álbum nativo (sendMediaGroup) de hasta 4 fotos agrupadas a Telegram.
+    Adjunta archivos binarios locales en multipart/form-data y asigna el caption HTML
+    a la foto principal para visualización premium en el grupo de operaciones.
+    """
+    cid = _resolve_telegram_chat_id(chat_id)
+    send_url = f"https://api.telegram.org/bot{token}/sendMediaGroup"
+
+    boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+    body = bytearray()
+    media_descriptors = []
+
+    for idx, item in enumerate(photo_sources[:4]):
+        field_id = f"photo_{idx + 1}"
+        local_p = None
+        if isinstance(item, str):
+            if os.path.isabs(item) and os.path.exists(item):
+                local_p = item
+            elif "/static/uploads/" in item:
+                cand = os.path.join(STATIC_DIR, "uploads", item.split("/static/uploads/", 1)[1])
+                if os.path.exists(cand): local_p = cand
+            elif "/uploads/" in item:
+                cand = os.path.join(STATIC_DIR, "uploads", item.split("/uploads/", 1)[1])
+                if os.path.exists(cand): local_p = cand
+            elif "/static/" in item:
+                cand = os.path.join(STATIC_DIR, item.split("/static/", 1)[1])
+                if os.path.exists(cand): local_p = cand
+            elif "/assets/" in item:
+                cand1 = os.path.join(STATIC_DIR, "assets", item.split("/assets/", 1)[1])
+                cand2 = os.path.join(BASE_DIR, "assets", item.split("/assets/", 1)[1])
+                if os.path.exists(cand1): local_p = cand1
+                elif os.path.exists(cand2): local_p = cand2
+
+        if local_p and os.path.exists(local_p):
+            desc = {"type": "photo", "media": f"attach://{field_id}"}
+            if idx == 0:
+                desc["caption"] = caption_html
+                desc["parse_mode"] = "HTML"
+            media_descriptors.append(desc)
+
+            fname = os.path.basename(local_p)
+            mime_type = "image/jpeg"
+            if fname.lower().endswith(".png"): mime_type = "image/png"
+            elif fname.lower().endswith(".webp"): mime_type = "image/webp"
+
+            body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{field_id}\"; filename=\"{fname}\"\r\nContent-Type: {mime_type}\r\n\r\n".encode("utf-8"))
+            with open(local_p, "rb") as f_in:
+                body.extend(f_in.read())
+            body.extend(b"\r\n")
+        elif isinstance(item, str) and (item.startswith("http://") or item.startswith("https://")):
+            desc = {"type": "photo", "media": item}
+            if idx == 0:
+                desc["caption"] = caption_html
+                desc["parse_mode"] = "HTML"
+            media_descriptors.append(desc)
+
+    if len(media_descriptors) < 2:
+        return {"ok": False, "error": "Se requieren al menos 2 fotos para sendMediaGroup"}
+
+    body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{cid}\r\n".encode("utf-8"))
+    media_json = json.dumps(media_descriptors)
+    body.extend(f"--{boundary}\r\nContent-Disposition: form-data; name=\"media\"\r\n\r\n{media_json}\r\n".encode("utf-8"))
+    body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+
+    try:
+        req = urllib.request.Request(
+            send_url,
+            data=bytes(body),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+        )
+        with urllib.request.urlopen(req, timeout=16) as r:
+            res_data = json.loads(r.read().decode("utf-8"))
+            log.info("[TELEGRAM @ONEILnewBot] Álbum de %d fotos Grooming QC enviado exitosamente a chat %s", len(media_descriptors), cid)
+            return {"ok": True, "method": "sendMediaGroup_multipart", "result": res_data.get("result")}
+    except Exception as e:
+        log.warning("[TELEGRAM @ONEILnewBot] Fallo en sendMediaGroup para chat %s: %s", cid, e)
+        return {"ok": False, "error": str(e)}
+
 
 def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
     def _worker():
@@ -2762,54 +2862,202 @@ def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
             log.error("[TELEGRAM @ONEILnewBot] Error en _send_telegram_notification: %s", e)
     threading.Thread(target=_worker, daemon=True).start()
 
+
+QC_UPLOADS_DIR = os.path.join(STATIC_DIR, "uploads", "qc_photos")
+os.makedirs(QC_UPLOADS_DIR, exist_ok=True)
+
+QC_PRESET_ASSETS = [
+    "hero_border_collie.jpg",       # Slot 1: Frontal / Rostro
+    "media_1787694901704.jpg",      # Slot 2: Perfil Lateral / Corte
+    "media_1789775225842.jpg",      # Slot 3: Cuerpo / Acabado
+    "leia_avatar.jpg",              # Slot 4: Detalle / Moño
+]
+
 DEFAULT_QC_PHOTOS = [
     "https://mrspets-portal.onrender.com/assets/hero_border_collie.jpg",
-    "https://mrspets-portal.onrender.com/assets/media__1787694901704.jpg",
+    "https://mrspets-portal.onrender.com/assets/media_1787694901704.jpg",
     "https://mrspets-portal.onrender.com/assets/media_1789775225842.jpg",
     "https://mrspets-portal.onrender.com/assets/leia_avatar.jpg",
 ]
 
-def _resolve_qc_photo_url(photo_val: Any, session_id: str, index: int) -> str:
-    default_url = DEFAULT_QC_PHOTOS[index % len(DEFAULT_QC_PHOTOS)]
-    if not photo_val or not isinstance(photo_val, str):
-        return default_url
-    
-    val = photo_val.strip()
-    if not val:
-        return default_url
-    
-    if val.startswith("http://") or val.startswith("https://"):
-        return val
+def _sanitize_slug(text: Any, default: str, max_len: int = 32) -> str:
+    if not text:
+        return default
+    cleaned = re.sub(r'[^a-zA-Z0-9]+', '_', str(text)).strip('_').lower()
+    return cleaned[:max_len] or default
 
-    if val.startswith("data:image"):
-        try:
-            import base64
-            uploads_dir = os.path.join(STATIC_DIR, "uploads", "qc_photos")
-            os.makedirs(uploads_dir, exist_ok=True)
-            header, encoded = val.split(",", 1)
-            ext = "jpg"
-            if "png" in header:
-                ext = "png"
-            elif "webp" in header:
-                ext = "webp"
-            fname = f"{session_id}_foto_{index + 1}.{ext}"
-            fpath = os.path.join(uploads_dir, fname)
-            with open(fpath, "wb") as f:
-                f.write(base64.b64decode(encoded))
-            return f"https://mrspets-portal.onrender.com/static/uploads/qc_photos/{fname}"
-        except Exception as e:
-            log.warning("No se pudo decodificar foto base64 slot %d: %s", index + 1, e)
-            return default_url
 
-    if val.startswith("/") or val.startswith("assets/") or val.startswith("static/"):
-        return f"https://mrspets-portal.onrender.com/{val.lstrip('/')}"
-
-    return default_url
-
-def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str, target_chat: Optional[Any] = None, breed: str = "Consentido VIP"):
+def _save_and_resolve_qc_photo(photo_input: Any, session_id: str, station: str, pet_name: str, index: int) -> Tuple[str, str, str]:
     """
-    Envía las fotos de control de calidad de Grooming al Supergrupo de Operaciones de Telegram
-    utilizando sendPhoto con formato HTML e imágenes individuales directas.
+    Garantiza que cada slot de una sesión de Grooming QC tenga un archivo físico
+    único e independiente en /static/uploads/qc_photos/, evitando solapamientos entre estaciones
+    y asegurando nombres y URLs exclusivos para foto_1, foto_2, foto_3 y foto_4.
+    
+    Retorna:
+        Tuple[public_url, filename, absolute_filepath]
+    """
+    clean_session = re.sub(r'[^a-zA-Z0-9_\-]+', '', str(session_id)).strip('_-') or f"QC-{int(time.time() * 1000)}"
+    clean_station = _sanitize_slug(station, "estacion_spa", 28)
+    clean_pet = _sanitize_slug(pet_name, "consentido", 18)
+    slot_idx = index + 1
+    
+    # 1. Nombre de archivo único y descriptivo garantizado
+    filename = f"{clean_session}_{clean_station}_foto_{slot_idx}.jpg"
+    target_path = os.path.join(QC_UPLOADS_DIR, filename)
+    public_url = f"https://mrspets-portal.onrender.com/static/uploads/qc_photos/{filename}"
+
+    # Si el archivo físico ya existe en disco y tiene tamaño válido, lo reutilizamos
+    if os.path.exists(target_path) and os.path.getsize(target_path) > 100:
+        return public_url, filename, target_path
+
+    def _write_bytes(raw_bytes: bytes) -> bool:
+        if raw_bytes and len(raw_bytes) > 50:
+            try:
+                with open(target_path, "wb") as f_out:
+                    f_out.write(raw_bytes)
+                os.chmod(target_path, 0o644)
+                return True
+            except Exception as ex:
+                log.warning("No se pudo escribir archivo físico %s: %s", target_path, ex)
+        return False
+
+    saved = False
+
+    # CASO A: UploadFile o bytes directos
+    if photo_input is not None:
+        if isinstance(photo_input, bytes):
+            saved = _write_bytes(photo_input)
+        elif hasattr(photo_input, "file") and hasattr(photo_input.file, "read"):
+            try:
+                photo_input.file.seek(0)
+                b = photo_input.file.read()
+                saved = _write_bytes(b)
+            except Exception as e:
+                log.warning("Error leyendo UploadFile slot %d: %s", slot_idx, e)
+        elif hasattr(photo_input, "read"):
+            try:
+                b = photo_input.read()
+                saved = _write_bytes(b)
+            except Exception as e:
+                log.warning("Error leyendo stream slot %d: %s", slot_idx, e)
+
+    # CASO B: String base64 (data:image/... o base64 crudo)
+    if not saved and isinstance(photo_input, str) and (photo_input.startswith("data:image") or ";base64," in photo_input):
+        try:
+            encoded = photo_input.split(",", 1)[1] if "," in photo_input else photo_input
+            b = base64.b64decode(encoded)
+            saved = _write_bytes(b)
+        except Exception as e:
+            log.warning("Fallo decodificando base64 slot %d: %s", slot_idx, e)
+
+    # CASO C: String con ruta local en servidor
+    if not saved and isinstance(photo_input, str):
+        val = photo_input.strip()
+        local_cand = None
+        if os.path.isabs(val) and os.path.exists(val):
+            local_cand = val
+        elif "/static/uploads/" in val:
+            rel = val.split("/static/uploads/", 1)[1]
+            p = os.path.join(STATIC_DIR, "uploads", rel)
+            if os.path.exists(p): local_cand = p
+        elif "/uploads/" in val:
+            rel = val.split("/uploads/", 1)[1]
+            p = os.path.join(STATIC_DIR, "uploads", rel)
+            if os.path.exists(p): local_cand = p
+        elif "/static/" in val:
+            rel = val.split("/static/", 1)[1]
+            p = os.path.join(STATIC_DIR, rel)
+            if os.path.exists(p): local_cand = p
+        elif "/assets/" in val:
+            rel = val.split("/assets/", 1)[1]
+            p1 = os.path.join(STATIC_DIR, "assets", rel)
+            p2 = os.path.join(BASE_DIR, "assets", rel)
+            if os.path.exists(p1): local_cand = p1
+            elif os.path.exists(p2): local_cand = p2
+        elif val.startswith("assets/"):
+            rel = val.split("assets/", 1)[1]
+            p1 = os.path.join(STATIC_DIR, "assets", rel)
+            p2 = os.path.join(BASE_DIR, "assets", rel)
+            if os.path.exists(p1): local_cand = p1
+            elif os.path.exists(p2): local_cand = p2
+
+        if local_cand and os.path.exists(local_cand) and os.path.isfile(local_cand):
+            try:
+                shutil.copyfile(local_cand, target_path)
+                os.chmod(target_path, 0o644)
+                saved = True
+            except Exception as e:
+                log.warning("Fallo copiando archivo local slot %d: %s", slot_idx, e)
+
+    # CASO D: URL web pública (ej. render / drive / externo)
+    if not saved and isinstance(photo_input, str) and (photo_input.startswith("http://") or photo_input.startswith("https://")):
+        val = photo_input.strip()
+        parsed = urllib.parse.urlparse(val)
+        if "onrender.com" in parsed.netloc or "localhost" in parsed.netloc:
+            path_part = parsed.path
+            for prefix, folder in [
+                ("/static/uploads/", os.path.join(STATIC_DIR, "uploads")),
+                ("/uploads/", os.path.join(STATIC_DIR, "uploads")),
+                ("/static/", STATIC_DIR),
+                ("/assets/", os.path.join(STATIC_DIR, "assets"))
+            ]:
+                if path_part.startswith(prefix):
+                    rel = path_part[len(prefix):]
+                    p = os.path.join(folder, rel)
+                    if os.path.exists(p) and os.path.isfile(p):
+                        try:
+                            shutil.copyfile(p, target_path)
+                            os.chmod(target_path, 0o644)
+                            saved = True
+                            break
+                        except Exception:
+                            pass
+        
+        if not saved:
+            try:
+                ctx_ssl = ssl.create_default_context()
+                ctx_ssl.check_hostname = False
+                ctx_ssl.verify_mode = ssl.CERT_NONE
+                req = urllib.request.Request(val, headers={"User-Agent": "MrsPets-GroomingQC/2.0"})
+                with urllib.request.urlopen(req, context=ctx_ssl, timeout=8) as dl:
+                    b = dl.read()
+                    saved = _write_bytes(b)
+            except Exception as e:
+                log.warning("Fallo descargando URL remota slot %d (%s): %s", slot_idx, val, e)
+
+    # CASO E: Fallback a Preset Oficial Garantizado para el Slot
+    if not saved:
+        preset_name = QC_PRESET_ASSETS[index % len(QC_PRESET_ASSETS)]
+        preset_candidates = [
+            os.path.join(STATIC_DIR, "assets", preset_name),
+            os.path.join(STATIC_DIR, "assets", preset_name.replace("media_", "media__")),
+            os.path.join(STATIC_DIR, "assets", preset_name.replace("media__", "media_")),
+            os.path.join(BASE_DIR, "assets", preset_name),
+            os.path.join(STATIC_DIR, "assets", "hero_border_collie.jpg"),
+        ]
+        for pcand in preset_candidates:
+            if os.path.exists(pcand) and os.path.isfile(pcand):
+                try:
+                    shutil.copyfile(pcand, target_path)
+                    os.chmod(target_path, 0o644)
+                    saved = True
+                    break
+                except Exception as e:
+                    log.warning("Fallo copiando preset candidato %s: %s", pcand, e)
+
+    return public_url, filename, target_path
+
+
+def _resolve_qc_photo_url(photo_val: Any, session_id: str, index: int) -> str:
+    url, _, _ = _save_and_resolve_qc_photo(photo_val, session_id, "spa", "consentido", index)
+    return url
+
+
+def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str, photos: list, notes: str, drive_url: str, target_chat: Optional[Any] = None, breed: str = "Consentido VIP", filepaths: Optional[list] = None):
+    """
+    Envía las 4 fotos de control de calidad de Grooming al Supergrupo de Operaciones de Telegram.
+    Intenta prioritariamente sendMediaGroup como álbum de 4 fotos unificadas.
+    Si falla, ejecuta fallback a envíos individuales sendPhoto y finalmente sendMessage.
     """
     def _worker():
         try:
@@ -2850,6 +3098,9 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
                 f"🤖 <i>Bot O’Neil Marketing & Grooming • @ONEILnewBot</i>"
             )
 
+            # Usar rutas físicas en disco si están disponibles para transmisión binaria directa
+            media_sources = filepaths if (filepaths and len(filepaths) >= 4 and all(os.path.exists(p) for p in filepaths)) else [p1, p2, p3, p4]
+
             slot_names = [
                 "Frontal / Rostro",
                 "Lateral Izquierdo",
@@ -2859,18 +3110,21 @@ def _send_telegram_grooming_photos(pet_name: str, tutor_name: str, station: str,
 
             for cid in target_ids:
                 try:
-                    # 1. Enviar Foto 1 (Principal) con el Caption HTML completo
-                    r1 = _send_telegram_photo_robust(token, cid, p1, caption_html)
+                    # Intento 1: Álbum unificado (sendMediaGroup)
+                    album_res = _send_telegram_media_group_robust(token, cid, media_sources, caption_html)
+                    if album_res.get("ok"):
+                        continue
 
-                    # 2. Si el chat es el supergrupo principal de operaciones, despachar también las fotos 2, 3 y 4
+                    # Intento 2: Fallback a fotos individuales (sendPhoto)
+                    r1 = _send_telegram_photo_robust(token, cid, media_sources[0], caption_html)
                     if str(cid) == str(resolved_target) or str(cid) == str(GROOMING_QC_SUPERGROUP_ID):
-                        for idx, p_url in enumerate([p2, p3, p4], start=2):
+                        for idx, p_item in enumerate(media_sources[1:], start=2):
                             slot_name = slot_names[idx - 1]
                             sub_caption = f"📸 <b>Foto #{idx} ({slot_name})</b> • {pet_name} ({breed})"
-                            _send_telegram_photo_robust(token, cid, p_url, sub_caption)
+                            _send_telegram_photo_robust(token, cid, p_item, sub_caption)
 
                     if not r1.get("ok"):
-                        # Fallback de texto si sendPhoto tuvo algún problema
+                        # Intento 3: Fallback a mensaje de texto si falla la imagen
                         send_url = f"https://api.telegram.org/bot{token}/sendMessage"
                         payload = json.dumps({"chat_id": cid, "text": caption_html, "parse_mode": "HTML", "disable_web_page_preview": False}).encode("utf-8")
                         req = urllib.request.Request(send_url, data=payload, headers={"Content-Type": "application/json"})
@@ -3050,55 +3304,96 @@ def get_official_agents_list():
 async def handle_grooming_qc_photos(request: Request):
     """
     Sesión de Fotos Grooming QC (4 Fotos individuales) para Supervisora, Telegram (@ONEILnewBot) y Make.com.
-    Valida y normaliza el Chat ID (-584146799510 -> -1004440607589), asegura permisos activos en el grupo
-    y despacha vía sendPhoto con formato HTML estructurado.
+    Garantiza 4 archivos físicos únicos en Render para foto_1, foto_2, foto_3 y foto_4,
+    sin solapamientos entre estaciones y soportando tanto JSON como Multipart Form-Data.
     """
-    try:
-        data = await request.json()
-    except Exception:
-        data = {}
+    content_type = request.headers.get("content-type", "").lower()
+    data: Dict[str, Any] = {}
+    uploaded_files: Dict[str, Any] = {}
 
-    pet_id = data.get("petId") or "PET-101"
-    session_id = data.get("sessionId") or f"QC-GROOM-{int(time.time() * 1000)}"
-    pet_name = data.get("petName") or "Consentido(a) VIP"
-    tutor_name = data.get("tutorName") or "Tutor VIP"
-    breed = data.get("breed") or "Príncipe / Princesa Canina"
-    station = data.get("station") or "Circuito Grooming Spa 7 Estaciones"
-    supervisor_notes = data.get("supervisorNotes") or "Aprobación de Control de Calidad QC Grooming para Redes"
-    drive_url = data.get("driveFolderUrl") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        try:
+            form = await request.form()
+            for k, v in form.items():
+                if hasattr(v, "filename") and hasattr(v, "read"):
+                    uploaded_files[k] = v
+                else:
+                    data[k] = v
+        except Exception as e:
+            log.warning("[GROOMING QC] Error parseando form multipart: %s", e)
+    else:
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+
+    pet_id = data.get("petId") or data.get("pet_id") or "PET-101"
+    session_id = data.get("sessionId") or data.get("session_id") or f"QC-GROOM-{int(time.time() * 1000)}"
+    pet_name = data.get("petName") or data.get("pet_name") or "Consentido(a) VIP"
+    tutor_name = data.get("tutorName") or data.get("tutor_name") or "Tutor VIP"
+    breed = data.get("breed") or data.get("pet_breed") or "Príncipe / Princesa Canina"
+    station = data.get("station") or data.get("groomingStation") or "Circuito Grooming Spa 7 Estaciones"
+    supervisor_notes = data.get("supervisorNotes") or data.get("supervisor_notes") or data.get("notes") or "Aprobación de Control de Calidad QC Grooming para Redes"
+    drive_url = data.get("driveFolderUrl") or data.get("drive_url") or "https://drive.google.com/drive/folders/1MrsPets_Grooming_QC_SocialMedia_2026"
     
     # 🛡️ NORMALIZACIÓN Y VALIDACIÓN DEL CHAT ID DE TELEGRAM
     raw_chat_target = data.get("chat_id") or data.get("chatId") or data.get("telegramChatId") or data.get("telegramTarget") or "-584146799510"
     resolved_chat_id = _resolve_telegram_chat_id(raw_chat_target)
     bot_perms = _check_telegram_bot_permissions(resolved_chat_id)
 
-    # Procesar URLs directas individuales de las fotos
-    raw_photos = data.get("photos") or data.get("photoUrls") or []
-    if not isinstance(raw_photos, list):
-        raw_photos = [raw_photos]
+    # Extraer arrays generales si vinieron en el cuerpo
+    raw_photos_list = data.get("photos") or data.get("fotos") or data.get("photoUrls") or data.get("fotoUrls") or []
+    if not isinstance(raw_photos_list, list):
+        raw_photos_list = [raw_photos_list]
 
-    # Mapear campos explícitos si vinieron en el cuerpo
-    explicit_keys = [
-        ("photoUrl1", "photo1"),
-        ("photoUrl2", "photo2"),
-        ("photoUrl3", "photo3"),
-        ("photoUrl4", "photo4"),
+    # Claves exhaustivas para mapear los 4 slots sin ambigüedad
+    slot_keys = [
+        ["foto_1", "foto1", "photo_1", "photo1", "photoUrl1", "fotoUrl1", "foto_url_1", "photo_url_1", "file1"],
+        ["foto_2", "foto2", "photo_2", "photo2", "photoUrl2", "fotoUrl2", "foto_url_2", "photo_url_2", "file2"],
+        ["foto_3", "foto3", "photo_3", "photo3", "photoUrl3", "fotoUrl3", "foto_url_3", "photo_url_3", "file3"],
+        ["foto_4", "foto4", "photo_4", "photo4", "photoUrl4", "fotoUrl4", "foto_url_4", "photo_url_4", "file4"],
     ]
-    while len(raw_photos) < 4:
-        raw_photos.append(None)
 
-    for i, (k1, k2) in enumerate(explicit_keys):
-        val = data.get(k1) or data.get(k2)
-        if val:
-            raw_photos[i] = val
+    slot_inputs: List[Any] = [None, None, None, None]
+    for i in range(4):
+        # 1. Archivo subido en multipart
+        for k in slot_keys[i]:
+            if k in uploaded_files:
+                slot_inputs[i] = uploaded_files[k]
+                break
+        # 2. Campo en el diccionario de datos (JSON o Form field)
+        if slot_inputs[i] is None:
+            for k in slot_keys[i]:
+                val = data.get(k)
+                if val:
+                    slot_inputs[i] = val
+                    break
+        # 3. Posición en lista posicional
+        if slot_inputs[i] is None and i < len(raw_photos_list) and raw_photos_list[i]:
+            slot_inputs[i] = raw_photos_list[i]
 
-    photo_url_1 = _resolve_qc_photo_url(raw_photos[0], session_id, 0)
-    photo_url_2 = _resolve_qc_photo_url(raw_photos[1], session_id, 1)
-    photo_url_3 = _resolve_qc_photo_url(raw_photos[2], session_id, 2)
-    photo_url_4 = _resolve_qc_photo_url(raw_photos[3], session_id, 3)
+    # Materializar y almacenar físicamente las 4 fotos en /static/uploads/qc_photos/
+    resolved_urls: List[str] = []
+    resolved_fnames: List[str] = []
+    resolved_fpaths: List[str] = []
 
-    resolved_photos = [photo_url_1, photo_url_2, photo_url_3, photo_url_4]
-    photos_count = len(resolved_photos)
+    for i in range(4):
+        u, fn, fp = _save_and_resolve_qc_photo(slot_inputs[i], session_id, station, pet_name, i)
+        resolved_urls.append(u)
+        resolved_fnames.append(fn)
+        resolved_fpaths.append(fp)
+
+    photo_url_1, photo_url_2, photo_url_3, photo_url_4 = resolved_urls
+    fname_1, fname_2, fname_3, fname_4 = resolved_fnames
+    fpath_1, fpath_2, fpath_3, fpath_4 = resolved_fpaths
+    photos_count = len(resolved_urls)
+
+    photos_details = [
+        {"index": 1, "slot": "Slot 1 - Frontal / Rostro", "url": photo_url_1, "filename": fname_1, "filepath": fpath_1},
+        {"index": 2, "slot": "Slot 2 - Lateral Izquierdo", "url": photo_url_2, "filename": fname_2, "filepath": fpath_2},
+        {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3, "filename": fname_3, "filepath": fpath_3},
+        {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4, "filename": fname_4, "filepath": fpath_4}
+    ]
 
     # 1. Auditoría inmutable de seguridad
     u = current_user(request)
@@ -3114,10 +3409,18 @@ async def handle_grooming_qc_photos(request: Request):
             "station": station,
             "supervisorNotes": supervisor_notes,
             "photosCount": photos_count,
+            "filename_1": fname_1,
+            "filename_2": fname_2,
+            "filename_3": fname_3,
+            "filename_4": fname_4,
             "photoUrl1": photo_url_1,
             "photoUrl2": photo_url_2,
             "photoUrl3": photo_url_3,
             "photoUrl4": photo_url_4,
+            "foto_1": photo_url_1,
+            "foto_2": photo_url_2,
+            "foto_3": photo_url_3,
+            "foto_4": photo_url_4,
             "driveFolderUrl": drive_url,
             "telegramTarget": "@ONEILnewBot",
             "telegramChatId": resolved_chat_id,
@@ -3128,7 +3431,7 @@ async def handle_grooming_qc_photos(request: Request):
         ip=client_ip(request)
     )
 
-    # 2. Despacho a Make.com (vía webhook oficial con URLs directas de imágenes y metadatos completos)
+    # 2. Despacho a Make.com (vía webhook oficial con nombres de archivos y URLs únicas directas)
     make_result = {"status": "skipped"}
     make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
     
@@ -3146,22 +3449,55 @@ async def handle_grooming_qc_photos(request: Request):
         "supervisorNotes": supervisor_notes,
         "driveFolderUrl": drive_url,
         "photosCount": photos_count,
-        "photos": resolved_photos,
-        "photoUrls": resolved_photos,
-        "photoUrl1": photo_url_1,
-        "photoUrl2": photo_url_2,
-        "photoUrl3": photo_url_3,
-        "photoUrl4": photo_url_4,
+        # Nombres de archivos físicos únicos y diferenciados en Render
+        "filename_1": fname_1,
+        "filename_2": fname_2,
+        "filename_3": fname_3,
+        "filename_4": fname_4,
+        "filenames": resolved_fnames,
+        # Rutas de almacenamiento en servidor
+        "filepath_1": fpath_1,
+        "filepath_2": fpath_2,
+        "filepath_3": fpath_3,
+        "filepath_4": fpath_4,
+        "filepaths": resolved_fpaths,
+        # Campos canónicos en español requeridos para Make y Telegram
+        "foto_1": photo_url_1,
+        "foto_2": photo_url_2,
+        "foto_3": photo_url_3,
+        "foto_4": photo_url_4,
+        "foto1": photo_url_1,
+        "foto2": photo_url_2,
+        "foto3": photo_url_3,
+        "foto4": photo_url_4,
+        "foto_url_1": photo_url_1,
+        "foto_url_2": photo_url_2,
+        "foto_url_3": photo_url_3,
+        "foto_url_4": photo_url_4,
+        "fotoUrl1": photo_url_1,
+        "fotoUrl2": photo_url_2,
+        "fotoUrl3": photo_url_3,
+        "fotoUrl4": photo_url_4,
+        # Campos equivalentes en inglés para retrocompatibilidad
+        "photo_1": photo_url_1,
+        "photo_2": photo_url_2,
+        "photo_3": photo_url_3,
+        "photo_4": photo_url_4,
         "photo1": photo_url_1,
         "photo2": photo_url_2,
         "photo3": photo_url_3,
         "photo4": photo_url_4,
-        "photosDetails": [
-            {"index": 1, "slot": "Slot 1 - Frontal / Rostro", "url": photo_url_1},
-            {"index": 2, "slot": "Slot 2 - Lateral Izquierdo", "url": photo_url_2},
-            {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
-            {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
-        ],
+        "photoUrl1": photo_url_1,
+        "photoUrl2": photo_url_2,
+        "photoUrl3": photo_url_3,
+        "photoUrl4": photo_url_4,
+        # Colecciones
+        "photos": resolved_urls,
+        "fotos": resolved_urls,
+        "photoUrls": resolved_urls,
+        "fotoUrls": resolved_urls,
+        "photosDetails": photos_details,
+        # Identidad Telegram & O'Neil
         "telegramTarget": "@ONEILnewBot",
         "telegramChatId": resolved_chat_id,
         "chat_id": resolved_chat_id,
@@ -3192,22 +3528,23 @@ async def handle_grooming_qc_photos(request: Request):
     except Exception as e:
         make_result = {"status": "error", "error": str(e)}
 
-    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (vía sendPhoto con HTML y resolución de chat_id)
+    # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (Álbum nativo sendMediaGroup con fallback robusto)
     _send_telegram_grooming_photos(
         pet_name=pet_name,
         tutor_name=tutor_name,
         station=station,
-        photos=resolved_photos,
+        photos=resolved_urls,
         notes=supervisor_notes,
         drive_url=drive_url,
         target_chat=resolved_chat_id,
-        breed=breed
+        breed=breed,
+        filepaths=resolved_fpaths
     )
 
     return {
         "status": 200,
         "success": True,
-        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. Fotos transferidas a Telegram @ONEILnewBot ({GROOMING_QC_SUPERGROUP_TITLE} • {resolved_chat_id}) y Make.com ({make_url}).",
+        "message": f"Sesión Grooming QC para {pet_name} registrada con éxito. 4 fotos físicas generadas e indexadas para Telegram @ONEILnewBot ({GROOMING_QC_SUPERGROUP_TITLE} • {resolved_chat_id}) y Make.com ({make_url}).",
         "sessionId": session_id,
         "petId": pet_id,
         "petName": pet_name,
@@ -3217,22 +3554,48 @@ async def handle_grooming_qc_photos(request: Request):
         "supervisorNotes": supervisor_notes,
         "driveFolderUrl": drive_url,
         "photosCount": photos_count,
-        "photos": resolved_photos,
-        "photoUrls": resolved_photos,
-        "photoUrl1": photo_url_1,
-        "photoUrl2": photo_url_2,
-        "photoUrl3": photo_url_3,
-        "photoUrl4": photo_url_4,
+        # Nombres de archivos físicos únicos
+        "filename_1": fname_1,
+        "filename_2": fname_2,
+        "filename_3": fname_3,
+        "filename_4": fname_4,
+        "filenames": resolved_fnames,
+        # Rutas de almacenamiento en disco
+        "filepath_1": fpath_1,
+        "filepath_2": fpath_2,
+        "filepath_3": fpath_3,
+        "filepath_4": fpath_4,
+        "filepaths": resolved_fpaths,
+        # URLs individuales completas
+        "foto_1": photo_url_1,
+        "foto_2": photo_url_2,
+        "foto_3": photo_url_3,
+        "foto_4": photo_url_4,
+        "foto1": photo_url_1,
+        "foto2": photo_url_2,
+        "foto3": photo_url_3,
+        "foto4": photo_url_4,
+        "photo_1": photo_url_1,
+        "photo_2": photo_url_2,
+        "photo_3": photo_url_3,
+        "photo_4": photo_url_4,
         "photo1": photo_url_1,
         "photo2": photo_url_2,
         "photo3": photo_url_3,
         "photo4": photo_url_4,
-        "photosDetails": [
-            {"index": 1, "slot": "Slot 1 - Frontal / Rostro", "url": photo_url_1},
-            {"index": 2, "slot": "Slot 2 - Lateral Izquierdo", "url": photo_url_2},
-            {"index": 3, "slot": "Slot 3 - Lateral Derecho", "url": photo_url_3},
-            {"index": 4, "slot": "Slot 4 - Detalle / Moño", "url": photo_url_4}
-        ],
+        "photoUrl1": photo_url_1,
+        "photoUrl2": photo_url_2,
+        "photoUrl3": photo_url_3,
+        "photoUrl4": photo_url_4,
+        "fotoUrl1": photo_url_1,
+        "fotoUrl2": photo_url_2,
+        "fotoUrl3": photo_url_3,
+        "fotoUrl4": photo_url_4,
+        "photos": resolved_urls,
+        "fotos": resolved_urls,
+        "photoUrls": resolved_urls,
+        "fotoUrls": resolved_urls,
+        "photosDetails": photos_details,
         "telegramTarget": "@ONEILnewBot",
         "telegramChatId": resolved_chat_id,
         "telegramGroupTitle": GROOMING_QC_SUPERGROUP_TITLE,
@@ -4880,6 +5243,10 @@ if os.path.isdir(STATIC_DIR):
     assets_dir = os.path.join(STATIC_DIR, "assets")
     if os.path.isdir(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    uploads_dir = os.path.join(STATIC_DIR, "uploads")
+    os.makedirs(os.path.join(uploads_dir, "qc_photos"), exist_ok=True)
+    if os.path.isdir(uploads_dir):
+        app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 if os.path.isdir(DATA_DIR):

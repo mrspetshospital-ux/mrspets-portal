@@ -2721,7 +2721,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     const baseUrl = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://mrspets-portal.onrender.com';
     const presets = [
       `${baseUrl}/assets/hero_border_collie.jpg`,
-      `${baseUrl}/assets/media__1787694901704.jpg`,
+      `${baseUrl}/assets/media_1787694901704.jpg`,
       `${baseUrl}/assets/media_1789775225842.jpg`,
       `${baseUrl}/assets/leia_avatar.jpg`
     ];
@@ -2751,7 +2751,17 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       station: station,
       photosCount: 4,
       photos: validPhotos,
+      fotos: validPhotos,
       photoUrls: validPhotos,
+      fotoUrls: validPhotos,
+      foto_1: validPhotos[0] || presets[0],
+      foto_2: validPhotos[1] || presets[1],
+      foto_3: validPhotos[2] || presets[2],
+      foto_4: validPhotos[3] || presets[3],
+      foto1: validPhotos[0] || presets[0],
+      foto2: validPhotos[1] || presets[1],
+      foto3: validPhotos[2] || presets[2],
+      foto4: validPhotos[3] || presets[3],
       photoUrl1: validPhotos[0] || presets[0],
       photoUrl2: validPhotos[1] || presets[1],
       photoUrl3: validPhotos[2] || presets[2],
