@@ -2905,23 +2905,8 @@ def _send_telegram_notification(text: str, chat_id: Optional[str] = None):
     def _worker():
         try:
             token = os.environ.get("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
-            target_ids = []
-            if chat_id:
-                target_ids.append(_resolve_telegram_chat_id(chat_id))
-            else:
-                target_ids.append(GROOMING_QC_SUPERGROUP_ID)
-                try:
-                    up_url = f"https://api.telegram.org/bot{token}/getUpdates"
-                    with urllib.request.urlopen(up_url, timeout=4) as r:
-                        up_data = json.loads(r.read().decode("utf-8"))
-                        if up_data.get("ok"):
-                            for update in up_data.get("result", []):
-                                c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
-                                cid = c.get("id")
-                                if cid and str(cid) not in [str(x) for x in target_ids]:
-                                    target_ids.append(cid)
-                except Exception:
-                    pass
+            # Destino único y exacto sin duplicación por getUpdates
+            target_ids = [_resolve_telegram_chat_id(chat_id)] if chat_id else [GROOMING_QC_SUPERGROUP_ID]
 
             for cid in target_ids:
                 try:
@@ -3152,19 +3137,8 @@ def _send_telegram_grooming_photos(
             resolved_target = _resolve_telegram_chat_id(target_chat)
             qc_reply_markup = reply_markup or _build_qc_reply_markup(pet_id)
             
-            target_ids = [resolved_target]
-            try:
-                up_url = f"https://api.telegram.org/bot{token}/getUpdates"
-                with urllib.request.urlopen(up_url, timeout=4) as r:
-                    up_data = json.loads(r.read().decode("utf-8"))
-                    if up_data.get("ok"):
-                        for update in up_data.get("result", []):
-                            c = update.get("message", {}).get("chat", {}) or update.get("channel_post", {}).get("chat", {})
-                            cid = c.get("id")
-                            if cid and str(cid) not in [str(x) for x in target_ids]:
-                                target_ids.append(cid)
-            except Exception:
-                pass
+            # 🛡️ Destino único y exclusivo: evitar duplicación de envíos al supergrupo
+            target_ids = [resolved_target] if resolved_target else [GROOMING_QC_SUPERGROUP_ID]
 
             p1 = photos[0] if len(photos) > 0 and photos[0] else DEFAULT_QC_PHOTOS[0]
             p2 = photos[1] if len(photos) > 1 and photos[1] else DEFAULT_QC_PHOTOS[1]
@@ -4295,6 +4269,13 @@ def get_official_agents_list():
     }
 
 
+# =====================================================================
+# DEDUPLICACIÓN DE SESIONES GROOMING QC (ANTI-REPETICIÓN)
+# =====================================================================
+_last_qc_submissions: Dict[str, float] = {}
+_qc_submission_lock = threading.Lock()
+
+
 @app.post("/api/grooming/qc-photos")
 @app.post("/api/v1/grooming/qc-photos")
 @app.post("/api/grooming/transfer-to-telegram")
@@ -4305,7 +4286,7 @@ async def handle_grooming_qc_photos(request: Request):
     Garantiza 4 archivos físicos únicos en Render para foto_1, foto_2, foto_3 y foto_4,
     sin solapamientos entre estaciones y soportando tanto JSON como Multipart Form-Data.
     """
-    global _live_pet_status_revision
+    global _live_pet_status_revision, _last_qc_submissions
     content_type = request.headers.get("content-type", "").lower()
     data: Dict[str, Any] = {}
     uploaded_files: Dict[str, Any] = {}
@@ -4329,6 +4310,27 @@ async def handle_grooming_qc_photos(request: Request):
     pet_id = data.get("petId") or data.get("pet_id") or "PET-101"
     session_id = data.get("sessionId") or data.get("session_id") or f"QC-GROOM-{int(time.time() * 1000)}"
     pet_name = data.get("petName") or data.get("pet_name") or "Consentido(a) VIP"
+
+    # 🛡️ DEDUPLICACIÓN EN SERVIDOR (VENTANA ANTI-REPETICIÓN DE 6 SEGUNDOS)
+    now_ts = time.time()
+    with _qc_submission_lock:
+        last_time = max(_last_qc_submissions.get(pet_id, 0.0), _last_qc_submissions.get(session_id, 0.0))
+        if (now_ts - last_time) < 6.0:
+            log.warning("[GROOMING QC DEDUP] Solicitud repetida para mascota %s (sesión %s) recibida dentro de 6s. Deduplicando para evitar reenvío múltiple a Telegram y Make.", pet_id, session_id)
+            return {
+                "status": 200,
+                "success": True,
+                "message": f"Sesión Grooming QC para {pet_name} ya fue procesada recientemente (Deduplicada con éxito).",
+                "sessionId": session_id,
+                "petId": pet_id,
+                "petName": pet_name,
+                "deduplicated": True
+            }
+        _last_qc_submissions[pet_id] = now_ts
+        _last_qc_submissions[session_id] = now_ts
+        if len(_last_qc_submissions) > 60:
+            _last_qc_submissions = {k: v for k, v in _last_qc_submissions.items() if (now_ts - v) < 120.0}
+
     tutor_name = data.get("tutorName") or data.get("tutor_name") or "Tutor VIP"
     breed = data.get("breed") or data.get("pet_breed") or "Príncipe / Princesa Canina"
     station = data.get("station") or data.get("groomingStation") or "Circuito Grooming Spa 7 Estaciones"

@@ -2694,6 +2694,8 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
 
   closeEmployeeCameraModal() {
     this.stopLiveCamera();
+    this._isSubmittingQcPhotos = false;
+    this.qcSessionPhotos = [null, null, null, null];
     if (window.app && typeof window.app.closeModal === 'function') {
       window.app.closeModal('employee-camera-modal');
     } else {
@@ -2703,7 +2705,24 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
   }
 
   submitInternalPhotoUpload(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+
+    // 🛡️ PROTECCIÓN ANTI-REPETICIÓN: Evita doble clic o envíos concurrentes
+    if (this._isSubmittingQcPhotos) {
+      console.warn('[GROOMING QC] Envío ya en curso. Clic duplicado bloqueado.');
+      return;
+    }
+    this._isSubmittingQcPhotos = true;
+
+    // Deshabilitar botón inmediatamente y mostrar estado de carga
+    const submitBtn = document.getElementById('btn-submit-qc-session');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.65';
+      submitBtn.style.cursor = 'wait';
+      submitBtn.innerHTML = '<span>⏳ Transmitiendo 4 fotos a Supervisora...</span>';
+    }
+
     const petSelect = document.getElementById('qc-photo-pet-select');
     const stationSelect = document.getElementById('qc-photo-station-select');
     const driveInput = document.getElementById('qc-drive-folder-url');
@@ -2837,17 +2856,29 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       }
     }
 
-    // Despacho a backend `/api/grooming/qc-photos`
-    try {
-      fetch('/api/grooming/qc-photos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sessionRecord)
-      }).catch(e => console.log('[GROOMING QC] Despacho local API:', e));
-    } catch(e) {}
-
-    // Despacho a Make.com Webhook para procesamiento de redes sociales
-    this.triggerMakeWebhook('grooming_qc_social_media_ready', sessionRecord);
+    // 🚀 DESPACHO ÚNICO Y CENTRALIZADO AL BACKEND `/api/grooming/qc-photos`:
+    // El servidor en Render procesa las fotos, las guarda físicamente, despacha el webhook a Make.com
+    // (con las 11 variables para Google Sheets MPF) y publica el álbum en Telegram (@ONEILnewBot).
+    // Se elimina el doble despacho concurrente de Make.com desde el cliente para evitar envíos repetidos.
+    fetch('/api/grooming/qc-photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionRecord)
+    })
+    .then(async res => {
+      const respData = await res.json().catch(() => ({}));
+      console.log('[GROOMING QC] Despacho exitoso confirmado por backend:', respData);
+    })
+    .catch(err => {
+      console.warn('[GROOMING QC] Servidor local no respondió, ejecutando fallback directo de contingencia a Make:', err);
+      // Fallback de contingencia ÚNICAMENTE si el backend en Render es inalcanzable
+      try {
+        this.triggerMakeWebhook('grooming_qc_social_media_ready', sessionRecord);
+      } catch(ex_fb) {}
+    })
+    .finally(() => {
+      this._isSubmittingQcPhotos = false;
+    });
 
     // Apagar cámara y cerrar modal
     this.stopLiveCamera();
