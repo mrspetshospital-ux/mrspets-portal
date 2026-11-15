@@ -1,7 +1,7 @@
 {
   "queriesToday": 151,
   "makeFailoverAlerts": 1,
-  "teamilyWebhookUrl": "https://api.teamily.ai/v1/mrspets/orchestrate",
+  "teamilyWebhookUrl": "https://teamily.ai/v1/agents/geo-a/responses",
   "makeWebhookUrl": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
   "brainDriveUrl": "https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge",
   "agentName": "Leia \ud83c\udf80 (Asistente Ejecutiva & Concierge VIP)",

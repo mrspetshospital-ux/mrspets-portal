@@ -4995,7 +4995,7 @@ async def get_agent_studio_config():
     default_config = {
         "queriesToday": 150,
         "makeFailoverAlerts": 1,
-        "teamilyWebhookUrl": "https://api.teamily.ai/v1/mrspets/orchestrate",
+        "teamilyWebhookUrl": "https://teamily.ai/v1/agents/geo-a/responses",
         "makeWebhookUrl": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
         "brainDriveUrl": "https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge",
         "agentName": "Leia 🎀 (Asistente Ejecutiva & Concierge VIP)",
@@ -5052,7 +5052,7 @@ async def agent_studio_dispatch_test(request: Request):
 
     channel = body.get("channel") or "make"
     payload = body.get("payload") or {"test": "agent_studio_live_dispatch", "timestamp": datetime.now(timezone.utc).isoformat()}
-    teamily_url = body.get("teamilyUrl") or "https://api.teamily.ai/v1/mrspets/orchestrate"
+    teamily_url = body.get("teamilyUrl") or "https://teamily.ai/v1/agents/geo-a/responses"
     make_url = body.get("makeUrl") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     timeout_sec = int(body.get("timeout") or 8)
 
