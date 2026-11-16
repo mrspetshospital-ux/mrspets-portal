@@ -6457,9 +6457,9 @@ async def simulate_binance_payment(request: Request):
 @app.get("/api/v1/biotracker/hotspots")
 def get_biotracker_hotspots():
     """Retorna los focos epidemiológicos y geocercas sanitarias de Maracaibo para BioTracker GeoGuard."""
-    clients_file = DATA_DIR / "biotracker_clients.json"
+    clients_file = os.path.join(DATA_DIR, "biotracker_clients.json")
     sector_counts = {}
-    if clients_file.exists():
+    if os.path.exists(clients_file):
         try:
             with open(clients_file, "r", encoding="utf-8") as f:
                 cdata = json.load(f)
