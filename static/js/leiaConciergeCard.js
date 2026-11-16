@@ -223,44 +223,109 @@
     async processAiResponse(userText) {
       const lower = userText.toLowerCase();
 
-      // Petición real según Inteligencia Primaria Activa (Teamily o Google Gemini)
+      // Petición real según Inteligencia Primaria Activa y Regla de Dualidad Operativa (Timeout Failover)
       try {
         const activeModel = (window.mrsPetsArch && typeof window.mrsPetsArch.getActiveAiModelId === 'function')
           ? window.mrsPetsArch.getActiveAiModelId()
           : (localStorage.getItem('mrspets_active_ai_model') || 'teamly-orchestrator');
         const isTeamly = String(activeModel).toLowerCase().includes('teamly');
-        const targetEndpoint = isTeamly ? '/api/v1/teamily/agent-chat' : '/api/v1/leia/chat';
+        const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
 
-        const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-        const res = await fetch(targetEndpoint, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-message-id': msgId
-          },
-          body: JSON.stringify({
-            message_id: msgId,
-            agente_origen: 'user',
-            input: userText,
-            message: userText,
-            model: activeModel,
-            agent_slug: 'leia',
-            agent_name: 'Leia Concierge VIP & Asistencia CEO',
-            board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-            context: {
-              userName: 'Cliente VIP',
-              channel: 'Modal Concierge Card (Leia Concierge)'
+        let responseReceived = false;
+
+        if (isTeamly) {
+          // =========================================================================
+          // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DE 20S
+          // =========================================================================
+          try {
+            const abortCtrl = new AbortController();
+            const timeoutTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
+            const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+
+            const res = await fetch('/api/v1/teamily/agent-chat', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-message-id': msgId
+              },
+              body: JSON.stringify({
+                message_id: msgId,
+                agente_origen: 'user',
+                input: userText,
+                message: userText,
+                model: 'teamly-orchestrator',
+                agent_slug: 'leia',
+                agent_name: 'Leia Concierge VIP & Asistencia CEO',
+                board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+                context: {
+                  userName: 'Cliente VIP',
+                  channel: 'Modal Concierge Card (Leia Concierge)'
+                }
+              }),
+              signal: abortCtrl.signal
+            });
+            clearTimeout(timeoutTimer);
+
+            if (res.ok) {
+              const data = await res.json();
+              const reply = typeof data.response_text === 'object' && data.response_text.text
+                ? data.response_text.text
+                : (data.response_text || (data.output && data.output.text) || data.reply);
+              if (reply && String(reply).trim().length > 0 && !String(reply).includes('serverMsgID')) {
+                this.appendLeiaBotMessage(reply);
+                responseReceived = true;
+                return;
+              }
             }
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const reply = typeof data.response_text === 'object' && data.response_text.text
-            ? data.response_text.text
-            : (data.response_text || (data.output && data.output.text));
-          if (reply && String(reply).trim().length > 0) {
-            this.appendLeiaBotMessage(reply);
-            return;
+          } catch (teamilyErr) {
+            console.warn(`[LeiaConciergeCard] Teamily no respondió dentro del estándar de ${timeoutSec}s o falló. Activando Failover Automático hacia Gemini...`, teamilyErr);
+            if (window.agentStudio) {
+              window.agentStudio.makeFailoverAlerts = (window.agentStudio.makeFailoverAlerts || 0) + 1;
+              window.agentStudio.updateKpiCounters();
+            }
+          }
+        }
+
+        // =========================================================================
+        // 2. FAILOVER AUTOMÁTICO / CANAL DIRECTO: GOOGLE GEMINI 3.8 FLASH
+        // =========================================================================
+        if (!responseReceived) {
+          const gemAbortCtrl = new AbortController();
+          const gemTimeoutTimer = setTimeout(() => gemAbortCtrl.abort(), 15000);
+          const gemMsgId = 'MSG-GEMINI-' + Date.now();
+
+          const gemRes = await fetch('/api/v1/leia/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-message-id': gemMsgId
+            },
+            body: JSON.stringify({
+              message_id: gemMsgId,
+              agente_origen: 'user',
+              input: userText,
+              message: userText,
+              model: 'gemini-3.8-flash',
+              agent_slug: 'leia',
+              agent_name: 'Leia Concierge VIP & Asistencia CEO',
+              context: {
+                userName: 'Cliente VIP',
+                channel: 'Modal Concierge Card (Failover Gemini)'
+              }
+            }),
+            signal: gemAbortCtrl.signal
+          });
+          clearTimeout(gemTimeoutTimer);
+
+          if (gemRes.ok) {
+            const gemData = await gemRes.json();
+            const reply = typeof gemData.response_text === 'object' && gemData.response_text.text
+              ? gemData.response_text.text
+              : (gemData.response_text || (gemData.output && gemData.output.text) || gemData.reply);
+            if (reply && String(reply).trim().length > 0) {
+              this.appendLeiaBotMessage(reply);
+              return;
+            }
           }
         }
       } catch (e) {

@@ -2129,30 +2129,35 @@ async def leia_chat_v1(request: Request):
     }
     _async_notify_make_webhook(make_url, make_payload)
 
-    # Si el modelo activo es de la familia Teamily
+    # Si el modelo activo es de la familia Teamily (Canal Principal con Failover Automático a Gemini)
     if "teamly" in str(ai_model).lower():
         message_id = f"MSG-LEIA-{uuid.uuid4().hex[:6]}"
         if centralita_router:
-            route_res = centralita_router.route_message(
-                message_id=message_id,
-                user_input=user_message,
-                requested_slug="leia",
-                context={"userName": user_name, "petName": pet_name, "userType": user_type},
-                agente_origen="user"
-            )
-            return {
-                "status": "success",
-                "reply": route_res.get("response_text") or route_res.get("reply"),
-                "response_text": route_res.get("response_text") or route_res.get("reply"),
-                "model_used": "teamly-orchestrator",
-                "latency_ms": 350
-            }
+            try:
+                route_res = centralita_router.route_message(
+                    message_id=message_id,
+                    user_input=user_message,
+                    requested_slug="leia",
+                    context={"userName": user_name, "petName": pet_name, "userType": user_type},
+                    agente_origen="user"
+                )
+                reply = route_res.get("response_text") or route_res.get("reply")
+                if reply and "serverMsgID" not in str(reply) and len(str(reply).strip()) > 0:
+                    return {
+                        "status": "success",
+                        "reply": reply,
+                        "response_text": reply,
+                        "model_used": "teamly-orchestrator",
+                        "latency_ms": 350
+                    }
+            except Exception as e:
+                log.warning("Fallo o demora en Teamily, ejecutando Failover Automático hacia Gemini: %s", e)
 
-    # Inferencia inteligente con Google Gemini
+    # Inferencia inteligente con Google Gemini (Primario o Failover Automático por Timeout de 20s)
     gem_res = _call_gemini_for_leia_engine(
         user_message=user_message,
         history=history,
-        requested_model=ai_model
+        requested_model=ai_model if "gemini" in str(ai_model).lower() else "gemini-3.8-flash"
     )
     reply_text = gem_res.get("reply") or ""
 
@@ -2162,7 +2167,7 @@ async def leia_chat_v1(request: Request):
                 message_id=f"LEIA-{uuid.uuid4().hex[:6]}",
                 agente_origen="Tutor / Staff",
                 agente_destino="leia",
-                webhook_utilizado=f"Google Gemini ({gem_res.get('model_used')})",
+                webhook_utilizado=f"Google Gemini ({gem_res.get('model_used')}) [Dualidad Failover]",
                 estado="CONCIERGE_ATENDIDO",
                 respuesta_preview=reply_text[:90]
             )
@@ -5071,7 +5076,7 @@ async def agent_studio_dispatch_test(request: Request):
     payload = body.get("payload") or {"test": "agent_studio_live_dispatch", "timestamp": datetime.now(timezone.utc).isoformat()}
     teamily_url = body.get("teamilyUrl") or "https://teamily.ai/v1/agents/geo-a/responses"
     make_url = body.get("makeUrl") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
-    timeout_sec = int(body.get("timeout") or 8)
+    timeout_sec = int(body.get("timeout") or 20)
 
     t0 = time.time()
     ctx_ssl = ssl.create_default_context()

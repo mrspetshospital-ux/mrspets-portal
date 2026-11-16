@@ -936,81 +936,150 @@
             }
 
             // 1. En todos los demás casos: LEIA RESPONDE CON PROTOCOLO CONCIERGE VIP & ASISTENCIA CEO
-            // Petición POST real al backend (Google Gemini o Teamily según selección)
+            // Petición POST real al backend con regla de Dualidad Operativa (Failover Automático Teamily -> Gemini)
             try {
                 this.showTypingIndicator(true);
                 const activeModel = (window.mrsPetsArch && typeof window.mrsPetsArch.getActiveAiModelId === 'function')
                     ? window.mrsPetsArch.getActiveAiModelId()
-                    : 'gemini-3.8-flash';
+                    : 'teamly-orchestrator';
                 const isTeamly = activeModel.includes('teamly');
-                const targetEndpoint = isTeamly ? '/api/v1/teamily/agent-chat' : '/api/v1/leia/chat';
+                const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
 
-                const abortCtrl = new AbortController();
-                const timeoutId = setTimeout(() => abortCtrl.abort(), 12000);
-                const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-                const res = await fetch(targetEndpoint, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-message-id': messageId
-                    },
-                    body: JSON.stringify({
-                        message_id: messageId,
-                        agente_origen: 'user',
-                        input: userText,
-                        message: userText,
-                        model: activeModel,
-                        agent_slug: 'leia',
-                        agent_name: 'Leia Concierge VIP & Asistencia CEO',
-                        board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-                        userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                        petName: this.lastActivePetName || '',
-                        userType: isStaff ? 'staff_admin' : 'client',
-                        context: {
-                            userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                            petName: this.lastActivePetName || '',
-                            userType: isStaff ? 'staff_admin' : 'client',
-                            channel: 'Widget Search (Leia Search)',
-                            activeModel: activeModel
+                let replyObtained = null;
+
+                // =========================================================================
+                // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DE 20S
+                // =========================================================================
+                if (isTeamly) {
+                    try {
+                        const abortCtrl = new AbortController();
+                        const timeoutId = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
+                        const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+                        const res = await fetch('/api/v1/teamily/agent-chat', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'x-message-id': messageId
+                            },
+                            body: JSON.stringify({
+                                message_id: messageId,
+                                agente_origen: 'user',
+                                input: userText,
+                                message: userText,
+                                model: activeModel,
+                                agent_slug: 'leia',
+                                agent_name: 'Leia Concierge VIP & Asistencia CEO',
+                                board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+                                userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                                petName: this.lastActivePetName || '',
+                                userType: isStaff ? 'staff_admin' : 'client',
+                                context: {
+                                    userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                                    petName: this.lastActivePetName || '',
+                                    userType: isStaff ? 'staff_admin' : 'client',
+                                    channel: 'Widget Search (Leia Search)',
+                                    activeModel: activeModel
+                                }
+                            }),
+                            signal: abortCtrl.signal
+                        });
+                        clearTimeout(timeoutId);
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            const rawReply = typeof data.response_text === 'object' && data.response_text.text 
+                                ? data.response_text.text 
+                                : (data.response_text || data.reply || (data.output && data.output.text));
+
+                            const isReceipt = String(rawReply).includes('serverMsgID');
+                            if (!isReceipt && rawReply && String(rawReply).trim().length > 0) {
+                                replyObtained = rawReply;
+                            }
                         }
-                    }),
-                    signal: abortCtrl.signal
-                });
-                clearTimeout(timeoutId);
-                const data = await res.json();
+                    } catch (teamilyErr) {
+                        console.warn(`[LeiaChatEngine] Teamily superó el lapso de ${timeoutSec}s o falló. Activando Failover Automático hacia Gemini...`, teamilyErr);
+                        if (window.agentStudio) {
+                            window.agentStudio.makeFailoverAlerts = (window.agentStudio.makeFailoverAlerts || 0) + 1;
+                            window.agentStudio.updateKpiCounters();
+                        }
+                    }
+                }
+
+                // =========================================================================
+                // 2. FAILOVER AUTOMÁTICO / CANAL DIRECTO: GOOGLE GEMINI 3.8 FLASH
+                // =========================================================================
+                if (!replyObtained) {
+                    try {
+                        const gemAbort = new AbortController();
+                        const gemTimeout = setTimeout(() => gemAbort.abort(), 15000);
+                        const gemMsgId = 'MSG-GEMINI-' + Date.now();
+                        const gemRes = await fetch('/api/v1/leia/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-message-id': gemMsgId
+                            },
+                            body: JSON.stringify({
+                                message_id: gemMsgId,
+                                agente_origen: 'user',
+                                input: userText,
+                                message: userText,
+                                model: 'gemini-3.8-flash',
+                                agent_slug: 'leia',
+                                agent_name: 'Leia Concierge VIP & Asistencia CEO',
+                                userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                                petName: this.lastActivePetName || '',
+                                userType: isStaff ? 'staff_admin' : 'client',
+                                context: {
+                                    userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                                    petName: this.lastActivePetName || '',
+                                    userType: isStaff ? 'staff_admin' : 'client',
+                                    channel: 'Widget Search (Failover Gemini)'
+                                }
+                            }),
+                            signal: gemAbort.signal
+                        });
+                        clearTimeout(gemTimeout);
+                        if (gemRes.ok) {
+                            const gemData = await gemRes.json();
+                            const rawReply = typeof gemData.response_text === 'object' && gemData.response_text.text 
+                                ? gemData.response_text.text 
+                                : (gemData.response_text || gemData.reply || (gemData.output && gemData.output.text));
+                            if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
+                                replyObtained = rawReply;
+                            }
+                        }
+                    } catch (gemErr) {
+                        console.warn('[LeiaChatEngine] Error en Gemini fallback:', gemErr);
+                    }
+                }
+
                 this.showTypingIndicator(false);
 
-                if (res.ok && data) {
-                    const rawReply = typeof data.response_text === 'object' && data.response_text.text 
-                        ? data.response_text.text 
-                        : (data.response_text || data.reply || (data.output && data.output.text));
-
-                    const isReceipt = String(rawReply).includes('serverMsgID');
-                    if (!isReceipt && rawReply && String(rawReply).trim().length > 0) {
-                        const lowerUser = (userText || '').toLowerCase();
-                        const isBookingContext = lowerUser.includes('reserva') || lowerUser.includes('cita') || 
-                                                lowerUser.includes('turno') || lowerUser.includes('agendar') || 
-                                                lowerUser.includes('horario') || lowerUser.includes('baño') || 
-                                                lowerUser.includes('grooming') || lowerUser.includes('clinica') ||
-                                                lowerUser.includes('domingo');
-                        let dynamicButtons = null;
-                        if (isBookingContext) {
-                            dynamicButtons = [
-                                '✂️ Cita Grooming Spa',
-                                '🩺 Consulta Dra. Margaret',
-                                '🏨 Suite Hotel VIP 5★',
-                                '📅 Ver Disponibilidad'
-                            ];
-                        }
-
-                        this.addMessage({
-                            sender: 'leia',
-                            text: rawReply,
-                            buttons: dynamicButtons,
-                            timestamp: new Date()
-                        });
-                        return;
+                if (replyObtained) {
+                    const lowerUser = (userText || '').toLowerCase();
+                    const isBookingContext = lowerUser.includes('reserva') || lowerUser.includes('cita') || 
+                                            lowerUser.includes('turno') || lowerUser.includes('agendar') || 
+                                            lowerUser.includes('horario') || lowerUser.includes('baño') || 
+                                            lowerUser.includes('grooming') || lowerUser.includes('clinica') ||
+                                            lowerUser.includes('domingo');
+                    let dynamicButtons = null;
+                    if (isBookingContext) {
+                        dynamicButtons = [
+                            '✂️ Cita Grooming Spa',
+                            '🩺 Consulta Dra. Margaret',
+                            '🏨 Suite Hotel VIP 5★',
+                            '📅 Ver Disponibilidad'
+                        ];
                     }
+
+                    this.addMessage({
+                        sender: 'leia',
+                        text: replyObtained,
+                        buttons: dynamicButtons,
+                        timestamp: new Date()
+                    });
+                    return;
                 }
             } catch (err) {
                 // Contingencia de red o timeout: activación instantánea de base de conocimiento local

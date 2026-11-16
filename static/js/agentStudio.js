@@ -28,7 +28,7 @@ class AgentStudio {
 
     // Configuración de Gobernanza & Failover
     this.primaryEngine = 'teamily'; // 'teamily' | 'make' | 'auto'
-    this.failoverTimeoutSeconds = 8; // Predeterminado: 8 segundos
+    this.failoverTimeoutSeconds = 20; // Estándar predeterminado: 20 segundos
     this.autoFailoverEnabled = true;
 
     // Métricas y Contadores
@@ -50,23 +50,18 @@ class AgentStudio {
     // 2. Vincular slider e input de timeout de gobernanza
     const timeoutInput = document.getElementById('governance-timeout-input');
     const timeoutRange = document.getElementById('governance-timeout-range');
-    const timeoutDisplay = document.getElementById('kpi-timeout-display');
 
     if (timeoutRange && timeoutInput) {
       timeoutRange.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value, 10) || 8;
-        timeoutInput.value = val;
-        this.failoverTimeoutSeconds = val;
-        if (timeoutDisplay) timeoutDisplay.innerText = `${val}.0s`;
+        const val = parseInt(e.target.value, 10) || 20;
+        this.setFailoverTimeout(val, false);
       });
 
       timeoutInput.addEventListener('input', (e) => {
         let val = parseInt(e.target.value, 10);
         if (isNaN(val) || val < 2) val = 2;
-        if (val > 30) val = 30;
-        timeoutRange.value = val;
-        this.failoverTimeoutSeconds = val;
-        if (timeoutDisplay) timeoutDisplay.innerText = `${val}.0s`;
+        if (val > 60) val = 60;
+        this.setFailoverTimeout(val, false);
       });
     }
 
@@ -120,7 +115,7 @@ class AgentStudio {
       try {
         const gov = JSON.parse(savedGov);
         if (gov.primaryEngine) this.primaryEngine = gov.primaryEngine;
-        if (gov.failoverTimeout) this.failoverTimeoutSeconds = parseInt(gov.failoverTimeout, 10) || 8;
+        if (gov.failoverTimeout) this.failoverTimeoutSeconds = parseInt(gov.failoverTimeout, 10) || 20;
         if (typeof gov.autoFailoverEnabled === 'boolean') this.autoFailoverEnabled = gov.autoFailoverEnabled;
         if (typeof gov.queriesToday === 'number') this.queriesToday = gov.queriesToday;
         if (typeof gov.makeFailoverAlerts === 'number') this.makeFailoverAlerts = gov.makeFailoverAlerts;
@@ -140,7 +135,7 @@ class AgentStudio {
           }
           if (data.brainDriveUrl) this.brainDriveUrl = data.brainDriveUrl;
           if (data.primaryEngine) this.primaryEngine = data.primaryEngine;
-          if (data.failoverTimeout) this.failoverTimeoutSeconds = parseInt(data.failoverTimeout, 10) || 8;
+          if (data.failoverTimeout) this.failoverTimeoutSeconds = parseInt(data.failoverTimeout, 10) || 20;
           if (typeof data.autoFailoverEnabled === 'boolean') this.autoFailoverEnabled = data.autoFailoverEnabled;
           if (typeof data.queriesToday === 'number') this.queriesToday = data.queriesToday;
           if (typeof data.makeFailoverAlerts === 'number') this.makeFailoverAlerts = data.makeFailoverAlerts;
@@ -183,13 +178,8 @@ class AgentStudio {
       makeIndicator.style.color = '#34d399';
     }
 
-    // Controles de gobernanza
-    const timeoutInput = document.getElementById('governance-timeout-input');
-    const timeoutRange = document.getElementById('governance-timeout-range');
-    const timeoutDisplay = document.getElementById('kpi-timeout-display');
-    if (timeoutInput) timeoutInput.value = this.failoverTimeoutSeconds;
-    if (timeoutRange) timeoutRange.value = this.failoverTimeoutSeconds;
-    if (timeoutDisplay) timeoutDisplay.innerText = `${this.failoverTimeoutSeconds}.0s`;
+    // Controles de gobernanza y sincronización del estándar de timeout
+    this.setFailoverTimeout(this.failoverTimeoutSeconds, false);
 
     const autoToggle = document.getElementById('governance-auto-failover-toggle');
     if (autoToggle) autoToggle.checked = this.autoFailoverEnabled;
@@ -382,8 +372,58 @@ class AgentStudio {
   }
 
   // =========================================================================
-  // 2. PANEL DE GOBERNANZA Y CONTROL DE TIEMPOS (FAILOVER)
+  // 2. PANEL DE GOBERNANZA Y CONTROL DE TIEMPOS (FAILOVER & DUALIDAD)
   // =========================================================================
+
+  setFailoverTimeout(sec, save = true) {
+    let val = parseInt(sec, 10);
+    if (isNaN(val) || val < 2) val = 2;
+    if (val > 60) val = 60;
+    this.failoverTimeoutSeconds = val;
+
+    const timeoutInput = document.getElementById('governance-timeout-input');
+    const timeoutRange = document.getElementById('governance-timeout-range');
+    const timeoutDisplay = document.getElementById('kpi-timeout-display');
+    const ruleLabel = document.getElementById('failover-time-rule-label');
+    const teamilySec1 = document.getElementById('teamily-failover-sec-text');
+    const teamilySec2 = document.getElementById('teamily-failover-sec-text2');
+    const makeSec = document.getElementById('make-failover-sec-text');
+
+    if (timeoutInput && parseInt(timeoutInput.value, 10) !== val) timeoutInput.value = val;
+    if (timeoutRange && parseInt(timeoutRange.value, 10) !== val) timeoutRange.value = val;
+    if (timeoutDisplay) timeoutDisplay.innerText = `${val}.0s`;
+    if (ruleLabel) ruleLabel.innerText = `${val}`;
+    if (teamilySec1) teamilySec1.innerText = `${val}`;
+    if (teamilySec2) teamilySec2.innerText = `${val}`;
+    if (makeSec) makeSec.innerText = `${val}`;
+
+    // Actualizar estilos de los 3 botones presets de tiempo
+    [10, 20, 30].forEach(pSec => {
+      const btn = document.getElementById(`preset-timeout-${pSec}`);
+      if (btn) {
+        if (val === pSec) {
+          btn.style.background = '#10b981';
+          btn.style.color = '#ffffff';
+          btn.style.fontWeight = '800';
+          btn.style.borderColor = '#34d399';
+          btn.style.boxShadow = '0 2px 8px rgba(16,185,129,0.35)';
+        } else {
+          btn.style.background = 'rgba(255,255,255,0.06)';
+          btn.style.color = '#cbd5e1';
+          btn.style.fontWeight = '500';
+          btn.style.borderColor = 'rgba(255,255,255,0.15)';
+          btn.style.boxShadow = 'none';
+        }
+      }
+    });
+
+    if (save) {
+      this.saveGovernanceConfig();
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⏱️ Estándar de ${val}s aplicado: Si Teamily no responde en ${val} segundos, Gemini toma el control.`, 'info');
+      }
+    }
+  }
 
   setPrimaryEngine(mode) {
     this.primaryEngine = mode;
@@ -578,7 +618,7 @@ class AgentStudio {
 
     if (timeoutInput) {
       const val = parseInt(timeoutInput.value, 10);
-      if (!isNaN(val) && val >= 2 && val <= 30) {
+      if (!isNaN(val) && val >= 2 && val <= 60) {
         this.failoverTimeoutSeconds = val;
       }
     }
@@ -605,12 +645,12 @@ class AgentStudio {
 
     if (indicator) {
       const now = new Date().toLocaleTimeString();
-      indicator.innerHTML = `✅ Gobernanza guardada a las ${now} • Timeout: ${this.failoverTimeoutSeconds}s`;
+      indicator.innerHTML = `✅ Gobernanza guardada a las ${now} • Timeout: ${this.failoverTimeoutSeconds}s (Dualidad Activa)`;
       indicator.style.color = '#34d399';
     }
 
     if (window.app && typeof window.app.showToast === 'function') {
-      window.app.showToast(`🎛️ Gobernanza y límite de ${this.failoverTimeoutSeconds}s guardados exitosamente.`, 'success');
+      window.app.showToast(`🎛️ Regla de Dualidad y límite de ${this.failoverTimeoutSeconds}s guardados exitosamente.`, 'success');
     }
   }
 

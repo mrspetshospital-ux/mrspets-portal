@@ -2329,7 +2329,7 @@
                 <div>
                   <div style="font-size:0.72rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Tiempo Límite Failover</div>
                   <div style="font-size:1.45rem; font-weight:900; color:#ffffff; line-height:1.2;">
-                    <span id="kpi-timeout-display">8.0s</span> <span style="font-size:0.72rem; font-weight:600; color:#94a3b8;">(Umbral)</span>
+                    <span id="kpi-timeout-display">20.0s</span> <span style="font-size:0.72rem; font-weight:600; color:#94a3b8;">(Estándar Dual)</span>
                   </div>
                 </div>
               </div>
@@ -2379,24 +2379,42 @@
                 </div>
               </div>
 
-              <!-- CONFIGURADOR DE TIEMPO LÍMITE (TIMEOUT 8-10S) -->
+              <!-- CONFIGURADOR DE TIEMPO LÍMITE (ESTÁNDAR 20S / DUALIDAD OPERATIVA) -->
               <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:18px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <label for="governance-timeout-input" style="font-size:0.82rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.04em; margin:0;">
-                    ⏱️ Configurador de Tiempo Límite (Timeout):
+                    ⏱️ Estándar de Tiempo Límite (Timeout Failover):
                   </label>
                   <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="number" id="governance-timeout-input" min="2" max="30" step="1" value="8" style="width:58px; background:#04070d; color:#34d399; border:1px solid #10b981; border-radius:6px; font-size:0.85rem; font-weight:800; text-align:center; padding:3px 6px;">
+                    <input type="number" id="governance-timeout-input" min="2" max="60" step="1" value="20" style="width:58px; background:#04070d; color:#34d399; border:1px solid #10b981; border-radius:6px; font-size:0.85rem; font-weight:800; text-align:center; padding:3px 6px;">
                     <span style="font-size:0.75rem; color:#cbd5e1; font-weight:700;">segundos</span>
                   </div>
                 </div>
 
-                <div style="margin-bottom:12px;">
-                  <input type="range" id="governance-timeout-range" min="2" max="30" step="1" value="8" style="width:100%; accent-color:#10b981; cursor:pointer;">
+                <div style="margin-bottom:10px;">
+                  <input type="range" id="governance-timeout-range" min="2" max="60" step="1" value="20" style="width:100%; accent-color:#10b981; cursor:pointer;">
                   <div style="display:flex; justify-content:space-between; font-size:0.68rem; color:#64748b; margin-top:2px;">
                     <span>2s (Ultra-Rápido)</span>
-                    <span style="color:#fbbf24; font-weight:800;">8-10s (Recomendado)</span>
-                    <span>30s (Extenso)</span>
+                    <span style="color:#fbbf24; font-weight:800;" id="governance-slider-center-label">⭐ 20s (Estándar Recomendado)</span>
+                    <span>60s (Extenso)</span>
+                  </div>
+                </div>
+
+                <!-- PRESETS RÁPIDOS DE TIEMPO LÍMITE -->
+                <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                  <button type="button" id="preset-timeout-10" onclick="agentStudio.setFailoverTimeout(10)" class="btn btn-sm" style="flex:1; padding:6px 8px; font-size:0.72rem; border-radius:8px; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); cursor:pointer;" title="Fijar tiempo límite en 10 segundos">⚡ 10s (Rápido)</button>
+                  <button type="button" id="preset-timeout-20" onclick="agentStudio.setFailoverTimeout(20)" class="btn btn-sm" style="flex:1.2; padding:6px 8px; font-size:0.72rem; border-radius:8px; background:#10b981; color:#ffffff; font-weight:800; border:1px solid #34d399; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.35);" title="Fijar tiempo estándar recomendado de 20 segundos">⭐ 20s (Estándar)</button>
+                  <button type="button" id="preset-timeout-30" onclick="agentStudio.setFailoverTimeout(30)" class="btn btn-sm" style="flex:1; padding:6px 8px; font-size:0.72rem; border-radius:8px; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); cursor:pointer;" title="Fijar tiempo límite en 30 segundos">⏳ 30s (Extenso)</button>
+                </div>
+
+                <!-- REGLA DE DUALIDAD OPERATIVA -->
+                <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:0.74rem; color:#cbd5e1; line-height:1.45;">
+                  <div style="font-weight:800; color:#34d399; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span>🔄 DUALIDAD OPERATIVA: MANUAL + FAILOVER AUTOMÁTICO</span>
+                  </div>
+                  <div>
+                    • <strong>Opción Manual:</strong> Puedes conmutar en cualquier momento con el botón <em>[Primario Activo / Respaldo Standby]</em> de cada canal.<br>
+                    • <strong>Opción Automática (Failover):</strong> Si Teamily está seleccionado y su sistema no responde en un lapso de <strong><span id="failover-time-rule-label">20</span> segundos</strong>, <strong>Gemini toma el control automáticamente</strong>.
                   </div>
                 </div>
 
@@ -2434,6 +2452,15 @@
                   <span id="teamily-status-badge">PRIMARIO ACTIVO</span>
                   <span style="font-size:0.68rem; opacity:0.85; margin-left:4px; border-left:1px solid rgba(255,255,255,0.3); padding-left:6px;">⇄ Conmutar</span>
                 </button>
+              </div>
+
+              <!-- BANNER VISUAL DINÁMICO DE DUALIDAD Y FAILOVER AUTOMÁTICO -->
+              <div id="teamily-dual-banner" style="background:rgba(2,132,199,0.12); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:9px 13px; margin-bottom:14px; font-size:0.75rem; color:#bae6fd; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.2rem;">🛡️</span>
+                <div>
+                  <strong>Dualidad Activa (Failover Automático <span id="teamily-failover-sec-text">20</span>s):</strong>
+                  Si el canal Teamily no responde en un lapso de <span id="teamily-failover-sec-text2">20</span> segundos, Gemini toma el control automáticamente.
+                </div>
               </div>
 
               <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.5; margin-bottom:16px;">
@@ -2504,6 +2531,15 @@
                   <span id="make-pos-status-badge">RESPALDO STANDBY</span>
                   <span style="font-size:0.68rem; opacity:0.85; margin-left:4px; border-left:1px solid rgba(255,255,255,0.3); padding-left:6px;">⇄ Conmutar</span>
                 </button>
+              </div>
+
+              <!-- BANNER VISUAL DINÁMICO DE RESPALDO EN CALIENTE -->
+              <div id="make-dual-banner" style="background:rgba(16,185,129,0.12); border:1px solid rgba(52,211,153,0.3); border-radius:10px; padding:9px 13px; margin-bottom:14px; font-size:0.75rem; color:#a7f3d0; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.2rem;">⚡</span>
+                <div>
+                  <strong>Respaldo en Caliente (Google Gemini 3.8 Flash):</strong>
+                  Toma el control automáticamente ante demoras superiores a <span id="make-failover-sec-text">20</span>s en Teamily o mediante conmutación manual.
+                </div>
               </div>
 
               <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.5; margin-bottom:16px;">
