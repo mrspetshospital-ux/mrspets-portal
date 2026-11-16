@@ -1498,7 +1498,9 @@ class AdminEngine {
       badgeLabelEl.innerText = badgeLabel;
     }
     if (badgeContainer) {
-      badgeContainer.title = `${badgeLabel} ${accountName}`;
+      badgeContainer.title = `✏️ ${badgeLabel} ${accountName} (Haz clic para ver o editar la Ficha del Cliente)`;
+      badgeContainer.style.cursor = 'pointer';
+      badgeContainer.onclick = () => this.openActiveCustomerProfileModal();
     }
     if (avatarImgEl) {
       avatarImgEl.src = accountPhoto;
@@ -4669,7 +4671,8 @@ class AdminEngine {
                               <div style="font-size:0.68rem; color:#64748B;">👤 ${a.tutor || 'Cliente VIP'}</div>
                               <div style="font-size:0.62rem; color:#94A3B8; margin-top:1px;">${a.service || a.area} (${a.id})</div>
                               ${a.isPending ? '<span style="font-size:0.6rem; background:#FEF3C7; color:#92400E; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; margin-top:2px;">🟡 Pendiente Confirmar</span>' : '<span style="font-size:0.6rem; background:#ECFDF5; color:#065F46; font-weight:800; padding:1px 5px; border-radius:4px; display:inline-block; margin-top:2px;">🟢 Confirmada</span>'}
-                              <div style="display:flex; justify-content:flex-end; margin-top:2px;">
+                              <div style="display:flex; justify-content:flex-end; align-items:center; gap:6px; margin-top:3px;">
+                                <button type="button" onclick="adminEngine.openEditClientModalByAppointment('${a.id}')" style="font-size:0.62rem; color:#4A6B5D; background:#F4F1EA; border:1px solid #4A6B5D; border-radius:4px; padding:1px 6px; cursor:pointer; font-weight:800;" title="✏️ Ver o corregir ficha del tutor o paciente">✏️ Ficha</button>
                                 <button type="button" onclick="adminEngine.cancelAppointment('${a.id}')" style="font-size:0.6rem; color:#EF4444; background:none; border:none; padding:0; cursor:pointer; font-weight:700;">✕ Liberar</button>
                               </div>
                             </div>
@@ -5126,9 +5129,14 @@ class AdminEngine {
                     </div>
                   </td>
                   <td>
-                    <button class="btn btn-sm btn-secondary" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.openChangePetPhotoModal('${p.id}')">
-                      🖼️ Foto
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                      <button class="btn btn-sm btn-primary" onclick="adminEngine.openEditClientModal('${p.id}')" style="background:#4A6B5D; color:white; border:none; font-weight:800; font-size:0.75rem; padding:6px 9px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;" title="✏️ Editar y Corregir Ficha del Cliente y Mascota">
+                        ✏️ Ficha
+                      </button>
+                      <button class="btn btn-sm btn-secondary" onclick="adminEngine.openChangePetPhotoModal('${p.id}')" style="font-size:0.75rem; padding:6px 8px; border-radius:8px;" title="Cambiar Foto">
+                        🖼️ Foto
+                      </button>
+                    </div>
                   </td>
                   <td>
                     <button class="btn btn-sm btn-whatsapp" onclick="adminEngine.notifyTutorWhatsApp('${p.id}')">
@@ -5800,12 +5808,56 @@ class AdminEngine {
     `;
   }
 
-  openEditClientModal(petId) {
-    if (this.permissionMode === 'view') {
-      if (window.app) window.app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura (Consulta).', 'error');
-      return;
+  openActiveCustomerProfileModal() {
+    let targetPetId = localStorage.getItem('mrs_pets_active_vip_patient_id') || (window.authEngine ? window.authEngine.currentVipPetId : null);
+    const activeCustomer = this.getCurrentCustomerName();
+    
+    if (Array.isArray(this.patientsStatus)) {
+      if (targetPetId) {
+        const found = this.patientsStatus.find(p => p.id === targetPetId);
+        if (found) {
+          this.openEditClientModal(targetPetId);
+          return;
+        }
+      }
+      const match = this.patientsStatus.find(p => {
+        const o = (p.owner || p.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const a = (activeCustomer || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return o && a && (o.includes(a) || a.includes(o) || (a.includes('bellita') && o.includes('bellita')) || (a.includes('dalybell') && o.includes('dalybell')) || (a.includes('carlos') && o.includes('carlos')));
+      });
+      if (match) {
+        this.openEditClientModal(match.id);
+        return;
+      }
+      if (this.patientsStatus.length > 0) {
+        this.openEditClientModal(this.patientsStatus[0].id);
+        return;
+      }
     }
+    this.openEditClientModal('');
+  }
 
+  openEditClientModalByAppointment(appointmentId) {
+    const appt = (Array.isArray(this.appointments) ? this.appointments : []).find(a => a.id === appointmentId);
+    let petId = appt ? appt.petId : null;
+    if (!petId && appt && Array.isArray(this.patientsStatus)) {
+      const cand = this.patientsStatus.find(p => {
+        const pName = (p.name || p.petName || '').toLowerCase();
+        const aName = (appt.pet || '').toLowerCase();
+        const oName = (p.owner || p.ownerName || '').toLowerCase();
+        const tName = (appt.tutor || '').toLowerCase();
+        return (pName && aName && pName.includes(aName)) || (oName && tName && oName.includes(tName));
+      });
+      if (cand) petId = cand.id;
+    }
+    if (petId) {
+      this.openEditClientModal(petId);
+    } else {
+      if (window.app) window.app.showToast('⚠️ No se encontró la ficha vinculada a esta cita.', 'warning');
+    }
+  }
+
+  openEditClientModal(petId) {
     const modalTitle = document.getElementById('edit-client-modal-title');
 
     if (!petId) {
@@ -5816,51 +5868,94 @@ class AdminEngine {
       if (document.getElementById('edit-tutor-email')) document.getElementById('edit-tutor-email').value = '';
       if (document.getElementById('edit-tutor-phone')) document.getElementById('edit-tutor-phone').value = '+58 414-6799510';
       if (document.getElementById('edit-tutor-rif')) document.getElementById('edit-tutor-rif').value = 'V-' + Math.floor(10000000 + Math.random() * 90000000);
+      if (document.getElementById('edit-tutor-sector')) document.getElementById('edit-tutor-sector').value = 'El Milagro';
+      if (document.getElementById('edit-tutor-address')) document.getElementById('edit-tutor-address').value = '';
       if (document.getElementById('edit-tutor-password')) document.getElementById('edit-tutor-password').value = '';
 
       if (document.getElementById('edit-tutor-photo')) document.getElementById('edit-tutor-photo').value = 'assets/leia_avatar.jpg';
       if (document.getElementById('edit-tutor-photo-preview')) document.getElementById('edit-tutor-photo-preview').src = 'assets/leia_avatar.jpg';
 
       if (document.getElementById('edit-pet-name')) document.getElementById('edit-pet-name').value = '';
-      if (document.getElementById('edit-pet-species')) document.getElementById('edit-pet-species').value = 'Canino VIP';
+      if (document.getElementById('edit-pet-species')) document.getElementById('edit-pet-species').value = 'Canino';
+      if (document.getElementById('edit-pet-breed')) document.getElementById('edit-pet-breed').value = '';
+      if (document.getElementById('edit-pet-age')) document.getElementById('edit-pet-age').value = '';
+      if (document.getElementById('edit-pet-weight')) document.getElementById('edit-pet-weight').value = '';
+      if (document.getElementById('edit-pet-area')) document.getElementById('edit-pet-area').value = 'grooming';
+      if (document.getElementById('edit-client-tier')) document.getElementById('edit-client-tier').value = 'standard';
+      if (document.getElementById('edit-pet-notes')) document.getElementById('edit-pet-notes').value = '';
+
       if (document.getElementById('edit-pet-photo')) document.getElementById('edit-pet-photo').value = 'assets/hero_border_collie.jpg';
       if (document.getElementById('edit-pet-photo-preview')) document.getElementById('edit-pet-photo-preview').src = 'assets/hero_border_collie.jpg';
-      if (document.getElementById('edit-pet-area')) document.getElementById('edit-pet-area').value = 'grooming';
 
       if (window.app) window.app.openModal('edit-client-modal');
       return;
     }
 
     // MODE: EDIT EXISTING CLIENT & PET
-    if (modalTitle) modalTitle.innerHTML = '✏️ Ficha Técnica & Edición de Cliente CRM';
-    const pet = this.patientsStatus.find(p => p.id === petId);
-    if (!pet) return;
+    if (modalTitle) modalTitle.innerHTML = '✏️ Ficha del Cliente & Mascota (Edición Integral CRM)';
+    let pet = Array.isArray(this.patientsStatus) ? this.patientsStatus.find(p => p.id === petId) : null;
+    if (!pet && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+      pet = window.petStatusEngine.pets.find(p => p.id === petId);
+    }
+    if (!pet && window.clinicaEngine && window.clinicaEngine.patientsDatabase && window.clinicaEngine.patientsDatabase[petId]) {
+      const c = window.clinicaEngine.patientsDatabase[petId];
+      pet = {
+        id: petId,
+        owner: c.tutorName,
+        email: c.tutorEmail,
+        ownerPhone: c.tutorPhone,
+        rif: c.tutorRif,
+        name: c.petName,
+        species: c.species || 'Canino'
+      };
+    }
+    if (!pet) {
+      if (window.app) window.app.showToast('⚠️ No se encontró la ficha del paciente seleccionado.', 'error');
+      return;
+    }
 
     if (document.getElementById('edit-client-pet-id')) document.getElementById('edit-client-pet-id').value = pet.id;
     if (document.getElementById('edit-tutor-name')) document.getElementById('edit-tutor-name').value = pet.owner || pet.ownerName || '';
     if (document.getElementById('edit-tutor-email')) document.getElementById('edit-tutor-email').value = pet.email || '';
     if (document.getElementById('edit-tutor-phone')) document.getElementById('edit-tutor-phone').value = pet.ownerPhone || pet.phone || '+58 414-6799510';
     if (document.getElementById('edit-tutor-rif')) document.getElementById('edit-tutor-rif').value = pet.rif || 'V-18.452.910';
+    if (document.getElementById('edit-tutor-sector')) document.getElementById('edit-tutor-sector').value = pet.sector || pet.addressSector || 'El Milagro';
+    if (document.getElementById('edit-tutor-address')) document.getElementById('edit-tutor-address').value = pet.address || '';
 
     const passInput = document.getElementById('edit-tutor-password');
-    if (passInput) passInput.value = pet.password || pet.clientPassword || '';
+    if (passInput) passInput.value = pet.password || pet.clientPassword || pet.pin || '';
 
     const tutorPhotoInput = document.getElementById('edit-tutor-photo');
     const tutorPhotoPreview = document.getElementById('edit-tutor-photo-preview');
-    const tutorPhotoVal = pet.ownerPhoto || 'assets/leia_avatar.jpg';
+    const tutorPhotoVal = pet.ownerPhoto || pet.tutorPhoto || 'assets/leia_avatar.jpg';
     if (tutorPhotoInput) tutorPhotoInput.value = tutorPhotoVal;
     if (tutorPhotoPreview) tutorPhotoPreview.src = tutorPhotoVal;
 
     if (document.getElementById('edit-pet-name')) document.getElementById('edit-pet-name').value = pet.name || pet.petName || '';
-    if (document.getElementById('edit-pet-species')) document.getElementById('edit-pet-species').value = pet.species || '';
+    
+    const speciesInput = document.getElementById('edit-pet-species');
+    if (speciesInput) {
+      const sp = (pet.species || '').toLowerCase();
+      if (sp.includes('fel') || sp.includes('gato')) speciesInput.value = 'Felino';
+      else if (sp.includes('exot') || sp.includes('ave') || sp.includes('conejo')) speciesInput.value = 'Exótico';
+      else speciesInput.value = 'Canino';
+    }
+
+    if (document.getElementById('edit-pet-breed')) document.getElementById('edit-pet-breed').value = pet.breed || '';
+    if (document.getElementById('edit-pet-age')) document.getElementById('edit-pet-age').value = pet.age || '';
+    if (document.getElementById('edit-pet-weight')) document.getElementById('edit-pet-weight').value = pet.weight || '';
+    if (document.getElementById('edit-pet-area')) document.getElementById('edit-pet-area').value = pet.area || 'grooming';
+    
+    const tierVal = pet.tierLevel || (window.LoyaltyEngine ? window.LoyaltyEngine.evaluateClientTier(pet).id : 'standard');
+    if (document.getElementById('edit-client-tier')) document.getElementById('edit-client-tier').value = tierVal;
+
+    if (document.getElementById('edit-pet-notes')) document.getElementById('edit-pet-notes').value = pet.notes || '';
     
     const petPhotoInput = document.getElementById('edit-pet-photo');
     const petPhotoPreview = document.getElementById('edit-pet-photo-preview');
     const petPhotoVal = pet.photo || pet.image || 'assets/media__1787694901704.jpg';
     if (petPhotoInput) petPhotoInput.value = petPhotoVal;
     if (petPhotoPreview) petPhotoPreview.src = petPhotoVal;
-
-    if (document.getElementById('edit-pet-area')) document.getElementById('edit-pet-area').value = pet.area || 'grooming';
 
     if (window.app) window.app.openModal('edit-client-modal');
   }
@@ -5897,10 +5992,6 @@ class AdminEngine {
 
   saveClientEditForm(event) {
     if (event && event.preventDefault) event.preventDefault();
-    if (this.permissionMode === 'view') {
-      if (window.app) window.app.showToast('⚠️ Permiso denegado: Estás en Modo Solo Lectura (Consulta).', 'error');
-      return;
-    }
 
     const petIdInput = document.getElementById('edit-client-pet-id');
     const petId = petIdInput ? petIdInput.value : '';
@@ -5909,13 +6000,20 @@ class AdminEngine {
     const newEmail = (document.getElementById('edit-tutor-email')?.value || '').trim();
     const newPhone = (document.getElementById('edit-tutor-phone')?.value || '').trim();
     const newRif = (document.getElementById('edit-tutor-rif')?.value || '').trim();
+    const newSector = (document.getElementById('edit-tutor-sector')?.value || 'El Milagro').trim();
+    const newAddress = (document.getElementById('edit-tutor-address')?.value || '').trim();
     const newPassword = document.getElementById('edit-tutor-password')?.value.trim() || '';
     const newTutorPhoto = document.getElementById('edit-tutor-photo')?.value.trim() || 'assets/leia_avatar.jpg';
 
     const newPetName = (document.getElementById('edit-pet-name')?.value || '').trim();
-    const newSpecies = (document.getElementById('edit-pet-species')?.value || '').trim();
-    const newPetPhoto = document.getElementById('edit-pet-photo')?.value.trim() || 'assets/hero_border_collie.jpg';
+    const newSpecies = (document.getElementById('edit-pet-species')?.value || 'Canino').trim();
+    const newBreed = (document.getElementById('edit-pet-breed')?.value || '').trim();
+    const newAge = (document.getElementById('edit-pet-age')?.value || '').trim();
+    const newWeight = (document.getElementById('edit-pet-weight')?.value || '').trim();
     const newArea = document.getElementById('edit-pet-area')?.value || 'grooming';
+    const newTier = document.getElementById('edit-client-tier')?.value || 'standard';
+    const newNotes = (document.getElementById('edit-pet-notes')?.value || '').trim();
+    const newPetPhoto = document.getElementById('edit-pet-photo')?.value.trim() || 'assets/hero_border_collie.jpg';
 
     if (!newOwner || !newPetName) {
       if (window.app) window.app.showToast('⚠️ Por favor ingresa el nombre del tutor y de la mascota.', 'warning');
@@ -5923,6 +6021,10 @@ class AdminEngine {
     }
 
     let pet = petId ? this.patientsStatus.find(p => p.id === petId) : null;
+    if (!pet && petId && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+      pet = window.petStatusEngine.pets.find(p => p.id === petId);
+      if (pet) this.patientsStatus.unshift(pet);
+    }
 
     if (!pet) {
       // BRAND NEW CLIENT & PET RECORD CREATION!
@@ -5931,22 +6033,33 @@ class AdminEngine {
         id: uniqueId,
         name: newPetName,
         petName: newPetName,
-        species: newSpecies || 'Mascota VIP',
+        species: newSpecies,
+        breed: newBreed,
+        age: newAge,
+        weight: newWeight,
         owner: newOwner,
         ownerName: newOwner,
         rif: newRif || 'V-Registrado',
         email: newEmail || 'tutor@example.com',
         ownerPhone: newPhone || '+58 414-6799510',
+        phone: newPhone || '+58 414-6799510',
+        sector: newSector,
+        addressSector: newSector,
+        address: newAddress || `Sector ${newSector}, Maracaibo`,
+        bioTrackerSector: newSector,
         password: newPassword,
         clientPassword: newPassword,
+        pin: newPassword,
         ownerPhoto: newTutorPhoto,
+        tutorPhoto: newTutorPhoto,
         photo: newPetPhoto,
         image: newPetPhoto,
         area: newArea,
+        tierLevel: newTier,
         stepIndex: 1,
         turnNumber: this.getNextTurnNumber(newArea),
         turno: this.getNextTurnNumber(newArea),
-        notes: 'Cliente registrado desde la Base de Datos CRM Admin.',
+        notes: newNotes || 'Cliente registrado desde la Base de Datos CRM.',
         hasReservation: true,
         updatedAt: 'Hace un momento',
         isVipRegistered: true
@@ -5982,34 +6095,57 @@ class AdminEngine {
     pet.ownerPhone = newPhone;
     pet.phone = newPhone;
     pet.rif = newRif;
+    pet.sector = newSector;
+    pet.addressSector = newSector;
+    pet.bioTrackerSector = newSector;
+    pet.address = newAddress || `Sector ${newSector}, Maracaibo`;
     pet.password = newPassword;
     pet.clientPassword = newPassword;
+    pet.pin = newPassword;
     pet.ownerPhoto = newTutorPhoto;
+    pet.tutorPhoto = newTutorPhoto;
 
     pet.name = newPetName;
     pet.petName = newPetName;
     pet.species = newSpecies;
+    pet.breed = newBreed;
+    pet.age = newAge;
+    pet.weight = newWeight;
     pet.photo = newPetPhoto;
     pet.image = newPetPhoto;
     pet.area = newArea;
+    pet.tierLevel = newTier;
+    if (newNotes) pet.notes = newNotes;
 
+    // Sincronizar en petStatusEngine
     if (window.petStatusEngine) {
       const pSE = window.petStatusEngine.pets.find(p => p.id === petId);
       if (pSE) {
         pSE.petName = newPetName;
         pSE.name = newPetName;
         pSE.species = newSpecies;
+        pSE.breed = newBreed;
+        pSE.age = newAge;
+        pSE.weight = newWeight;
         pSE.ownerName = newOwner;
         pSE.owner = newOwner;
         pSE.ownerPhone = newPhone;
         pSE.phone = newPhone;
         pSE.rif = newRif;
+        pSE.sector = newSector;
+        pSE.addressSector = newSector;
+        pSE.bioTrackerSector = newSector;
+        pSE.address = newAddress || `Sector ${newSector}, Maracaibo`;
         pSE.email = newEmail;
         pSE.ownerPhoto = newTutorPhoto;
+        pSE.tutorPhoto = newTutorPhoto;
         pSE.photo = newPetPhoto;
         pSE.image = newPetPhoto;
         pSE.area = newArea;
+        pSE.tierLevel = newTier;
         pSE.password = newPassword;
+        pSE.pin = newPassword;
+        if (newNotes) pSE.notes = newNotes;
       }
       if (typeof window.petStatusEngine.render === 'function') window.petStatusEngine.render();
       if (typeof window.petStatusEngine.savePetsToStorage === 'function') {
@@ -6017,6 +6153,7 @@ class AdminEngine {
       }
     }
 
+    // Sincronizar en clinicaEngine
     if (window.clinicaEngine && window.clinicaEngine.patientsDatabase && window.clinicaEngine.patientsDatabase[petId]) {
       const cP = window.clinicaEngine.patientsDatabase[petId];
       cP.petName = newPetName;
@@ -6024,15 +6161,38 @@ class AdminEngine {
       cP.tutorPhone = newPhone;
       cP.tutorEmail = newEmail;
       cP.tutorRif = newRif;
+      cP.sector = newSector;
+      cP.address = newAddress || `Sector ${newSector}, Maracaibo`;
+    }
+
+    // Si es el cliente activo en sesión, actualizar localStorage
+    const activeStored = localStorage.getItem('mrs_pets_active_customer_name');
+    if (activeStored) {
+      localStorage.setItem('mrs_pets_active_customer_name', newOwner);
     }
 
     this.savePatientsToStorage();
     this.updateHeaderAccountDisplay();
     this.renderClientDatabaseManager();
     this.renderStatusManager();
+
+    // Notificación en vivo y webhook asíncrono
+    try {
+      if (window.mrsPetsArch && typeof window.mrsPetsArch.triggerMakeWebhook === 'function') {
+        window.mrsPetsArch.triggerMakeWebhook('client_updated', {
+          petId: pet.id,
+          petName: newPetName,
+          tutor: newOwner,
+          email: newEmail,
+          phone: newPhone,
+          sector: newSector
+        });
+      }
+    } catch (e) { console.warn(e); }
+
     if (window.app) {
       window.app.closeModal('edit-client-modal');
-      window.app.showToast(`✅ Ficha de "${newOwner}" (${newPetName}) guardada con éxito.`, 'success');
+      window.app.showToast(`✅ Ficha de "${newOwner}" (${newPetName}) actualizada exitosamente.`, 'success');
     }
   }
 

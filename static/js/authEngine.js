@@ -1420,10 +1420,17 @@ class AuthEngine {
       ` : '';
 
       const staffTraceabilityBtn = isStaff ? `
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${p.id}')" style="background:#4A6B5D !important; color:#FFFFFF !important; border:none !important; border-radius:12px; font-weight:900; font-size:0.8rem; padding:8px 12px; cursor:pointer;" title="✏️ Editar y corregir Ficha del Cliente">
+          ✏️ Ficha
+        </button>
         <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); analytics.openTraceabilityModal('${p.id}')" style="background:#F1F5F9 !important; color:#000000 !important; border:2px solid #000000 !important; border-radius:12px; font-weight:900; font-size:0.8rem; padding:8px 12px; cursor:pointer;" title="Ver etapas del servicio">
           📋 Etapas
         </button>
-      ` : '';
+      ` : `
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${p.id}')" style="background:#F4F1EA !important; color:#2C2C2E !important; border:1.5px solid #4A6B5D !important; border-radius:12px; font-weight:900; font-size:0.8rem; padding:8px 12px; cursor:pointer;" title="✏️ Corregir datos de mi ficha">
+          ✏️ Mi Ficha
+        </button>
+      `;
 
       const dblClickAttr = isStaff ? `ondblclick="analytics.openTraceabilityModal('${p.id}')"` : '';
 

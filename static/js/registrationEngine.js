@@ -1027,6 +1027,12 @@ class RegistrationEngine {
   }
 
   openRegistrationModal(prefillData) {
+    if (prefillData && (prefillData.editMode || prefillData.isEdit) && (prefillData.petId || prefillData.id)) {
+      if (window.adminEngine && typeof window.adminEngine.openEditClientModal === 'function') {
+        window.adminEngine.openEditClientModal(prefillData.petId || prefillData.id);
+        return;
+      }
+    }
     this.resetForm();
     this.returnBookingArea = prefillData?.returnBookingArea || prefillData?.modalType || prefillData?.area || (window.clinicaEngine?.pendingBookingDraft?.area) || null;
     const banner = document.getElementById('gf-required-notice-banner');

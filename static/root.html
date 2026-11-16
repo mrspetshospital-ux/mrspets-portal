@@ -1082,13 +1082,14 @@
           <!-- SELECTOR DE MONEDA EN TIEMPO REAL: USD ($) / BOLÍVARES (BS. BCV) -->
           <div id="header-currency-selector-container" style="flex-shrink:0;"></div>
 
-          <!-- CLIENT/ACCOUNT IDENTIFIER BADGE WITH USER PROFILE PHOTO -->
-          <div id="user-account-badge" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1e293b, #0f172a); padding:4px 14px 4px 6px; border-radius:20px; border:1.5px solid #d97706; font-size:0.82rem; font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,0.25); flex-shrink:0;" title="Cuenta de Dalybell Montilla">
+          <!-- CLIENT/ACCOUNT IDENTIFIER BADGE WITH USER PROFILE PHOTO (CLICKABLE PARA EDITAR FICHA) -->
+          <div id="user-account-badge" onclick="adminEngine.openActiveCustomerProfileModal()" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #1e293b, #0f172a); padding:4px 14px 4px 6px; border-radius:20px; border:1.5px solid #d97706; font-size:0.82rem; font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,0.25); flex-shrink:0; cursor:pointer; transition:transform 0.15s ease;" title="✏️ Ver o editar la Ficha del Cliente (Haz clic para corregir información)">
             <img id="user-account-avatar-img" src="assets/leia_avatar.jpg" alt="Foto de Perfil - Dalybell Montilla" onerror="this.onerror=null; this.src='assets/leia_avatar.jpg';" style="width:28px; height:28px; border-radius:50%; border:1.5px solid #fbbf24; object-fit:cover; flex-shrink:0;">
             <div style="display:flex; flex-direction:column; line-height:1.1; white-space:nowrap;">
               <span id="user-account-badge-label" style="color:#94a3b8; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Cuenta de</span>
               <span id="user-account-name-text" style="color:#fbbf24; font-weight:900; font-size:0.82rem;">Dalybell Montilla</span>
             </div>
+            <span style="font-size:0.75rem; color:#D4AF37; margin-left:2px;" title="Editar Ficha del Cliente">✏️</span>
           </div>
 
           <!-- BOTÓN DE ACCESO RÁPIDO AL CARRITO EN HEADER SUPERIOR -->
@@ -1632,6 +1633,9 @@
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="clinicaEngine.triggerSOS()" style="background:#FEF2F2; color:#DC2626; border:1px solid #FCA5A5; font-weight:700; padding:10px 16px; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
                   🚨 SOS Urgencias 24/7
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="adminEngine.openActiveCustomerProfileModal()" style="background:#F4F1EA; color:#2C2C2E; border:1.5px solid #4A6B5D; font-weight:800; padding:10px 16px; border-radius:10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(74,107,93,0.15);" title="Corregir datos de tutor o paciente">
+                  ✏️ Editar Ficha Cliente
                 </button>
                 <button type="button" class="btn btn-primary" onclick="registrationEngine.openRegistrationModal()" style="background:#4A6B5D; color:#FFFFFF; border:1px solid #D4AF37; font-weight:700; padding:10px 18px; border-radius:10px; box-shadow:0 4px 12px rgba(74,107,93,0.25);">
                   📝 Ficha Médica / Registro VIP
@@ -7223,18 +7227,18 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
 
   <!-- MODAL: EDITAR CLIENTE Y MASCOTA (CRM CRUD COMPLETO) -->
   <div class="modal-overlay" id="edit-client-modal">
-    <div class="modal-card" style="max-width:620px; padding:32px; border-radius:24px; background:#ffffff; border:2px solid #4A6B5D; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div class="modal-card" style="max-width:700px; max-height:90vh; overflow-y:auto; padding:28px 32px; border-radius:24px; background:#ffffff; border:2px solid #4A6B5D; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:12px; border-bottom:1.5px solid #F4F1EA;">
         <div>
-          <h3 style="font-size:1.35rem; font-weight:900; color:#2C2C2E; margin:0;">✏️ Editar Perfil de Cliente & Mascota</h3>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 0 0;">Modifica datos, cambia fotos, administra claves de acceso o elimina el registro.</p>
+          <h3 id="edit-client-modal-title" style="font-size:1.35rem; font-weight:900; color:#2C2C2E; margin:0;">✏️ Ficha del Cliente & Mascota (Edición Integral CRM)</h3>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 0 0;">Modifica o corrige datos del tutor, dirección BioTracker, perfil de la mascota, fotos y accesos.</p>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="analytics.openTraceabilityModal(document.getElementById('edit-client-pet-id').value)" style="background:#4A6B5D; color:white; font-weight:800; border-radius:10px; border:none; padding:6px 12px; font-size:0.78rem; cursor:pointer;" title="Ver quién lo atendió en cada estación">
+          <button type="button" class="btn btn-primary btn-sm" onclick="if(window.analytics && document.getElementById('edit-client-pet-id')) analytics.openTraceabilityModal(document.getElementById('edit-client-pet-id').value)" style="background:#4A6B5D; color:white; font-weight:800; border-radius:10px; border:none; padding:6px 12px; font-size:0.78rem; cursor:pointer;" title="Ver quién lo atendió en cada estación">
             🔎 Histórico Staff
           </button>
-          <button class="btn btn-secondary btn-sm" onclick="app.closeModal('edit-client-modal')" style="border-radius:50%; width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">✕</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="app.closeModal('edit-client-modal')" style="border-radius:50%; width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">✕</button>
         </div>
       </div>
 
@@ -7244,50 +7248,71 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         <!-- SECCIÓN 1: DATOS Y FOTO DEL TUTOR CON CLAVE DE ACCESO -->
         <div style="background:#FBFBFD; border:1px solid #E2E8F0; border-radius:16px; padding:16px; margin-bottom:16px;">
           <h4 style="font-size:0.95rem; font-weight:800; color:#4A6B5D; margin:0 0 12px 0; display:flex; align-items:center; gap:6px;">
-            👤 Datos, Foto & Clave del Tutor (Cliente)
+            👤 Datos, Contacto & Residencia del Tutor (Cliente)
           </h4>
 
           <div class="form-row" style="margin-bottom:12px;">
             <div class="form-group">
-              <label class="form-label">Nombre del Tutor *</label>
-              <input type="text" class="form-input" id="edit-tutor-name" required style="border-radius:10px;">
+              <label class="form-label">Nombre Completo del Tutor *</label>
+              <input type="text" class="form-input" id="edit-tutor-name" required placeholder="Ej: Dalybell Ramírez Montilla" style="border-radius:10px;">
             </div>
             <div class="form-group">
-              <label class="form-label">Correo Electrónico *</label>
-              <input type="email" class="form-input" id="edit-tutor-email" required style="border-radius:10px;">
+              <label class="form-label">Cédula de Identidad / RIF *</label>
+              <input type="text" class="form-input" id="edit-tutor-rif" placeholder="V-18.452.910" style="border-radius:10px;">
             </div>
           </div>
 
           <div class="form-row" style="margin-bottom:12px;">
             <div class="form-group">
-              <label class="form-label">Teléfono WhatsApp *</label>
-              <input type="text" class="form-input" id="edit-tutor-phone" required style="border-radius:10px;">
+              <label class="form-label">Correo Electrónico Oficial *</label>
+              <input type="email" class="form-input" id="edit-tutor-email" required placeholder="tutor@ejemplo.com" style="border-radius:10px;">
             </div>
             <div class="form-group">
-              <label class="form-label">Cédula / RIF</label>
-              <input type="text" class="form-input" id="edit-tutor-rif" placeholder="V-18.765.432" style="border-radius:10px;">
+              <label class="form-label">Teléfono / WhatsApp *</label>
+              <input type="text" class="form-input" id="edit-tutor-phone" required placeholder="+58 414-6799510" style="border-radius:10px;">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label class="form-label">Sector Residencia (BioTracker GeoGuard) *</label>
+              <select class="form-select" id="edit-tutor-sector" style="border-radius:10px;">
+                <option value="El Milagro">📍 El Milagro</option>
+                <option value="Bella Vista">📍 Bella Vista</option>
+                <option value="La Lago">📍 La Lago</option>
+                <option value="5 de Julio">📍 5 de Julio</option>
+                <option value="Santa Rita">📍 Santa Rita</option>
+                <option value="Tierra Negra">📍 Tierra Negra</option>
+                <option value="Maracaibo Norte">📍 Maracaibo Norte / Doral</option>
+                <option value="San Francisco">📍 San Francisco</option>
+                <option value="Otro Sector">📍 Otro Sector (Maracaibo)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dirección / Punto de Referencia</label>
+              <input type="text" class="form-input" id="edit-tutor-address" placeholder="Ej: Av. 2 El Milagro, Residencias Don Bosco, Apto 4B" style="border-radius:10px;">
             </div>
           </div>
 
           <!-- 🔑 CAMBIAR CLAVE DE ACCESO -->
           <div class="form-group" style="margin-bottom:12px; background:#fffbe6; padding:10px 12px; border-radius:12px; border:1px solid #fef3c7;">
-            <label class="form-label" style="color:#d97706; font-weight:800; margin-bottom:4px;">🔑 Clave / Contraseña de Acceso del Cliente</label>
+            <label class="form-label" style="color:#d97706; font-weight:800; margin-bottom:4px;">🔑 Clave / PIN de Acceso del Tutor VIP</label>
             <div style="display:flex; gap:8px; align-items:center;">
               <input type="text" class="form-input" id="edit-tutor-password" placeholder="Definir contraseña (ej: mrspets2026)" style="border-radius:8px; background:#ffffff; font-weight:700; flex:1;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="adminEngine.generateRandomPassword()" style="font-size:0.75rem; padding:8px 10px; border-radius:8px; white-space:nowrap; background:#4A6B5D; color:white; border:none; font-weight:700; cursor:pointer;">
                 🎲 Generar Clave
               </button>
             </div>
-            <div style="font-size:0.68rem; color:#b45309; margin-top:4px;">Permite al cliente iniciar sesión en el Portal con su usuario y esta contraseña.</div>
+            <div style="font-size:0.68rem; color:#b45309; margin-top:4px;">Permite al cliente iniciar sesión en el Portal con su usuario y esta contraseña o PIN personal.</div>
           </div>
 
           <!-- 📷 CAMBIAR FOTO DEL TUTOR -->
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700;">📷 Cambiar Foto del Tutor (Cliente)</label>
+            <label class="form-label" style="font-weight:700;">📷 Fotografía Oficial del Tutor (Cliente VIP)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <img id="edit-tutor-photo-preview" src="assets/leia_avatar.jpg" style="width:42px; height:42px; border-radius:50%; border:2px solid #4A6B5D; object-fit:cover; flex-shrink:0;">
+              <img id="edit-tutor-photo-preview" src="assets/leia_avatar.jpg" style="width:44px; height:44px; border-radius:50%; border:2px solid #4A6B5D; object-fit:cover; flex-shrink:0;">
               <input type="text" class="form-input" id="edit-tutor-photo" placeholder="URL de imagen..." oninput="document.getElementById('edit-tutor-photo-preview').src = this.value || 'assets/leia_avatar.jpg'" style="border-radius:8px; flex:1;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-tutor-photo-file').click()" style="padding:8px 12px; font-weight:700; border-radius:8px; white-space:nowrap; background:#e2e8f0; color:#334155; border:none;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-tutor-photo-file').click()" style="padding:8px 12px; font-weight:700; border-radius:8px; white-space:nowrap; background:#e2e8f0; color:#334155; border:none; cursor:pointer;">
                 📁 Subir Foto
               </button>
               <input type="file" id="edit-tutor-photo-file" accept="image/*" style="display:none;" onchange="adminEngine.handleClientPhotoUpload(event, 'tutor')">
@@ -7298,37 +7323,73 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         <!-- SECCIÓN 2: DATOS Y FOTO DE LA MASCOTA -->
         <div style="background:#FBFBFD; border:1px solid #E2E8F0; border-radius:16px; padding:16px; margin-bottom:20px;">
           <h4 style="font-size:0.95rem; font-weight:800; color:#4A6B5D; margin:0 0 12px 0; display:flex; align-items:center; gap:6px;">
-            🐾 Ficha & Foto del Príncipe / Princesa
+            🐾 Ficha, Expediente & Foto del Príncipe / Princesa
           </h4>
 
           <div class="form-row" style="margin-bottom:12px;">
             <div class="form-group">
-              <label class="form-label">Nombre Mascota *</label>
-              <input type="text" class="form-input" id="edit-pet-name" required style="border-radius:10px;">
+              <label class="form-label">Nombre del Príncipe / Princesa *</label>
+              <input type="text" class="form-input" id="edit-pet-name" required placeholder="Ej: Bellita / Princesa" style="border-radius:10px;">
             </div>
             <div class="form-group">
-              <label class="form-label">Raza / Especie *</label>
-              <input type="text" class="form-input" id="edit-pet-species" required style="border-radius:10px;">
+              <label class="form-label">Especie *</label>
+              <select class="form-select" id="edit-pet-species" style="border-radius:10px;">
+                <option value="Canino">Canino 🐶</option>
+                <option value="Felino">Felino 🐱</option>
+                <option value="Exótico">Exótico 🐾</option>
+              </select>
             </div>
           </div>
 
-          <div class="form-group" style="margin-bottom:12px;">
-            <label class="form-label">Área Operativa Asignada</label>
-            <select class="form-select" id="edit-pet-area" style="border-radius:10px;">
-              <option value="grooming">✂️ Grooming (Estética)</option>
-              <option value="clinica">🩺 Clínica Veterinaria</option>
-              <option value="hotel">🏨 Hotel (Admisión / Guardería)</option>
-              <option value="tienda">🛍️ Tienda & Boutique VIP</option>
-            </select>
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label class="form-label">Raza / Tipo *</label>
+              <input type="text" class="form-input" id="edit-pet-breed" placeholder="Ej: Yorkshire Terrier / Poodle / Border Collie" style="border-radius:10px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Edad o Fecha de Nacimiento</label>
+              <input type="text" class="form-input" id="edit-pet-age" placeholder="Ej: 2 años / 8 meses" style="border-radius:10px;">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label class="form-label">Peso Aproximado (Kg)</label>
+              <input type="text" class="form-input" id="edit-pet-weight" placeholder="Ej: 4.5" style="border-radius:10px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Área Operativa Asignada</label>
+              <select class="form-select" id="edit-pet-area" style="border-radius:10px;">
+                <option value="grooming">✂️ Grooming Spa (Estética 7 Estaciones)</option>
+                <option value="clinica">🩺 Clínica Veterinaria (Consultas & Cirugía)</option>
+                <option value="hotel">🏨 Hotel 5★ (Suites Bioclimáticas / Guardería)</option>
+                <option value="tienda">🛍️ Tienda & Boutique VIP</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label class="form-label">Nivel de Lealtad (Reclasificación)</label>
+              <select class="form-select" id="edit-client-tier" style="border-radius:10px; font-weight:700;">
+                <option value="legacy_vip">👑 Legacy VIP (≥ 6 meses continuos)</option>
+                <option value="premium">✨ Premium</option>
+                <option value="standard">⭐ Standard</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Observaciones, Alergias & Cuidados</label>
+              <input type="text" class="form-input" id="edit-pet-notes" placeholder="Ej: Piel delicada, champú hipoalergénico" style="border-radius:10px;">
+            </div>
           </div>
 
           <!-- 📷 CAMBIAR FOTO DE LA MASCOTA -->
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label" style="font-weight:700;">📷 Cambiar Foto de la Mascota</label>
+            <label class="form-label" style="font-weight:700;">📷 Fotografía Oficial del Consentido</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <img id="edit-pet-photo-preview" src="assets/media__1787694901704.jpg" style="width:42px; height:42px; border-radius:50%; border:2px solid #D4AF37; object-fit:cover; flex-shrink:0;">
+              <img id="edit-pet-photo-preview" src="assets/media__1787694901704.jpg" style="width:44px; height:44px; border-radius:50%; border:2px solid #D4AF37; object-fit:cover; flex-shrink:0;">
               <input type="text" class="form-input" id="edit-pet-photo" placeholder="URL de imagen..." oninput="document.getElementById('edit-pet-photo-preview').src = this.value || 'assets/media__1787694901704.jpg'" style="border-radius:8px; flex:1;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-pet-photo-file').click()" style="padding:8px 12px; font-weight:700; border-radius:8px; white-space:nowrap; background:#e2e8f0; color:#334155; border:none;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-pet-photo-file').click()" style="padding:8px 12px; font-weight:700; border-radius:8px; white-space:nowrap; background:#e2e8f0; color:#334155; border:none; cursor:pointer;">
                 📁 Subir Foto
               </button>
               <input type="file" id="edit-pet-photo-file" accept="image/*" style="display:none;" onchange="adminEngine.handleClientPhotoUpload(event, 'pet')">
@@ -7337,14 +7398,19 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         </div>
 
         <!-- BOTONES DE ACCIÓN: GUARDAR Y ELIMINAR -->
-        <div style="display:flex; gap:12px; align-items:center;">
+        <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
           <button type="button" class="btn btn-secondary" onclick="adminEngine.deleteClientFromModal()" style="background:#ef4444; color:white; border:none; font-weight:800; border-radius:12px; padding:12px 18px; display:flex; align-items:center; gap:6px; cursor:pointer;">
-            🗑️ Eliminar Cliente
+            🗑️ Eliminar Ficha
           </button>
           
-          <button type="submit" class="btn btn-primary" style="flex:1; padding:12px; font-weight:800; border-radius:12px; background:#4A6B5D; color:white; border:none; box-shadow:0 4px 15px rgba(74,107,93,0.3); cursor:pointer;">
-            💾 Guardar Cambios en CRM
-          </button>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button type="button" class="btn btn-secondary" onclick="app.closeModal('edit-client-modal')" style="padding:12px 18px; border-radius:12px; font-weight:700; cursor:pointer;">
+              ✕ Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" style="padding:12px 24px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #4A6B5D, #2D433A); color:white; border:1px solid #D4AF37; box-shadow:0 4px 15px rgba(74,107,93,0.3); cursor:pointer;">
+              💾 Guardar y Actualizar Ficha
+            </button>
+          </div>
         </div>
       </form>
     </div>

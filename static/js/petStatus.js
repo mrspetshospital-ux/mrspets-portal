@@ -2978,6 +2978,9 @@ class PetStatusEngine {
                   🏡 Listo para Casa
                 </button>
               ` : ''}
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${pet.id}')" style="background:#F4F1EA; color:#2C2C2E; border:1.5px solid #4A6B5D; font-weight:800; padding:6px 10px; border-radius:8px; font-size:0.75rem; cursor:pointer;" title="✏️ Editar Ficha del Cliente (Corregir datos de tutor y mascota)">
+                ✏️ Ficha
+              </button>
               <button class="btn btn-whatsapp btn-sm" onclick="petStatusEngine.notifyOwner('${pet.id}')" style="padding:6px 10px; border-radius:8px; margin-left:auto;">
                 📱 WA
               </button>
@@ -3037,10 +3040,10 @@ class PetStatusEngine {
               </div>
             ` : ''}
 
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:4px;">
-              <div style="font-size:0.72rem; color:#4A6B5D; font-weight:800; display:flex; align-items:center; gap:4px;">
-                <span>🔒 Tiempo en vivo (Solo Lectura)</span>
-              </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:4px; gap:8px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${pet.id}')" style="background:#F4F1EA; color:#2C2C2E; border:1.5px solid #4A6B5D; font-weight:800; padding:6px 12px; border-radius:8px; font-size:0.75rem; cursor:pointer;" title="✏️ Ver o corregir mis datos de tutor o los de mi consentido">
+                ✏️ Mi Ficha VIP
+              </button>
               <button class="btn btn-whatsapp btn-sm" onclick="petStatusEngine.notifyOwner('${pet.id}')" style="padding:6px 12px; border-radius:8px; font-size:0.75rem;">
                 💬 Consultar por WA
               </button>
@@ -3096,9 +3099,14 @@ class PetStatusEngine {
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
               ${statusBadgeHTML}
-              <button class="btn btn-sm" onclick="event.stopPropagation(); analytics.openTraceabilityModal('${pet.id}')" style="background:#4A6B5D; color:white; font-weight:800; border:none; border-radius:8px; padding:4px 10px; font-size:0.72rem; cursor:pointer;" title="${isStaff ? 'Ver quién lo recibió, atendió, bañó y secó' : 'Ver las etapas y estado de atención'}">
-                ${isStaff ? '🔎 Histórico Staff' : '📋 Etapas del Servicio'}
-              </button>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${pet.id}')" style="background:#4A6B5D; color:white; font-weight:800; border:none; border-radius:8px; padding:4px 10px; font-size:0.72rem; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(74,107,93,0.3);" title="✏️ Editar y Corregir Ficha del Cliente y Mascota">
+                  ✏️ Ficha
+                </button>
+                <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); analytics.openTraceabilityModal('${pet.id}')" style="background:#0F172A; color:#D4AF37; font-weight:800; border:1px solid #D4AF37; border-radius:8px; padding:4px 10px; font-size:0.72rem; cursor:pointer;" title="${isStaff ? 'Ver quién lo recibió, atendió, bañó y secó' : 'Ver las etapas y estado de atención'}">
+                  ${isStaff ? '🔎 Histórico Staff' : '📋 Etapas'}
+                </button>
+              </div>
             </div>
           </div>
 

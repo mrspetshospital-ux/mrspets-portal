@@ -1103,6 +1103,9 @@ class ClinicaEngine {
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.adminEngine) adminEngine.openEditClientModal('${this.authenticatedPatientId}')" style="background:#D4AF37; color:#121214; font-weight:800; border-radius:10px; border:none; padding:8px 14px; cursor:pointer;" title="Corregir datos de tutor o paciente">
+                ✏️ Editar Ficha
+              </button>
               <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); analytics.openTraceabilityModal('${this.authenticatedPatientId}')" style="background:#4A6B5D; color:white; font-weight:800; border-radius:10px; border:none; padding:8px 14px; cursor:pointer;">
                 📋 Etapas & Estatus de Atención
               </button>
