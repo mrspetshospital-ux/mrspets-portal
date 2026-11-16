@@ -2416,16 +2416,21 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;" class="dual-webhooks-grid">
             
             <!-- CANAL PRINCIPAL: TEAMIY (ORQUESTADOR DE AGENTES Y SUBAGENTES) -->
-            <div class="card" style="padding:24px; border:1.5px solid #0284c7; background:linear-gradient(145deg, #070e1c 0%, #0d1b2a 100%); color:white; border-radius:18px; box-shadow:0 8px 24px rgba(2,132,199,0.15);">
+            <div class="card" id="card-channel-teamily" style="padding:24px; border:1.5px solid #0284c7; background:linear-gradient(145deg, #070e1c 0%, #0d1b2a 100%); color:white; border-radius:18px; box-shadow:0 8px 24px rgba(2,132,199,0.25); transition:all 0.3s ease;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <span style="font-size:1.8rem;">🤖</span>
                   <div>
-                    <h3 style="font-size:1.15rem; font-weight:900; color:#FFFFFF; margin:0;">Canal Principal: Teamily</h3>
-                    <div style="font-size:0.75rem; color:#38bdf8; font-weight:700;">Orquestación de Agentes y Subagentes</div>
+                    <h3 id="teamily-channel-title" style="font-size:1.15rem; font-weight:900; color:#FFFFFF; margin:0;">Canal Principal: Teamily</h3>
+                    <div id="teamily-channel-subtitle" style="font-size:0.75rem; color:#38bdf8; font-weight:700;">Orquestación de Agentes y Subagentes (Primario Activo)</div>
                   </div>
                 </div>
-                <span class="badge" id="teamily-status-badge" style="background:#0284c7; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:12px;">PRIMARIO • ACTIVO</span>
+                <!-- BOTÓN INTERACTIVO DE CONMUTACIÓN DE ROL (PRIMARIO ACTIVO / RESPALDO STANDBY) -->
+                <button type="button" id="btn-toggle-teamily-role" onclick="agentStudio.toggleEngineRole('teamily')" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:0.78rem; font-weight:900; padding:7px 16px; border-radius:14px; border:1.5px solid #38bdf8; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(2,132,199,0.45); transition:all 0.25s ease;" title="Haz clic para conmutar entre Primario Activo y Respaldo Standby">
+                  <span id="teamily-status-icon">🟢</span>
+                  <span id="teamily-status-badge">PRIMARIO ACTIVO</span>
+                  <span style="font-size:0.68rem; opacity:0.85; margin-left:4px; border-left:1px solid rgba(255,255,255,0.3); padding-left:6px;">⇄ Conmutar</span>
+                </button>
               </div>
 
               <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.5; margin-bottom:16px;">
@@ -2481,16 +2486,21 @@
             </div>
 
             <!-- CANAL SECUNDARIO / RESPALDO: MAKE.COM + GEMINI (WEBHOOK DE EMERGENCIA) -->
-            <div class="card" style="padding:24px; border:1.5px solid #10b981; background:linear-gradient(145deg, #07130e 0%, #0d1b14 100%); color:white; border-radius:18px; box-shadow:0 8px 24px rgba(16,185,129,0.15);">
+            <div class="card" id="card-channel-make" style="padding:24px; border:1.5px solid rgba(255,255,255,0.15); background:linear-gradient(145deg, #07130e 0%, #0d1b14 100%); color:white; border-radius:18px; box-shadow:none; transition:all 0.3s ease;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <span style="font-size:1.8rem;">🛡️</span>
                   <div>
-                    <h3 style="font-size:1.15rem; font-weight:900; color:#FFFFFF; margin:0;">Canal Secundario: Make.com + Gemini</h3>
-                    <div style="font-size:0.75rem; color:#10b981; font-weight:700;">Webhook de Emergencia / Respaldo POS</div>
+                    <h3 id="make-channel-title" style="font-size:1.15rem; font-weight:900; color:#FFFFFF; margin:0;">Canal Secundario: Make.com + Gemini</h3>
+                    <div id="make-channel-subtitle" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Webhook de Emergencia / Respaldo Standby</div>
                   </div>
                 </div>
-                <span class="badge" id="make-pos-status-badge" style="background:#10b981; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:12px;">RESPALDO STANDBY</span>
+                <!-- BOTÓN INTERACTIVO DE CONMUTACIÓN DE ROL (PRIMARIO ACTIVO / RESPALDO STANDBY) -->
+                <button type="button" id="btn-toggle-make-role" onclick="agentStudio.toggleEngineRole('make')" style="background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:0.78rem; font-weight:800; padding:7px 16px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.2); cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:none; transition:all 0.25s ease;" title="Haz clic para conmutar entre Primario Activo y Respaldo Standby">
+                  <span id="make-pos-status-icon">⏸️</span>
+                  <span id="make-pos-status-badge">RESPALDO STANDBY</span>
+                  <span style="font-size:0.68rem; opacity:0.85; margin-left:4px; border-left:1px solid rgba(255,255,255,0.3); padding-left:6px;">⇄ Conmutar</span>
+                </button>
               </div>
 
               <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.5; margin-bottom:16px;">

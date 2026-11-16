@@ -223,10 +223,16 @@
     async processAiResponse(userText) {
       const lower = userText.toLowerCase();
 
-      // Petición real a la Centralita Router como Leia Concierge VIP y registro en Sheets
+      // Petición real según Inteligencia Primaria Activa (Teamily o Google Gemini)
       try {
+        const activeModel = (window.mrsPetsArch && typeof window.mrsPetsArch.getActiveAiModelId === 'function')
+          ? window.mrsPetsArch.getActiveAiModelId()
+          : (localStorage.getItem('mrspets_active_ai_model') || 'teamly-orchestrator');
+        const isTeamly = String(activeModel).toLowerCase().includes('teamly');
+        const targetEndpoint = isTeamly ? '/api/v1/teamily/agent-chat' : '/api/v1/leia/chat';
+
         const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-        const res = await fetch('/api/v1/teamily/agent-chat', {
+        const res = await fetch(targetEndpoint, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -236,6 +242,8 @@
             message_id: msgId,
             agente_origen: 'user',
             input: userText,
+            message: userText,
+            model: activeModel,
             agent_slug: 'leia',
             agent_name: 'Leia Concierge VIP & Asistencia CEO',
             board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',

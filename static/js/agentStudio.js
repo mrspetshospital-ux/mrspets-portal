@@ -194,8 +194,10 @@ class AgentStudio {
     const autoToggle = document.getElementById('governance-auto-failover-toggle');
     if (autoToggle) autoToggle.checked = this.autoFailoverEnabled;
 
-    // Selector de inteligencia primaria
+    // Selector de inteligencia primaria y botones de rol interactivos
     this.applyPrimaryEngineSelection(this.primaryEngine, false);
+    this.updateRoleBadgesUI(this.primaryEngine);
+    this.syncActiveAiModel(this.primaryEngine);
 
     // Actualizar contadores de estado y volumen
     this.updateKpiCounters();
@@ -215,7 +217,7 @@ class AgentStudio {
     const failoverStatusEl = document.getElementById('kpi-failover-status');
     if (failoverStatusEl) {
       if (this.makeFailoverAlerts > 0) {
-        failoverStatusEl.innerHTML = `⚠️ ${this.makeFailoverAlerts} conmutación(es) a Make`;
+        failoverStatusEl.innerHTML = `⚠️ ${this.makeFailoverAlerts} conmutación(es) a Respaldo`;
         failoverStatusEl.style.color = '#f59e0b';
       } else {
         failoverStatusEl.innerHTML = '● Sin contingencias activas';
@@ -226,10 +228,10 @@ class AgentStudio {
     const channelEl = document.getElementById('kpi-active-channel');
     if (channelEl) {
       if (this.primaryEngine === 'teamily') {
-        channelEl.innerHTML = 'Teamily (Primario)';
+        channelEl.innerHTML = 'Teamily (Primario Activo)';
         channelEl.style.color = '#38bdf8';
       } else if (this.primaryEngine === 'make') {
-        channelEl.innerHTML = 'Make.com (Forzado)';
+        channelEl.innerHTML = 'Gemini 3.8 (Primario Activo)';
         channelEl.style.color = '#34d399';
       } else {
         channelEl.innerHTML = 'Dual Auto-Failover';
@@ -269,10 +271,7 @@ class AgentStudio {
       indicator.innerHTML = `✅ Guardado a las ${now} • Persistente`;
       indicator.style.color = '#38bdf8';
     }
-    if (badge) {
-      badge.innerText = 'GUARDADO & ACTIVO';
-      badge.style.background = '#0284c7';
-    }
+    this.updateRoleBadgesUI(this.primaryEngine);
 
     if (window.app && typeof window.app.showToast === 'function') {
       window.app.showToast('💾 Canal Principal Teamily actualizado correctamente.', 'success');
@@ -342,10 +341,7 @@ class AgentStudio {
       indicator.innerHTML = `✅ Guardado a las ${now} • Persistente`;
       indicator.style.color = '#34d399';
     }
-    if (badge) {
-      badge.innerText = 'GUARDADO & ACTIVO';
-      badge.style.background = '#059669';
-    }
+    this.updateRoleBadgesUI(this.primaryEngine);
 
     const tableCode = document.getElementById('integrations-table-pos-webhook');
     if (tableCode) tableCode.innerText = newUrl;
@@ -392,7 +388,137 @@ class AgentStudio {
   setPrimaryEngine(mode) {
     this.primaryEngine = mode;
     this.applyPrimaryEngineSelection(mode, true);
+    this.updateRoleBadgesUI(mode);
+    this.syncActiveAiModel(mode);
     this.updateKpiCounters();
+    this.saveGovernanceConfig();
+  }
+
+  toggleEngineRole(clickedChannel) {
+    // Conmutador bidireccional inteligente:
+    // Si se presiona el canal actualmente primario, pasa al otro.
+    // Si se presiona el canal en standby, se activa inmediatamente como primario.
+    let newMode = 'teamily';
+    if (clickedChannel === 'teamily') {
+      newMode = (this.primaryEngine === 'teamily') ? 'make' : 'teamily';
+    } else if (clickedChannel === 'make') {
+      newMode = (this.primaryEngine === 'make') ? 'teamily' : 'make';
+    }
+    this.setPrimaryEngine(newMode);
+  }
+
+  updateRoleBadgesUI(mode) {
+    const isTeamilyPrimary = (mode === 'teamily' || mode === 'auto');
+
+    // Elementos Interactivos Teamily
+    const btnTeamily = document.getElementById('btn-toggle-teamily-role');
+    const badgeTeamily = document.getElementById('teamily-status-badge');
+    const iconTeamily = document.getElementById('teamily-status-icon');
+    const cardTeamily = document.getElementById('card-channel-teamily');
+    const titleTeamily = document.getElementById('teamily-channel-title');
+    const subTeamily = document.getElementById('teamily-channel-subtitle');
+
+    // Elementos Interactivos Make / Gemini
+    const btnMake = document.getElementById('btn-toggle-make-role');
+    const badgeMake = document.getElementById('make-pos-status-badge');
+    const iconMake = document.getElementById('make-pos-status-icon');
+    const cardMake = document.getElementById('card-channel-make');
+    const titleMake = document.getElementById('make-channel-title');
+    const subMake = document.getElementById('make-channel-subtitle');
+
+    const activeTeamilyStyle = "background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:0.78rem; font-weight:900; padding:7px 16px; border-radius:14px; border:1.5px solid #38bdf8; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(2,132,199,0.45); transition:all 0.25s ease;";
+    const activeGeminiStyle = "background:linear-gradient(135deg, #059669, #047857); color:#ffffff; font-size:0.78rem; font-weight:900; padding:7px 16px; border-radius:14px; border:1.5px solid #34d399; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(5,150,105,0.45); transition:all 0.25s ease;";
+    const standbyStyle = "background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:0.78rem; font-weight:800; padding:7px 16px; border-radius:14px; border:1.5px solid rgba(255,255,255,0.2); cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:none; transition:all 0.25s ease;";
+
+    if (isTeamilyPrimary) {
+      // 1. TEAMIY ES EL CANAL PRIMARIO ACTIVO
+      if (btnTeamily) {
+        btnTeamily.style.cssText = activeTeamilyStyle;
+        btnTeamily.title = "Teamily es la Inteligencia Primaria Activa. Haz clic para cambiar a Gemini.";
+      }
+      if (badgeTeamily) badgeTeamily.textContent = "PRIMARIO ACTIVO";
+      if (iconTeamily) iconTeamily.textContent = "🟢";
+      if (cardTeamily) {
+        cardTeamily.style.borderColor = "#0284c7";
+        cardTeamily.style.boxShadow = "0 8px 24px rgba(2,132,199,0.25)";
+      }
+      if (titleTeamily) titleTeamily.textContent = "Canal Principal: Teamily";
+      if (subTeamily) {
+        subTeamily.textContent = "Orquestación de Agentes y Subagentes (Primario Activo)";
+        subTeamily.style.color = "#38bdf8";
+      }
+
+      // 2. MAKE / GEMINI ES RESPALDO STANDBY
+      if (btnMake) {
+        btnMake.style.cssText = standbyStyle;
+        btnMake.title = "Gemini / Make.com está en Respaldo Standby. Haz clic para activarlo como Inteligencia Primaria.";
+      }
+      if (badgeMake) badgeMake.textContent = "RESPALDO STANDBY";
+      if (iconMake) iconMake.textContent = "⏸️";
+      if (cardMake) {
+        cardMake.style.borderColor = "rgba(255,255,255,0.15)";
+        cardMake.style.boxShadow = "none";
+      }
+      if (titleMake) titleMake.textContent = "Canal Secundario: Make.com + Gemini";
+      if (subMake) {
+        subMake.textContent = "Webhook de Emergencia / Respaldo Standby";
+        subMake.style.color = "#94a3b8";
+      }
+    } else {
+      // 1. MAKE / GEMINI ES EL CANAL PRIMARIO ACTIVO
+      if (btnMake) {
+        btnMake.style.cssText = activeGeminiStyle;
+        btnMake.title = "Gemini es la Inteligencia Primaria Activa. Haz clic para cambiar a Teamily.";
+      }
+      if (badgeMake) badgeMake.textContent = "PRIMARIO ACTIVO";
+      if (iconMake) iconMake.textContent = "🟢";
+      if (cardMake) {
+        cardMake.style.borderColor = "#10b981";
+        cardMake.style.boxShadow = "0 8px 24px rgba(16,185,129,0.3)";
+      }
+      if (titleMake) titleMake.textContent = "Canal Principal: Make.com + Gemini";
+      if (subMake) {
+        subMake.textContent = "Inteligencia Principal de Consulta (Primario Activo)";
+        subMake.style.color = "#34d399";
+      }
+
+      // 2. TEAMIY ES RESPALDO STANDBY
+      if (btnTeamily) {
+        btnTeamily.style.cssText = standbyStyle;
+        btnTeamily.title = "Teamily está en Respaldo Standby. Haz clic para activarlo como Inteligencia Primaria.";
+      }
+      if (badgeTeamily) badgeTeamily.textContent = "RESPALDO STANDBY";
+      if (iconTeamily) iconTeamily.textContent = "⏸️";
+      if (cardTeamily) {
+        cardTeamily.style.borderColor = "rgba(255,255,255,0.15)";
+        cardTeamily.style.boxShadow = "none";
+      }
+      if (titleTeamily) titleTeamily.textContent = "Canal Secundario: Teamily";
+      if (subTeamily) {
+        subTeamily.textContent = "Orquestación de Agentes (Respaldo Standby)";
+        subTeamily.style.color = "#94a3b8";
+      }
+    }
+  }
+
+  syncActiveAiModel(mode) {
+    const isGemini = (mode === 'make');
+    const targetModelId = isGemini ? 'gemini-3.8-flash' : 'teamly-orchestrator';
+
+    localStorage.setItem('mrspets_active_ai_model', targetModelId);
+
+    if (window.mrsPetsArch) {
+      if (typeof window.mrsPetsArch.setActiveAiModel === 'function') {
+        window.mrsPetsArch.setActiveAiModel(targetModelId, false);
+      }
+      if (typeof window.mrsPetsArch.syncModelSelectors === 'function') {
+        window.mrsPetsArch.syncModelSelectors();
+      }
+    }
+
+    if (window.leiaChatEngine && typeof window.leiaChatEngine.setActiveModel === 'function') {
+      window.leiaChatEngine.setActiveModel(targetModelId);
+    }
   }
 
   applyPrimaryEngineSelection(mode, showToast = false) {
@@ -415,8 +541,13 @@ class AgentStudio {
     }
 
     if (showToast && window.app && typeof window.app.showToast === 'function') {
-      const modeName = mode === 'teamily' ? 'Teamily (Orquestador Primario)' : (mode === 'make' ? 'Make.com + Gemini (Solo Respaldo)' : 'Dual Auto-Failover');
-      window.app.showToast(`🧠 Canal activo configurado: ${modeName}`, 'info');
+      if (mode === 'teamily') {
+        window.app.showToast('🧠 Teamily configurado como Inteligencia Primaria Activa. Gemini en Respaldo Standby.', 'success');
+      } else if (mode === 'make') {
+        window.app.showToast('🧠 Gemini configurado como Inteligencia Primaria Activa. Teamily en Respaldo Standby.', 'success');
+      } else {
+        window.app.showToast('🔄 Modo Dual Auto-Failover sincronizado.', 'info');
+      }
     }
   }
 

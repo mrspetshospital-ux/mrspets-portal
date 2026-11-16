@@ -2087,7 +2087,19 @@ async def leia_chat_v1(request: Request):
         body = {}
 
     user_message = str(body.get("message") or body.get("input") or body.get("prompt") or "").strip()
-    ai_model = body.get("model") or body.get("aiModel") or "gemini-3.8-flash"
+    ai_model = body.get("model") or body.get("aiModel")
+    if not ai_model or ai_model == "auto":
+        try:
+            if AGENT_STUDIO_CONFIG_PATH.exists():
+                with open(AGENT_STUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    p_engine = cfg.get("primaryEngine", "teamily")
+                    ai_model = "gemini-3.8-flash" if p_engine == "make" else "teamly-orchestrator"
+        except Exception:
+            ai_model = "teamly-orchestrator"
+    if not ai_model:
+        ai_model = "teamly-orchestrator"
+
     user_type = body.get("userType") or body.get("user_type") or "client"
     user_name = body.get("userName") or body.get("user_name") or "Cliente VIP"
     pet_name = body.get("petName") or body.get("pet_name") or ""
