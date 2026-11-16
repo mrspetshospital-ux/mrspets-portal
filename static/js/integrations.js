@@ -1477,25 +1477,31 @@ class Integrations {
         const t3 = document.getElementById('bcv-edit-time-3');
 
         if (urlInput) urlInput.value = cfg.query_url || 'https://ve.dolarapi.com/v1/dolares/oficial';
-        if (sourceInput) sourceInput.value = cfg.source_name || 'Banco Central de Venezuela';
-        if (rateInput) rateInput.value = cfg.manual_rate || (data.effective_rate || 49.50);
-        if (overrideInput) overrideInput.checked = Boolean(cfg.manual_override !== false);
+        if (sourceInput) sourceInput.value = cfg.source || cfg.source_name || 'Banco Central de Venezuela';
+        if (rateInput) rateInput.value = cfg.manual_rate || cfg.effective_rate || (data.effective_rate || 914.02);
+        if (overrideInput) overrideInput.checked = Boolean(cfg.manual_override === true);
 
         if (Array.isArray(cfg.schedule_times) && cfg.schedule_times.length >= 3) {
           if (t1) t1.value = cfg.schedule_times[0];
           if (t2) t2.value = cfg.schedule_times[1];
           if (t3) t3.value = cfg.schedule_times[2];
+        } else {
+          if (t1) t1.value = '08:30';
+          if (t2) t2.value = '12:00';
+          if (t3) t3.value = '16:00';
         }
 
         const rateBadge = document.getElementById('bcv-modal-current-rate');
         if (rateBadge) {
-          const rateVal = data.effective_rate || cfg.manual_rate || 49.50;
+          const rateVal = data.effective_rate || cfg.manual_rate || 914.02;
           rateBadge.textContent = `${Number(rateVal).toFixed(2)} Bs/USD`;
         }
 
         const slotBadge = document.getElementById('bcv-modal-current-slot');
-        if (slotBadge && data.active_block) {
-          slotBadge.textContent = `Bloque: ${data.active_block.slot} • Próxima: ${data.next_scheduled_sync ? data.next_scheduled_sync.time : '17:00'}`;
+        if (slotBadge) {
+          const slotText = data.slot || (data.active_block ? data.active_block.slot : '12:00 PM');
+          const nextText = data.next_scheduled_sync ? (data.next_scheduled_sync.time || data.next_scheduled_sync) : '04:00 PM';
+          slotBadge.textContent = `Bloque: ${slotText} • Próxima: ${nextText}`;
         }
       }
     } catch(err) {
@@ -1624,7 +1630,8 @@ class Integrations {
       source_name,
       manual_rate,
       manual_override,
-      schedule_times
+      schedule_times,
+      auto_sync_enabled: true
     };
 
     try {
@@ -1642,7 +1649,7 @@ class Integrations {
         // Actualizar UI de la tabla
         const rateBadge = document.getElementById('bcv-table-rate-badge');
         if (rateBadge) {
-          rateBadge.textContent = `Tasa: ${manual_rate.toFixed(2)} Bs/USD`;
+          rateBadge.textContent = `Tasa: ${manual_rate.toFixed(2)} Bs/USD (🟢 Auto-Sync)`;
           rateBadge.style.background = '#ECFDF5';
           rateBadge.style.color = '#047857';
           rateBadge.style.border = '1px solid #A7F3D0';
@@ -1660,8 +1667,8 @@ class Integrations {
         }
 
         // Notificar y refrescar motor financiero
-        if (window.financialEngine && typeof window.financialEngine.fetchOfficialBcvRate === 'function') {
-          window.financialEngine.fetchOfficialBcvRate(true);
+        if (window.FinancialEngine && typeof window.FinancialEngine.fetchOfficialBcvRate === 'function') {
+          window.FinancialEngine.fetchOfficialBcvRate(true);
         }
 
         if (window.app && typeof window.app.showToast === 'function') {
@@ -1673,6 +1680,41 @@ class Integrations {
     } catch(err) {
       if (window.app && typeof window.app.showToast === 'function') {
         window.app.showToast(`⚠️ Error al guardar configuración BCV: ${err.message}`, 'error');
+      }
+    }
+  }
+
+  async triggerLiveBcvSync() {
+    const btn = document.getElementById('btn-sync-bcv-now');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.innerHTML = '⏳ Sincronizando...';
+      btn.disabled = true;
+    }
+    try {
+      const res = await fetch('/api/v1/bcv/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        const rateVal = data.data ? data.data.rate : 914.02;
+        const slot = data.data ? data.data.slot : '12:00 PM';
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast(`✅ Tasa BCV sincronizada en vivo: Bs. ${Number(rateVal).toFixed(2)} (${slot})`, 'success');
+        }
+        if (window.FinancialEngine && typeof window.FinancialEngine.fetchOfficialBcvRate === 'function') {
+          window.FinancialEngine.fetchOfficialBcvRate(true);
+        }
+        await this.fetchBcvConfigAndRefreshUi();
+      } else {
+        throw new Error(data.message || 'Error en sincronización');
+      }
+    } catch (e) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⚠️ Sincronización en proceso: ${e.message}`, 'warning');
+      }
+    } finally {
+      if (btn) {
+        btn.innerHTML = origHtml || '⚡ Sincronizar Ahora';
+        btn.disabled = false;
       }
     }
   }

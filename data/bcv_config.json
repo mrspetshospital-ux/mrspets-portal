@@ -1,12 +1,17 @@
 {
-  "query_url": "https://www.bcv.org.ve/",
+  "query_url": "https://ve.dolarapi.com/v1/dolares/oficial",
   "schedule_times": [
-    "08:00",
-    "11:00",
-    "17:00"
+    "08:30",
+    "12:00",
+    "16:00"
   ],
-  "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)",
-  "manual_override": true,
-  "manual_rate": 887.3,
-  "last_updated": "2026-10-27T18:35:00Z"
+  "source": "Banco Central de Venezuela (BCV Oficial)",
+  "auto_sync_enabled": true,
+  "manual_override": false,
+  "manual_rate": 914.02,
+  "effective_rate": 914.02,
+  "active_slot": "04:00 PM",
+  "active_block": "BLOQUE_16_00_PM",
+  "next_scheduled_sync": "08:30 AM",
+  "last_updated": "2026-11-16T16:00:00Z"
 }

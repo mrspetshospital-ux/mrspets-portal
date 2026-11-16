@@ -1725,7 +1725,7 @@
                     <span>🛒</span> Carrito de Compras
                   </h3>
                   <div id="cart-header-bcv-pill" style="font-size:0.75rem; font-weight:900; color:#10B981; background:rgba(16,185,129,0.15); border:1px solid #10B981; padding:4px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-                    <span>🏛️ Tasa BCV:</span> <strong>887.30 Bs/USD</strong>
+                    <span>🏛️ Tasa BCV:</span> <strong>914.02 Bs/USD</strong>
                   </div>
                 </div>
                 <div id="cart-items-container"></div>
@@ -3153,21 +3153,21 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
                     </td>
                   </tr>
 
-                  <!-- FILA 8: AUTOMATIZACIÓN TASA BCV OFICIAL -->
+                  <!-- FILA 8: AUTOMATIZACIÓN TASA BCV OFICIAL (CRONOGRAMA: 08:30 AM • 12:00 PM • 04:00 PM) -->
                   <tr id="row-endpoint-bcv" style="border-bottom:1px solid #F1F5F9; transition:background 0.2s;">
                     <td style="padding:14px 18px; vertical-align:middle;">
                       <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:1.15rem;">🇻🇪</span>
                         <div>
-                          <strong style="color:#0F172A; font-size:0.92rem;">Automatización Tasa Oficial BCV (Instagram @bcv.org.ve)</strong>
-                          <div id="bcv-schedule-hours-label" style="font-size:0.75rem; color:#64748B;">3 ejecuciones fijas diarias: 8:00 AM • 11:00 AM • 5:00 PM (Cero dólar paralelo)</div>
+                          <strong style="color:#0F172A; font-size:0.92rem;">Automatización Tasa Oficial BCV</strong>
+                          <div id="bcv-schedule-hours-label" style="font-size:0.75rem; color:#64748B;">3 ejecuciones fijas diarias: 8:30 AM • 12:00 PM • 4:00 PM (Hora de Venezuela • Cero dólar paralelo)</div>
                         </div>
                       </div>
                     </td>
                     <td style="padding:14px 18px; vertical-align:middle;">
                       <span class="badge" style="background:#F3E8FF; color:#7E22CE; font-weight:800; border:1px solid #D8B4FE; font-size:0.72rem;">CRON / REST</span>
                       <div style="margin-top:4px;">
-                        <span id="bcv-table-rate-badge" class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; font-weight:800; font-size:0.72rem;">Tasa: Cargando...</span>
+                        <span id="bcv-table-rate-badge" class="badge" style="background:#ECFDF5; color:#047857; border:1px solid #A7F3D0; font-weight:800; font-size:0.72rem;">Tasa: Cargando...</span>
                       </div>
                     </td>
                     <td style="padding:14px 18px; vertical-align:middle;">
@@ -3175,11 +3175,14 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
                     </td>
                     <td style="padding:14px 18px; vertical-align:middle;">
                       <button type="button" class="badge" id="btn-bcv-scheduled-badge" onclick="integrations.openEditBcvModal()" style="background:#ECFDF5; color:#047857; border:1px solid #A7F3D0; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" title="Haz clic para modificar los horarios programados o la URL">
-                        ⚙️ Programado ✏️
+                        🟢 Auto-Sync Activo ✏️
                       </button>
                     </td>
                     <td style="padding:14px 18px; vertical-align:middle; text-align:right;">
                       <div style="display:flex; justify-content:flex-end; gap:6px; align-items:center;">
+                        <button type="button" id="btn-sync-bcv-now" class="btn btn-sm" onclick="integrations.triggerLiveBcvSync()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; border:none; font-weight:800; border-radius:8px; padding:5px 12px; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;" title="Disparar sincronización inmediata con BCV">
+                          ⚡ Sincronizar Ahora
+                        </button>
                         <button type="button" id="btn-edit-bcv-row" class="btn btn-sm" onclick="integrations.openEditBcvModal()" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214; border:none; font-weight:800; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:0.75rem;" title="Modificar URL de consulta, tasa manual u horarios">
                           ✏️ Editar
                         </button>
@@ -8412,18 +8415,15 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         <div style="background:#141416; border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:18px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
             <label style="font-size:0.8rem; font-weight:800; color:#E2E8F0; text-transform:uppercase; letter-spacing:0.06em;">
-              ⏰ 3. Horarios Programados de Ejecución Diaria (3 Horas)
+              ⏰ 3. Cronograma Oficial de Actualización (08:30 AM • 12:00 PM • 04:00 PM)
             </label>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <span style="font-size:0.72rem; color:#94A3B8; font-weight:700; align-self:center;">Presets de Horas:</span>
-              <button type="button" class="btn btn-sm" onclick="integrations.setBcvSchedulePreset(['08:00', '11:00', '17:00'])" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#E2E8F0; font-size:0.72rem; padding:3px 8px; border-radius:6px; cursor:pointer;">
-                08:00 • 11:00 • 17:00 (Estándar)
+              <button type="button" class="btn btn-sm" onclick="integrations.setBcvSchedulePreset(['08:30', '12:00', '16:00'])" style="background:#10B981; border:1px solid #34D399; color:#FFFFFF; font-weight:800; font-size:0.72rem; padding:3px 10px; border-radius:6px; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.35);">
+                ⭐ 08:30 • 12:00 • 16:00 (Cronograma Oficial Mrs. Pets)
               </button>
-              <button type="button" class="btn btn-sm" onclick="integrations.setBcvSchedulePreset(['09:00', '13:00', '18:00'])" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#E2E8F0; font-size:0.72rem; padding:3px 8px; border-radius:6px; cursor:pointer;">
-                09:00 • 13:00 • 18:00 (Comercial)
-              </button>
-              <button type="button" class="btn btn-sm" onclick="integrations.setBcvSchedulePreset(['08:30', '12:00', '16:30'])" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#E2E8F0; font-size:0.72rem; padding:3px 8px; border-radius:6px; cursor:pointer;">
-                08:30 • 12:00 • 16:30 (Vespertino)
+              <button type="button" class="btn btn-sm" onclick="integrations.setBcvSchedulePreset(['09:00', '13:00', '17:00'])" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#E2E8F0; font-size:0.72rem; padding:3px 8px; border-radius:6px; cursor:pointer;">
+                09:00 • 13:00 • 17:00 (Comercial)
               </button>
             </div>
           </div>
@@ -8431,19 +8431,19 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
             <div>
               <label style="display:block; font-size:0.75rem; font-weight:700; color:#94A3B8; margin-bottom:4px;">1ª Ejecución (Mañana)</label>
-              <input type="time" id="bcv-edit-time-1" required value="08:00" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
+              <input type="time" id="bcv-edit-time-1" required value="08:30" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
             </div>
             <div>
               <label style="display:block; font-size:0.75rem; font-weight:700; color:#94A3B8; margin-bottom:4px;">2ª Ejecución (Mediodía)</label>
-              <input type="time" id="bcv-edit-time-2" required value="11:00" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
+              <input type="time" id="bcv-edit-time-2" required value="12:00" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
             </div>
             <div>
-              <label style="display:block; font-size:0.75rem; font-weight:700; color:#94A3B8; margin-bottom:4px;">3ª Ejecución (Cierre BCV)</label>
-              <input type="time" id="bcv-edit-time-3" required value="17:00" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
+              <label style="display:block; font-size:0.75rem; font-weight:700; color:#94A3B8; margin-bottom:4px;">3ª Ejecución (Tarde BCV)</label>
+              <input type="time" id="bcv-edit-time-3" required value="16:00" style="width:100%; box-sizing:border-box; background:#0F172A; border:1.5px solid #334155; border-radius:10px; padding:10px 12px; color:#FFFFFF; font-size:0.95rem; font-weight:800; text-align:center;">
             </div>
           </div>
           <p style="font-size:0.73rem; color:#94A3B8; margin:8px 0 0 0;">
-            El scheduler de Mrs. Pets ejecutará la consulta automática exactamente en estos 3 momentos diarios y actualizará la matriz cambiaria.
+            El scheduler de Mrs. Pets ejecutará la consulta automática exactamente en estos 3 momentos diarios (8:30 AM, 12:00 PM y 4:00 PM VET) y actualizará la matriz cambiaria de toda la plataforma.
           </p>
         </div>
 

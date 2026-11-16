@@ -337,6 +337,23 @@
                     btnUsd.classList.remove('active');
                 }
             }
+
+            // Actualizar píldora visual en el carrito de compras de la tienda
+            const cartBcvPill = document.getElementById('cart-header-bcv-pill');
+            if (cartBcvPill && this.config.bcvRate) {
+                const formattedRate = this.formatVenezuelanNumber(this.config.bcvRate);
+                const slotText = this.config.bcvSlot ? ` • ${this.config.bcvSlot}` : '';
+                cartBcvPill.innerHTML = `<span>🏛️ Tasa BCV:</span> <strong>${formattedRate} Bs/USD</strong><span style="font-size:0.68rem; opacity:0.85; margin-left:4px;">${slotText}</span>`;
+            }
+
+            // Actualizar badge en la tabla de Integraciones / Endpoints
+            const bcvTableRateBadge = document.getElementById('bcv-table-rate-badge');
+            if (bcvTableRateBadge && this.config.bcvRate) {
+                bcvTableRateBadge.innerHTML = `Tasa: ${this.formatVenezuelanNumber(this.config.bcvRate)} Bs/USD (🟢 Auto-Sync)`;
+                bcvTableRateBadge.style.background = '#ECFDF5';
+                bcvTableRateBadge.style.color = '#047857';
+                bcvTableRateBadge.style.borderColor = '#A7F3D0';
+            }
         },
 
         /**
@@ -506,6 +523,11 @@
             window.addEventListener('mrs_pets_financial_config_updated', () => {
                 this.updateCurrencySelectorUI();
             });
+
+            // Polling defensivo en frontend cada 2 minutos para asegurar tasa fresca
+            setInterval(() => {
+                this.ensureFreshRate();
+            }, 120000);
         }
     };
 

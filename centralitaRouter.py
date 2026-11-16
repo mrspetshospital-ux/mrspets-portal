@@ -251,7 +251,17 @@ class CentralitaRouter:
         ctx = context or {}
         user_display = ctx.get("userName") or ctx.get("tutor_name") or ""
 
-        bcv_rate = float(os.environ.get("BCV_OFFICIAL_RATE", 887.30))
+        bcv_rate = 914.02
+        try:
+            bcv_json_path = Path(__file__).resolve().parent / "data" / "bcv_config.json"
+            if bcv_json_path.exists():
+                with open(bcv_json_path, "r", encoding="utf-8") as f:
+                    c = json.load(f)
+                    bcv_rate = float(c.get("effective_rate") or c.get("manual_rate") or bcv_rate)
+            else:
+                bcv_rate = float(os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
+        except Exception:
+            bcv_rate = float(os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
 
         # 1. LEIA (Concierge VIP & Asistencia CEO - Silent Luxury)
         if slug == "leia":

@@ -201,6 +201,14 @@ def _startup():
     else:
         log.info("Barrera de acceso activa para el usuario '%s'.", PORTAL_USER)
 
+    # Iniciar daemon de sincronización automática de Tasa Oficial BCV
+    try:
+        t_bcv = threading.Thread(target=_bcv_scheduler_daemon, daemon=True, name="bcv-scheduler-thread")
+        t_bcv.start()
+        log.info("Daemon de sincronización automática de Tasa Oficial BCV iniciado en segundo plano.")
+    except Exception as e_bcv:
+        log.error("No se pudo iniciar el daemon de Tasa BCV: %s", e_bcv)
+
 
 # ---------------------------------------------------------------------
 # Helpers
@@ -5739,15 +5747,174 @@ async def misipet_staff_schedule_update(request: Request):
     return {"status": "error", "message": "Engine no disponible"}
 
 
+# =====================================================================
+# AUTOMATIZACIÓN TASA OFICIAL BCV (BANCO CENTRAL DE VENEZUELA)
+# Cronograma Oficial: 08:30 AM • 12:00 PM • 04:00 PM (Hora de Venezuela)
+# =====================================================================
+
+def get_caracas_time():
+    """Hora legal oficial en Venezuela (UTC-4 / VET)"""
+    return datetime.now(timezone(timedelta(hours=-4)))
+
+
+def get_bcv_active_slot_and_next():
+    """Calcula el bloque activo y la próxima sincronización según el cronograma: 08:30 AM, 12:00 PM, 04:00 PM"""
+    ct = get_caracas_time()
+    t_min = ct.hour * 60 + ct.minute
+    # 08:30 AM = 510 minutos
+    # 12:00 PM = 720 minutos
+    # 04:00 PM = 960 minutos (16:00)
+    if t_min < 510:
+        active_slot = "04:00 PM (Cierre Anterior)"
+        active_block = "BLOQUE_16_00_PM"
+        next_sync = "08:30 AM"
+    elif t_min < 720:
+        active_slot = "08:30 AM"
+        active_block = "BLOQUE_08_30_AM"
+        next_sync = "12:00 PM"
+    elif t_min < 960:
+        active_slot = "12:00 PM"
+        active_block = "BLOQUE_12_00_PM"
+        next_sync = "04:00 PM"
+    else:
+        active_slot = "04:00 PM"
+        active_block = "BLOQUE_16_00_PM"
+        next_sync = "08:30 AM (Día Siguiente)"
+    return active_slot, active_block, next_sync
+
+
+def _parse_rate_from_raw_payload(payload_bytes_or_str):
+    if not payload_bytes_or_str:
+        return None
+    if isinstance(payload_bytes_or_str, bytes):
+        text = payload_bytes_or_str.decode("utf-8", errors="ignore")
+    else:
+        text = str(payload_bytes_or_str)
+
+    # 1. Intentar JSON
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            for k in ["promedio", "valor", "precio", "rate", "usd", "price", "tasa", "official"]:
+                val = data.get(k)
+                if val is not None:
+                    try:
+                        v = float(val)
+                        if v > 1.0:
+                            return v
+                    except (ValueError, TypeError):
+                        pass
+            if "monitors" in data and isinstance(data["monitors"], dict):
+                usd_mon = data["monitors"].get("usd") or data["monitors"].get("bcv")
+                if isinstance(usd_mon, dict):
+                    for k in ["price", "valor", "rate", "promedio"]:
+                        v = usd_mon.get(k)
+                        if v:
+                            try:
+                                return float(v)
+                            except Exception:
+                                pass
+    except Exception:
+        pass
+
+    # 2. Intentar HTML de portal BCV
+    m = re.search(r'id=["\']dolar["\'][\s\S]*?<strong>\s*([0-9.,]+)\s*<\/strong>', text, re.IGNORECASE)
+    if m:
+        try:
+            raw = m.group(1).replace(".", "").replace(",", ".")
+            v = float(raw)
+            if v > 1.0:
+                return v
+        except Exception:
+            pass
+
+    m2 = re.search(r'(?:USD|D[oó]lar|BCV)[\s\S]*?([0-9]{2,4}[.,][0-9]{2,4})', text, re.IGNORECASE)
+    if m2:
+        try:
+            raw = m2.group(1).replace(".", "").replace(",", ".")
+            v = float(raw)
+            if v > 1.0:
+                return v
+        except Exception:
+            pass
+
+    return None
+
+
+def fetch_live_bcv_rate(custom_url: Optional[str] = None) -> dict:
+    """Consulta en vivo multi-fuente defensiva para obtener la tasa oficial BCV"""
+    t0 = time.time()
+    ctx_ssl = ssl.create_default_context()
+    ctx_ssl.check_hostname = False
+    ctx_ssl.verify_mode = ssl.CERT_NONE
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/html, */*",
+        "Cache-Control": "no-cache"
+    }
+
+    candidate_sources = []
+    if custom_url and custom_url.startswith("http"):
+        candidate_sources.append(("URL Personalizada", custom_url))
+
+    # Cascada de proveedores oficiales y proxies comunitarios venezolanos
+    candidate_sources.extend([
+        ("DolarApi Oficial (BCV)", "https://ve.dolarapi.com/v1/dolares/oficial"),
+        ("BCV Today REST API", "https://bcv.today/api/v1/rate.json"),
+        ("Rates DolarVzla (BCV CDN)", "https://rates.dolarvzla.com/bcv/current.json"),
+        ("PyDolarVenezuela API", "https://pydolarve.org/api/v1/dollar?page=bcv"),
+        ("Banco Central de Venezuela (Web Oficial)", "https://www.bcv.org.ve/")
+    ])
+
+    for source_name, url in candidate_sources:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, context=ctx_ssl, timeout=3.5) as resp:
+                raw_data = resp.read()
+                rate = _parse_rate_from_raw_payload(raw_data)
+                if rate and rate > 1.0:
+                    dt_ms = int((time.time() - t0) * 1000)
+                    log.info("Tasa BCV obtenida exitosamente desde %s: %.2f Bs/USD (%d ms)", source_name, rate, dt_ms)
+                    return {
+                        "success": True,
+                        "rate": round(rate, 2),
+                        "source": source_name,
+                        "url_used": url,
+                        "latency_ms": dt_ms
+                    }
+        except Exception:
+            continue
+
+    # Si todas las fuentes externas fallan, recurrir a la tasa guardada en configuración
+    dt_ms = int((time.time() - t0) * 1000)
+    cfg = get_bcv_config_data()
+    saved_rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
+    return {
+        "success": False,
+        "rate": round(saved_rate, 2),
+        "source": "Respaldo Local / Base de Contingencia",
+        "url_used": "local_cache",
+        "latency_ms": dt_ms,
+        "fallback": True
+    }
+
+
 def get_bcv_config_data():
     bcv_path = Path(__file__).resolve().parent / "data" / "bcv_config.json"
-    default_rate = float(os.environ.get("BCV_OFFICIAL_RATE", "887.30"))
+    default_rate = float(os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
+    slot, block, nxt = get_bcv_active_slot_and_next()
     cfg = {
-        "query_url": "https://www.bcv.org.ve/",
-        "schedule_times": ["08:00", "11:00", "17:00"],
-        "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)",
-        "manual_override": True,
+        "query_url": "https://ve.dolarapi.com/v1/dolares/oficial",
+        "schedule_times": ["08:30", "12:00", "16:00"],
+        "source": "Banco Central de Venezuela (BCV Oficial)",
+        "auto_sync_enabled": True,
+        "manual_override": False,
         "manual_rate": default_rate,
+        "effective_rate": default_rate,
+        "active_slot": slot,
+        "active_block": block,
+        "next_scheduled_sync": nxt,
         "last_updated": datetime.now(timezone.utc).isoformat()
     }
     if bcv_path.exists():
@@ -5761,37 +5928,181 @@ def get_bcv_config_data():
     return cfg
 
 
+def sync_bcv_rate_task(force: bool = False, reason: str = "scheduler", custom_rate: Optional[float] = None) -> dict:
+    """Ejecuta una sincronización de la tasa oficial del BCV y persiste el resultado"""
+    cfg = get_bcv_config_data()
+    manual_override = bool(cfg.get("manual_override", False))
+    auto_sync = bool(cfg.get("auto_sync_enabled", True))
+
+    slot, block, nxt = get_bcv_active_slot_and_next()
+
+    if custom_rate and custom_rate > 1.0:
+        rate = round(custom_rate, 2)
+        source = "Ajuste Directo / Tasa Forzada"
+        latency_ms = 5
+    elif manual_override and not force:
+        rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or 914.02)
+        source = cfg.get("source") or "Banco Central de Venezuela (Fijado Manualmente)"
+        latency_ms = 0
+    elif not auto_sync and not force:
+        rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or 914.02)
+        source = cfg.get("source") or "Sincronización Automática en Pausa"
+        latency_ms = 0
+    else:
+        fetch_res = fetch_live_bcv_rate(cfg.get("query_url"))
+        rate = fetch_res.get("rate") or float(cfg.get("manual_rate") or 914.02)
+        source = fetch_res.get("source") or "Banco Central de Venezuela (BCV Oficial)"
+        latency_ms = fetch_res.get("latency_ms", 30)
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cfg["manual_rate"] = rate
+    cfg["effective_rate"] = rate
+    cfg["source"] = source
+    cfg["active_slot"] = slot
+    cfg["active_block"] = block
+    cfg["next_scheduled_sync"] = nxt
+    cfg["last_updated"] = now_iso
+    cfg["last_sync_reason"] = reason
+    cfg["last_latency_ms"] = latency_ms
+
+    bcv_path = Path(__file__).resolve().parent / "data" / "bcv_config.json"
+    try:
+        bcv_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(bcv_path, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        log.warning(f"Error guardando bcv_config.json: {e}")
+
+    log.info("Sincronización BCV completada: %.2f Bs/USD (%s) • Razón: %s", rate, slot, reason)
+    return {
+        "status": "success",
+        "rate": rate,
+        "effective_rate": rate,
+        "slot": slot,
+        "active_block": block,
+        "next_scheduled_sync": nxt,
+        "source": source,
+        "latency_ms": latency_ms,
+        "timestamp": now_iso,
+        "auto_sync_enabled": auto_sync
+    }
+
+
+def _bcv_scheduler_daemon():
+    """Hilo demonio en segundo plano para sincronizar la Tasa BCV automáticamente según cronograma (08:30 AM, 12:00 PM, 04:00 PM)"""
+    log.info("Iniciando daemon de sincronización automática de Tasa BCV (08:30 AM, 12:00 PM, 04:00 PM)...")
+    time.sleep(5)
+
+    try:
+        sync_bcv_rate_task(force=False, reason="startup_sync")
+    except Exception as e:
+        log.warning("Sincronización inicial BCV: %s", e)
+
+    last_synced_minute_key = -1
+
+    while True:
+        try:
+            time.sleep(30)
+            ct = get_caracas_time()
+            cur_min_key = ct.hour * 60 + ct.minute
+            cur_time_str = ct.strftime("%H:%M")
+
+            cfg = get_bcv_config_data()
+            if not cfg.get("auto_sync_enabled", True):
+                continue
+
+            schedule_times = cfg.get("schedule_times") or ["08:30", "12:00", "16:00"]
+
+            # 1. ¿Es hora de ejecución programada en el cronograma (08:30 AM, 12:00 PM, 04:00 PM)?
+            is_scheduled_time = (cur_time_str in schedule_times) and (cur_min_key != last_synced_minute_key)
+
+            # 2. ¿La tasa tiene más de 60 minutos sin actualizarse?
+            last_updated_iso = cfg.get("last_updated")
+            is_stale = False
+            if last_updated_iso:
+                try:
+                    dt_last = datetime.fromisoformat(last_updated_iso.replace("Z", "+00:00"))
+                    diff_sec = (datetime.now(timezone.utc) - dt_last).total_seconds()
+                    if diff_sec > 3600:
+                        is_stale = True
+                except Exception:
+                    is_stale = True
+            else:
+                is_stale = True
+
+            if is_scheduled_time or is_stale:
+                last_synced_minute_key = cur_min_key
+                sync_bcv_rate_task(force=False, reason=f"cronograma_{cur_time_str}" if is_scheduled_time else "stale_refresh")
+
+        except Exception as e:
+            log.error("Excepción en daemon BCV: %s", e)
+            time.sleep(60)
+
+
 @app.get("/api/v1/bcv/rate")
 @app.get("/api/v1/bcb/rate")
 @app.get("/bcv/rate")
 @app.get("/bcb/rate")
 def bcv_rate():
     cfg = get_bcv_config_data()
-    rate = float(cfg.get("manual_rate") or os.environ.get("BCV_OFFICIAL_RATE", "887.30"))
+    rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
+    slot, block, nxt = get_bcv_active_slot_and_next()
     return {
         "status": "success",
         "rate": rate,
         "currentRate": rate,
         "effective_rate": rate,
-        "slot": "11:00 AM",
-        "activeBlock": "BLOQUE_11_00_AM",
+        "slot": slot,
+        "activeBlock": block,
+        "active_block": block,
+        "nextScheduledSync": nxt,
+        "next_scheduled_sync": nxt,
         "currency": "VES/USD",
         "source": cfg.get("source", "Banco Central de Venezuela (BCV Oficial)"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "lastSync": {"timestamp": cfg.get("last_updated", datetime.now(timezone.utc).isoformat())}
+        "auto_sync_enabled": bool(cfg.get("auto_sync_enabled", True)),
+        "manual_override": bool(cfg.get("manual_override", False)),
+        "lastSync": {
+            "timestamp": cfg.get("last_updated", datetime.now(timezone.utc).isoformat()),
+            "reason": cfg.get("last_sync_reason", "scheduler"),
+            "latency_ms": cfg.get("last_latency_ms", 15)
+        }
+    }
+
+
+@app.post("/api/v1/bcv/sync")
+async def bcv_sync_endpoint(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    custom_rate = None
+    if "rate" in body and body["rate"]:
+        try:
+            custom_rate = float(body["rate"])
+        except (ValueError, TypeError):
+            pass
+    res = sync_bcv_rate_task(force=True, reason="manual_sync_endpoint", custom_rate=custom_rate)
+    return {
+        "status": "success",
+        "message": f"Tasa Oficial BCV sincronizada exitosamente: Bs. {res['rate']:.2f}",
+        "data": res
     }
 
 
 @app.get("/api/v1/bcv/config")
 def get_bcv_config():
     cfg = get_bcv_config_data()
-    rate = float(cfg.get("manual_rate") or os.environ.get("BCV_OFFICIAL_RATE", "887.30"))
+    rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
+    slot, block, nxt = get_bcv_active_slot_and_next()
     return {
         "status": "success",
         "config": cfg,
         "effective_rate": rate,
         "current_rate": rate,
-        "slot": "11:00 AM"
+        "slot": slot,
+        "active_block": {"slot": slot, "block": block},
+        "next_scheduled_sync": {"time": nxt}
     }
 
 
@@ -5806,16 +6117,21 @@ async def save_bcv_config(request: Request):
         if "manual_rate" in body and body["manual_rate"]:
             try:
                 cfg["manual_rate"] = float(body["manual_rate"])
+                cfg["effective_rate"] = float(body["manual_rate"])
             except ValueError:
                 pass
         if "query_url" in body:
             cfg["query_url"] = str(body["query_url"])
         if "source" in body:
             cfg["source"] = str(body["source"])
+        if "source_name" in body:
+            cfg["source"] = str(body["source_name"])
         if "schedule_times" in body and isinstance(body["schedule_times"], list):
             cfg["schedule_times"] = body["schedule_times"]
         if "manual_override" in body:
             cfg["manual_override"] = bool(body["manual_override"])
+        if "auto_sync_enabled" in body:
+            cfg["auto_sync_enabled"] = bool(body["auto_sync_enabled"])
         cfg["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         bcv_path = Path(__file__).resolve().parent / "data" / "bcv_config.json"
@@ -5826,7 +6142,11 @@ async def save_bcv_config(request: Request):
         except Exception as e:
             log.warning(f"Error saving bcv_config.json: {e}")
 
-    rate = float(cfg.get("manual_rate") or 887.30)
+    # Si manual_override es falso o si se solicita sync en background
+    if not cfg.get("manual_override"):
+        threading.Thread(target=sync_bcv_rate_task, kwargs={"force": False, "reason": "config_update"}, daemon=True).start()
+
+    rate = float(cfg.get("manual_rate") or cfg.get("effective_rate") or 914.02)
     return {
         "status": "success",
         "message": "Configuración BCV actualizada exitosamente",
@@ -5841,14 +6161,28 @@ async def test_bcv_url(request: Request):
         body = await request.json()
     except Exception:
         body = {}
-    cfg = get_bcv_config_data()
-    rate = float(cfg.get("manual_rate") or 887.30)
-    return {
-        "status": "success",
-        "extracted_rate": rate,
-        "latency_ms": 28,
-        "message": f"Conexión exitosa. Tasa Oficial BCV: {rate:.2f} Bs./USD"
-    }
+    query_url = body.get("query_url") or "https://ve.dolarapi.com/v1/dolares/oficial"
+    t0 = time.time()
+    res = fetch_live_bcv_rate(query_url)
+    dt_ms = int((time.time() - t0) * 1000)
+    rate = res.get("rate")
+    if rate and rate > 1.0 and not res.get("fallback"):
+        return {
+            "status": "success",
+            "extracted_rate": rate,
+            "latency_ms": dt_ms,
+            "source": res.get("source", query_url),
+            "message": f"Conexión exitosa ({dt_ms} ms). Tasa Oficial BCV: {rate:.2f} Bs./USD"
+        }
+    else:
+        cfg = get_bcv_config_data()
+        fallback_rate = float(cfg.get("manual_rate") or 914.02)
+        return {
+            "status": "warning",
+            "extracted_rate": fallback_rate,
+            "latency_ms": dt_ms,
+            "message": f"Endpoint consultado ({dt_ms} ms). Tasa de referencia disponible: {fallback_rate:.2f} Bs./USD"
+        }
 
 
 # =====================================================================

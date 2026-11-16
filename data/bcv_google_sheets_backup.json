@@ -487,8 +487,18 @@
       "source": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)",
       "timestamp": "2026-10-27T18:35:00Z",
       "status": "CONSOLIDADO_FIJO"
+    },
+    {
+      "date": "2026-11-16",
+      "slot": "04:00 PM",
+      "block": "BLOQUE_16_00_PM",
+      "rate": 914.02,
+      "closingValueRate": 914.02,
+      "source": "Banco Central de Venezuela (BCV Oficial)",
+      "timestamp": "2026-11-16T20:00:00Z",
+      "status": "SINCRONIZADO_EN_VIVO"
     }
   ],
-  "latestSlot": "05:00 PM",
-  "latestSource": "Banco Central de Venezuela (BCV Oficial - bcv.org.ve)"
+  "latestSlot": "04:00 PM",
+  "latestSource": "Banco Central de Venezuela (BCV Oficial)"
 }
