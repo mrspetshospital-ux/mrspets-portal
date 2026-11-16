@@ -2412,7 +2412,7 @@ class PetStatusEngine {
         } else if (lowerName.includes('carlos') || lowerName.includes('mendoza')) {
           activeCustomerPhone = '+58 (412) 555-1234';
         } else if (lowerName.includes('dalybell') || lowerName.includes('montilla')) {
-          activeCustomerPhone = '+58 (414) 389-1102';
+          activeCustomerPhone = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '+58 (414) 679-9510';
         }
       }
     }
@@ -4190,6 +4190,8 @@ class PetStatusEngine {
       { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', price: 18.00 },
       { id: 'PROD-103', name: 'Bravecto Perros 10-20kg', price: 42.00 }
     ];
+    const activeName = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_name') : null) || 'Dalybell Ramírez Montilla';
+    const activePhone = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '+58 414-6799510';
 
     const modalHtml = `
       <div style="background:#0F172A; color:#FFFFFF; padding:24px; border-radius:18px; border:2px solid #D4AF37; max-width:540px; margin:auto;">
@@ -4201,7 +4203,7 @@ class PetStatusEngine {
         <form id="form-quick-pos-sale" onsubmit="event.preventDefault(); petStatusEngine.handleQuickPosSubmit(this);">
           <div style="margin-bottom:12px;">
             <label style="font-size:0.8rem; font-weight:700; color:#CBD5E1; display:block; margin-bottom:4px;">Nombre del Cliente / Tutor:</label>
-            <input type="text" name="customerName" required value="Dalybell Ramírez Montilla" style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#1E293B; color:#FFFFFF; font-size:0.85rem;">
+            <input type="text" name="customerName" required value="${activeName}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#1E293B; color:#FFFFFF; font-size:0.85rem;">
           </div>
 
           <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; margin-bottom:12px;">
@@ -4211,7 +4213,7 @@ class PetStatusEngine {
             </div>
             <div>
               <label style="font-size:0.8rem; font-weight:700; color:#CBD5E1; display:block; margin-bottom:4px;">Teléfono WhatsApp:</label>
-              <input type="text" name="phone" required value="+58 (414) 389-1102" style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#1E293B; color:#FFFFFF; font-size:0.85rem;">
+              <input type="text" name="phone" required value="${activePhone}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #475569; background:#1E293B; color:#FFFFFF; font-size:0.85rem;">
             </div>
           </div>
 

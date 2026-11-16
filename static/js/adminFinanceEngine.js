@@ -45,6 +45,7 @@ class AdminFinanceEngine {
     if (this.invoices.length === 0) {
       this.seedInitialInvoices();
     }
+    this.synchronizeInvoicesWithLiveClients();
   }
 
   // ==================== RESTRICCIÓN ZERO TRUST & ROLES ====================
@@ -107,6 +108,66 @@ class AdminFinanceEngine {
       localStorage.setItem(this.storageKeyInvoices, JSON.stringify(this.invoices));
     } catch (e) {
       console.error('Error al guardar estado de Administración y Finanzas:', e);
+    }
+  }
+
+  getLiveCustomerPhone(customerName, fallbackPhone) {
+    if (!customerName && !fallbackPhone) return '';
+    const norm = (s) => (s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+    const target = norm(customerName);
+
+    // 1. Check adminEngine.patientsStatus
+    if (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+      const match = window.adminEngine.patientsStatus.find(p => {
+        const o = norm(p.owner || p.ownerName);
+        return o && (o === target || o.includes(target) || target.includes(o) || (o.includes('dalybell') && target.includes('dalybell')));
+      });
+      if (match && (match.ownerPhone || match.phone)) {
+        return (match.ownerPhone || match.phone).trim();
+      }
+    }
+
+    // 2. Check petStatusEngine.pets
+    if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+      const match = window.petStatusEngine.pets.find(p => {
+        const o = norm(p.owner || p.ownerName);
+        return o && (o === target || o.includes(target) || target.includes(o) || (o.includes('dalybell') && target.includes('dalybell')));
+      });
+      if (match && (match.ownerPhone || match.phone)) {
+        return (match.ownerPhone || match.phone).trim();
+      }
+    }
+
+    // 3. Check localStorage
+    if (typeof localStorage !== 'undefined') {
+      const storedActiveName = norm(localStorage.getItem('mrs_pets_active_customer_name') || '');
+      if (storedActiveName && (storedActiveName === target || storedActiveName.includes(target) || target.includes(storedActiveName) || (storedActiveName.includes('dalybell') && target.includes('dalybell')))) {
+        const p = localStorage.getItem('mrs_pets_active_customer_phone');
+        if (p) return p.trim();
+      }
+      if (target.includes('dalybell')) {
+        const p = localStorage.getItem('mrs_pets_active_customer_phone');
+        if (p) return p.trim();
+      }
+    }
+
+    return fallbackPhone || '';
+  }
+
+  synchronizeInvoicesWithLiveClients() {
+    if (!Array.isArray(this.invoices) || this.invoices.length === 0) return;
+    let changed = false;
+    this.invoices.forEach(inv => {
+      if (inv.customer && inv.customer.name) {
+        const livePhone = this.getLiveCustomerPhone(inv.customer.name, inv.customer.phone);
+        if (livePhone && livePhone !== inv.customer.phone) {
+          inv.customer.phone = livePhone;
+          changed = true;
+        }
+      }
+    });
+    if (changed) {
+      this.saveState();
     }
   }
 
@@ -924,12 +985,18 @@ class AdminFinanceEngine {
 
   // ==================== VISOR OFICIAL SENIAT & ACCIONES DE FACTURA ====================
   openInvoiceViewer(invoiceId) {
+    this.synchronizeInvoicesWithLiveClients();
     const inv = this.invoices.find(i => i.id === invoiceId);
     if (!inv) {
       if (window.app && typeof window.app.showToast === 'function') {
         window.app.showToast('No se encontró la factura fiscal seleccionada.', 'warning');
       }
       return;
+    }
+
+    const livePhone = this.getLiveCustomerPhone(inv.customer ? inv.customer.name : '', inv.customer ? inv.customer.phone : '');
+    if (livePhone && inv.customer) {
+      inv.customer.phone = livePhone;
     }
 
     const bcvRate = inv.bcvRate || (window.FinancialEngine && window.FinancialEngine.bcvRate) || 887.30;
@@ -988,7 +1055,7 @@ class AdminFinanceEngine {
               <div style="font-size:0.75rem; font-weight:900; color:#64748B; text-transform:uppercase; margin-bottom:6px;">👤 Datos del Receptor / Cliente:</div>
               <div style="font-size:0.95rem; font-weight:900; color:#0F172A;">${inv.customer.name}</div>
               <div style="font-size:0.82rem; color:#334155; margin-top:2px;"><strong>C.I. / RIF:</strong> ${inv.customer.rif}</div>
-              <div style="font-size:0.82rem; color:#334155;"><strong>Teléfono:</strong> ${inv.customer.phone || 'N/A'}</div>
+              <div style="font-size:0.82rem; color:#334155;"><strong>Teléfono:</strong> <span style="font-weight:800; color:#10B981;">${inv.customer.phone || 'N/A'}</span></div>
               <div style="font-size:0.82rem; color:#334155;"><strong>Email:</strong> ${inv.customer.email || 'N/A'}</div>
               <div style="font-size:0.78rem; color:#64748B;"><strong>Dirección:</strong> ${inv.customer.address || 'Maracaibo, Estado Zulia'}</div>
             </div>
@@ -1086,6 +1153,29 @@ class AdminFinanceEngine {
               </button>
             </div>
 
+            <!-- SECCIÓN DE ATENCIÓN: WHATSAPP DESPACHO / REENVÍO CON NÚMERO ACTUALIZADO -->
+            <div style="margin-top:14px; padding-top:12px; border-top:1.5px dashed #BFDBFE;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                <div>
+                  <strong style="color:#065F46; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+                    <span>💬 Atención al Cliente: Despacho / Reenvío Oficial por WhatsApp</span>
+                  </strong>
+                  <p style="margin:3px 0 0 0; font-size:0.78rem; color:#047857;">
+                    Confirme o actualice el número de WhatsApp para que el cliente reciba el recibo y factura fiscal al número correcto.
+                  </p>
+                </div>
+                <span class="badge" style="background:#D1FAE5; color:#065F46; border:1px solid #6EE7B7; font-size:0.75rem; padding:4px 8px; border-radius:6px; font-weight:800;">
+                  WhatsApp Live
+                </span>
+              </div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <input type="tel" id="invoice-resend-whatsapp-target" value="${inv.customer.phone || ''}" placeholder="Ej: +58 414-XXXXXXX" style="flex:1; min-width:260px; padding:9px 14px; border-radius:8px; border:1.5px solid #10B981; font-size:0.85rem; font-weight:700; color:#065F46; background:#FFFFFF;">
+                <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.sendInvoiceWhatsApp('${inv.id}', document.getElementById('invoice-resend-whatsapp-target').value)" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35); display:inline-flex; align-items:center; gap:6px;">
+                  <span>💬 Enviar Factura a este WhatsApp Ahora</span>
+                </button>
+              </div>
+            </div>
+
             <div style="margin-top:12px; padding-top:8px; border-top:1px solid #BFDBFE;">
               <div style="font-size:0.75rem; font-weight:800; color:#1E40AF; margin-bottom:4px;">Historial de Envíos al Cliente:</div>
               ${emailHistoryHtml}
@@ -1098,7 +1188,7 @@ class AdminFinanceEngine {
               <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.printInvoiceDirectly('${inv.id}')" style="background:#0F172A; color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                 <span>🖨️ Imprimir Factura Fiscal</span>
               </button>
-              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.sendInvoiceWhatsApp('${inv.id}')" style="background:#10B981; color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.sendInvoiceWhatsApp('${inv.id}', document.getElementById('invoice-resend-whatsapp-target') ? document.getElementById('invoice-resend-whatsapp-target').value : '')" style="background:#10B981; color:#FFFFFF; font-weight:900; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                 <span>💬 Enviar por WhatsApp</span>
               </button>
               <button type="button" class="btn btn-sm" onclick="adminFinanceEngine.downloadInvoiceJson('${inv.id}')" style="background:#F1F5F9; color:#334155; font-weight:800; padding:10px 14px; border-radius:10px; border:1px solid #CBD5E1; cursor:pointer;">
@@ -1183,41 +1273,60 @@ class AdminFinanceEngine {
     }
   }
 
-  sendInvoiceWhatsApp(invoiceId) {
+  sendInvoiceWhatsApp(invoiceId, targetPhone) {
     const inv = this.invoices.find(i => i.id === invoiceId);
     if (!inv) return;
 
-    const phoneClean = (inv.customer.phone || '').replace(/[^0-9]/g, '');
+    let phone = (targetPhone || '').trim();
+    if (!phone && typeof document !== 'undefined') {
+      const el = document.getElementById('invoice-resend-whatsapp-target');
+      if (el && el.value) phone = el.value.trim();
+    }
+    if (!phone) {
+      phone = this.getLiveCustomerPhone(inv.customer ? inv.customer.name : '', inv.customer ? inv.customer.phone : '');
+    }
+
+    if (phone && inv.customer) {
+      inv.customer.phone = phone;
+      this.saveState();
+    }
+
+    let phoneClean = (phone || (inv.customer && inv.customer.phone) || '').replace(/[^0-9]/g, '');
+    // Normalizar código de país para Venezuela si empieza con 0414/0424/0412
+    if (phoneClean.startsWith('04') && phoneClean.length === 11) {
+      phoneClean = '58' + phoneClean.slice(1);
+    } else if (phoneClean.startsWith('4') && phoneClean.length === 10) {
+      phoneClean = '58' + phoneClean;
+    }
+
+    if (!phoneClean || phoneClean.length < 8) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ No se encontró un número WhatsApp válido para el cliente. Ingrese el número en el campo de reenvío.', 'warning');
+      }
+      return;
+    }
+
     const bcvRate = inv.bcvRate || 887.30;
     const msg = `🐾 *FACTURA FISCAL DIGITAL - MRS. PETS MARACAIBO* 🐾
-` +
-                `*Factura N°:* ${inv.invoiceNumber}
-` +
-                `*Control SENIAT:* ${inv.controlNumber}
-` +
-                `*Cliente:* ${inv.customer.name} (RIF: ${inv.customer.rif})
-` +
-                `*Paciente:* ${inv.pet.name} (${inv.pet.species})
-` +
-                `*Fecha:* ${inv.date} ${inv.time}
-` +
-                `*División:* ${inv.divisionLabel}
-` +
-                `------------------------------------
-` +
-                `*Total USD:* $${inv.totalUsd.toFixed(2)} USD
-` +
-                `*Total Bs. (BCV ${bcvRate}):* Bs. ${inv.totalVes.toLocaleString('es-VE')}
-` +
-                `*Método:* ${inv.paymentMethod}
-` +
-                `------------------------------------
-` +
-                `¡Gracias por confiar en Mrs. Pets Maracaibo! Big & Little Dogs C.A. RIF: J-40120233-0`;
+*Factura N°:* ${inv.invoiceNumber}
+*Control SENIAT:* ${inv.controlNumber}
+*Cliente:* ${inv.customer.name} (RIF: ${inv.customer.rif})
+*Paciente:* ${inv.pet.name} (${inv.pet.species})
+*Fecha:* ${inv.date} ${inv.time}
+*División:* ${inv.divisionLabel}
+------------------------------------
+*Total USD:* $${inv.totalUsd.toFixed(2)} USD
+*Total Bs. (BCV ${bcvRate}):* Bs. ${inv.totalVes.toLocaleString('es-VE')}
+*Método:* ${inv.paymentMethod}
+------------------------------------
+¡Gracias por confiar en Mrs. Pets Maracaibo! Big & Little Dogs C.A. RIF: J-40120233-0`;
 
-    const url = `https://wa.me/${phoneClean || '584143891102'}?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`;
     if (typeof window !== 'undefined' && typeof window.open === 'function') {
       window.open(url, '_blank');
+    }
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`💬 Factura enviada al WhatsApp +${phoneClean} exitosamente.`, 'success');
     }
   }
 
@@ -1419,12 +1528,12 @@ class AdminFinanceEngine {
   prefillCustomerData(key) {
     if (typeof document === 'undefined') return;
     const presets = {
-      dalybell: { name: 'Dalybell Ramírez Montilla', rif: 'V-18.452.910', email: 'dalybell@mrspets.com', phone: '+58 (414) 389-1102', pet: 'Princesa', species: 'Canino / Border Collie VIP' },
-      carlos: { name: 'Carlos Mendoza', rif: 'V-14.882.109', email: 'carlos.mendoza@email.com', phone: '+58 (412) 555-1234', pet: 'Fifi', species: 'Canino / Poodle Toy VIP' },
-      patricia: { name: 'Patricia Villalobos', rif: 'V-19.874.521-0', email: 'patricia.v@gmail.com', phone: '+58 (414) 679-9510', pet: 'Simba', species: 'Canino / Golden Retriever' },
-      andres: { name: 'Andrés Morales', rif: 'V-20.145.890', email: 'andres.morales@outlook.com', phone: '+58 (424) 612-4488', pet: 'Buddy', species: 'Canino / Bulldog Francés' },
-      mariaeugenia: { name: 'María Eugenia Faría', rif: 'V-16.784.320', email: 'mariaeugenia.f@gmail.com', phone: '+58 (416) 555-8901', pet: 'Luna', species: 'Felino / Persa Blanco' },
-      roberto: { name: 'Roberto González', rif: 'V-12.441.980', email: 'r.gonzalez@inversiones.com', phone: '+58 (414) 601-2233', pet: 'Max', species: 'Canino / Pastor Alemán' }
+      dalybell: { name: 'Dalybell Ramírez Montilla', rif: 'V-18.452.910', email: 'dalybell@mrspets.com', phone: this.getLiveCustomerPhone('Dalybell Ramírez Montilla', '+58 (414) 389-1102'), pet: 'Princesa', species: 'Canino / Border Collie VIP' },
+      carlos: { name: 'Carlos Mendoza', rif: 'V-14.882.109', email: 'carlos.mendoza@email.com', phone: this.getLiveCustomerPhone('Carlos Mendoza', '+58 (412) 555-1234'), pet: 'Fifi', species: 'Canino / Poodle Toy VIP' },
+      patricia: { name: 'Patricia Villalobos', rif: 'V-19.874.521-0', email: 'patricia.v@gmail.com', phone: this.getLiveCustomerPhone('Patricia Villalobos', '+58 (414) 679-9510'), pet: 'Simba', species: 'Canino / Golden Retriever' },
+      andres: { name: 'Andrés Morales', rif: 'V-20.145.890', email: 'andres.morales@outlook.com', phone: this.getLiveCustomerPhone('Andrés Morales', '+58 (424) 612-4488'), pet: 'Buddy', species: 'Canino / Bulldog Francés' },
+      mariaeugenia: { name: 'María Eugenia Faría', rif: 'V-16.784.320', email: 'mariaeugenia.f@gmail.com', phone: this.getLiveCustomerPhone('María Eugenia Faría', '+58 (416) 555-8901'), pet: 'Luna', species: 'Felino / Persa Blanco' },
+      roberto: { name: 'Roberto González', rif: 'V-12.441.980', email: 'r.gonzalez@inversiones.com', phone: this.getLiveCustomerPhone('Roberto González', '+58 (414) 601-2233'), pet: 'Max', species: 'Canino / Pastor Alemán' }
     };
 
     const p = presets[key];
@@ -1433,10 +1542,11 @@ class AdminFinanceEngine {
         const el = document.getElementById(id);
         if (el) el.value = val;
       };
+      const activePhone = this.getLiveCustomerPhone(p.name, p.phone);
       setVal('create-customer-name', p.name);
       setVal('create-customer-rif', p.rif);
       setVal('create-customer-email', p.email);
-      setVal('create-customer-phone', p.phone);
+      setVal('create-customer-phone', activePhone || p.phone);
       setVal('create-pet-name', p.pet);
       setVal('create-pet-species', p.species);
     }
@@ -1568,7 +1678,8 @@ class AdminFinanceEngine {
     const customerName = saleData.customerName || 'Dalybell Ramírez Montilla';
     const customerRif = saleData.customerRif || 'V-18.452.910';
     const customerEmail = saleData.customerEmail || 'dalybell@mrspets.com';
-    const customerPhone = saleData.customerPhone || '+58 (414) 389-1102';
+    const livePhone = this.getLiveCustomerPhone(customerName, saleData.customerPhone);
+    const customerPhone = livePhone || saleData.customerPhone || '';
     const petName = saleData.petName || 'Princesa';
     const petSpecies = saleData.petSpecies || 'Canino / Border Collie VIP';
     const cashier = saleData.cashier || 'Sistema Automatizado POS & Concierge VIP';
@@ -2699,6 +2810,9 @@ class AdminFinanceEngine {
                   <div style="display:flex; gap:6px; justify-content:center;">
                     <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.openInvoiceViewer('${inv.id}')" style="background:#0F172A; color:#D4AF37; border:1px solid #D4AF37; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:800;" title="Abrir y Visualizar Factura SENIAT">
                       👁️ Ver
+                    </button>
+                    <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.sendInvoiceWhatsApp('${inv.id}')" style="background:#10B981; color:#FFFFFF; border:none; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:800;" title="Enviar Factura por WhatsApp">
+                      💬 WA
                     </button>
                     <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminFinanceEngine.quickResendInvoice('${inv.id}')" style="background:#2563EB; color:#FFFFFF; border:none; font-size:0.75rem; padding:4px 8px; border-radius:6px; cursor:pointer; font-weight:800;" title="Reenviar por Correo al Cliente">
                       📧 Reenviar

@@ -380,6 +380,17 @@ class AdminEngine {
         if (!p.pin) p.pin = '1234';
       });
 
+      const storedActivePhone = localStorage.getItem('mrs_pets_active_customer_phone');
+      if (storedActivePhone) {
+        this.patientsStatus.forEach(p => {
+          const o = (p.owner || p.ownerName || '').toLowerCase();
+          if (o.includes('dalybell')) {
+            p.ownerPhone = storedActivePhone;
+            p.phone = storedActivePhone;
+          }
+        });
+      }
+
       this.savePatientsToStorage();
     } catch (e) {
       console.warn("Could not load patients from localStorage:", e);
@@ -6095,6 +6106,35 @@ class AdminEngine {
     }
 
     // UPDATING EXISTING RECORD
+    const normStr = (s) => (s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+    const oldOwnerNorm = normStr(pet.owner || pet.ownerName || '');
+    const newOwnerNorm = normStr(newOwner);
+
+    // Actualizar todos los registros del mismo tutor en patientsStatus
+    if (Array.isArray(this.patientsStatus)) {
+      this.patientsStatus.forEach(p => {
+        const oNorm = normStr(p.owner || p.ownerName || '');
+        const isOwnerMatch = p.id === pet.id || (oNorm && (oNorm === oldOwnerNorm || oNorm === newOwnerNorm || (oNorm.includes('dalybell') && newOwnerNorm.includes('dalybell'))));
+        if (isOwnerMatch) {
+          p.owner = newOwner;
+          p.ownerName = newOwner;
+          p.email = newEmail;
+          p.ownerPhone = newPhone;
+          p.phone = newPhone;
+          p.rif = newRif;
+          p.sector = newSector;
+          p.addressSector = newSector;
+          p.bioTrackerSector = newSector;
+          p.address = newAddress || `Sector ${newSector}, Maracaibo`;
+          p.password = newPassword;
+          p.clientPassword = newPassword;
+          p.pin = newPassword;
+          p.ownerPhoto = newTutorPhoto;
+          p.tutorPhoto = newTutorPhoto;
+        }
+      });
+    }
+
     pet.owner = newOwner;
     pet.ownerName = newOwner;
     pet.email = newEmail;
@@ -6124,35 +6164,40 @@ class AdminEngine {
     if (newNotes) pet.notes = newNotes;
 
     // Sincronizar en petStatusEngine
-    if (window.petStatusEngine) {
-      const pSE = window.petStatusEngine.pets.find(p => p.id === petId);
-      if (pSE) {
-        pSE.petName = newPetName;
-        pSE.name = newPetName;
-        pSE.species = newSpecies;
-        pSE.breed = newBreed;
-        pSE.age = newAge;
-        pSE.weight = newWeight;
-        pSE.ownerName = newOwner;
-        pSE.owner = newOwner;
-        pSE.ownerPhone = newPhone;
-        pSE.phone = newPhone;
-        pSE.rif = newRif;
-        pSE.sector = newSector;
-        pSE.addressSector = newSector;
-        pSE.bioTrackerSector = newSector;
-        pSE.address = newAddress || `Sector ${newSector}, Maracaibo`;
-        pSE.email = newEmail;
-        pSE.ownerPhoto = newTutorPhoto;
-        pSE.tutorPhoto = newTutorPhoto;
-        pSE.photo = newPetPhoto;
-        pSE.image = newPetPhoto;
-        pSE.area = newArea;
-        pSE.tierLevel = newTier;
-        pSE.password = newPassword;
-        pSE.pin = newPassword;
-        if (newNotes) pSE.notes = newNotes;
-      }
+    if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+      window.petStatusEngine.pets.forEach(pSE => {
+        const oNorm = normStr(pSE.owner || pSE.ownerName || '');
+        const isOwnerMatch = pSE.id === petId || (oNorm && (oNorm === oldOwnerNorm || oNorm === newOwnerNorm || (oNorm.includes('dalybell') && newOwnerNorm.includes('dalybell'))));
+        if (isOwnerMatch) {
+          pSE.ownerName = newOwner;
+          pSE.owner = newOwner;
+          pSE.ownerPhone = newPhone;
+          pSE.phone = newPhone;
+          pSE.rif = newRif;
+          pSE.sector = newSector;
+          pSE.addressSector = newSector;
+          pSE.bioTrackerSector = newSector;
+          pSE.address = newAddress || `Sector ${newSector}, Maracaibo`;
+          pSE.email = newEmail;
+          pSE.ownerPhoto = newTutorPhoto;
+          pSE.tutorPhoto = newTutorPhoto;
+          pSE.password = newPassword;
+          pSE.pin = newPassword;
+          if (pSE.id === petId) {
+            pSE.petName = newPetName;
+            pSE.name = newPetName;
+            pSE.species = newSpecies;
+            pSE.breed = newBreed;
+            pSE.age = newAge;
+            pSE.weight = newWeight;
+            pSE.photo = newPetPhoto;
+            pSE.image = newPetPhoto;
+            pSE.area = newArea;
+            pSE.tierLevel = newTier;
+            if (newNotes) pSE.notes = newNotes;
+          }
+        }
+      });
       if (typeof window.petStatusEngine.render === 'function') window.petStatusEngine.render();
       if (typeof window.petStatusEngine.savePetsToStorage === 'function') {
         window.petStatusEngine.savePetsToStorage();
@@ -6171,10 +6216,58 @@ class AdminEngine {
       cP.address = newAddress || `Sector ${newSector}, Maracaibo`;
     }
 
-    // Si es el cliente activo en sesión, actualizar localStorage
-    const activeStored = localStorage.getItem('mrs_pets_active_customer_name');
-    if (activeStored) {
+    // Persistir cliente y teléfono activo en localStorage
+    if (typeof localStorage !== 'undefined') {
       localStorage.setItem('mrs_pets_active_customer_name', newOwner);
+      localStorage.setItem('mrs_pets_active_customer_phone', newPhone);
+      localStorage.setItem('mrs_pets_active_customer_email', newEmail);
+      localStorage.setItem('mrs_pets_active_customer_rif', newRif);
+    }
+
+    // Sincronizar de forma inmediata con Facturación Fiscal (adminFinanceEngine)
+    if (window.adminFinanceEngine) {
+      if (Array.isArray(window.adminFinanceEngine.invoices)) {
+        window.adminFinanceEngine.invoices.forEach(inv => {
+          if (inv.customer) {
+            const cNorm = normStr(inv.customer.name || '');
+            if (cNorm === oldOwnerNorm || cNorm === newOwnerNorm || (cNorm.includes('dalybell') && newOwnerNorm.includes('dalybell'))) {
+              inv.customer.name = newOwner;
+              inv.customer.phone = newPhone;
+              inv.customer.email = newEmail;
+              inv.customer.rif = newRif;
+              inv.customer.address = newAddress || `Sector ${newSector}, Maracaibo`;
+            }
+          }
+        });
+      }
+      if (newOwnerNorm.includes('dalybell') && window.adminFinanceEngine.presets && window.adminFinanceEngine.presets.dalybell) {
+        window.adminFinanceEngine.presets.dalybell.phone = newPhone;
+        window.adminFinanceEngine.presets.dalybell.email = newEmail;
+        window.adminFinanceEngine.presets.dalybell.name = newOwner;
+        window.adminFinanceEngine.presets.dalybell.rif = newRif;
+      }
+      if (typeof window.adminFinanceEngine.saveState === 'function') {
+        window.adminFinanceEngine.saveState();
+      }
+      if (typeof window.adminFinanceEngine.render === 'function') {
+        window.adminFinanceEngine.render();
+      }
+    }
+
+    // Sincronizar en citas y reservaciones
+    if (Array.isArray(this.appointments)) {
+      this.appointments.forEach(a => {
+        const tNorm = normStr(a.tutor || a.owner || '');
+        if (tNorm === oldOwnerNorm || tNorm === newOwnerNorm || (tNorm.includes('dalybell') && newOwnerNorm.includes('dalybell'))) {
+          a.phone = newPhone;
+          a.ownerPhone = newPhone;
+          a.email = newEmail;
+          a.tutor = newOwner;
+        }
+      });
+      if (typeof this.saveAppointmentsToStorage === 'function') {
+        this.saveAppointmentsToStorage();
+      }
     }
 
     this.savePatientsToStorage();

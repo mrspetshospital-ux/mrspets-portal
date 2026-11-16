@@ -79,11 +79,15 @@ class StoreEngine {
     if (typeof localStorage !== 'undefined') {
       const storedName = localStorage.getItem('mrs_pets_active_customer_name');
       const storedRif = localStorage.getItem('mrs_pets_active_customer_rif');
+      const storedPhone = localStorage.getItem('mrs_pets_active_customer_phone');
       if (storedName && !this.isStaffName(storedName)) {
         name = storedName.trim();
         if (storedRif && !storedRif.toLowerCase().includes('registrado')) {
           rif = storedRif.trim();
         }
+      }
+      if (storedPhone) {
+        phone = storedPhone.trim();
       }
     }
 
@@ -146,21 +150,22 @@ class StoreEngine {
         const storedClient = typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_name') : null;
         if (storedClient && !this.isStaffName(storedClient)) {
           name = storedClient.trim();
+          phone = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || phone || '+58 414-6799510';
         } else {
           name = 'Dalybell Ramírez Montilla';
           rif = 'V-18.452.910';
-          phone = '+58 414-3891102';
+          phone = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || phone || '+58 414-6799510';
         }
       } else {
         name = 'Cliente VIP';
         rif = '';
-        phone = '';
+        phone = (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '';
       }
     }
 
     // 5. Vincular RIF / Cédula y teléfono desde la base de datos si aún no están resueltos o son genéricos
     const allPets = (window.adminEngine?.patientsStatus || window.petStatusEngine?.pets || []);
-    if ((!rif || rif.toLowerCase().includes('registrado')) && name && Array.isArray(allPets)) {
+    if (name && Array.isArray(allPets)) {
       const normName = this.normalizeString(name);
       let match = allPets.find(p => {
         const oNorm = this.normalizeString(p.owner || p.ownerName || '');
@@ -176,13 +181,12 @@ class StoreEngine {
       if (!match && normName.length >= 4) {
         match = allPets.find(p => {
           const oNorm = this.normalizeString(p.owner || p.ownerName || '');
-          const hasValidRif = p.rif && !p.rif.toLowerCase().includes('registrado');
-          return oNorm && (oNorm.startsWith(normName) || normName.startsWith(oNorm)) && hasValidRif;
+          return oNorm && (oNorm.startsWith(normName) || normName.startsWith(oNorm));
         });
       }
       if (match) {
         if (!rif || rif.toLowerCase().includes('registrado')) rif = match.rif || rif || '';
-        if (!phone) phone = match.ownerPhone || '';
+        if (match.ownerPhone || match.phone) phone = match.ownerPhone || match.phone;
         name = match.owner || match.ownerName || name;
       }
     }
@@ -3285,14 +3289,15 @@ class StoreEngine {
 
       // Emisión y despacho digital automático de factura fiscal SENIAT por email
       let invoiceCreated = null;
+      const liveCustomerInfo = this.getCurrentCustomerInfo();
       if (window.adminFinanceEngine && typeof window.adminFinanceEngine.createInvoiceFromCart === 'function') {
         try {
           invoiceCreated = window.adminFinanceEngine.createInvoiceFromCart({
             ticketId: ticketId,
-            customerName: customerName || 'Dalybell Ramírez Montilla',
-            customerEmail: 'dalybell@mrspets.com',
-            customerRif: 'V-18.452.910',
-            customerPhone: '+58 (414) 389-1102',
+            customerName: customerName || liveCustomerInfo.name || 'Dalybell Ramírez Montilla',
+            customerEmail: (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_email') : null) || 'dalybell@mrspets.com',
+            customerRif: liveCustomerInfo.rif || 'V-18.452.910',
+            customerPhone: liveCustomerInfo.phone || (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '+58 414-6799510',
             petName: cartSnapshot.find(i => i.pet)?.pet || 'Princesa',
             petSpecies: 'Canino / Border Collie VIP',
             cashier: 'Punto de Venta Boutique Mrs. Pets',
@@ -3350,9 +3355,9 @@ class StoreEngine {
         if (window.storeSalesEngine && typeof window.storeSalesEngine.recordSale === 'function') {
           window.storeSalesEngine.recordSale({
             ticketId: ticketId,
-            customerName: customerName || 'Dalybell Ramírez Montilla',
-            rif: 'V-18.452.910',
-            phone: '+58 (414) 389-1102',
+            customerName: customerName || liveCustomerInfo.name || 'Dalybell Ramírez Montilla',
+            rif: liveCustomerInfo.rif || 'V-18.452.910',
+            phone: liveCustomerInfo.phone || (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '+58 414-6799510',
             petName: 'Princesa',
             items: cartSnapshot.map(i => ({
               name: i.name,
@@ -3387,8 +3392,8 @@ class StoreEngine {
 
           const payPayload = {
             ticketId: ticketId,
-            tutor: customerName || 'Dalybell Ramírez Montilla',
-            phone: '+58 (414) 389-1102',
+            tutor: customerName || liveCustomerInfo.name || 'Dalybell Ramírez Montilla',
+            phone: liveCustomerInfo.phone || (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null) || '+58 414-6799510',
             pet: cartSnapshot.find(i => i.pet)?.pet || 'Princesa',
             total: totalPaid,
             formattedTotalVes: formattedTotalVes,

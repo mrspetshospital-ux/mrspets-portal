@@ -330,12 +330,15 @@ class StripeEngine {
     let invoiceCreated = null;
     if (window.adminFinanceEngine && typeof window.adminFinanceEngine.createInvoiceFromCart === 'function') {
       try {
+        const livePhone = (window.storeEngine && typeof window.storeEngine.getCurrentCustomerInfo === 'function')
+          ? window.storeEngine.getCurrentCustomerInfo().phone
+          : (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_phone') : null);
         invoiceCreated = window.adminFinanceEngine.createInvoiceFromCart({
           ticketId: intentId,
           customerName: customerName || 'Dalybell Ramírez Montilla',
-          customerEmail: 'dalybell@mrspets.com',
-          customerRif: 'V-18.452.910',
-          customerPhone: '+58 (414) 389-1102',
+          customerEmail: (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_email') : null) || 'dalybell@mrspets.com',
+          customerRif: (typeof localStorage !== 'undefined' ? localStorage.getItem('mrs_pets_active_customer_rif') : null) || 'V-18.452.910',
+          customerPhone: livePhone || '+58 414-6799510',
           petName: 'Princesa',
           petSpecies: 'Canino / Border Collie VIP',
           cashier: 'Pasarela Digital Stripe Vault 3D',
