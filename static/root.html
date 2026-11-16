@@ -2195,6 +2195,9 @@
                 <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 0 0;">Busca tutores por Nombre, Cédula/RIF, WhatsApp o Correo. Consulta sus mascotas vinculadas y corrige o actualiza sus datos en tiempo real.</p>
               </div>
               <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminEngine.openActiveCustomerProfileModal()" style="background:linear-gradient(135deg, #4A6B5D, #2D433A); color:#FFFFFF !important; border:1.5px solid #D4AF37; font-weight:900; border-radius:8px; padding:7px 16px; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(74,107,93,0.35);" title="Abrir y editar información de la ficha del cliente">
+                  ✏️ Editar Info del Cliente
+                </button>
                 <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); adminEngine.refreshAllOperationalViews()">🔄 Refrescar Lista</button>
                 <span class="accordion-chevron">Desplegar <span class="accordion-chevron-icon">▼</span></span>
               </div>

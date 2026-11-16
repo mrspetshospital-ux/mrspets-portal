@@ -5616,11 +5616,14 @@ class AdminEngine {
 
     return `
     <tr ondblclick="if(window.analytics) analytics.openTraceabilityModal('${p.id}')" style="cursor:pointer;" title="💡 Haz doble clic para ver el histórico de staff que atendió a ${petName}">
-      <td>
+      <td onclick="adminEngine.openEditClientModal('${p.id}')" style="cursor:pointer;" title="✏️ Clic para editar la información de ${ownerName}">
         <div style="display:flex; align-items:center; gap:10px;">
-          <img src="${p.ownerPhoto || 'assets/leia_avatar.jpg'}" style="width:40px; height:40px; border-radius:50%; border:2px solid #4A6B5D; object-fit:cover;">
+          <img src="${p.ownerPhoto || 'assets/leia_avatar.jpg'}" style="width:42px; height:42px; border-radius:50%; border:2px solid #D4AF37; object-fit:cover; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
           <div>
-            <div style="font-weight:900; color:var(--obsidian-black); font-size:0.92rem;">${ownerName}</div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="font-weight:900; color:var(--obsidian-black); font-size:0.94rem;">${ownerName}</span>
+              <span class="badge" style="background:linear-gradient(135deg, #4A6B5D, #2D433A); color:#FFFFFF; font-size:0.70rem; padding:2px 7px; border-radius:4px; font-weight:800; border:1px solid #D4AF37;">✏️ Editar Info</span>
+            </div>
             <div style="font-size:0.75rem; font-weight:700; color:#d97706;">RIF: ${p.rif || 'V-Registrado'}</div>
             <div style="font-size:0.70rem; color:var(--text-muted);">${p.address || 'Maracaibo, Zulia'}</div>
           </div>
@@ -5675,17 +5678,17 @@ class AdminEngine {
         </button>
       </td>
       <td>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.openEditClientModal('${p.id}')" style="background:#4A6B5D; color:white; border:none; font-weight:700; padding:6px 10px; border-radius:8px; font-size:0.78rem;">
-            ✏️ Editar
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminEngine.openEditClientModal('${p.id}')" style="background:linear-gradient(135deg, #4A6B5D, #2D433A); color:#FFFFFF !important; border:1.5px solid #D4AF37; font-weight:900; padding:7px 14px; border-radius:8px; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(74,107,93,0.35);" title="✏️ Editar información completa del cliente ${ownerName} y ${petName}">
+            ✏️ Editar Info del Cliente
           </button>
-          <button class="btn btn-sm" onclick="event.stopPropagation(); if(window.analytics) analytics.openTraceabilityModal('${p.id}')" style="background:#4A6B5D; color:white; font-weight:800; font-size:0.78rem; padding:6px 10px; border-radius:8px; border:none; cursor:pointer;" title="Ver quién lo atendió">
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); if(window.analytics) analytics.openTraceabilityModal('${p.id}')" style="background:#1E293B; color:#F8FAFC; font-weight:800; font-size:0.78rem; padding:6px 10px; border-radius:8px; border:1px solid #475569; cursor:pointer;" title="Ver quién lo atendió">
             🔎 Histórico
           </button>
-          <button class="btn btn-whatsapp btn-sm" onclick="adminEngine.notifyTutorWhatsApp('${p.id}')" style="padding:6px 8px; border-radius:8px; font-size:0.78rem;">
+          <button type="button" class="btn btn-whatsapp btn-sm" onclick="event.stopPropagation(); adminEngine.notifyTutorWhatsApp('${p.id}')" style="padding:6px 10px; border-radius:8px; font-size:0.78rem; font-weight:700;">
             📱 WA
           </button>
-          <button class="btn btn-secondary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.deleteClient('${p.id}')" style="background:#ef4444; color:white; border:none; font-weight:700; padding:6px 10px; border-radius:8px; font-size:0.78rem;" title="Eliminar Cliente y Mascota">
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation(); adminEngine.deleteClient('${p.id}')" style="background:#ef4444; color:white; border:none; font-weight:700; padding:6px 10px; border-radius:8px; font-size:0.78rem; cursor:pointer;" title="Eliminar Cliente y Mascota">
             🗑️ Eliminar
           </button>
         </div>
@@ -5773,7 +5776,10 @@ class AdminEngine {
         </div>
 
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.openEditClientModal('')" style="background:#4A6B5D; color:white; border:none; font-weight:800; padding:8px 14px; border-radius:10px; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          <button type="button" class="btn btn-sm" onclick="adminEngine.openActiveCustomerProfileModal()" style="background:linear-gradient(135deg, #D4AF37, #B8860B); color:#121214 !important; font-weight:900; border:none; padding:8px 16px; border-radius:10px; font-size:0.84rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(212,175,55,0.35);" title="Editar información del cliente o tutor activo">
+            ✏️ Editar Info del Cliente
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="adminEngine.openEditClientModal('')" style="background:#4A6B5D; color:white; border:none; font-weight:800; padding:8px 14px; border-radius:10px; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
             ➕ Nuevo Cliente
           </button>
           <div id="admin-clients-database-count" style="font-size:0.78rem; color:#64748b; font-weight:700;">
@@ -5791,7 +5797,7 @@ class AdminEngine {
               <th>Príncipe / Princesa</th>
               <th>Nivel de Lealtad (Reclasificación)</th>
               <th>Área & Estatus</th>
-              <th>Acción CRM</th>
+              <th>Acciones / Editar Info del Cliente</th>
             </tr>
           </thead>
           <tbody id="admin-clients-database-tbody">
