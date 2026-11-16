@@ -101,7 +101,8 @@ class AdminEngine {
       { id: 'PROD-102', name: 'Champú Ozono Hipoalergénico 500ml', category: 'Higiene y Cuidado', price: 18.00, stock: 24, active: true, barcode: '7509823412093', image: 'assets/media__1787695246337.jpg' },
       { id: 'PROD-103', name: 'Bravecto Perros 10-20kg', category: 'Farmacia', price: 42.00, stock: 8, active: true, barcode: '7508492019482', image: 'assets/media__1787694901704.jpg' },
       { id: 'SERV-GROOMING', name: 'Circuito Grooming Spa (7 Estaciones)', category: 'Servicio Grooming', price: 25.00, stock: 99, active: true, barcode: '7504829103949', image: 'assets/mrs_pets_official_logo.png' },
-      { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, stock: 99, active: true, barcode: '7504829103948', image: 'assets/media__1787695254613.jpg' }
+      { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, stock: 99, active: true, barcode: '7504829103948', image: 'assets/media__1787695254613.jpg' },
+      { id: 'PROD-7204', name: 'Pack Cuidado Dermatológico & Ozonoterapia VIP (7204)', category: 'Higiene y Cuidado', price: 32.00, stock: 18, active: true, barcode: '7507204192834', image: 'assets/media__1787695246337.jpg', description: 'Pack especial dermatológico con ozonoterapia activa para consentidos de piel sensible.' }
     ];
 
     // AI / Manual Approval Mode for Online Reservations Queue ('auto' vs 'manual')
@@ -6111,14 +6112,20 @@ class AdminEngine {
           <tbody>
             ${this.catalog.map(item => `
               <tr ${this._lastSavedProductId === item.id ? 'style="background:rgba(16, 185, 129, 0.12); border-left:4px solid #10B981;"' : ''}>
-                <td>
-                  <img src="${item.image || 'assets/media__1787694901704.jpg'}" style="width:44px; height:44px; border-radius:8px; border:1.5px solid #D4AF37; object-fit:cover;">
+                <td style="cursor:pointer;" onclick="adminEngine.openEditProductModal('${item.id}')" title="Clic para editar foto en vivo e información">
+                  <div style="position:relative; display:inline-block;">
+                    <img src="${item.image || 'assets/media__1787694901704.jpg'}" onerror="this.src='assets/media__1787694901704.jpg'" style="width:44px; height:44px; border-radius:8px; border:1.5px solid #D4AF37; object-fit:cover; display:block;">
+                    <span style="position:absolute; bottom:-3px; right:-3px; background:#0284c7; color:white; border-radius:50%; width:16px; height:16px; font-size:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,0.4);" title="Editar foto">📷</span>
+                  </div>
                 </td>
                 <td>
                   <div style="font-weight:800; color:var(--obsidian-black);">${item.id} ${this._lastSavedProductId === item.id ? '<span style="font-size:0.68rem; background:#10B981; color:white; padding:2px 6px; border-radius:4px; font-weight:800; margin-left:4px;">✨ RECIÉN GUARDADO</span>' : ''}</div>
                   <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:800; font-size:0.7rem;">📊 ${item.barcode || '7509823412093'}</span>
                 </td>
-                <td style="font-weight:800; color:var(--obsidian-black);">${item.name}</td>
+                <td style="cursor:pointer;" onclick="adminEngine.openEditProductModal('${item.id}')" title="Clic para editar información completa">
+                  <div style="font-weight:800; color:var(--obsidian-black); line-height:1.3;">${item.name}</div>
+                  <span style="font-size:0.72rem; color:#0284c7; font-weight:700; display:inline-flex; align-items:center; gap:3px; margin-top:2px;">✏️ Clic para editar datos</span>
+                </td>
                 <td><span class="badge" style="background:#f1f5f9; color:#475569;">${item.category}</span></td>
                 <td>
                   <input type="number" step="0.5" value="${item.price}" ${isReadOnly ? 'disabled' : ''} style="width:80px; padding:4px; border-radius:6px; border:1px solid #cbd5e1; font-weight:800;" onchange="adminEngine.updateItemPrice('${item.id}', this.value)">
@@ -6130,12 +6137,15 @@ class AdminEngine {
                   <span class="badge ${item.active ? 'badge-success' : 'badge-danger'}">${item.active ? 'Activo' : 'Inactivo'}</span>
                 </td>
                 <td>
-                  <div style="display:flex; gap:4px;">
-                    <button class="btn btn-secondary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.toggleItemActive('${item.id}')">
+                  <div style="display:flex; gap:5px; flex-wrap:wrap; align-items:center;">
+                    <button class="btn btn-primary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.openEditProductModal('${item.id}')" style="background:#0284c7; color:white; border:none; padding:5px 9px; border-radius:6px; font-weight:800; display:inline-flex; align-items:center; gap:4px; cursor:pointer; box-shadow:0 2px 6px rgba(2,132,199,0.3);" title="Editar información, foto, precio, código y stock">
+                      ✏️ Editar
+                    </button>
+                    <button class="btn btn-secondary btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.toggleItemActive('${item.id}')" style="padding:5px 8px; border-radius:6px; font-weight:700; cursor:pointer;">
                       ${item.active ? 'Desactivar' : 'Activar'}
                     </button>
-                    <button class="btn btn-danger btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.deleteCatalogItem('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:6px; font-weight:800;" title="Eliminar del catálogo y tienda">
-                      🗑️ Eliminar
+                    <button class="btn btn-danger btn-sm" ${isReadOnly ? 'disabled' : ''} onclick="adminEngine.deleteCatalogItem('${item.id}')" style="background:#ef4444; color:white; border:none; padding:5px 8px; border-radius:6px; font-weight:800; cursor:pointer;" title="Eliminar del catálogo y tienda">
+                      🗑️
                     </button>
                   </div>
                 </td>
@@ -6145,6 +6155,259 @@ class AdminEngine {
         </table>
       </div>
     `;
+  }
+
+  // ============================================================================
+  // EDICIÓN INTEGRAL DE PRODUCTOS Y SERVICIOS EN CATÁLOGO & FOTOS EN VIVO
+  // ============================================================================
+
+  openEditProductModal(id) {
+    const isClientMode = document.body.classList.contains('customer-view-mode') || (window.authEngine && window.authEngine.userRole === 'client');
+    if (isClientMode) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⛔ Acción restringida: La edición del catálogo está reservada exclusivamente al personal administrativo.', 'warning');
+      }
+      return;
+    }
+
+    this.permissionMode = 'edit';
+    this.isEnterpriseAuthenticated = true;
+    this.loadCatalogFromStorage();
+    if (!Array.isArray(this.catalog)) this.catalog = [];
+
+    // Búsqueda flexible por ID exacto, sin prefijo PROD-, sufijo o código de barras
+    const cleanId = String(id || '').trim();
+    const item = this.catalog.find(c => 
+      c.id === cleanId || 
+      c.id === `PROD-${cleanId}` || 
+      String(c.id).endsWith(cleanId) || 
+      (c.barcode && String(c.barcode).includes(cleanId))
+    );
+
+    if (!item) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⚠️ No se encontró el producto ${cleanId} en el catálogo.`, 'error');
+      }
+      return;
+    }
+
+    const idInput = document.getElementById('edit-prod-id');
+    const badgeEl = document.getElementById('edit-prod-id-badge');
+    const nameInput = document.getElementById('edit-prod-name');
+    const catInput = document.getElementById('edit-prod-category');
+    const priceInput = document.getElementById('edit-prod-price');
+    const stockInput = document.getElementById('edit-prod-stock');
+    const statusInput = document.getElementById('edit-prod-status');
+    const barcodeInput = document.getElementById('edit-prod-barcode');
+    const imgUrlInput = document.getElementById('edit-prod-image-url');
+    const imgPreview = document.getElementById('edit-prod-img-preview');
+    const descInput = document.getElementById('edit-prod-description');
+
+    if (idInput) idInput.value = item.id;
+    if (badgeEl) badgeEl.innerText = item.id;
+    if (nameInput) nameInput.value = item.name || item.title || '';
+    if (catInput) catInput.value = item.category || 'Tienda VIP';
+    if (priceInput) priceInput.value = item.price !== undefined ? item.price : 25.00;
+    if (stockInput) stockInput.value = item.stock !== undefined ? item.stock : 10;
+    if (statusInput) statusInput.value = item.active !== false ? 'active' : 'inactive';
+    if (barcodeInput) barcodeInput.value = item.barcode || '';
+    const img = item.image || 'assets/media__1787694901704.jpg';
+    if (imgUrlInput) imgUrlInput.value = img;
+    if (imgPreview) imgPreview.src = img;
+    if (descInput) descInput.value = item.description || '';
+
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('edit-product-modal');
+    }
+    const modal = document.getElementById('edit-product-modal');
+    if (modal) {
+      modal.classList.add('active');
+      modal.style.setProperty('display', 'flex', 'important');
+      modal.style.setProperty('opacity', '1', 'important');
+      modal.style.setProperty('visibility', 'visible', 'important');
+      modal.style.setProperty('pointer-events', 'auto', 'important');
+      modal.style.setProperty('z-index', '2147483647', 'important');
+    }
+    setTimeout(() => {
+      if (nameInput) nameInput.focus();
+    }, 100);
+  }
+
+  handleEditProductImageUpload(event) {
+    const file = event && event.target && event.target.files ? event.target.files[0] : null;
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 420;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
+
+          const preview = document.getElementById('edit-prod-img-preview');
+          const input = document.getElementById('edit-prod-image-url');
+          if (preview) preview.src = dataUrl;
+          if (input) input.value = dataUrl;
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('📸 Foto del producto cargada y optimizada con éxito.', 'success');
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  generateAutoBarcodeForEdit() {
+    const code = '750' + Math.floor(100000005 + Math.random() * 899999990).toString();
+    const input = document.getElementById('edit-prod-barcode');
+    if (input) {
+      input.value = code;
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`📊 Código de barras generado: ${code}`, 'info');
+      }
+    }
+  }
+
+  saveEditedProduct(event) {
+    if (event) {
+      try {
+        if (event.preventDefault) event.preventDefault();
+        if (event.stopPropagation) event.stopPropagation();
+      } catch (e) {}
+    }
+    const isClientMode = document.body.classList.contains('customer-view-mode') || (window.authEngine && window.authEngine.userRole === 'client');
+    if (isClientMode) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⛔ Acción restringida: No tienes permisos para modificar productos del catálogo.', 'warning');
+      }
+      return false;
+    }
+
+    const idInput = document.getElementById('edit-prod-id');
+    const targetId = idInput ? idInput.value.trim() : '';
+    if (!targetId) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ Error: Identificador de producto no encontrado.', 'error');
+      }
+      return false;
+    }
+
+    const nameInput = document.getElementById('edit-prod-name');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) {
+      if (nameInput) {
+        nameInput.style.borderColor = '#EF4444';
+        nameInput.focus();
+      }
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast('⚠️ El nombre del producto es obligatorio.', 'warning');
+      }
+      return false;
+    }
+
+    const catInput = document.getElementById('edit-prod-category');
+    const category = catInput ? catInput.value : 'Tienda VIP';
+
+    const priceInput = document.getElementById('edit-prod-price');
+    const rawPrice = priceInput ? String(priceInput.value).replace(/[^0-9.]/g, '') : '25';
+    let price = parseFloat(rawPrice);
+    if (isNaN(price) || price <= 0) price = 25.00;
+
+    const stockInput = document.getElementById('edit-prod-stock');
+    const rawStock = stockInput ? String(stockInput.value).replace(/[^0-9]/g, '') : '10';
+    let stock = parseInt(rawStock, 10);
+    if (isNaN(stock) || stock < 0) stock = 0;
+
+    const statusInput = document.getElementById('edit-prod-status');
+    const active = statusInput ? (statusInput.value === 'active') : true;
+
+    const barcodeInput = document.getElementById('edit-prod-barcode');
+    let barcode = barcodeInput ? barcodeInput.value.trim() : '';
+    if (!barcode) {
+      barcode = '750' + Math.floor(100000005 + Math.random() * 899999990);
+    }
+
+    const imgUrlInput = document.getElementById('edit-prod-image-url');
+    const image = (imgUrlInput && imgUrlInput.value.trim()) ? imgUrlInput.value.trim() : 'assets/media__1787694901704.jpg';
+
+    const descInput = document.getElementById('edit-prod-description');
+    const description = (descInput && descInput.value.trim()) ? descInput.value.trim() : `Artículo "${name}" disponible en Tienda & Boutique VIP. Stock: ${stock} und.`;
+
+    this.loadCatalogFromStorage();
+    if (!Array.isArray(this.catalog)) this.catalog = [];
+
+    const index = this.catalog.findIndex(c => c.id === targetId);
+    if (index === -1) {
+      if (window.app && typeof window.app.showToast === 'function') {
+        window.app.showToast(`⚠️ No se pudo localizar el producto ${targetId} para guardar cambios.`, 'error');
+      }
+      return false;
+    }
+
+    // Actualizar producto preservando campos existentes
+    this.catalog[index] = {
+      ...this.catalog[index],
+      id: targetId,
+      name: name,
+      title: name,
+      category: category,
+      price: price,
+      stock: stock,
+      active: active,
+      barcode: barcode,
+      image: image,
+      description: description,
+      lastModifiedAt: new Date().toISOString()
+    };
+
+    this.saveCatalogToStorage();
+
+    // Sincronizar inmediatamente con la Tienda Online
+    if (window.storeEngine) {
+      if (typeof window.storeEngine.loadProductsFromCatalog === 'function') {
+        window.storeEngine.loadProductsFromCatalog();
+      }
+      if (typeof window.storeEngine.renderProducts === 'function') {
+        window.storeEngine.renderProducts();
+      }
+    }
+
+    this._lastSavedProductId = targetId;
+    this.renderCatalogManager();
+
+    // Cerrar modal
+    if (window.app && typeof window.app.closeModal === 'function') {
+      window.app.closeModal('edit-product-modal');
+    }
+    const modal = document.getElementById('edit-product-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.setProperty('display', 'none', 'important');
+    }
+
+    if (window.app && typeof window.app.showToast === 'function') {
+      window.app.showToast(`✅ Producto "${name}" (${targetId}) actualizado y sincronizado en vivo.`, 'success');
+    }
+
+    return true;
   }
 
   openAddProductModal() {

@@ -7013,6 +7013,111 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
     </div>
   </div>
 
+  <!-- MODAL: EDITAR PRODUCTO / SERVICIO EN CATÁLOGO & FOTOS EN VIVO -->
+  <div class="modal-overlay" id="edit-product-modal" style="z-index: 2147483647 !important;">
+    <div class="modal-card" style="max-width:540px; padding:32px; border-radius:24px; background:#FFFFFF; border:2px solid #D4AF37; box-shadow:0 25px 60px rgba(0,0,0,0.35);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid rgba(217,119,6,0.2);">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h3 style="font-size:1.3rem; font-weight:900; color:var(--obsidian-black); margin:0;">✏️ Editar Producto / Servicio</h3>
+            <span id="edit-prod-id-badge" class="badge" style="background:#0F172A; color:#FBBF24; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px; border:1px solid #D4AF37;">PROD-7204</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin:3px 0 0 0;">Actualiza el nombre, precio, stock, código de barras y foto en vivo.</p>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="app.closeModal('edit-product-modal')">✕</button>
+      </div>
+
+      <form id="edit-product-form" onsubmit="event.preventDefault(); if(window.adminEngine) window.adminEngine.saveEditedProduct(event); return false;">
+        <input type="hidden" id="edit-prod-id">
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-weight:800; color:#0F172A;">Nombre del Producto / Servicio *</label>
+          <input type="text" class="form-input" id="edit-prod-name" placeholder="Nombre completo" required style="border-radius:8px; font-weight:700;">
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px; display:flex; gap:12px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" style="font-weight:800; color:#0F172A;">Categoría *</label>
+            <select class="form-select" id="edit-prod-category" style="border-radius:8px; font-weight:600; width:100%; padding:8px;">
+              <option value="Farmacia">Farmacia</option>
+              <option value="Alimento Canino / Felino">Alimento Canino / Felino</option>
+              <option value="Higiene y Cuidado">Higiene y Cuidado</option>
+              <option value="Servicio Clínico">Servicio Clínico</option>
+              <option value="Hotel & Hospedaje">Hotel & Hospedaje</option>
+              <option value="Servicio Grooming & Spa">Servicio Grooming & Spa</option>
+              <option value="Boutique & Accesorios VIP">Boutique & Accesorios VIP</option>
+              <option value="Tienda VIP">Tienda VIP</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" style="font-weight:800; color:#0F172A;">Precio ($ USD) *</label>
+            <input type="number" step="0.5" class="form-input" id="edit-prod-price" placeholder="25.00" required style="border-radius:8px; font-weight:800; color:#047857;">
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px; display:flex; gap:12px;">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" style="font-weight:800; color:#0F172A;">Stock / Inventario *</label>
+            <input type="number" class="form-input" id="edit-prod-stock" required style="border-radius:8px; font-weight:700;">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" style="font-weight:800; color:#0F172A;">Estatus en Tienda *</label>
+            <select class="form-select" id="edit-prod-status" style="border-radius:8px; font-weight:700; width:100%; padding:8px;">
+              <option value="active">🟢 Activo (Visible en Tienda)</option>
+              <option value="inactive">⏸️ Inactivo (Oculto en Tienda)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-weight:800; color:#0F172A;">Código de Barras (Barcode / EAN-13 / SKU)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" class="form-input" id="edit-prod-barcode" placeholder="7501234567890" style="border-radius:8px; font-weight:700; flex:1;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="if(window.adminEngine) window.adminEngine.generateAutoBarcodeForEdit();" style="padding:6px 10px; font-size:0.75rem; font-weight:800;" title="Generar nuevo código de barras">📊 Auto</button>
+          </div>
+        </div>
+
+        <!-- FOTO EN VIVO & GESTOR DE IMAGEN -->
+        <div class="form-group" style="margin-bottom:16px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:12px;">
+          <label class="form-label" style="font-weight:800; color:#0F172A; display:flex; justify-content:space-between; align-items:center;">
+            <span>📸 Foto en Vivo / Imagen del Producto</span>
+            <span style="font-size:0.72rem; color:#64748b; font-weight:600;">Soporta captura directa en piso o archivo</span>
+          </label>
+          <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+            <img id="edit-prod-img-preview" src="assets/media__1787694901704.jpg" onerror="this.src='assets/media__1787694901704.jpg'" style="width:60px; height:60px; border-radius:12px; border:2px solid #D4AF37; object-fit:cover; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+            <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+              <input type="text" class="form-input" id="edit-prod-image-url" placeholder="URL o ruta de la foto" onchange="document.getElementById('edit-prod-img-preview').src = this.value || 'assets/media__1787694901704.jpg'" style="border-radius:8px; font-size:0.8rem; padding:6px 10px;">
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-prod-image-file').click()" style="padding:6px 10px; font-weight:800; font-size:0.75rem; background:#ffffff; border:1px solid #cbd5e1; cursor:pointer;">
+                  📁 Subir Archivo
+                </button>
+                <button type="button" class="btn btn-sm" onclick="document.getElementById('edit-prod-camera-file').click()" style="padding:6px 10px; font-weight:800; font-size:0.75rem; background:#0284c7; color:#ffffff; border:none; border-radius:6px; cursor:pointer;" title="Tomar foto en vivo con la cámara del dispositivo">
+                  📷 Cámara en Vivo
+                </button>
+              </div>
+              <input type="file" id="edit-prod-image-file" accept="image/*" style="display:none;" onchange="if(window.adminEngine) window.adminEngine.handleEditProductImageUpload(event);">
+              <input type="file" id="edit-prod-camera-file" accept="image/*" capture="environment" style="display:none;" onchange="if(window.adminEngine) window.adminEngine.handleEditProductImageUpload(event);">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label" style="font-weight:800; color:#0F172A;">Descripción Comercial (Opcional)</label>
+          <textarea class="form-input" id="edit-prod-description" rows="2" placeholder="Detalles visibles en la tienda online..." style="border-radius:8px; resize:vertical; font-size:0.85rem;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('edit-product-modal')" style="flex:1; padding:12px; font-weight:800; border-radius:12px; cursor:pointer;">
+            ✕ Cancelar
+          </button>
+          <button type="submit" id="btn-save-edited-product" class="btn btn-primary" style="flex:2; padding:12px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #10B981, #059669); border:none; color:white; cursor:pointer; box-shadow:0 4px 14px rgba(16,185,129,0.35);">
+            💾 Guardar Cambios del Producto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 
 
   <!-- MODAL: ACTUALIZAR FOTO DE PERFIL / GROOMING DE MASCOTA -->

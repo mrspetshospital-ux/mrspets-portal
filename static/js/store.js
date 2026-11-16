@@ -993,7 +993,8 @@ class StoreEngine {
         { id: 'PROD-104', name: 'Hill\'s Prescription Diet k/d Renal (3.8kg)', category: 'Alimento Canino / Felino', price: 46.00, stock: 0, active: true, image: 'assets/hero_border_collie.jpg' },
         { id: 'PROD-105', name: 'Pro Plan Veterinary Diets OM Obesity (7.5kg)', category: 'Alimento Canino / Felino', price: 58.00, stock: 0, active: true, image: 'assets/media__1787694901704.jpg' },
         { id: 'SERV-GROOMING', name: 'Circuito Grooming Spa (7 Estaciones)', category: 'Servicio Grooming', price: 25.00, stock: 99, active: true, image: 'assets/mrs_pets_official_logo.png' },
-        { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, stock: 99, active: true, image: 'assets/media__1787695254613.jpg' }
+        { id: 'SERV-201', name: 'Profilaxis Dental & Higiene Ultrasónica', category: 'Servicio Clínico Specialist', price: 35.00, stock: 99, active: true, image: 'assets/media__1787695254613.jpg' },
+        { id: 'PROD-7204', name: 'Pack Cuidado Dermatológico & Ozonoterapia VIP (7204)', category: 'Higiene y Cuidado', price: 32.00, stock: 18, active: true, barcode: '7507204192834', image: 'assets/media__1787695246337.jpg', description: 'Pack especial dermatológico con ozonoterapia activa para consentidos de piel sensible.' }
       ];
     }
 
