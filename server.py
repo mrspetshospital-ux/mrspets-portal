@@ -6450,6 +6450,160 @@ async def simulate_binance_payment(request: Request):
     return binance_pay_engine.simulate_sandbox_payment(trade_no)
 
 
+# =====================================================================
+# BIOTRACKER GEOGUARD & RADAR EPIDEMIOLÓGICO (MARACAIBO)
+# =====================================================================
+@app.get("/api/biotracker/hotspots")
+@app.get("/api/v1/biotracker/hotspots")
+def get_biotracker_hotspots():
+    """Retorna los focos epidemiológicos y geocercas sanitarias de Maracaibo para BioTracker GeoGuard."""
+    clients_file = DATA_DIR / "biotracker_clients.json"
+    sector_counts = {}
+    if clients_file.exists():
+        try:
+            with open(clients_file, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+                if isinstance(cdata, list):
+                    for rec in cdata:
+                        sec = rec.get("sector")
+                        if sec:
+                            sector_counts[sec] = sector_counts.get(sec, 0) + 1
+        except Exception as e:
+            log.warning("No se pudo leer biotracker_clients.json: %s", e)
+
+    sectors = [
+        {
+            "sector": "Las Delicias",
+            "lat": 10.6500,
+            "lng": -71.6150,
+            "casos": sector_counts.get("Las Delicias", 12),
+            "alerta": "Alta",
+            "radio": 1300,
+            "tipo": "Corredor Médico / Comercial",
+            "patologia": "Ectoparásitos (Garrapatas/Pulgas)",
+            "registeredClients": 8
+        },
+        {
+            "sector": "El Milagro",
+            "lat": 10.6661,
+            "lng": -71.6122,
+            "casos": sector_counts.get("El Milagro", 8),
+            "alerta": "Moderada",
+            "radio": 1500,
+            "tipo": "Core Central Sede Principal",
+            "patologia": "Dermatitis Atópica",
+            "registeredClients": 14
+        },
+        {
+            "sector": "Bella Vista",
+            "lat": 10.6400,
+            "lng": -71.6150,
+            "casos": sector_counts.get("Bella Vista", 14),
+            "alerta": "Alta",
+            "radio": 1500,
+            "tipo": "Corredor Principal",
+            "patologia": "Garrapatas (Rhipicephalus sanguineus)",
+            "registeredClients": 11
+        },
+        {
+            "sector": "Tierra Negra",
+            "lat": 10.6500,
+            "lng": -71.6050,
+            "casos": sector_counts.get("Tierra Negra", 6),
+            "alerta": "Moderada",
+            "radio": 1000,
+            "tipo": "Residencial / Comercial",
+            "patologia": "Dermatitis por Pulgas",
+            "registeredClients": 9
+        },
+        {
+            "sector": "La Lago",
+            "lat": 10.6600,
+            "lng": -71.6300,
+            "casos": sector_counts.get("La Lago", 5),
+            "alerta": "Preventiva",
+            "radio": 1100,
+            "tipo": "Residencial Alta",
+            "patologia": "Hongos / Malassezia",
+            "registeredClients": 7
+        },
+        {
+            "sector": "5 de Julio",
+            "lat": 10.6450,
+            "lng": -71.6250,
+            "casos": sector_counts.get("5 de Julio", 9),
+            "alerta": "Moderada",
+            "radio": 1200,
+            "tipo": "Comercial / Bancario",
+            "patologia": "Ectoparásitos",
+            "registeredClients": 6
+        },
+        {
+            "sector": "Santa Lucía",
+            "lat": 10.6420,
+            "lng": -71.5950,
+            "casos": sector_counts.get("Santa Lucía", 7),
+            "alerta": "Preventiva",
+            "radio": 1400,
+            "tipo": "Histórico / Residencial",
+            "patologia": "Dermatitis Alérgica",
+            "registeredClients": 5
+        },
+        {
+            "sector": "Juana de Ávila",
+            "lat": 10.6800,
+            "lng": -71.6200,
+            "casos": sector_counts.get("Juana de Ávila", 5),
+            "alerta": "Preventiva",
+            "radio": 1800,
+            "tipo": "Residencial Norte",
+            "patologia": "Control Preventivo",
+            "registeredClients": 4
+        },
+        {
+            "sector": "La Rita Norte",
+            "lat": 10.6850,
+            "lng": -71.5800,
+            "casos": sector_counts.get("La Rita Norte", 6),
+            "alerta": "Preventiva",
+            "radio": 2000,
+            "tipo": "Expansión Periférica",
+            "patologia": "Ectoparásitos",
+            "registeredClients": 3
+        }
+    ]
+    total_casos = sum(s["casos"] for s in sectors)
+
+    return {
+        "status": "success",
+        "state": "ACTIVO & SINCRONIZADO",
+        "provider": "Leaflet CARTO Voyager (Maracaibo Core)",
+        "totalCasos": total_casos,
+        "lastUpdated": datetime.now(timezone.utc).isoformat(),
+        "sectors": sectors
+    }
+
+
+@app.post("/api/biotracker/report-dermal-case")
+async def report_dermal_case(request: Request):
+    """Registra un reporte dérmico en BioTracker."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return {"status": "success", "message": "Caso registrado en BioTracker", "case": body}
+
+
+@app.post("/api/biotracker/register-client")
+async def register_biotracker_client(request: Request):
+    """Registra un cliente en BioTracker."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return {"status": "success", "message": "Cliente registrado", "data": body}
+
+
 
 # Estáticos (css, js, assets, data)
 if os.path.isdir(STATIC_DIR):

@@ -1533,127 +1533,73 @@
         </div>
 
         <!-- ========================================================================= -->
-        <!-- SECCIÓN BIOTRACKER GEOGUARD (RADAR EPIDEMIOLÓGICO INTERACTIVO DE MARACAIBO) -->
+        <!-- SECCIÓN BIOTRACKER GEOGUARD (RADAR EPIDEMIOLÓGICO LEAFLET CARTO OFICIAL) -->
         <!-- ========================================================================= -->
-        <div style="margin-top:28px; margin-bottom:28px; background:linear-gradient(135deg, #111827, #070a11); border:1.5px solid #D4AF37; border-radius:24px; padding:24px; box-shadow:0 12px 36px rgba(0,0,0,0.25);">
+        <div id="geoguard-map-card" style="margin-top:28px; margin-bottom:28px; background:linear-gradient(135deg, #111827, #070a11); border:1.5px solid #D4AF37; border-radius:24px; padding:24px; box-shadow:0 12px 36px rgba(0,0,0,0.35);">
+          <!-- Encabezado y Botones Principales -->
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
             <div style="display:flex; align-items:center; gap:12px;">
-              <span style="font-size:2rem;">🛡️</span>
+              <span style="font-size:2.2rem;">🛡️</span>
               <div>
                 <div style="font-size:0.75rem; font-weight:800; color:#D4AF37; text-transform:uppercase; letter-spacing:0.08em;">
                   RED PREVENTIVA SANITARIA • MARACAIBO, VENEZUELA
                 </div>
-                <h3 style="font-size:1.3rem; font-weight:900; color:#FFFFFF; margin:2px 0;">
-                  BioTracker GeoGuard & Radar Epidemiológico
+                <h3 style="font-size:1.35rem; font-weight:900; color:#FFFFFF; margin:2px 0;">
+                  BioTracker GeoGuard & Radar Epidemiológico (Leaflet CARTO)
                 </h3>
                 <div style="font-size:0.8rem; color:#94A3B8;">
-                  Detección preventiva por sectores sin fricción ni invasión de privacidad (Las Delicias, El Milagro, Bella Vista, Tierra Negra, Indio Mara, La Lago).
+                  Monitoreo preventivo georreferenciado en tiempo real: Las Delicias, El Milagro, Bella Vista, Tierra Negra, 5 de Julio, La Lago y sectores norte.
                 </div>
               </div>
             </div>
 
-            <!-- Botón para activar BioTracker GeoGuard -->
+            <!-- Botones de Acción y Estado -->
             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <span id="geoGuardApiBadge" style="font-size:0.75rem; background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#34d399; padding:6px 12px; border-radius:8px; font-weight:700;">
+                ● MODO LEAFLET CARTO ACTIVO
+              </span>
+              <div style="background: rgba(217, 83, 79, 0.2); border: 1px solid #d9534f; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; color:#fee2e2; font-weight:700;">
+                🔴 Casos Activos: <span id="alertCount" style="color:#f59e0b; font-weight:900;">50</span>
+              </div>
               <button class="nav-btn" id="btnBioTracker" onclick="showBioTrackerMap()" style="background:linear-gradient(135deg, #10b981, #059669); border:1px solid #34d399; color:#ffffff; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:800; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-                🗺️ Abrir BioTracker GeoGuard (Leaflet CARTO)
-              </button>
-              <button class="nav-btn" id="btnBioTrackerLeafletTop" onclick="showBioTrackerMap()" style="background:linear-gradient(135deg, #1e1b4b, #312e81); border:1px solid #818cf8; color:#e0e7ff; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer;">
-                🗺️ Modo Leaflet CARTO
-              </button>
-              <button class="nav-btn" id="btnForzarLeafletCarto" onclick="cargarMapaGeoGuard()" style="background:linear-gradient(135deg, #065f46, #047857); border:1.5px solid #10b981; color:#ecfdf5; font-weight:800; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.25);" title="Mapa Oficial Leaflet CARTO">
-                ⚡ Leaflet CARTO Voyager
+                🗺️ Abrir BioTracker GeoGuard
               </button>
               <button class="nav-btn" id="btnCloseBioTracker" onclick="closeBioTrackerMap()" style="display:none; background:linear-gradient(135deg, rgba(239,68,68,0.25), rgba(185,28,28,0.4)); border:1.5px solid #ef4444; color:#fee2e2; font-weight:800; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer; align-items:center; gap:6px;">
-                ✕ Cerrar Mapa
+                ✕ Cerrar Radar
               </button>
             </div>
           </div>
 
-          <!-- Contenedor del Radar Epidemiológico GeoGuard Oficial Leaflet CARTO -->
-          <div class="geoguard-container" id="geoGuardContainer" style="display:none; background: #1a1a1a; padding: 20px; border-radius: 16px; border: 1px solid #333; color: #fff; margin-top: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-              <div>
-                <h3 style="margin: 0; color: #d4af37;">🛡️ BioTracker GeoGuard & Radar Epidemiológico (Leaflet CARTO Oficial)</h3>
-                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 3px;">
-                  • Módulo: Radar Epidemiológico Sanitario (Maracaibo) | Direct Internal Fetch: <code style="color:#fcd34d;">/api/biotracker/hotspots</code>
-                </div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <span id="geoGuardApiBadge" style="font-size:0.75rem; background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#34d399; padding:4px 8px; border-radius:6px; font-weight:700;">● MODO LEAFLET CARTO ACTIVO</span>
-                <div style="background: rgba(217, 83, 79, 0.2); border: 1px solid #d9534f; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem;">
-                  🔴 Casos Activos Totales: <span id="directAlertCount">50</span>
-                </div>
-                <button type="button" id="btn-close-direct-geoguard" onclick="closeGeoGuardMap()" style="background:#dc2626; color:#ffffff; border:1px solid #ef4444; border-radius:8px; cursor:pointer; font-weight:900; font-size:0.8rem; padding:6px 14px; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;" title="Cerrar Radar">
-                  ✕ Cerrar
-                </button>
-              </div>
+          <!-- Contenedor Único y Consolidado del Mapa Leaflet CARTO Voyager -->
+          <div id="biotrackerView" style="display:none; width:100%; height:520px; min-height:520px; position:relative; border-radius:14px; overflow:hidden; margin-top:18px; border:1px solid #334155; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+            <div id="maracaiboMap" style="width:100%; height:100%; min-height:520px;"></div>
+            
+            <!-- Barra Flotante de Enfoque Rápido por Sectores GeoGuard -->
+            <div id="geoguard-sectors-pill-bar" style="position:absolute; top:12px; left:12px; z-index:1000; background:rgba(17,24,39,0.92); border:1px solid #D4AF37; padding:6px 10px; border-radius:10px; display:flex; gap:6px; flex-wrap:wrap; max-width:70%; box-shadow:0 4px 16px rgba(0,0,0,0.6); backdrop-filter:blur(6px); align-items:center;">
+              <span style="font-size:0.72rem; font-weight:900; color:#D4AF37;">📍 ENFOQUE:</span>
+              <button type="button" onclick="centrarSectorGeoGuard('elMilagro')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Núcleo Central: El Milagro (1500m)">El Milagro</button>
+              <button type="button" onclick="centrarSectorGeoGuard('laLago')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Núcleo Central: La Lago (1100m)">La Lago</button>
+              <button type="button" onclick="centrarSectorGeoGuard('tierraNegra')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Núcleo Central: Tierra Negra (1000m)">Tierra Negra</button>
+              <button type="button" onclick="centrarSectorGeoGuard('bellaVista')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Eje Comercial: Bella Vista (1500m)">Bella Vista</button>
+              <button type="button" onclick="centrarSectorGeoGuard('cincoDeJulio')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Eje Comercial: 5 de Julio (1200m)">5 de Julio</button>
+              <button type="button" onclick="centrarSectorGeoGuard('santaLucia')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Eje Comercial: Santa Lucía (1400m)">Santa Lucía</button>
+              <button type="button" onclick="centrarSectorGeoGuard('juanaDeAvila')" style="background:rgba(16,185,129,0.18); border:1px solid #34d399; color:#6ee7b7; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Norte: Juana de Ávila (1800m)">Juana de Ávila</button>
+              <button type="button" onclick="centrarSectorGeoGuard('laRitaNorte')" style="background:rgba(16,185,129,0.18); border:1px solid #34d399; color:#6ee7b7; font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 8px; cursor:pointer;" title="Expansión: La Rita Norte (2000m)">La Rita Norte</button>
+            </div>
+            
+            <!-- Badge Superior Derecho con Alertas y Botón Cerrar -->
+            <div style="position:absolute; top:12px; right:12px; z-index:1000; background:rgba(26,26,26,0.95); color:#fff; padding:6px 12px; border-radius:10px; font-size:0.85rem; border:1px solid #d4af37; display:flex; align-items:center; gap:10px; box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+              <span style="font-weight:700;">📡 Telemetría: <span style="color:#34d399; font-weight:800;">En Vivo</span></span>
+              <button type="button" id="btn-close-leaflet-biotracker" onclick="closeBioTrackerMap()" style="background:#dc2626; color:#ffffff; border:1px solid #ef4444; border-radius:8px; cursor:pointer; font-weight:900; font-size:0.8rem; padding:5px 12px; display:inline-flex; align-items:center; gap:4px;" title="Cerrar Mapa">
+                ✕ Cerrar
+              </button>
             </div>
 
-            <!-- Contenedor Oficial Leaflet CARTO Voyager (Sin Google Maps) -->
-            <div id="map-container" style="width: 100%; height: 500px; border-radius: 12px; border: 1px solid #444; position: relative;"></div>
-          </div>
-
-          <!-- ========================================================================= -->
-          <!-- SECCIÓN BIOTRACKER GEOGUARD (RADAR EPIDEMIOLÓGICO LEAFLET CARTO) -->
-          <!-- ========================================================================= -->
-          <div style="margin-top:24px; margin-bottom:28px; background:linear-gradient(135deg, #111827, #070a11); border:1.5px solid #D4AF37; border-radius:24px; padding:24px; box-shadow:0 12px 36px rgba(0,0,0,0.25);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-size:2rem;">🛡️</span>
-                <div>
-                  <div style="font-size:0.75rem; font-weight:800; color:#D4AF37; text-transform:uppercase; letter-spacing:0.08em;">
-                    RED PREVENTIVA SANITARIA • MARACAIBO, VENEZUELA
-                  </div>
-                  <h3 style="font-size:1.3rem; font-weight:900; color:#FFFFFF; margin:2px 0;">
-                    BioTracker GeoGuard & Radar Epidemiológico (CARTO)
-                  </h3>
-                  <div style="font-size:0.8rem; color:#94A3B8;">
-                    Monitoreo en tiempo real de los seis sectores de Maracaibo (Las Delicias, El Milagro, Bella Vista, Tierra Negra, Indio Mara, La Lago).
-                  </div>
-                </div>
-              </div>
-              <!-- Botones de Acción -->
-              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                <button class="nav-btn" id="btnBioTrackerLeaflet" onclick="showBioTrackerMap()" style="background:linear-gradient(135deg, #1e1b4b, #312e81); border:1px solid #818cf8; color:#e0e7ff; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:800;">
-                  🗺️ Abrir Radar Leaflet CARTO
-                </button>
-                <button class="nav-btn" id="btnCloseBioTracker" onclick="closeBioTrackerMap()" style="display:none; background:linear-gradient(135deg, rgba(239,68,68,0.25), rgba(185,28,28,0.4)); border:1.5px solid #ef4444; color:#fee2e2; font-weight:800; font-size:0.85rem; padding:10px 18px; border-radius:10px; cursor:pointer; align-items:center; gap:6px;">
-                  ✕ Cerrar Mapa
-                </button>
-              </div>
-            </div>
-
-            <!-- Contenedor del Mapa Leaflet CARTO Optimizado (Sin Pestañeos) -->
-            <div id="biotrackerView" style="display:none; width:100%; height:500px; position:relative; border-radius:12px; overflow:hidden; margin-top:15px; border:1px solid #333;">
-              <div id="maracaiboMap" style="width:100%; height:100%;"></div>
-              
-              <!-- Barra Flotante de Enfoque Rápido por Sectores GeoGuard -->
-              <div id="geoguard-sectors-pill-bar" style="position:absolute; top:10px; left:10px; z-index:1000; background:rgba(17,24,39,0.92); border:1px solid #D4AF37; padding:6px 10px; border-radius:10px; display:flex; gap:6px; flex-wrap:wrap; max-width:65%; box-shadow:0 4px 16px rgba(0,0,0,0.5); backdrop-filter:blur(6px); align-items:center;">
-                <span style="font-size:0.72rem; font-weight:900; color:#D4AF37;">📍 ENFOQUE:</span>
-                <button type="button" onclick="centrarSectorGeoGuard('elMilagro')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Núcleo Central: El Milagro (1500m)">El Milagro</button>
-                <button type="button" onclick="centrarSectorGeoGuard('laLago')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Núcleo Central: La Lago (1100m)">La Lago</button>
-                <button type="button" onclick="centrarSectorGeoGuard('tierraNegra')" style="background:rgba(212,175,55,0.18); border:1px solid #D4AF37; color:#fde047; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Núcleo Central: Tierra Negra (1000m)">Tierra Negra</button>
-                <button type="button" onclick="centrarSectorGeoGuard('bellaVista')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Eje Comercial: Bella Vista (1500m)">Bella Vista</button>
-                <button type="button" onclick="centrarSectorGeoGuard('cincoDeJulio')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Eje Comercial: 5 de Julio (1200m)">5 de Julio</button>
-                <button type="button" onclick="centrarSectorGeoGuard('santaLucia')" style="background:rgba(59,130,246,0.18); border:1px solid #60a5fa; color:#93c5fd; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Eje Comercial: Santa Lucía (1400m)">Santa Lucía</button>
-                <button type="button" onclick="centrarSectorGeoGuard('juanaDeAvila')" style="background:rgba(16,185,129,0.18); border:1px solid #34d399; color:#6ee7b7; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Norte: Juana de Ávila (1800m)">Juana de Ávila</button>
-                <button type="button" onclick="centrarSectorGeoGuard('laRitaNorte')" style="background:rgba(16,185,129,0.18); border:1px solid #34d399; color:#6ee7b7; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; cursor:pointer;" title="Expansión: La Rita Norte (2000m)">La Rita Norte</button>
-              </div>
-              
-              <!-- Badge Superior con Alertas y Botón Cerrar -->
-              <div style="position:absolute; top:10px; right:10px; z-index:1000; background:rgba(26,26,26,0.95); color:#fff; padding:6px 12px; border-radius:10px; font-size:0.85rem; border:1px solid #d4af37; display:flex; align-items:center; gap:10px; box-shadow:0 4px 16px rgba(0,0,0,0.5);">
-                <span style="font-weight:700;">🔴 Alertas Activas: <span id="alertCount" style="color:#f59e0b; font-weight:900;">50</span> casos</span>
-                <button type="button" id="btn-close-leaflet-biotracker" onclick="closeBioTrackerMap()" style="background:#dc2626; color:#ffffff; border:1px solid #ef4444; border-radius:8px; cursor:pointer; font-weight:900; font-size:0.8rem; padding:5px 12px; display:inline-flex; align-items:center; gap:4px;" title="Cerrar Mapa">
-                  ✕ Cerrar
-                </button>
-              </div>
-
-              <!-- Botón Flotante Inferior Central para Cerrar Fácilmente al Explorar -->
-              <div style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1000;">
-                <button type="button" onclick="closeBioTrackerMap()" style="background:rgba(17,24,39,0.92); border:1.5px solid #d4af37; color:#fbbf24; padding:7px 18px; border-radius:20px; font-weight:800; font-size:0.82rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px; backdrop-filter:blur(4px);">
-                  ✕ Cerrar Radar Epidemiológico
-                </button>
-              </div>
+            <!-- Botón Flotante Inferior Central para Cerrar Fácilmente al Explorar -->
+            <div style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+              <button type="button" onclick="closeBioTrackerMap()" style="background:rgba(17,24,39,0.92); border:1.5px solid #d4af37; color:#fbbf24; padding:7px 18px; border-radius:20px; font-weight:800; font-size:0.82rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.6); display:flex; align-items:center; gap:6px; backdrop-filter:blur(4px);">
+                ✕ Cerrar Radar Epidemiológico
+              </button>
             </div>
           </div>
         </div>
@@ -8730,88 +8676,59 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
       };
     }
 
-    function initMap() {
-      // Redirigir al motor oficial Leaflet CARTO Voyager
-      cargarMapaGeoGuard();
-    }
+    // =========================================================================
+    // CONTROLADOR OFICIAL LEAFLET CARTO VOYAGER (BIOTRACKER GEOGUARD)
+    // =========================================================================
 
-    function closeGeoGuardMap() {
-      const container = document.getElementById('geoGuardContainer') || document.querySelector('.geoguard-container');
-      if (container) container.style.display = 'none';
-      const lView = document.getElementById('biotrackerView');
-      if (lView) lView.style.display = 'none';
-      const mapContainer = document.getElementById('map-container');
-      if (mapContainer) mapContainer.style.display = 'none';
-      const allCloseBtns = document.querySelectorAll('#btnCloseBioTracker');
-      allCloseBtns.forEach(btn => btn.style.display = 'none');
-      const btnClose = document.getElementById('btnCloseBioTracker');
-      if (btnClose) btnClose.style.display = 'none';
-    }
+    // Renderizado seguro de círculos epidemiológicos sobre el mapa Leaflet
+    async function actualizarHotspotsEnMapa(map) {
+      if (!map) return;
+      try {
+        const data = await fetchBioTrackerHotspots();
+        const alertCountEl = document.getElementById('alertCount');
+        if (alertCountEl) alertCountEl.textContent = data.totalCasos || 50;
 
-    function closeBioTrackerMap() {
-      const view = document.getElementById('biotrackerView');
-      const btnClose = document.getElementById('btnCloseBioTracker');
-      if (view) view.style.display = 'none';
-      if (btnClose) btnClose.style.display = 'none';
+        const directAlertEl = document.getElementById('directAlertCount');
+        if (directAlertEl) directAlertEl.textContent = data.totalCasos || 50;
 
-      const lView = document.getElementById('biotrackerView');
-      if (lView) lView.style.display = 'none';
-      const mapContainer = document.getElementById('map-container');
-      if (mapContainer) mapContainer.style.display = 'none';
-      const allCloseBtns = document.querySelectorAll('#btnCloseBioTracker');
-      allCloseBtns.forEach(btn => btn.style.display = 'none');
-      const container = document.getElementById('geoGuardContainer') || document.querySelector('.geoguard-container');
-      if (container) container.style.display = 'none';
-    }
-
-    // Inicialización del mapa GeoGuard con Leaflet CARTO Voyager Oficial
-    async function initGeoGuardMap() {
-      if (typeof cargarMapaGeoGuard === 'function') {
-        cargarMapaGeoGuard();
-      } else if (typeof showBioTrackerMap === 'function') {
-        showBioTrackerMap();
-      }
-    }
-
-    function showGoogleBioTrackerMap(forceOpen = true) {
-      // 1. Activar pestaña donde reside el mapa de BioTracker GeoGuard
-      if (window.app && typeof window.app.switchTab === 'function') {
-        window.app.switchTab('welcome', true);
-      } else {
-        document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
-        const welcomeTab = document.getElementById('tab-welcome');
-        if (welcomeTab) welcomeTab.classList.add('active');
-      }
-
-      // 2. Destacar el ítem en la barra lateral
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      const sidebarBtn = document.getElementById('btn-sidebar-biotracker');
-      if (sidebarBtn) sidebarBtn.classList.add('active');
-
-      // 3. Abrir el mapa oficial Leaflet CARTO
-      showBioTrackerMap(forceOpen);
-
-      // 4. Scroll suave hacia el radar y reajustar tamaño Leaflet
-      setTimeout(() => {
-        const view = document.getElementById('biotrackerView') || document.getElementById('geoGuardContainer');
-        if (view) {
-          view.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Limpiar círculos previos si existían
+        if (window.leafletBioTrackerCircles && window.leafletBioTrackerCircles.length > 0) {
+          window.leafletBioTrackerCircles.forEach(c => {
+            try { map.removeLayer(c); } catch (_) {}
+          });
         }
-        if (window.maracaiboMap) {
-          window.maracaiboMap.invalidateSize(true);
-        }
-        if (window.geoGuardCartoMap) {
-          window.geoGuardCartoMap.invalidateSize(true);
-        }
-      }, 120);
+        window.leafletBioTrackerCircles = [];
 
-      if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('🛡️ BioTracker GeoGuard: Radar Epidemiológico Desplegado en Maracaibo', 'info');
+        const sectors = data.sectors || [];
+        sectors.forEach(spot => {
+          const circle = L.circle([spot.lat, spot.lng], {
+            color: '#dc2626',
+            fillColor: spot.casos >= 12 ? '#ef4444' : (spot.casos >= 8 ? '#f97316' : '#eab308'),
+            fillOpacity: 0.55,
+            radius: spot.radio || (spot.casos * 90)
+          }).addTo(map)
+            .bindPopup(`
+              <div style="font-family:sans-serif; padding:5px; max-width:240px;">
+                <b style="color:#b91c1c; font-size:0.95rem;">🛡️ Sector: ${spot.sector}</b><br>
+                ${spot.tipo ? `<span style="font-size:0.75rem; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:700;">${spot.tipo}</span><br>` : ''}
+                <div style="font-size:0.82rem; color:#334155; margin-top:4px;">
+                  ⚠️ Alerta Sanitaria: <b style="color:#dc2626;">${spot.casos} casos</b>
+                </div>
+                <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
+                  Patología: ${spot.patologia || 'Ectoparásitos (Garrapatas/Pulgas)'}
+                </div>
+                ${spot.radio ? `<div style="font-size:0.74rem; color:#64748b;">📏 Geocerca: <b>${spot.radio} m</b></div>` : ''}
+                ${spot.registeredClients ? `<div style="font-size:0.74rem; color:#047857; font-weight:700; margin-top:2px;">👑 Clientes registrados: ${spot.registeredClients}</div>` : ''}
+                <div style="margin-top:6px; font-size:0.7rem; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:2px;">
+                  📡 BioTracker GeoGuard • CARTO Voyager
+                </div>
+              </div>
+            `);
+          window.leafletBioTrackerCircles.push(circle);
+        });
+      } catch (err) {
+        console.warn('[BioTracker Hotspots Render Warning]', err);
       }
-    }
-
-    async function renderMaracaiboMap() {
-      showBioTrackerMap(true);
     }
 
     async function showBioTrackerMap(forceOpen = false) {
@@ -8827,228 +8744,159 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         }
       }
 
+      // 2. Destacar en la barra lateral si existe el ítem
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const sidebarBtn = document.getElementById('btn-sidebar-biotracker');
+      if (sidebarBtn) sidebarBtn.classList.add('active');
+
       const view = document.getElementById('biotrackerView');
+      const btnOpen = document.getElementById('btnBioTracker');
       const btnClose = document.getElementById('btnCloseBioTracker');
 
+      // Si ya estaba abierto y no es forceOpen, conmutar (toggle)
       if (!forceOpen && isAlreadyOnWelcome && view && view.style.display === 'block') {
         closeBioTrackerMap();
         return;
       }
 
-      const googleView = document.getElementById('googleBioTrackerView');
-      if (googleView) googleView.style.display = 'none';
-      const weatherEl = document.getElementById('weatherView');
-      if (weatherEl) weatherEl.style.display = 'none';
-      const patientStatusEl = document.getElementById('patientStatusView');
-      if (patientStatusEl) patientStatusEl.style.display = 'none';
+      // Ocultar vistas secundarias
+      ['googleBioTrackerView', 'weatherView', 'patientStatusView'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
 
       if (view) {
         view.style.display = 'block';
       }
-
+      if (btnOpen) btnOpen.style.display = 'none';
       if (btnClose) btnClose.style.display = 'inline-flex';
       const allCloseBtns = document.querySelectorAll('#btnCloseBioTracker');
       allCloseBtns.forEach(btn => btn.style.display = 'inline-flex');
 
-      if (!mapInitialized) {
-        maracaiboMap = L.map('maracaiboMap', {
-          fadeAnimation: true,
-          zoomAnimation: true
-        }).setView([10.63167, -71.64056], 13);
-
-        // Capa de CARTO Voyager de alta velocidad con llave autorizada
-        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4vtj_1_8fff6461e3706d615fda3fb6', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors, &copy; CARTO'
-        }).addTo(maracaiboMap);
-        window.maracaiboMap = maracaiboMap;
-
-        const data = await fetchBioTrackerHotspots();
-        const alertCountEl = document.getElementById('alertCount');
-        if (alertCountEl) alertCountEl.textContent = data.totalCasos || 50;
-
-        data.sectors.forEach(spot => {
-          const circle = L.circle([spot.lat, spot.lng], {
-            color: '#d9534f',
-            fillColor: spot.casos >= 12 ? '#ef4444' : '#f97316',
-            fillOpacity: 0.6,
-            radius: spot.radio || (spot.casos * 90) // Base: radius: spot.casos * 90
-          }).addTo(maracaiboMap)
-            .bindPopup(`
-              <div style="font-family:sans-serif; padding:4px; max-width:240px;">
-                <b style="color:#b91c1c; font-size:0.95rem;">🛡️ Sector: ${spot.sector}</b><br>
-                ${spot.tipo ? `<span style="font-size:0.75rem; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:700;">${spot.tipo}</span><br>` : ''}
-                <div style="font-size:0.82rem; color:#334155; margin-top:4px;">
-                  ⚠️ Alertas Sanitarias: <b style="color:#dc2626;">${spot.casos} casos</b>
-                </div>
-                ${spot.radio ? `<div style="font-size:0.75rem; color:#64748b; margin-top:2px;">📏 Geocerca: <b>${spot.radio} m</b></div>` : ''}
-                <div style="margin-top:6px; font-size:0.7rem; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:2px;">
-                  📡 BioTracker GeoGuard • CARTO Voyager
-                </div>
-              </div>
-            `);
-          leafletBioTrackerCircles.push(circle);
-        });
-
-        mapInitialized = true;
-      }
-
-      setTimeout(() => {
-        if (maracaiboMap) {
-          maracaiboMap.invalidateSize(true);
-        }
-        if (view) {
-          view.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-
-    // =========================================================================
-    // FORZAR LEAFLET CARTO (SIN PEDIR LLAVES DE GOOGLE)
-    // =========================================================================
-    function cargarMapaGeoGuard() {
-      // Ocultar cualquier error de Google Maps
-      if (document.getElementById('error-api-container')) {
-        document.getElementById('error-api-container').style.display = 'none';
-      }
-
-      // Asegurar que la pestaña tab-welcome esté activa si estamos en otra pestaña
-      const welcomeTab = document.getElementById('tab-welcome');
-      if (welcomeTab && !welcomeTab.classList.contains('active')) {
-        if (window.app && typeof window.app.switchTab === 'function') {
-          window.app.switchTab('welcome', true);
-        } else {
-          document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
-          welcomeTab.classList.add('active');
-        }
-      }
-
-      // Asegurar visibilidad del contenedor general si estuviese oculto
-      const container = document.getElementById('geoGuardContainer') || document.querySelector('.geoguard-container');
-      if (container) {
-        container.style.display = 'block';
-        setTimeout(() => {
-          container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 50);
-      }
-
-      // Conmutar vistas: ocultar mapa directo de Google si no tiene llave y mostrar map-container
-      const directGoogleMap = document.getElementById('directMaracaiboMap');
-      const mapContainer = document.getElementById('map-container');
-      if (directGoogleMap && mapContainer) {
-        directGoogleMap.style.display = 'none';
-        mapContainer.style.display = 'block';
-      }
-
-      // Ocultar otras vistas emergentes para evitar colisiones visuales
-      const gView = document.getElementById('googleBioTrackerView');
-      if (gView) gView.style.display = 'none';
-      const lView = document.getElementById('biotrackerView');
-      if (lView) lView.style.display = 'none';
-
-      // Mostrar botón de cerrar
-      const btnClose = document.getElementById('btnCloseBioTracker');
-      if (btnClose) btnClose.style.display = 'inline-flex';
-
-      // Asegurar que la librería Leaflet esté disponible
+      // Verificar que Leaflet esté cargado
       if (typeof L === 'undefined') {
-        console.warn('Leaflet aún no está disponible.');
+        console.warn('[BioTracker] Esperando carga de biblioteca Leaflet...');
+        setTimeout(() => showBioTrackerMap(forceOpen), 200);
         return;
       }
 
-      // Prevenir error si ya existía una instancia en map-container
-      if (window.geoGuardCartoMap) {
+      // 3. Inicialización o reutilización del mapa Leaflet
+      if (!window.maracaiboMap) {
         try {
-          window.geoGuardCartoMap.remove();
-        } catch (e) {
-          console.warn('[Leaflet Remove Warning]', e);
-        }
-        window.geoGuardCartoMap = null;
-      }
+          const map = L.map('maracaiboMap', {
+            fadeAnimation: true,
+            zoomAnimation: true,
+            attributionControl: true
+          }).setView([10.6549, -71.6067], 13);
 
-      // Inicializar mapa directamente con Leaflet y los tiles de CARTO
-      var map = L.map('map-container').setView([10.6549, -71.6067], 13); // Coordenadas de Maracaibo
-      window.geoGuardCartoMap = map;
-
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-          attribution: '&copy; CARTO'
-      }).addTo(map);
-
-      console.log("Modo Leaflet CARTO forzado con éxito en Maracaibo.");
-
-      // Actualizar badge de estado
-      const badge = document.getElementById('geoGuardApiBadge');
-      if (badge) {
-        badge.innerHTML = '● MODO LEAFLET CARTO ACTIVO (Sin Llaves)';
-        badge.style.background = 'rgba(16,185,129,0.25)';
-        badge.style.borderColor = '#10b981';
-        badge.style.color = '#34d399';
-      }
-
-      // Marcador Sede Principal Mrs. Pets (Av. 2 El Milagro)
-      L.marker([10.6650, -71.6080]).addTo(map)
-        .bindPopup(`
-          <div style="font-family:sans-serif; padding:4px;">
-            <b style="color:#b45309; font-size:0.95rem;">🏥 Mrs. Pets Sede Principal</b><br>
-            <span style="font-size:0.82rem; color:#1e293b; font-weight:600;">Av. 2 El Milagro, Maracaibo</span><br>
-            <span style="font-size:0.75rem; color:#475569;">"We see pets" — Clínica Veterinaria, Grooming Spa & Hotel VIP</span>
-          </div>
-        `);
-
-      // Sincronizar hotspots epidemiológicos desde la API
-      if (typeof fetchBioTrackerHotspots === 'function') {
-        fetchBioTrackerHotspots().then(data => {
-          const sectors = data.sectors || [];
-          const total = data.totalCasos || 50;
-          const alertEl = document.getElementById('directAlertCount');
-          if (alertEl) alertEl.textContent = total;
-          const googleAlertEl = document.getElementById('googleAlertCount');
-          if (googleAlertEl) googleAlertEl.textContent = total;
-          const alertCountEl = document.getElementById('alertCount');
-          if (alertCountEl) alertCountEl.textContent = total;
-
-          sectors.forEach(spot => {
-            L.circle([spot.lat, spot.lng], {
-              color: '#dc2626',
-              fillColor: spot.casos >= 15 ? '#ef4444' : (spot.casos >= 10 ? '#f97316' : '#f0ad4e'),
-              fillOpacity: 0.55,
-              radius: spot.radio || (spot.casos * 90)
-            }).addTo(map)
-              .bindPopup(`
-                <div style="font-family:sans-serif; padding:4px; max-width:240px;">
-                  <b style="color:#b91c1c; font-size:0.95rem;">🛡️ Sector: ${spot.sector}</b><br>
-                  ${spot.tipo ? `<span style="font-size:0.75rem; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:700;">${spot.tipo}</span><br>` : ''}
-                  <div style="font-size:0.82rem; color:#334155; margin-top:2px;">
-                    ⚠️ Alerta Sanitaria: <b style="color:#dc2626;">${spot.casos} casos</b>
-                  </div>
-                  <div style="font-size:0.75rem; color:#64748b;">
-                    Patología: ${spot.patologia || 'Ectoparásitos (Garrapatas/Pulgas)'}
-                  </div>
-                  ${spot.radio ? `<div style="font-size:0.74rem; color:#64748b;">📏 Geocerca: <b>${spot.radio} m</b></div>` : ''}
-                  ${spot.registeredClients ? `<div style="font-size:0.74rem; color:#047857; font-weight:700; margin-top:2px;">👑 Clientes registrados: ${spot.registeredClients}</div>` : ''}
-                  <div style="margin-top:4px; font-size:0.7rem; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:2px;">
-                    📡 BioTracker GeoGuard API • CARTO Voyager (Sin Llaves)
-                  </div>
-                </div>
-              `);
+          // Capa Oficial CARTO Voyager con subdominios y fallback automático
+          const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 20,
+            attribution: '&copy; OpenStreetMap contributors, &copy; CARTO'
           });
-        }).catch(err => console.warn('[CARTO Hotspots Fetch Warning]', err));
+
+          let fallbackActivated = false;
+          cartoVoyager.on('tileerror', function() {
+            if (!fallbackActivated) {
+              fallbackActivated = true;
+              console.warn('[BioTracker] Activando contingencia OpenStreetMap...');
+              L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+              }).addTo(map);
+            }
+          });
+
+          cartoVoyager.addTo(map);
+          window.maracaiboMap = map;
+          window.geoGuardCartoMap = map;
+
+          // Marcador Sede Principal Mrs. Pets (Av. 2 El Milagro)
+          L.marker([10.6650, -71.6080]).addTo(map)
+            .bindPopup(`
+              <div style="font-family:sans-serif; padding:5px;">
+                <b style="color:#b45309; font-size:0.95rem;">🏥 Mrs. Pets Sede Principal</b><br>
+                <span style="font-size:0.82rem; color:#1e293b; font-weight:700;">Av. 2 El Milagro, Maracaibo</span><br>
+                <span style="font-size:0.75rem; color:#475569;">Clínica Veterinaria, Grooming Spa & Hotel VIP</span>
+              </div>
+            `);
+
+          await actualizarHotspotsEnMapa(map);
+          mapInitialized = true;
+        } catch (err) {
+          console.error('[BioTracker Map Init Error]', err);
+        }
+      } else {
+        // Instancia existente: re-centrar y sincronizar hotspots
+        window.maracaiboMap.setView([10.6549, -71.6067], 13);
+        actualizarHotspotsEnMapa(window.maracaiboMap);
       }
 
-      // Redimensionamiento suave para estabilizar las teselas
+      // 4. Invalidación de tamaño en ráfaga para prevenir renders 0x0
+      [50, 150, 300, 600].forEach(delay => {
+        setTimeout(() => {
+          if (window.maracaiboMap) {
+            window.maracaiboMap.invalidateSize(true);
+          }
+        }, delay);
+      });
+
       setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 200);
+        const card = document.getElementById('geoguard-map-card') || view;
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
 
       if (window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast('🗺️ Modo Leaflet CARTO forzado con éxito (Sin llaves de Google)', 'success');
+        window.app.showToast('🛡️ BioTracker GeoGuard: Radar Epidemiológico Leaflet CARTO desplegado', 'info');
       }
     }
 
-    // =========================================================================
-    // STUBS NO-OP DE COMPATIBILIDAD (GOOGLE MAPS REMOVIDO EN FAVOR DE LEAFLET CARTO)
-    // =========================================================================
+    function closeBioTrackerMap() {
+      const view = document.getElementById('biotrackerView');
+      const btnOpen = document.getElementById('btnBioTracker');
+      const btnClose = document.getElementById('btnCloseBioTracker');
+      if (view) view.style.display = 'none';
+      if (btnOpen) btnOpen.style.display = 'inline-flex';
+      if (btnClose) btnClose.style.display = 'none';
+      const allCloseBtns = document.querySelectorAll('#btnCloseBioTracker');
+      allCloseBtns.forEach(btn => btn.style.display = 'none');
+    }
+
+    function closeGeoGuardMap() {
+      closeBioTrackerMap();
+    }
+
+    function cargarMapaGeoGuard() {
+      showBioTrackerMap(true);
+    }
+
+    function initGeoGuardMap() {
+      showBioTrackerMap(true);
+    }
+
+    function initMap() {
+      showBioTrackerMap(true);
+    }
+
+    function showGoogleBioTrackerMap(forceOpen = true) {
+      showBioTrackerMap(forceOpen);
+    }
+
+    async function renderMaracaiboMap() {
+      showBioTrackerMap(true);
+    }
+
+    // Auto-ajuste ante cambio de dimensiones de pantalla
+    window.addEventListener('resize', () => {
+      if (window.maracaiboMap) {
+        window.maracaiboMap.invalidateSize(true);
+      }
+    });
+
+    // Stubs de compatibilidad
     function updateGoogleMapsKeyUI() {}
     function saveGoogleMapsKey() {}
     function clearGoogleMapsKey() {}
@@ -9056,9 +8904,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
     function loadGoogleMapsScriptWithKey() {}
     function loadGoogleMapsKey() {}
 
-    // =========================================================================
-    // NAVEGACIÓN Y ENFOQUE DINÁMICO POR SECTORES DE MARACAIBO
-    // =========================================================================
+    // Navegación y enfoque dinámico por sectores de Maracaibo
     function centrarSectorGeoGuard(sectorKey) {
       if (!sectoresCompletosMaracaibo || !sectoresCompletosMaracaibo[sectorKey]) {
         console.warn('[GeoGuard] Sector desconocido: ' + sectorKey);
@@ -9067,22 +8913,8 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
       const sector = sectoresCompletosMaracaibo[sectorKey];
       const targetCoords = [sector.lat, sector.lng];
 
-      // Centrar en Leaflet si está activo
-      if (maracaiboMap && typeof maracaiboMap.flyTo === 'function') {
-        maracaiboMap.flyTo(targetCoords, 15, { duration: 1.2 });
-      }
-      if (window.geoGuardCartoMap && typeof window.geoGuardCartoMap.flyTo === 'function') {
-        window.geoGuardCartoMap.flyTo(targetCoords, 15, { duration: 1.2 });
-      }
-
-      // Centrar en Google Maps si estuviera activo
-      if (window.googleMap && typeof window.googleMap.panTo === 'function') {
-        window.googleMap.panTo({ lat: sector.lat, lng: sector.lng });
-        window.googleMap.setZoom(15);
-      }
-      if (directGeoGuardMap && typeof directGeoGuardMap.panTo === 'function') {
-        directGeoGuardMap.panTo({ lat: sector.lat, lng: sector.lng });
-        directGeoGuardMap.setZoom(15);
+      if (window.maracaiboMap && typeof window.maracaiboMap.flyTo === 'function') {
+        window.maracaiboMap.flyTo(targetCoords, 15, { duration: 1.2 });
       }
 
       if (window.app && typeof window.app.showToast === 'function') {
@@ -9093,6 +8925,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
 
     // Exposición global
     window.fetchBioTrackerHotspots = fetchBioTrackerHotspots;
+    window.actualizarHotspotsEnMapa = actualizarHotspotsEnMapa;
     window.initMap = initMap;
     window.initGeoGuardMap = initGeoGuardMap;
     window.closeGeoGuardMap = closeGeoGuardMap;
