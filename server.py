@@ -90,6 +90,11 @@ try:
 except Exception as _e_qcl:
     qc_learning_engine = None
 
+try:
+    from binancePayEngine import binance_pay_engine
+except Exception as _e_binance:
+    binance_pay_engine = None
+
 
 # ---------------------------------------------------------------------
 # Logging — errores claros y consultables
@@ -6017,6 +6022,18 @@ HEALTH_CONNECTIONS_CATALOG = [
         "category": "Pasarelas de Pago"
     },
     {
+        "id": "binance-pay-api",
+        "name": "Binance Pay Official Gateway (USDT / Crypto Payments)",
+        "method": "POST / WEBHOOK",
+        "url": "https://bpay.binanceapi.com/binancepay/openapi/v2/order",
+        "status_level": "healthy",
+        "has_token": True,
+        "latency_ms": 26,
+        "today_failures": 0,
+        "enabled": True,
+        "category": "Pasarelas de Pago"
+    },
+    {
         "id": "banplus-c2p",
         "name": "Banplus C2P / Pago Móvil Interbancario (P2C / C2P)",
         "method": "POST",
@@ -6326,6 +6343,111 @@ def root_page():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return HTMLResponse("<h1>Mrs. Pets VIP Portal</h1><p>Archivo root.html no encontrado.</p>")
+
+
+
+# =====================================================================
+# BINANCE PAY OFFICIAL GATEWAY API
+# =====================================================================
+@app.get("/api/v1/payments/binance/config")
+def get_binance_pay_config():
+    """Retorna la configuración pública y estatus de conexión de Binance Pay."""
+    if binance_pay_engine:
+        return binance_pay_engine.get_public_config()
+    return {
+        "gateway": "Binance Pay Official Gateway",
+        "environment": "sandbox",
+        "merchantId": "mrspets",
+        "merchantEmail": "mrspetsvzla@gmail.com",
+        "status": "offline"
+    }
+
+
+@app.post("/api/v1/payments/binance/create-order")
+async def create_binance_pay_order(request: Request):
+    """
+    Crea una orden de pago en Binance Pay v2 (/binancepay/openapi/v2/order).
+    Genera Timestamp, Nonce y firma digital HMAC-SHA512.
+    """
+    if not binance_pay_engine:
+        raise HTTPException(status_code=503, detail="Motor Binance Pay no inicializado")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    amount = float(body.get("amount") or 45.0)
+    currency = body.get("currency") or "USDT"
+    pet_id = body.get("petId")
+    pet_name = body.get("petName")
+    tutor_name = body.get("tutorName")
+    service_name = body.get("serviceName") or body.get("service")
+    return_url = body.get("returnUrl")
+    cancel_url = body.get("cancelUrl")
+
+    try:
+        order = binance_pay_engine.create_order(
+            amount=amount,
+            currency=currency,
+            pet_id=pet_id,
+            pet_name=pet_name,
+            tutor_name=tutor_name,
+            service_name=service_name,
+            return_url=return_url,
+            cancel_url=cancel_url
+        )
+        return order
+    except Exception as e:
+        log.error("Error creando orden en Binance Pay: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/payments/binance/order-status/{trade_no}")
+def get_binance_order_status(trade_no: str):
+    """Consulta el estatus de una orden de Binance Pay (para sondeo en tiempo real)."""
+    if not binance_pay_engine:
+        raise HTTPException(status_code=503, detail="Motor Binance Pay no inicializado")
+    return binance_pay_engine.query_order(trade_no)
+
+
+@app.post("/api/v1/payments/binance/webhook")
+async def binance_pay_webhook(request: Request):
+    """
+    Endpoint de Webhook oficial para recibir notificaciones asíncronas de Binance Pay.
+    Valida la firma HMAC-SHA512 y actualiza automáticamente el estatus del paciente.
+    """
+    if not binance_pay_engine:
+        return JSONResponse(status_code=503, content={"returnCode": "FAIL", "returnMessage": "Engine not available"})
+
+    try:
+        raw_body = (await request.body()).decode("utf-8")
+        headers = dict(request.headers)
+        payload = json.loads(raw_body) if raw_body else {}
+    except Exception as e:
+        log.warning("Webhook Binance Pay payload malformado: %s", e)
+        return JSONResponse(status_code=400, content={"returnCode": "FAIL", "returnMessage": f"Invalid JSON: {e}"})
+
+    res = binance_pay_engine.process_webhook(payload, headers, raw_body)
+    return JSONResponse(content=res)
+
+
+@app.post("/api/v1/payments/binance/simulate-payment")
+async def simulate_binance_payment(request: Request):
+    """Simulador de aprobación instantánea de pago para pruebas en modo Sandbox."""
+    if not binance_pay_engine:
+        raise HTTPException(status_code=503, detail="Motor Binance Pay no inicializado")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    trade_no = body.get("merchantTradeNo") or body.get("tradeNo")
+    if not trade_no:
+        raise HTTPException(status_code=400, detail="merchantTradeNo requerido")
+
+    return binance_pay_engine.simulate_sandbox_payment(trade_no)
 
 
 

@@ -21,7 +21,7 @@
 (function (window) {
     'use strict';
 
-    const DEFAULT_RECENT_APIS = ['banplus', 'bcv', 'idexx', 'teamily', 'qvet', 'make_pos', 'whatsapp', 'biotracker', 'maps', 'zinli'];
+    const DEFAULT_RECENT_APIS = ['binance_pay', 'banplus', 'bcv', 'idexx', 'teamily', 'qvet', 'make_pos', 'whatsapp', 'biotracker', 'maps', 'zinli'];
 
     const ClinicalIntegrations = {
         bcvData: null,
@@ -705,6 +705,29 @@
                         </button>
                         <button type="button" class="btn btn-sm btn-secondary" onclick="window.ClinicalIntegrations.copyEndpoint('pagos@mrspets.com')" style="font-size:0.75rem; padding:7px 12px; background:#2C2C2E; color:#CBD5E1; border:1px solid rgba(255,255,255,0.15); border-radius:8px; cursor:pointer;">
                             📋 Copiar
+                        </button>
+                    `
+                },
+                binance_pay: {
+                    id: 'binance_pay',
+                    title: '🟡 Binance Pay API (Pasarela Oficial)',
+                    badge: 'Binance Pay v2',
+                    badgeColor: '#F0B90B',
+                    badgeBg: 'rgba(240,185,11,0.18)',
+                    badgeBorder: '#F0B90B',
+                    borderColor: '#F0B90B',
+                    desc: 'Pasarela automatizada oficial de Binance Pay para cobro de servicios y estética canina en USDT con QR interactivo.',
+                    specs: [
+                        `Comercio: <strong style="color:#F0B90B;">mrspets</strong> (mrspetsvzla@gmail.com)`,
+                        `Seguridad: <strong>HMAC-SHA512 + Nonce + Webhook</strong>`,
+                        `Estado: <strong style="color:#10B981;">🟢 Pasarela Cripto Operativa</strong>`
+                    ],
+                    buttons: `
+                        <button type="button" class="btn btn-sm btn-luxury-primary" onclick="if(window.binancePayEngine) window.binancePayEngine.prepareCheckout(); if(window.app) window.app.openModal('checkout-modal');" style="font-size:0.75rem; padding:7px 14px; flex:1; justify-content:center; background:linear-gradient(135deg, #F0B90B, #D97706); color:#121214; font-weight:900; border:none; border-radius:8px; cursor:pointer;">
+                            ⚡ Probar Binance Pay
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.ClinicalIntegrations.copyEndpoint('/api/v1/payments/binance/create-order')" style="font-size:0.75rem; padding:7px 12px; background:#2C2C2E; color:#CBD5E1; border:1px solid rgba(255,255,255,0.15); border-radius:8px; cursor:pointer;">
+                            📋 Copiar Endpoint
                         </button>
                     `
                 }

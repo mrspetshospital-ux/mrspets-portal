@@ -2867,13 +2867,15 @@ class StoreEngine {
     const paypalSec = document.getElementById('payment-section-paypal');
     const zinliSec = document.getElementById('payment-section-zinli');
     const cardSec = document.getElementById('payment-section-card');
+    const binanceSec = document.getElementById('payment-section-binance');
     const btnStripe = document.getElementById('tab-btn-stripe');
     const btnPaypal = document.getElementById('tab-btn-paypal');
     const btnZinli = document.getElementById('tab-btn-zinli');
     const btnCard = document.getElementById('tab-btn-card');
+    const btnBinance = document.getElementById('tab-btn-binance');
 
     // Reset buttons to neutral
-    [btnStripe, btnPaypal, btnZinli, btnCard].forEach(btn => {
+    [btnStripe, btnPaypal, btnZinli, btnCard, btnBinance].forEach(btn => {
       if (btn) {
         btn.style.background = '#f1f5f9';
         btn.style.color = '#334155';
@@ -2882,11 +2884,27 @@ class StoreEngine {
       }
     });
 
-    if (method === 'stripe') {
+    if (method === 'binance') {
+      if (stripeSec) stripeSec.style.display = 'none';
+      if (paypalSec) paypalSec.style.display = 'none';
+      if (zinliSec) zinliSec.style.display = 'none';
+      if (cardSec) cardSec.style.display = 'none';
+      if (binanceSec) binanceSec.style.display = 'block';
+      if (btnBinance) {
+        btnBinance.style.background = '#0b0e11';
+        btnBinance.style.color = '#F0B90B';
+        btnBinance.style.boxShadow = '0 2px 10px rgba(240, 185, 11, 0.45)';
+        btnBinance.style.border = '1.5px solid #F0B90B';
+      }
+      if (window.binancePayEngine && typeof window.binancePayEngine.prepareCheckout === 'function') {
+        window.binancePayEngine.prepareCheckout();
+      }
+    } else if (method === 'stripe') {
       if (stripeSec) stripeSec.style.display = 'block';
       if (paypalSec) paypalSec.style.display = 'none';
       if (zinliSec) zinliSec.style.display = 'none';
       if (cardSec) cardSec.style.display = 'none';
+      if (binanceSec) binanceSec.style.display = 'none';
       if (btnStripe) {
         btnStripe.style.background = '#635BFF';
         btnStripe.style.color = '#ffffff';
@@ -2901,6 +2919,7 @@ class StoreEngine {
       if (paypalSec) paypalSec.style.display = 'block';
       if (zinliSec) zinliSec.style.display = 'none';
       if (cardSec) cardSec.style.display = 'none';
+      if (binanceSec) binanceSec.style.display = 'none';
       if (btnPaypal) {
         btnPaypal.style.background = '#0070ba';
         btnPaypal.style.color = '#ffffff';
@@ -2913,6 +2932,7 @@ class StoreEngine {
       if (paypalSec) paypalSec.style.display = 'none';
       if (zinliSec) zinliSec.style.display = 'block';
       if (cardSec) cardSec.style.display = 'none';
+      if (binanceSec) binanceSec.style.display = 'none';
       if (btnZinli) {
         btnZinli.style.background = '#6c3483';
         btnZinli.style.color = '#ffffff';
@@ -2923,6 +2943,7 @@ class StoreEngine {
       if (stripeSec) stripeSec.style.display = 'none';
       if (paypalSec) paypalSec.style.display = 'none';
       if (zinliSec) zinliSec.style.display = 'none';
+      if (binanceSec) binanceSec.style.display = 'none';
       if (cardSec) cardSec.style.display = 'block';
       if (btnCard) {
         btnCard.style.background = '#0f172a';
