@@ -1742,6 +1742,9 @@
                   <button class="btn" style="width:100%; font-weight:800; background:linear-gradient(135deg, #1E293B, #0F172A); color:#FBBF24 !important; border:1.5px solid #D4AF37; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; cursor:pointer; box-shadow:0 4px 12px rgba(212,175,55,0.25);" onclick="storeEngine.openCheckout('card')">
                     <span style="color:#FBBF24 !important;">💎 Tarjeta 3D Directa</span>
                   </button>
+                  <button class="btn" id="btn-pay-with-binance" style="width:100%; font-weight:800; background:linear-gradient(135deg, #0b0e11, #1e2329); color:#F0B90B !important; border:1.5px solid #F0B90B; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; cursor:pointer; box-shadow:0 4px 14px rgba(240,185,11,0.3);" onclick="storeEngine.openCheckout('binance')">
+                    <span style="color:#F0B90B !important;">🟡 Pagar con Binance Pay (USDT / Cripto QR)</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -6582,7 +6585,10 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
       <!-- ACCIONES DEL CARRITO RÁPIDO -->
       <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px; border-top:1px solid rgba(197, 160, 101, 0.25); padding-top:16px;">
         <button type="button" class="btn btn-primary" onclick="app.closeModal('quick-cart-modal'); storeEngine.openCheckout('stripe');" style="width:100%; font-weight:900; background:linear-gradient(135deg, #635BFF, #4F46E5); border:none; color:#FFFFFF !important; padding:13px; border-radius:14px; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 15px rgba(99,91,255,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
-          <span>💳 Ir a Pagar / Checkout Seguro</span>
+          <span>💳 Ir a Pagar / Checkout Seguro (Stripe / Tarjetas)</span>
+        </button>
+        <button type="button" class="btn" onclick="app.closeModal('quick-cart-modal'); storeEngine.openCheckout('binance');" style="width:100%; font-weight:800; background:linear-gradient(135deg, #0b0e11, #1e2329); color:#F0B90B !important; border:1.5px solid #F0B90B; padding:12px; border-radius:14px; cursor:pointer; font-size:0.9rem; box-shadow:0 4px 14px rgba(240,185,11,0.25); display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span>🟡 Pagar con Binance Pay (USDT / Cripto QR)</span>
         </button>
         <div style="display:flex; gap:10px;">
           <button type="button" class="btn btn-secondary" onclick="app.closeModal('quick-cart-modal'); app.switchTab('store');" style="flex:1; background:rgba(212, 175, 55, 0.15); color:#FDE68A !important; border:1.5px solid #D4AF37; font-weight:800; padding:10px; border-radius:12px; cursor:pointer; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px;">
@@ -6612,10 +6618,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
 
       <!-- Selector de Método de Pago -->
       <div style="display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;">
-        <button type="button" id="tab-btn-binance" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#0b0e11; color:#F0B90B; font-weight:800; border-radius:10px; border:1.5px solid #F0B90B; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 10px rgba(240,185,11,0.4); font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('binance')">
-          <span>🟡 Binance Pay</span>
-        </button>
-        <button type="button" id="tab-btn-stripe" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#f1f5f9; color:#334155; font-weight:700; border-radius:10px; border:1px solid #cbd5e1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('stripe')">
+        <button type="button" id="tab-btn-stripe" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#635BFF; color:#ffffff; font-weight:700; border-radius:10px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('stripe')">
           <span>💳 Stripe</span>
         </button>
         <button type="button" id="tab-btn-paypal" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#f1f5f9; color:#334155; font-weight:700; border-radius:10px; border:1px solid #cbd5e1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('paypal')">
@@ -6626,6 +6629,9 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         </button>
         <button type="button" id="tab-btn-card" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#f1f5f9; color:#334155; font-weight:700; border-radius:10px; border:1px solid #cbd5e1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('card')">
           <span>💎 Tarjeta 3D</span>
+        </button>
+        <button type="button" id="tab-btn-binance" class="btn btn-sm" style="flex:1; min-width:85px; padding:10px 4px; background:#f1f5f9; color:#334155; font-weight:800; border-radius:10px; border:1.5px solid #cbd5e1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.75rem;" onclick="storeEngine.switchPaymentMethod('binance')">
+          <span>🟡 Binance Pay</span>
         </button>
       </div>
 

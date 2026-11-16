@@ -54,9 +54,28 @@ class BinancePayEngine {
     let tutorName = 'Dalybell Ramirez Montilla';
     let serviceName = 'Grooming & Estética Canina Spa VIP';
 
-    if (window.storeEngine && typeof window.storeEngine.getCartTotal === 'function') {
-      const cartTotal = window.storeEngine.getCartTotal();
-      if (cartTotal > 0) total = cartTotal;
+    if (window.storeEngine) {
+      if (typeof window.storeEngine.getCartTotal === 'function') {
+        const cartTotal = window.storeEngine.getCartTotal();
+        if (cartTotal > 0) total = cartTotal;
+      }
+      if (typeof window.storeEngine.getCurrentCustomerInfo === 'function') {
+        const cust = window.storeEngine.getCurrentCustomerInfo();
+        if (cust && cust.name) tutorName = cust.name;
+      }
+      if (Array.isArray(window.storeEngine.cart) && window.storeEngine.cart.length > 0) {
+        const petItem = window.storeEngine.cart.find(i => i.pet);
+        if (petItem) {
+          petName = petItem.pet;
+          petId = petItem.petId || petItem.id || 'PET-001';
+        }
+        const srvItem = window.storeEngine.cart.find(i => i.isGroomingService || i.isClinicalService);
+        if (srvItem) {
+          serviceName = srvItem.name || serviceName;
+        } else if (window.storeEngine.cart[0]) {
+          serviceName = window.storeEngine.cart[0].name || serviceName;
+        }
+      }
     }
 
     if (customParams.amount) total = parseFloat(customParams.amount);
