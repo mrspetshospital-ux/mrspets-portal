@@ -117,7 +117,7 @@
     "bot_name": "FOTOS MARKETING MRSPETS",
     "bot_id": 9219306084,
     "api_endpoint_url": "https://api.telegram.org/bot9219306084:AAGEgbKLlQhJG1dyz0jzVatQnjKm5bJ3bW4/sendMessage",
-    "webhook_make_url": "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j",
+    "webhook_make_url": "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a",
     "auth_type": "Bearer Token / Webhook",
     "credentials_vault_ref": "env://TELEGRAM_BOT_TOKEN",
     "status": "active",

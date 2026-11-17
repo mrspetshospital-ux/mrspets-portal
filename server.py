@@ -3479,7 +3479,7 @@ async def handle_telegram_bot_webhook(request: Request):
 
             # 4.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
-                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
                 make_appr_payload = {
                     "campaign_id": f"QC-{pet_id}-{int(time.time())}",
                     "session_id": f"QC-{pet_id}-{int(time.time())}",
@@ -3709,7 +3709,7 @@ async def handle_telegram_bot_webhook(request: Request):
 
             # 7. Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
-                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
                 make_rej_payload = {
                     "campaign_id": f"QC-{pet_id}-{int(time.time())}",
                     "session_id": f"QC-{pet_id}-{int(time.time())}",
@@ -3780,7 +3780,7 @@ async def handle_telegram_bot_webhook(request: Request):
 
             # 2. Despachar publicación hacia Make.com con las 11 variables obligatorias
             try:
-                make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
                 m_payload = {
                     # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
                     "campaign_id": camp_id,
@@ -3902,7 +3902,7 @@ async def handle_telegram_bot_webhook(request: Request):
 
             # 2.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
-                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+                make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
                 make_camp_rej_payload = {
                     "campaign_id": camp_id,
                     "session_id": camp_id,
@@ -4524,7 +4524,7 @@ async def handle_grooming_qc_photos(request: Request):
         or data.get("webhookUrl")
         or os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING")
         or os.environ.get("MAKE_WEBHOOK_URL_GROOMING")
-        or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+        or "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
     )
     
     # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
@@ -4736,7 +4736,7 @@ async def handle_grooming_qc_photos(request: Request):
 # =====================================================================
 # MARKETING & CAMPAÑAS PUBLICITARIAS (O'NEIL • MAKE.COM WEBHOOK & TELEGRAM)
 # =====================================================================
-MAKE_MARKETING_WEBHOOK_DEFAULT = "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+MAKE_MARKETING_WEBHOOK_DEFAULT = "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"
 
 @app.post("/api/v1/marketing/campaigns/dispatch")
 @app.post("/api/marketing/dispatch-campaign")

@@ -2968,7 +2968,7 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       }
     } catch(e) {}
     const saved = localStorage.getItem('mrspets_make_grooming_marketing_webhook_url');
-    return (saved && saved.trim()) ? saved.trim() : 'https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j';
+    return (saved && saved.trim()) ? saved.trim() : 'https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a';
   }
 
   saveGroomingMarketingWebhookUrl(url) {
