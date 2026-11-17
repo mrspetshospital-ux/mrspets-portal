@@ -20,23 +20,23 @@
       this.allActiveIncidents = [];
       this.nodes = {};
       this.chatMessages = [];
-      this.selectedTargetNode = 'volturi'; // Nodo destinatario activo para conversación directa
-      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'fallas', 'trazas', 'cuadros_falla', 'consorcio_jason')
+      this.selectedTargetNode = 'gemini'; // Nodo destinatario activo para conversación directa
+      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'channel_mrspets', 'channel_super_agent', 'channel_antigravity', 'channel_gemini')
       this.channelsList = [
-        { id: 'deliberacion', name: 'Deliberación Ejecutiva', icon: '🏛️' },
-        { id: 'fallas', name: 'Fallas Operativas', icon: '🚨' },
-        { id: 'trazas', name: 'Trazas Descentralizadas', icon: '🌐' },
-        { id: 'cuadros_falla', name: 'Cuadros de Falla', icon: '📊' },
-        { id: 'consorcio_jason', name: 'Consorcio Jason', icon: '🤝' }
+        { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
+        { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
+        { id: 'channel_super_agent', name: 'Super Agent (Teamly)', icon: '🤝' },
+        { id: 'channel_antigravity', name: 'Google AntiGravity', icon: '⚡' },
+        { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' }
       ];
       this.nodeConfigs = {
-        make_webhook_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
+        make_webhook_url: 'https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a',
         make_api_key: '',
-        make_fallback_url: '',
+        make_fallback_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
         gemini_model: 'gemini-2.5-flash',
+        gemini_api_key: '',
         antigravity_endpoint_url: '/api/v1/war-room/execute-patch',
-        volturi_endpoint_url: '/api/v1/war-room/chat',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox' | 'playground'
@@ -778,16 +778,16 @@
 
       // 1. Fila de los 5 Nodos (Siempre Visible en la cabecera del cuerpo)
       const nodesList = [
-        { id: 'harryt', name: 'Harryt & Dalybell', icon: '👑', role: 'Dirección General & Mando', desc: 'Mando operativo y autorizaciones' },
-        { id: 'volturi', name: 'Charlie / Volturi', icon: '🏛️', role: 'Comité Volturi & Decisiones IA', desc: 'Deliberación ejecutiva y ética' },
-        { id: 'antigravity', name: 'Google AntiGravity', icon: '⚡', role: 'Ingeniería Autónoma', desc: 'Diagnóstico y hotfixes en caliente' },
+        { id: 'harryt', name: 'Mrs. PETS CORP', icon: '👑', role: 'Dirección General & Mando', desc: 'Mando operativo y planteamiento central' },
+        { id: 'gemini', name: 'Gemini AI', icon: '✨', role: 'Razonamiento Multimodal', desc: 'Diagnóstico cognitivo y causa raíz' },
+        { id: 'antigravity', name: 'Google AntiGravity', icon: '⚡', role: 'Ingeniería Autónoma', desc: 'Diagnóstico y resiliencia de endpoints' },
         { id: 'make', name: 'Make.com', icon: '🔗', role: 'Webhooks & Omnicanalidad', desc: 'Flujos Make, POS y WhatsApp' },
-        { id: 'teamly', name: 'Teamly (Elías)', icon: '🤝', role: 'Enjambre Agentes', desc: 'Colaboración multimodal y CRM' }
+        { id: 'teamly', name: 'Super Agent (Teamly)', icon: '🤝', role: 'Coordinación Operativa', desc: 'Enjambre de agentes y tableros' }
       ];
 
       const nodesHtml = nodesList.map(item => {
         const nodeData = this.nodes[item.id] || {};
-        const nodeStatus = nodeData.status || (isAlert && (item.id === 'make' || item.id === 'volturi') ? 'ALERTA' : 'ESTABLE');
+        const nodeStatus = nodeData.status || (isAlert && (item.id === 'make' || item.id === 'gemini') ? 'ALERTA' : 'ESTABLE');
         const isNodeAlert = nodeStatus === 'ALERTA';
         const isTarget = this.selectedTargetNode === item.id;
         const ping = (nodeData.ping_ms !== undefined && nodeData.ping_ms !== null) ? `${nodeData.ping_ms}ms` : 'En espera...';
@@ -916,13 +916,13 @@
        ---------------------------------------------------------------------- */
     renderChatTabHtml() {
       const messagesHtml = this.getFormattedMessagesHtml();
-      const currentTarget = this.selectedTargetNode || 'volturi';
+      const currentTarget = this.selectedTargetNode || 'gemini';
       const nodeLabels = {
-        harryt: 'Harryt & Dalybell (Dirección)',
-        volturi: 'Charlie / Volturi (Ética & Riesgo)',
-        antigravity: 'Google AntiGravity (Ingeniería)',
-        make: 'Make.com (Webhooks & Flujos)',
-        teamly: 'Teamly (Operaciones)'
+        harryt: 'Mrs. PETS CORP (Dirección General)',
+        gemini: 'Gemini AI (Razonamiento & Causa Raíz)',
+        antigravity: 'Google AntiGravity (Ingeniería Autónoma)',
+        make: 'Make.com (Webhooks & Omnicanalidad)',
+        teamly: 'Super Agent (Teamly Operaciones)'
       };
       const activeLabel = nodeLabels[currentTarget] || currentTarget.toUpperCase();
 
@@ -946,11 +946,11 @@
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase;">Conversar con Nodo:</span>
               ${[
-                { id: 'volturi', name: 'Volturi', icon: '🏛️' },
+                { id: 'gemini', name: 'Gemini AI', icon: '✨' },
                 { id: 'antigravity', name: 'AntiGravity', icon: '⚡' },
-                { id: 'harryt', name: 'Harryt & Dalybell', icon: '👑' },
-                { id: 'make', name: 'Make.com', icon: '🔗' },
-                { id: 'teamly', name: 'Teamly', icon: '🤝' }
+                { id: 'harryt', name: 'Mrs. PETS CORP', icon: '👑' },
+                { id: 'teamly', name: 'Super Agent', icon: '🤝' },
+                { id: 'make', name: 'Make.com', icon: '🔗' }
               ].map(n => {
                 const isSelected = this.selectedTargetNode === n.id;
                 return `
@@ -1008,6 +1008,7 @@
     getFormattedMessagesHtml() {
       const activeChannel = this.selectedChannel || 'deliberacion';
       const channelMsgs = (this.chatMessages || []).filter(msg => {
+        if (activeChannel === 'deliberacion') return true;
         const ch = msg.channel_id || 'deliberacion';
         return ch === activeChannel;
       });
@@ -1017,13 +1018,13 @@
         return `
           <div style="text-align:center; padding:40px; color:#64748B; font-size:0.8rem;">
             No hay mensajes registrados en el canal <strong>${this.escapeHtml(channelName)}</strong>.<br>
-            Selecciona un nodo destinatario y envía tu mensaje para iniciar la conversación real con Gemini 2.5 Flash.
+            Plantea un requerimiento para iniciar la deliberación en canales independientes con verificación criptográfica.
           </div>
         `;
       }
 
       return channelMsgs.map(msg => {
-        const nid = msg.node_id || 'guest';
+        const nid = msg.node_id || msg.sender_id || 'guest';
         let bg = 'rgba(255,255,255,0.04)';
         let border = '1px solid rgba(255,255,255,0.1)';
         let titleColor = '#CBD5E1';
@@ -1034,22 +1035,22 @@
           border = '1px solid #10B981';
           titleColor = '#34D399';
           icon = '⚡';
-        } else if (nid === 'volturi') {
-          bg = 'rgba(129, 140, 248, 0.12)';
-          border = '1px solid #818CF8';
-          titleColor = '#A5B4FC';
-          icon = '🏛️';
+        } else if (nid === 'gemini') {
+          bg = 'rgba(167, 139, 250, 0.12)';
+          border = '1px solid #A78BFA';
+          titleColor = '#C4B5FD';
+          icon = '✨';
         } else if (nid === 'make') {
           bg = 'rgba(96, 165, 250, 0.12)';
           border = '1px solid #60A5FA';
           titleColor = '#93C5FD';
           icon = '🔗';
-        } else if (nid === 'teamly') {
+        } else if (nid === 'teamly' || nid === 'super_agent') {
           bg = 'rgba(251, 146, 60, 0.12)';
           border = '1px solid #FB923C';
           titleColor = '#FDBA74';
           icon = '🤝';
-        } else if (nid === 'harryt' || nid === 'director' || nid === 'user') {
+        } else if (nid === 'harryt' || nid === 'mrspets' || nid === 'director' || nid === 'user') {
           bg = 'rgba(212, 175, 55, 0.14)';
           border = '1px solid #D4AF37';
           titleColor = '#FDE047';
@@ -1060,7 +1061,10 @@
         const latencyBadge = (msg.latency_ms !== undefined && msg.latency_ms !== null)
           ? `<span style="background:rgba(212,175,55,0.18); color:#FDE047; padding:1px 6px; border-radius:6px; font-size:0.68rem; font-family:monospace; font-weight:700;">${msg.latency_ms}ms</span>`
           : '';
-        const channelBadge = `<span style="background:rgba(255,255,255,0.08); color:#94A3B8; padding:1px 6px; border-radius:6px; font-size:0.65rem;">${msg.channel_id || activeChannel}</span>`;
+        const channelBadge = `<span style="background:rgba(255,255,255,0.08); color:#94A3B8; padding:1px 6px; border-radius:6px; font-size:0.65rem; font-family:monospace;">${msg.channel_id || activeChannel}</span>`;
+        const verifiedBadge = (msg.verified === false)
+          ? `<span style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">⚠️ No respondió</span>`
+          : `<span style="background:rgba(16,185,129,0.2); color:#34D399; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">✓ Verificado</span>`;
 
         return `
           <div class="wr-msg-bubble" style="background:${bg}; border:${border}; margin-bottom:10px; border-radius:10px; padding:10px 14px;">
@@ -1069,6 +1073,7 @@
                 <span>${icon}</span> ${this.escapeHtml(msg.sender || 'Mesa')} &bull; <span style="font-weight:600; color:#94A3B8; font-size:0.75rem;">${this.escapeHtml(msg.role || '')}</span>
               </span>
               <div style="display:flex; align-items:center; gap:6px;">
+                ${verifiedBadge}
                 ${channelBadge}
                 ${latencyBadge}
                 <span style="color:#64748B; font-size:0.7rem;">${timeStr}</span>
@@ -1103,21 +1108,23 @@
       const text = (customText || (input ? input.value : '')).trim();
       if (!text) return;
 
-      const adminName = this.getAuthorizedAdminName();
-      const targetNode = this.selectedTargetNode || 'volturi';
-      const activeChannel = this.selectedChannel || 'deliberacion';
+      const adminName = this.getAuthorizedAdminName() || 'Mrs. PETS CORP';
+      const targetNode = this.selectedTargetNode || 'gemini';
+      const activeChannel = (this.selectedChannel && this.selectedChannel !== 'deliberacion') ? this.selectedChannel : 'channel_mrspets';
 
       this.isSending = true;
 
       // Inyección optimista local en el canal activo
       const optimisticMsg = {
         id: 'MSG-' + Math.random().toString(36).substring(2, 8),
-        sender: adminName,
+        sender: 'Mrs. PETS CORP',
+        sender_id: 'mrspets',
         role: 'Dirección General & Mando Operativo',
         message: text,
         timestamp: new Date().toISOString(),
         node_id: 'harryt',
-        channel_id: activeChannel,
+        channel_id: 'channel_mrspets',
+        verified: true,
         latency_ms: null
       };
       this.chatMessages.push(optimisticMsg);
@@ -1129,28 +1136,30 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sender: adminName,
+            sender: 'Mrs. PETS CORP',
+            sender_id: 'mrspets',
             role: 'Dirección General & Mando Operativo',
             message: text,
             target_node_id: targetNode,
-            node_id: targetNode,
             channel_id: activeChannel
           })
         });
 
         const data = await resp.json();
-        // Respuesta en la misma llamada: Inyectar mensaje de vuelta del nodo
-        if (data && data.node_message) {
+        // Incorporar las respuestas autónomas de cada canal independiente
+        if (data && data.responses && Array.isArray(data.responses)) {
+          data.responses.forEach(r => {
+            if (r.sender_id !== 'mrspets') {
+              this.chatMessages.push(r);
+            }
+          });
+          this.renderChatFeedOnly();
+        } else if (data && data.node_message) {
           this.chatMessages.push(data.node_message);
-          if (data.target_node_id && this.nodes[data.target_node_id]) {
-            this.nodes[data.target_node_id].ping_ms = data.latency_ms;
-            const pingEl = document.getElementById(`wr-card-ping-${data.target_node_id}`);
-            if (pingEl) pingEl.innerText = `${data.latency_ms}ms`;
-          }
           this.renderChatFeedOnly();
         }
 
-        // Refrescar status global para actualizar tarjetas y telemetría
+        // Refrescar status global para actualizar telemetría
         setTimeout(() => this.fetchStatus(), 400);
       } catch (err) {
         console.warn('War Room Chat network error:', err);
@@ -2656,15 +2665,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
               </div>
             </div>
 
-            <!-- VOLTURI ENDPOINT -->
+            <!-- GEMINI AI API KEY & MODEL -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#A5B4FC;">🏛️ Comité Volturi (Gobernanza):</label>
-                <span id="wr-ping-volturi-res" style="font-size:0.7rem; color:#818CF8; font-weight:700;">● 4ms Local</span>
+                <label style="font-size:0.76rem; font-weight:800; color:#A78BFA;">✨ Gemini AI (API Key):</label>
+                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#C4B5FD; font-weight:700;">● Gemini 2.5 Flash</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-volturi" class="wr-cfg-input" value="${this.escapeHtml(cfg.volturi_endpoint_url || '/api/v1/war-room/chat')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
-                <button type="button" onclick="window.warRoomEngine.pingNode('volturi', document.getElementById('wr-cfg-volturi').value)" style="background:rgba(129,140,248,0.15); border:1px solid #818CF8; color:#A5B4FC; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
+                <input type="text" id="wr-cfg-gemini-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.gemini_api_key || '')}" placeholder="Pegar GEMINI_API_KEY (se enmascara automáticamente)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <button type="button" onclick="window.warRoomEngine.pingNode('gemini', document.getElementById('wr-cfg-gemini-key').value)" style="background:rgba(167,139,250,0.15); border:1px solid #A78BFA; color:#C4B5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
               </div>
@@ -2690,7 +2699,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const makeFallback = document.getElementById('wr-cfg-make-fallback')?.value || '';
       const makeKey = document.getElementById('wr-cfg-make-key')?.value || '';
       const antigravityUrl = document.getElementById('wr-cfg-antigravity')?.value || '';
-      const volturiUrl = document.getElementById('wr-cfg-volturi')?.value || '';
+      const geminiKey = document.getElementById('wr-cfg-gemini-key')?.value || '';
       const sheetsId = document.getElementById('wr-cfg-sheets')?.value || '';
 
       const payload = {
@@ -2698,7 +2707,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
         make_fallback_url: makeFallback,
         make_api_key: makeKey,
         antigravity_endpoint_url: antigravityUrl,
-        volturi_endpoint_url: volturiUrl,
+        gemini_api_key: geminiKey,
         google_sheets_id: sheetsId
       };
 

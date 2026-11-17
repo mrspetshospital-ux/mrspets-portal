@@ -34,7 +34,7 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertFalse(status["has_active_incidents"])
         
         nodes = status["nodes"]
-        expected_nodes = ["harryt", "volturi", "antigravity", "make", "teamly"]
+        expected_nodes = ["harryt", "antigravity", "gemini", "make", "teamly"]
         for nid in expected_nodes:
             self.assertIn(nid, nodes, f"Nodo {nid} debe estar presente en la mesa de 5 nodos")
             self.assertEqual(nodes[nid]["status"], "ESTABLE")
@@ -52,7 +52,7 @@ class TestWarRoomEngine(unittest.TestCase):
                 "http_status": 502,
                 "attempt_count": 3
             },
-            affected_nodes=["make", "volturi"]
+            affected_nodes=["make", "antigravity"]
         )
         self.assertEqual(inc["severity"], "CRITICA")
         self.assertIn("structured_diagnostic", inc)
@@ -129,22 +129,80 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertFalse(is_authorized_war_room_admin({}))
 
     def test_06_war_room_chat_deliberation(self):
-        # 1. Dirección envía reporte de que Leia no está respondiendo
-        msg = war_room_engine.add_chat_message(
-            sender="Harryt Padrón",
+        # 1. Dirección envía reporte de problema en channel_mrspets
+        res = war_room_engine.process_chat(
+            sender="Harryt Padrón / Mrs. PETS CORP",
             role="Dirección General",
             message="Tengo un problema en estos momentos en que Leia no está conversando, no está respondiendo",
-            node_id="harryt"
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
         )
-        self.assertEqual(msg["sender"], "Harryt Padrón")
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(res["channel_id"], "channel_mrspets")
+        self.assertEqual(res["sender_id"], "mrspets")
 
-        # 2. Verificar que AntiGravity y Volturi deliberaron y respondieron automáticamente
+        # 2. Verificar que cada IA deliberó y respondió en su canal independiente con su identidad
         status = war_room_engine.get_status()
-        recent_senders = [m["sender"] for m in status["chat_messages"][-5:]]
-        self.assertIn("Google AntiGravity", recent_senders)
-        self.assertIn("Charlie / Comité Volturi", recent_senders)
+        recent_messages = status["chat_messages"][-10:]
 
-        # 3. Verificar que se abrió la incidencia automáticamente en el Cuadro de Fallas
+        # Verificar AntiGravity en channel_antigravity
+        ag_msgs = [m for m in recent_messages if m.get("sender_id") == "antigravity"]
+        self.assertTrue(len(ag_msgs) > 0, "AntiGravity debe haber respondido en su canal")
+        self.assertEqual(ag_msgs[-1]["channel_id"], "channel_antigravity")
+        self.assertTrue(ag_msgs[-1]["verified"])
+        self.assertEqual(ag_msgs[-1]["sender"], "Google AntiGravity")
+
+        # Verificar Super Agent en channel_super_agent
+        sa_msgs = [m for m in recent_messages if m.get("sender_id") == "super_agent"]
+        self.assertTrue(len(sa_msgs) > 0, "Super Agent debe haber respondido en su canal")
+        self.assertEqual(sa_msgs[-1]["channel_id"], "channel_super_agent")
+        self.assertTrue(sa_msgs[-1]["verified"])
+        self.assertEqual(sa_msgs[-1]["sender"], "Super Agent (Teamly)")
+
+        # Verificar Gemini en channel_gemini
+        gem_msgs = [m for m in recent_messages if m.get("sender_id") == "gemini"]
+        self.assertTrue(len(gem_msgs) > 0, "Gemini debe haber emitido mensaje en su canal")
+        self.assertEqual(gem_msgs[-1]["channel_id"], "channel_gemini")
+        self.assertEqual(gem_msgs[-1]["sender"], "Gemini AI")
+        self.assertIn("verified", gem_msgs[-1])
+        # Si Gemini falló por falta de API key o red, debe avisar con su texto real o 'Gemini AI no respondió' sin relleno
+        if not gem_msgs[-1]["verified"]:
+            self.assertIn("Gemini AI no respondió", gem_msgs[-1]["message"])
+
+        # 3. Verificar regla estricta: nadie publica por otro en canal ajeno
+        for m in recent_messages:
+            if m.get("channel_id") == "channel_antigravity":
+                self.assertEqual(m.get("sender_id"), "antigravity")
+            elif m.get("channel_id") == "channel_super_agent":
+                self.assertEqual(m.get("sender_id"), "super_agent")
+            elif m.get("channel_id") == "channel_gemini":
+                self.assertEqual(m.get("sender_id"), "gemini")
+            elif m.get("channel_id") == "channel_mrspets":
+                self.assertEqual(m.get("sender_id"), "mrspets")
+
+        # 4. Probar rechazo ante discordancia de canal (ej. Gemini intentando firmar en canal de AntiGravity)
+        rej_mismatch = war_room_engine.process_chat(
+            sender="Gemini AI",
+            role="AI",
+            message="Intento publicar en canal de AntiGravity",
+            channel_id="channel_antigravity",
+            sender_id="gemini"
+        )
+        self.assertEqual(rej_mismatch["status"], "rejected")
+        self.assertEqual(rej_mismatch["error"], "REJECTED_CHANNEL_MISMATCH")
+
+        # 5. Probar rechazo ante Comité Volturi (canal bilateral externo no admitido en Cuarto de Guerra)
+        rej_volturi = war_room_engine.process_chat(
+            sender="Charlie / Comité Volturi",
+            role="Gobernanza",
+            message="Intento publicar en Cuarto de Guerra",
+            channel_id="channel_mrspets",
+            sender_id="volturi"
+        )
+        self.assertEqual(rej_volturi["status"], "rejected")
+        self.assertEqual(rej_volturi["error"], "VOLTURI_EXCLUDED_FROM_WAR_ROOM")
+
+        # 6. Verificar que se abrió la incidencia en el Cuadro de Fallas
         self.assertTrue(status["has_active_incidents"])
         self.assertIn("Leia", status["active_incident"]["service"])
 
@@ -184,6 +242,26 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertGreater(res["payload_bytes"], 0)
         self.assertIn("http_status", res)
         self.assertIn("latency_ms", res)
+
+    def test_09_masked_secrets_in_status_and_config(self):
+        status = war_room_engine.get_status()
+        configs = status["node_configs"]
+        
+        # Verificar que el webhook está enmascarado
+        webhook_val = configs.get("make_webhook_url", "")
+        if webhook_val:
+            self.assertIn("/****", webhook_val, "Webhook debe estar enmascarado en status")
+
+        # Verificar que la API key está enmascarada
+        gemini_key = configs.get("gemini_api_key", "")
+        if gemini_key:
+            self.assertTrue(gemini_key.startswith("****"), "gemini_api_key debe estar enmascarada")
+            self.assertLessEqual(len(gemini_key), 8)
+
+        # Verificar que get_masked_node_configs() no expone secretos
+        masked_cfg = war_room_engine.get_masked_node_configs()
+        if masked_cfg.get("gemini_api_key"):
+            self.assertTrue(masked_cfg["gemini_api_key"].startswith("****"))
 
 if __name__ == "__main__":
     unittest.main()

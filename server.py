@@ -1737,13 +1737,12 @@ def war_room_guest():
 @app.get("/api/v1/war-room/config")
 def war_room_get_config():
     if war_room_engine:
-        return war_room_engine.node_configs
+        return war_room_engine.get_masked_node_configs()
     return {
-        "make_webhook_url": os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"),
-        "make_api_key": os.environ.get("MAKE_API_KEY", ""),
+        "make_webhook_url": "https://hook.us2.make.com/****642a",
+        "make_api_key": "",
         "make_fallback_url": "",
         "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
-        "volturi_endpoint_url": "/api/v1/war-room/chat",
         "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
     }
 
@@ -1757,10 +1756,11 @@ async def war_room_post_chat(request: Request):
         body = {}
 
     sender = body.get("sender", "Dirección General & Mando Operativo")
+    sender_id = body.get("sender_id")
     role = body.get("role", "Dirección General")
     message = str(body.get("message", "")).strip()
-    target_node_id = body.get("target_node_id") or body.get("node_id") or "volturi"
-    channel_id = body.get("channel_id") or "deliberacion"
+    target_node_id = body.get("target_node_id") or body.get("node_id")
+    channel_id = body.get("channel_id")
     override_api_key = (
         body.get("api_key")
         or body.get("gemini_api_key")
@@ -1769,33 +1769,44 @@ async def war_room_post_chat(request: Request):
     )
 
     if not message:
-        return {
-            "status": "error",
-            "message": "Mensaje vacío",
-            "reply": "❌ Error: El mensaje no puede estar vacío.",
-            "target_node_id": target_node_id,
-            "channel_id": channel_id
-        }
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Mensaje vacío",
+                "reply": "❌ Error: El mensaje no puede estar vacío.",
+                "target_node_id": target_node_id,
+                "channel_id": channel_id,
+                "verified": False
+            }
+        )
 
     if war_room_engine:
-        # Conversación real por nodo con Gemini y respuesta en la misma llamada
+        # Conversación en canales independientes auditados con verificación de emisor
         result = war_room_engine.process_chat(
             sender=sender,
             role=role,
             message=message,
             target_node_id=target_node_id,
             channel_id=channel_id,
+            sender_id=sender_id,
             override_api_key=override_api_key
         )
+        if result.get("status") == "rejected":
+            return JSONResponse(status_code=400, content=result)
         return result
 
-    return {
-        "status": "error",
-        "message": "War Room Engine no inicializado",
-        "reply": "❌ Error: El motor del Cuarto de Guerra no está en línea.",
-        "target_node_id": target_node_id,
-        "channel_id": channel_id
-    }
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "error",
+            "message": "War Room Engine no inicializado",
+            "reply": "❌ Error: El motor del Cuarto de Guerra no está en línea.",
+            "target_node_id": target_node_id,
+            "channel_id": channel_id,
+            "verified": False
+        }
+    )
 
 
 @app.post("/api/v1/war-room/config")
