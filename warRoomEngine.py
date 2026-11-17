@@ -427,8 +427,21 @@ class WarRoomEngine:
                 masked[k] = v
         return masked
 
-    def get_status(self, channel_id: Optional[str] = None) -> Dict[str, Any]:
-        """Devuelve el estatus en tiempo real del Cuarto de Guerra con canales independientes auditados y credenciales enmascaradas."""
+    def get_node_configs_for_user(self, is_admin: bool = False) -> Dict[str, str]:
+        """
+        Devuelve las configuraciones completas y visibles si el usuario tiene perfil de Administrador
+        (para que pueda corroborar la información), o enmascaradas si no es administrador.
+        """
+        if is_admin:
+            return dict(self.node_configs)
+        return self.get_masked_node_configs()
+
+    def get_status(self, channel_id: Optional[str] = None, is_admin: bool = False) -> Dict[str, Any]:
+        """
+        Devuelve el estatus en tiempo real del Cuarto de Guerra con canales independientes auditados.
+        Si la petición proviene de un administrador autenticado (is_admin=True), entrega las claves completas
+        para su corroboración; de lo contrario, se entregan estrictamente enmascaradas.
+        """
         now_iso = datetime.now(timezone.utc).isoformat()
         
         # Limpieza de tokens expirados
@@ -496,7 +509,8 @@ class WarRoomEngine:
             "last_updated": now_iso,
             "active_guest_tokens_count": len(self.ephemeral_tokens),
             "chat_messages": filtered_chat,
-            "node_configs": self.get_masked_node_configs()
+            "is_admin": is_admin,
+            "node_configs": dict(self.node_configs) if is_admin else self.get_masked_node_configs()
         }
 
     def test_make_links(self, target_url: Optional[str] = None, custom_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

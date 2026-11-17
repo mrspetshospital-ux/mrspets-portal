@@ -39,6 +39,8 @@
         antigravity_endpoint_url: '/api/v1/war-room/execute-patch',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
       };
+      this.isAdmin = false; // Indicador de perfil de Administrador verificado por el servidor
+      this.showSecrets = false; // Alternador visual para ver u ocultar credenciales completas
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox' | 'playground'
       this.selectedIncidentService = 'Make.com Webhook Omnichannel';
       this.savedIssueSource = 'Make.com Webhook Omnichannel';
@@ -468,6 +470,7 @@
         }
         const data = await res.json();
         this.status = data.status || 'ESTABLE';
+        this.isAdmin = Boolean(data.is_admin);
         this.hasActiveIncident = !!data.has_active_incidents;
         this.activeIncident = data.active_incident || null;
         this.allActiveIncidents = data.all_active_incidents || [];
@@ -2575,6 +2578,29 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
 
           <div id="wr-cfg-feedback" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-size:0.78rem;"></div>
 
+          <div style="margin-bottom:16px;">
+            ${this.isAdmin ? `
+              <div style="background:rgba(212,175,55,0.12); border:1px solid #D4AF37; border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:1.1rem;">👑</span>
+                  <span style="font-size:0.78rem; color:#FDE047; font-weight:700;">
+                    Perfil de Administrador Verificado (Harryt & Dalybell). Claves completas habilitadas para corroboración de información.
+                  </span>
+                </div>
+                <button type="button" id="wr-btn-toggle-secrets" onclick="window.warRoomEngine.toggleShowSecrets()" style="background:#1F2937; border:1px solid #D4AF37; color:#FDE047; border-radius:8px; padding:5px 12px; font-size:0.73rem; font-weight:800; cursor:pointer;">
+                  ${this.showSecrets ? '🙈 Ocultar Claves' : '👁️ Revelar / Corroborar Claves'}
+                </button>
+              </div>
+            ` : `
+              <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.1rem;">🔒</span>
+                <span style="font-size:0.78rem; color:#FCA5A5; font-weight:700;">
+                  Modo Protegido: Las claves se muestran enmascaradas. Solo el perfil de Administrador (Harryt & Dalybell) tiene autorización para corroborar las credenciales completas.
+                </span>
+              </div>
+            `}
+          </div>
+
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
             <!-- MAKE WEBHOOK PRINCIPAL -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
@@ -2616,7 +2642,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span style="font-size:0.7rem; color:#FBBF24;">Header x-make-apikey</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-make-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_api_key || '')}" placeholder="Pegar token si el webhook en Make tiene clave" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-make-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.make_api_key || '')}" placeholder="Pegar token si el webhook en Make tiene clave" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
               </div>
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Se envía automáticamente en 'x-make-apikey' y 'Authorization: Bearer'.</div>
             </div>
@@ -2672,7 +2698,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#C4B5FD; font-weight:700;">● Gemini 2.5 Flash</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-gemini-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.gemini_api_key || '')}" placeholder="Pegar GEMINI_API_KEY (se enmascara automáticamente)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-gemini-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.gemini_api_key || '')}" placeholder="Pegar GEMINI_API_KEY (visible solo para Administrador)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('gemini', document.getElementById('wr-cfg-gemini-key').value)" style="background:rgba(167,139,250,0.15); border:1px solid #A78BFA; color:#C4B5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -2732,6 +2758,21 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
         }
       } catch (e) {
         alert('Configuración guardada en memoria local.');
+      }
+    }
+
+    toggleShowSecrets() {
+      this.showSecrets = !this.showSecrets;
+      const ids = ['wr-cfg-gemini-key', 'wr-cfg-make-key'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.type = this.showSecrets ? 'text' : 'password';
+        }
+      });
+      const btn = document.getElementById('wr-btn-toggle-secrets');
+      if (btn) {
+        btn.innerHTML = this.showSecrets ? '🙈 Ocultar Claves' : '👁️ Revelar / Corroborar Claves';
       }
     }
 

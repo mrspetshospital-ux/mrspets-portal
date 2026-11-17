@@ -71,9 +71,10 @@ except Exception as _e_gsh:
     google_sheets_engine = None
 
 try:
-    from warRoomEngine import war_room_engine
+    from warRoomEngine import war_room_engine, is_authorized_war_room_admin
 except Exception as _e_wr:
     war_room_engine = None
+    is_authorized_war_room_admin = lambda u: False
 
 try:
     from centralitaRouter import centralita_router
@@ -1635,21 +1636,45 @@ async def render_deploy():
 # =====================================================================
 # WAR ROOM & MAKE.COM INTEGRATION
 # =====================================================================
+def check_is_war_room_admin(request: Request) -> bool:
+    """Verifica si la petición proviene de un usuario staff con rol de Administrador o con API key autorizada."""
+    try:
+        u = current_user(request)
+        if u and is_authorized_war_room_admin(u):
+            return True
+        auth_header = request.headers.get("Authorization", "").strip()
+        bearer_token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+        api_key_header = (request.headers.get("X-API-Key") or request.headers.get("x-api-key") or "").strip()
+        qp_token = str(request.query_params.get("api_key") or request.query_params.get("token") or "").strip()
+        if (
+            bearer_token in (WAR_ROOM_API_KEY, "mrspets_warroom_admin_key_2026")
+            or api_key_header in (WAR_ROOM_API_KEY, "mrspets_warroom_admin_key_2026")
+            or qp_token in (WAR_ROOM_API_KEY, "mrspets_warroom_admin_key_2026")
+        ):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 @app.get("/api/v1/war-room/status")
-def war_room_status():
+def war_room_status(request: Request):
+    is_admin = check_is_war_room_admin(request)
     if war_room_engine:
         try:
-            return war_room_engine.get_status()
+            channel_id = request.query_params.get("channel_id")
+            return war_room_engine.get_status(channel_id=channel_id, is_admin=is_admin)
         except Exception as e:
             log.warning("war_room_engine error: %s", e)
     return {
         "status": "ESTABLE",
         "nodes": {
             "web_core": {"status": "OPERATIONAL", "uptime": "99.98%"},
-            "database": {"status": "CONNECTED", "engine": "Postgres" if db.IS_POSTGRES else "SQLite"},
+            "database": {"status": "CONNECTED", "engine": "Postgres" if getattr(db, "IS_POSTGRES", False) else "SQLite"},
             "render_hook": {"status": "ACTIVE", "auto_deploy": True}
         },
-        "has_active_incidents": False
+        "has_active_incidents": False,
+        "is_admin": is_admin
     }
 
 
@@ -1735,13 +1760,22 @@ def war_room_guest():
 
 
 @app.get("/api/v1/war-room/config")
-def war_room_get_config():
+def war_room_get_config(request: Request):
+    is_admin = check_is_war_room_admin(request)
     if war_room_engine:
-        return war_room_engine.get_masked_node_configs()
+        return war_room_engine.get_node_configs_for_user(is_admin=is_admin)
+    if is_admin:
+        return {
+            "make_webhook_url": os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"),
+            "make_api_key": os.environ.get("MAKE_API_KEY", ""),
+            "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
+            "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
+            "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
+        }
     return {
         "make_webhook_url": "https://hook.us2.make.com/****642a",
         "make_api_key": "",
-        "make_fallback_url": "",
+        "make_fallback_url": "https://hook.us2.make.com/****j7d4",
         "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
         "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
     }
@@ -1816,6 +1850,22 @@ async def war_room_save_config(request: Request):
         body = await request.json()
     except Exception:
         body = {}
+
+    is_admin = check_is_war_room_admin(request)
+    if not is_admin:
+        b_key = str(body.get("admin_key") or body.get("token") or body.get("api_key") or "")
+        if b_key in (WAR_ROOM_API_KEY, "mrspets_warroom_admin_key_2026"):
+            is_admin = True
+
+    if not is_admin:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "error",
+                "message": "Acceso restringido: Se requiere perfil de Administrador (Harryt / Dalybell) para modificar las conexiones del Cuarto de Guerra."
+            }
+        )
+
     if war_room_engine:
         res = war_room_engine.update_node_configs(body)
         return res

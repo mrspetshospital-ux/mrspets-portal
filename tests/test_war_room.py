@@ -244,24 +244,39 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertIn("latency_ms", res)
 
     def test_09_masked_secrets_in_status_and_config(self):
-        status = war_room_engine.get_status()
-        configs = status["node_configs"]
+        # 1. Modo protegido para usuarios no administradores o sin sesión: claves enmascaradas
+        status_public = war_room_engine.get_status(is_admin=False)
+        configs_public = status_public["node_configs"]
+        self.assertFalse(status_public.get("is_admin"))
         
         # Verificar que el webhook está enmascarado
-        webhook_val = configs.get("make_webhook_url", "")
+        webhook_val = configs_public.get("make_webhook_url", "")
         if webhook_val:
-            self.assertIn("/****", webhook_val, "Webhook debe estar enmascarado en status")
+            self.assertIn("/****", webhook_val, "Webhook debe estar enmascarado para no administradores")
 
         # Verificar que la API key está enmascarada
-        gemini_key = configs.get("gemini_api_key", "")
+        gemini_key = configs_public.get("gemini_api_key", "")
         if gemini_key:
-            self.assertTrue(gemini_key.startswith("****"), "gemini_api_key debe estar enmascarada")
+            self.assertTrue(gemini_key.startswith("****"), "gemini_api_key debe estar enmascarada para no administradores")
             self.assertLessEqual(len(gemini_key), 8)
 
-        # Verificar que get_masked_node_configs() no expone secretos
-        masked_cfg = war_room_engine.get_masked_node_configs()
-        if masked_cfg.get("gemini_api_key"):
-            self.assertTrue(masked_cfg["gemini_api_key"].startswith("****"))
+        # 2. Modo Administrador: el perfil de Administrador puede ver las claves completas para corroborar información
+        status_admin = war_room_engine.get_status(is_admin=True)
+        configs_admin = status_admin["node_configs"]
+        self.assertTrue(status_admin.get("is_admin"))
+
+        if war_room_engine.node_configs.get("make_webhook_url"):
+            self.assertEqual(configs_admin["make_webhook_url"], war_room_engine.node_configs["make_webhook_url"])
+        if war_room_engine.node_configs.get("gemini_api_key"):
+            self.assertEqual(configs_admin["gemini_api_key"], war_room_engine.node_configs["gemini_api_key"])
+
+        # 3. Métodos auxiliares de permisos
+        cfg_masked = war_room_engine.get_node_configs_for_user(is_admin=False)
+        cfg_unmasked = war_room_engine.get_node_configs_for_user(is_admin=True)
+        if cfg_masked.get("gemini_api_key"):
+            self.assertTrue(cfg_masked["gemini_api_key"].startswith("****"))
+        if cfg_unmasked.get("gemini_api_key"):
+            self.assertEqual(cfg_unmasked["gemini_api_key"], war_room_engine.node_configs["gemini_api_key"])
 
 if __name__ == "__main__":
     unittest.main()
