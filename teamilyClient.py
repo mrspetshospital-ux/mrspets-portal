@@ -170,6 +170,18 @@ class TeamilyGeoAClient:
         suffix = self.server_key[-4:]
         return f"{prefix}••••••••{suffix}"
 
+    def get_status(self) -> Dict[str, Any]:
+        """Retorna el estado de conectividad y configuración del agente Teamily GEO A."""
+        return {
+            "status": "ready",
+            "agent": "geo-a",
+            "board_id": self.board_id,
+            "endpoint": self.endpoint,
+            "server_key_configured": bool(self.server_key),
+            "masked_key": self.get_masked_key(),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }
+
     def _log_audit(self, event_type: str, details: Dict[str, Any]):
         """Registra la auditoría en logs/audit_trail.jsonl."""
         try:
