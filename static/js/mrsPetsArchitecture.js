@@ -2821,6 +2821,8 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       telegramBotUrl: 'https://t.me/ONEILnewBot',
       telegramStatus: 'DESPACHADO_A_TELEGRAM',
       makeStatus: 'SINCRONIZADO',
+      webhookUrl: this.getGroomingMarketingWebhookUrl(),
+      makeUrl: this.getGroomingMarketingWebhookUrl(),
       supervisorNotes: notes,
       status: 'PENDIENTE_AUTORIZACION_SUPERVISORA',
       socialMediaChannels: ['Instagram', 'TikTok', 'Facebook', 'Telegram VIP']
@@ -2958,13 +2960,28 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
   }
 
   getGroomingMarketingWebhookUrl() {
+    try {
+      const globalCfg = localStorage.getItem('mrs_pets_webhooks_config');
+      if (globalCfg) {
+        const parsed = JSON.parse(globalCfg);
+        if (parsed.photos && parsed.photos.trim()) return parsed.photos.trim();
+      }
+    } catch(e) {}
     const saved = localStorage.getItem('mrspets_make_grooming_marketing_webhook_url');
     return (saved && saved.trim()) ? saved.trim() : 'https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j';
   }
 
   saveGroomingMarketingWebhookUrl(url) {
-    if (url) {
-      localStorage.setItem('mrspets_make_grooming_marketing_webhook_url', url.trim());
+    if (url && url.trim()) {
+      const cleanUrl = url.trim();
+      localStorage.setItem('mrspets_make_grooming_marketing_webhook_url', cleanUrl);
+      try {
+        const globalCfg = localStorage.getItem('mrs_pets_webhooks_config');
+        const parsed = globalCfg ? JSON.parse(globalCfg) : {};
+        parsed.photos = cleanUrl;
+        parsed.updated_at = new Date().toISOString();
+        localStorage.setItem('mrs_pets_webhooks_config', JSON.stringify(parsed));
+      } catch(e) {}
     }
   }
 

@@ -1799,26 +1799,47 @@ class Integrations {
 
     const t0 = performance.now();
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ping: true, client: "MrsPetsOmnichannel", timestamp: new Date().toISOString() })
-      });
+      let resStatus = 0;
+      let ok = false;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ping: true, client: "MrsPetsOmnichannel", timestamp: new Date().toISOString() })
+        });
+        resStatus = res.status;
+        ok = res.ok;
+      } catch(fetchErr) {
+        // Fallback a través del proxy del backend en Render para evitar bloqueo CORS
+        const proxyRes = await fetch('/api/webhook/make-pos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhookUrl: url, payload: { ping: true, client: "MrsPetsOmnichannel", timestamp: new Date().toISOString() } })
+        });
+        const pData = await proxyRes.json().catch(() => ({}));
+        resStatus = pData.http_status || proxyRes.status;
+        ok = (resStatus >= 200 && resStatus < 300);
+      }
+
       const t1 = performance.now();
       const ms = Math.round(t1 - t0);
-      if (res.ok) {
+      if (ok) {
         feedback.style.background = 'rgba(16, 185, 129, 0.15)';
         feedback.style.color = '#6EE7B7';
-        feedback.innerHTML = `✅ Conexión con Webhook Exitosa (${ms} ms) • HTTP ${res.status}`;
+        feedback.innerHTML = `✅ Conexión con Webhook Exitosa (${ms} ms) • HTTP ${resStatus}`;
+      } else if (resStatus === 410) {
+        feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+        feedback.style.color = '#FCA5A5';
+        feedback.innerHTML = `❌ Error HTTP 410 (Gone): El webhook fue desactivado o eliminado en Make.com (${ms} ms). Por favor renueve la URL en Make.`;
       } else {
         feedback.style.background = 'rgba(245, 158, 11, 0.15)';
         feedback.style.color = '#FCD34D';
-        feedback.innerHTML = `⚠️ Webhook respondió con HTTP ${res.status} (${ms} ms) • Verifique el escenario Make`;
+        feedback.innerHTML = `⚠️ Webhook respondió con HTTP ${resStatus} (${ms} ms) • Verifique el escenario Make`;
       }
     } catch(err) {
-      feedback.style.background = 'rgba(16, 185, 129, 0.15)';
-      feedback.style.color = '#6EE7B7';
-      feedback.innerHTML = `✅ Webhook Verificado (Simulado • 14 ms) • Listo para producción`;
+      feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+      feedback.style.color = '#FCA5A5';
+      feedback.innerHTML = `⚠️ Error al verificar Webhook: ${err.message || 'Sin conexión'}`;
     }
   }
 
@@ -1851,6 +1872,10 @@ class Integrations {
 
     const cfg = { pos, triage, booking, photos, wa, updated_at: new Date().toISOString() };
     localStorage.setItem('mrs_pets_webhooks_config', JSON.stringify(cfg));
+    localStorage.setItem('mrspets_make_grooming_marketing_webhook_url', photos);
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.saveGroomingMarketingWebhookUrl === 'function') {
+      window.mrsPetsArch.saveGroomingMarketingWebhookUrl(photos);
+    }
 
     if (document.getElementById('integrations-table-pos-webhook')) document.getElementById('integrations-table-pos-webhook').innerText = pos;
     if (document.getElementById('integrations-url-triage')) document.getElementById('integrations-url-triage').innerText = triage;

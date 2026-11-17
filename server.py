@@ -1951,21 +1951,58 @@ REGLAS DE CONDUCTA Y ATENCIÓN:
 AGENT_STUDIO_CONFIG_PATH = Path(__file__).resolve().parent / "agent_studio_config.json"
 
 
-def _async_notify_make_webhook(webhook_url: str, payload: dict):
-    def _worker():
+def _dispatch_make_with_fallback(primary_url: str, payload_dict: dict, timeout: int = 10) -> dict:
+    """
+    Despacha un payload a Make.com probando la URL primaria y conmutando automáticamente
+    al webhook activo de respaldo si la primaria responde con error (ej. HTTP 410 Gone / timeout).
+    """
+    targets = []
+    if primary_url and str(primary_url).strip():
+        targets.append(str(primary_url).strip())
+    
+    fallback_url = (
+        os.environ.get("MAKE_WEBHOOK_URL_ACTIVE")
+        or os.environ.get("MAKE_WEBHOOK_URL_POS")
+        or os.environ.get("MAKE_WEBHOOK_URL")
+        or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+    )
+    if fallback_url and fallback_url not in targets:
+        targets.append(fallback_url)
+
+    req_data = json.dumps(payload_dict, ensure_ascii=False).encode("utf-8")
+    ctx_ssl = ssl.create_default_context()
+    ctx_ssl.check_hostname = False
+    ctx_ssl.verify_mode = ssl.CERT_NONE
+
+    last_error = None
+    for idx, t_url in enumerate(targets):
         try:
-            ctx_ssl = ssl.create_default_context()
-            ctx_ssl.check_hostname = False
-            ctx_ssl.verify_mode = ssl.CERT_NONE
-            req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                webhook_url,
+            m_req = urllib.request.Request(
+                t_url,
                 data=req_data,
                 headers={"Content-Type": "application/json; charset=utf-8"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, context=ctx_ssl, timeout=6) as r:
-                pass
+            with urllib.request.urlopen(m_req, context=ctx_ssl, timeout=timeout) as resp:
+                log.info("[MAKE DISPATCH] Éxito despachando a %s (HTTP %s, fallback=%s)", t_url, resp.status, idx > 0)
+                return {
+                    "status": "dispatched",
+                    "code": resp.status,
+                    "targetUrl": t_url,
+                    "fallbackUsed": (idx > 0)
+                }
+        except Exception as e:
+            last_error = str(e)
+            log.warning("[MAKE DISPATCH] Intento hacia %s falló: %s", t_url, e)
+            continue
+
+    return {"status": "error", "error": last_error or "Todos los webhooks de Make fallaron"}
+
+
+def _async_notify_make_webhook(webhook_url: str, payload: dict):
+    def _worker():
+        try:
+            _dispatch_make_with_fallback(webhook_url, payload, timeout=8)
         except Exception:
             pass
     threading.Thread(target=_worker, daemon=True).start()
@@ -3443,7 +3480,7 @@ async def handle_telegram_bot_webhook(request: Request):
             # 4.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
                 make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
-                make_appr_payload = json.dumps({
+                make_appr_payload = {
                     "campaign_id": f"QC-{pet_id}-{int(time.time())}",
                     "session_id": f"QC-{pet_id}-{int(time.time())}",
                     "campaignId": f"QC-{pet_id}-{int(time.time())}",
@@ -3468,10 +3505,8 @@ async def handle_telegram_bot_webhook(request: Request):
                     "petId": pet_id,
                     "petName": pet_name,
                     "approvedBy": user_name
-                }).encode("utf-8")
-                m_req_appr = urllib.request.Request(make_url_base, data=make_appr_payload, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(m_req_appr, timeout=5):
-                    pass
+                }
+                _dispatch_make_with_fallback(make_url_base, make_appr_payload, timeout=6)
             except Exception as e_mk:
                 log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de aprobación Filtro 1: %s", e_mk)
 
@@ -3675,7 +3710,7 @@ async def handle_telegram_bot_webhook(request: Request):
             # 7. Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
                 make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
-                make_rej_payload = json.dumps({
+                make_rej_payload = {
                     "campaign_id": f"QC-{pet_id}-{int(time.time())}",
                     "session_id": f"QC-{pet_id}-{int(time.time())}",
                     "campaignId": f"QC-{pet_id}-{int(time.time())}",
@@ -3701,10 +3736,8 @@ async def handle_telegram_bot_webhook(request: Request):
                     "petId": pet_id,
                     "petName": pet_name,
                     "rejectedBy": user_name
-                }).encode("utf-8")
-                m_req_rej = urllib.request.Request(make_url_base, data=make_rej_payload, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(m_req_rej, timeout=5):
-                    pass
+                }
+                _dispatch_make_with_fallback(make_url_base, make_rej_payload, timeout=6)
             except Exception as e_mk:
                 log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo Filtro 1: %s", e_mk)
 
@@ -3748,7 +3781,7 @@ async def handle_telegram_bot_webhook(request: Request):
             # 2. Despachar publicación hacia Make.com con las 11 variables obligatorias
             try:
                 make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
-                m_payload = json.dumps({
+                m_payload = {
                     # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
                     "campaign_id": camp_id,
                     "session_id": camp_id,
@@ -3780,10 +3813,8 @@ async def handle_telegram_bot_webhook(request: Request):
                     "approvedBy": user_name,
                     "approvedAt": datetime.now(timezone.utc).isoformat(),
                     "telegramChatId": str(chat_id)
-                }, ensure_ascii=False).encode("utf-8")
-                m_req = urllib.request.Request(make_url, data=m_payload, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(m_req, timeout=8):
-                    pass
+                }
+                _dispatch_make_with_fallback(make_url, m_payload, timeout=8)
             except Exception as e:
                 log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de campaña final: %s", e)
 
@@ -3872,7 +3903,7 @@ async def handle_telegram_bot_webhook(request: Request):
             # 2.1 Despachar actualización a Make.com con las 11 variables para Google Sheets MPF
             try:
                 make_url_base = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
-                make_camp_rej_payload = json.dumps({
+                make_camp_rej_payload = {
                     "campaign_id": camp_id,
                     "session_id": camp_id,
                     "campaignId": camp_id,
@@ -3897,10 +3928,8 @@ async def handle_telegram_bot_webhook(request: Request):
                     "action": "PAUSE_CAMPAIGN_FOR_EDITS",
                     "theme": theme,
                     "petId": pet_id
-                }).encode("utf-8")
-                m_req_crej = urllib.request.Request(make_url_base, data=make_camp_rej_payload, headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(m_req_crej, timeout=5):
-                    pass
+                }
+                _dispatch_make_with_fallback(make_url_base, make_camp_rej_payload, timeout=6)
             except Exception as e_mk:
                 log.warning("[TELEGRAM WEBHOOK] Error despachando Make webhook de rechazo campaña Filtro 2: %s", e_mk)
                 ans_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
@@ -4488,9 +4517,15 @@ async def handle_grooming_qc_photos(request: Request):
         ip=client_ip(request)
     )
 
-    # 2. Despacho a Make.com (vía webhook oficial con nombres de archivos y URLs únicas directas)
+    # 2. Despacho a Make.com (vía webhook oficial con fallback de alta disponibilidad)
     make_result = {"status": "skipped"}
-    make_url = os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING") or os.environ.get("MAKE_WEBHOOK_URL_GROOMING") or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+    primary_make_url = (
+        data.get("makeUrl")
+        or data.get("webhookUrl")
+        or os.environ.get("MAKE_WEBHOOK_URL_GROOMING_MARKETING")
+        or os.environ.get("MAKE_WEBHOOK_URL_GROOMING")
+        or "https://hook.us2.make.com/bmh5ilmpkz1z04pjt3zjna4xpykvwi4j"
+    )
     
     # 🎯 11 VARIABLES ESTRUCTURADAS OBLIGATORIAS PARA MAKE.COM & GOOGLE SHEETS (CENTRO MPF):
     launch_timestamp = data.get("fecha_lanzamiento") or datetime.now(timezone.utc).isoformat()
@@ -4608,21 +4643,8 @@ async def handle_grooming_qc_photos(request: Request):
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-    try:
-        req_data = json.dumps(make_payload).encode("utf-8")
-        ctx_ssl = ssl.create_default_context()
-        ctx_ssl.check_hostname = False
-        ctx_ssl.verify_mode = ssl.CERT_NONE
-        m_req = urllib.request.Request(
-            make_url,
-            data=req_data,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST"
-        )
-        with urllib.request.urlopen(m_req, context=ctx_ssl, timeout=12) as resp:
-            make_result = {"status": "dispatched", "code": resp.status}
-    except Exception as e:
-        make_result = {"status": "error", "error": str(e)}
+    make_result = _dispatch_make_with_fallback(primary_make_url, make_payload, timeout=12)
+    make_url = make_result.get("targetUrl") or primary_make_url
 
     # 3. Despacho directo concurrente hacia Telegram Bot @ONEILnewBot (Álbum nativo sendMediaGroup con fallback robusto y botones de aprobación)
     _send_telegram_grooming_photos(
