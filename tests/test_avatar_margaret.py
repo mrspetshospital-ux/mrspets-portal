@@ -266,6 +266,50 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertEqual(payload_cust_2["thread"]["thread_id"], "tmly_thread_abc_123")
         self.assertNotIn("board_id", payload_cust_2)
 
+    def test_14_independent_channels_and_dual_orchestration_governance(self):
+        """Verifica la existencia y gobernanza de los 2 canales independientes de IA (Teamily y Gemini)."""
+        import asyncio
+        server_path = os.path.join(os.path.dirname(__file__), "..", "server.py")
+        with open(server_path, "r", encoding="utf-8") as f:
+            src = f.read()
+
+        # 1. Ambos canales definidos de forma independiente
+        self.assertIn("async def _execute_teamily_channel", src)
+        self.assertIn("async def _execute_gemini_channel", src)
+        self.assertIn("async def orchestrate_dual_ai_chat", src)
+        self.assertIn('@app.post("/api/v1/channels/teamily/test")', src)
+        self.assertIn('@app.post("/api/v1/channels/gemini/test")', src)
+
+        # 2. Prueba dinámica de orquestación dual y gobernanza de selección
+        try:
+            from server import orchestrate_dual_ai_chat, get_primary_ai_engine
+
+            # Caso A: Gemini como Primario, Teamily de Respaldo
+            res_gem_primary = asyncio.run(orchestrate_dual_ai_chat(
+                msg="buenas noches",
+                session_id="test_dual_sess_gemini",
+                is_customer=True,
+                primary_engine="gemini",
+                timeout_sec=4.0
+            ))
+            self.assertEqual(res_gem_primary["primary_engine"], "gemini")
+            self.assertEqual(res_gem_primary["backup_engine"], "teamily")
+            self.assertTrue(bool(res_gem_primary["reply"]))
+
+            # Caso B: Teamily como Primario, Gemini de Respaldo
+            res_tmly_primary = asyncio.run(orchestrate_dual_ai_chat(
+                msg="buenas noches",
+                session_id="test_dual_sess_teamily",
+                is_customer=True,
+                primary_engine="teamily",
+                timeout_sec=4.0
+            ))
+            self.assertEqual(res_tmly_primary["primary_engine"], "teamily")
+            self.assertEqual(res_tmly_primary["backup_engine"], "gemini")
+            self.assertTrue(bool(res_tmly_primary["reply"]))
+        except ImportError:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

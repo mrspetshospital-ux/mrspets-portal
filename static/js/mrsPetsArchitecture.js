@@ -1618,7 +1618,11 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const isTeamlyPrimary = (activeModel.id && activeModel.id.includes('teamly'));
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
     const agentName = 'Margaret (actuando como Leia Concierge VIP)';
-    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 50;
+    const savedGov = localStorage.getItem('mrspets_governance_config');
+    let storedGov = {};
+    try { storedGov = savedGov ? JSON.parse(savedGov) : {}; } catch(e){}
+    const primaryEngine = (window.agentStudio && window.agentStudio.primaryEngine) || storedGov.primaryEngine || 'teamily';
+    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 20;
     const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
     const isStaff = (typeof this.isStaffMode === 'function') ? this.isStaffMode() : false;
@@ -1633,6 +1637,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       agent_id: agentSlug,
       agent_slug: agentSlug,
       sessionId: chatSessionId,
+      primaryEngine: primaryEngine,
       timeoutSeconds: timeoutSec,
       model: activeModel.id,
       approval_mode: activeApprovalMode,

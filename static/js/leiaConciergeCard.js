@@ -255,6 +255,7 @@
                 input: userText,
                 message: userText,
                 sessionId: chatSessionId,
+                primaryEngine: isTeamly ? 'teamily' : 'gemini',
                 timeoutSeconds: timeoutSec,
                 agent_slug: 'margaret',
                 context: {

@@ -2111,7 +2111,8 @@ def _call_gemini_for_leia_engine(
     user_message: str,
     history: Optional[List[dict]] = None,
     requested_model: Optional[str] = None,
-    requested_agent: str = "margaret"
+    requested_agent: str = "margaret",
+    timeout_sec: float = 8.0
 ) -> dict:
     api_key = (
         os.environ.get("GEMINI_API_KEY", "").strip()
@@ -2189,7 +2190,7 @@ def _call_gemini_for_leia_engine(
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req, context=ctx_ssl, timeout=6) as r:
+            with urllib.request.urlopen(req, context=ctx_ssl, timeout=timeout_sec) as r:
                 body = json.loads(r.read().decode("utf-8"))
                 dt_ms = int((time.time() - t0) * 1000)
                 reply = body.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
@@ -2217,6 +2218,283 @@ def _call_gemini_for_leia_engine(
     }
 
 
+def get_primary_ai_engine() -> Tuple[str, float]:
+    """Retorna (primary_engine, failover_timeout) configurados en el panel de IA."""
+    primary = "teamily"
+    timeout_sec = 8.0
+    if AGENT_STUDIO_CONFIG_PATH.exists():
+        try:
+            with open(AGENT_STUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                p = cfg.get("primaryEngine") or cfg.get("primary_engine")
+                if p:
+                    p_str = str(p).lower()
+                    primary = "gemini" if p_str in ["gemini", "make"] else "teamily"
+                t = cfg.get("failoverTimeout") or cfg.get("failover_timeout")
+                if t:
+                    timeout_sec = float(t)
+        except Exception:
+            pass
+    return primary, timeout_sec
+
+
+async def _execute_teamily_channel(
+    msg: str,
+    session_id: str,
+    is_customer: bool = True,
+    timeout_sec: float = 8.0,
+    board_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Canal 1 Independiente: Teamily Live API (GEO-A / Charly).
+    - Hilo único por cliente (aislamiento de datos estricto sin mezclar board compartido)
+    - Medición de latencia real
+    - Forzamiento estricto de timeout
+    """
+    if not teamily_geo_a_client or not TeamilyGeoARequest or not msg:
+        return {
+            "success": False,
+            "reply": "",
+            "agent": "geo-a",
+            "agent_name": "Charly (GEO A • Teamily)",
+            "model_used": "teamily-geo-a",
+            "channel": "teamily",
+            "latency_ms": 0.0,
+            "error": "Cliente Teamily no disponible o mensaje vacío"
+        }
+
+    t0 = time.time()
+    try:
+        req = TeamilyGeoARequest(
+            input=msg,
+            board_id=board_id if not is_customer else None,
+            session_id=session_id,
+            is_customer=is_customer,
+            timeout=timeout_sec
+        )
+        res = await asyncio.wait_for(
+            asyncio.to_thread(teamily_geo_a_client.send_message, req),
+            timeout=timeout_sec + 0.5
+        )
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        if res.success and res.response_text:
+            return {
+                "success": True,
+                "reply": res.response_text,
+                "agent": "geo-a",
+                "agent_name": "Charly (GEO A • Teamily)",
+                "model_used": "teamily-geo-a",
+                "channel": "teamily",
+                "latency_ms": elapsed_ms,
+                "error": None
+            }
+        else:
+            return {
+                "success": False,
+                "reply": "",
+                "agent": "geo-a",
+                "agent_name": "Charly (GEO A • Teamily)",
+                "model_used": "teamily-geo-a",
+                "channel": "teamily",
+                "latency_ms": elapsed_ms,
+                "error": res.error or "Respuesta vacía recibida de Teamily"
+            }
+    except asyncio.TimeoutError:
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        log.warning("Canal Teamily superó timeout estricto de %ss (latencia: %sms)", timeout_sec, elapsed_ms)
+        return {
+            "success": False,
+            "reply": "",
+            "agent": "geo-a",
+            "agent_name": "Charly (GEO A • Teamily)",
+            "model_used": "teamily-geo-a",
+            "channel": "teamily",
+            "latency_ms": elapsed_ms,
+            "error": f"Timeout superado ({timeout_sec}s)"
+        }
+    except Exception as e:
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        log.warning("Error en Canal Teamily: %s", e)
+        return {
+            "success": False,
+            "reply": "",
+            "agent": "geo-a",
+            "agent_name": "Charly (GEO A • Teamily)",
+            "model_used": "teamily-geo-a",
+            "channel": "teamily",
+            "latency_ms": elapsed_ms,
+            "error": str(e)
+        }
+
+
+async def _execute_gemini_channel(
+    msg: str,
+    history: Optional[List[dict]] = None,
+    requested_model: Optional[str] = None,
+    requested_agent: str = "margaret",
+    timeout_sec: float = 8.0
+) -> Dict[str, Any]:
+    """
+    Canal 2 Independiente: Google Gemini Live API.
+    - Personalidad fiel de Recepción / Leia Concierge VIP / Margaret
+    - Detección de servicios, horarios y Tasa BCV oficial
+    - Medición de latencia real
+    - Forzamiento estricto de timeout
+    """
+    t0 = time.time()
+    try:
+        gem_res = await asyncio.wait_for(
+            asyncio.to_thread(
+                _call_gemini_for_leia_engine,
+                user_message=msg,
+                history=history or [],
+                requested_model=requested_model or "gemini-flash-latest",
+                requested_agent=requested_agent,
+                timeout_sec=timeout_sec
+            ),
+            timeout=timeout_sec + 0.5
+        )
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        if gem_res.get("success") and gem_res.get("reply"):
+            return {
+                "success": True,
+                "reply": gem_res["reply"],
+                "agent": requested_agent,
+                "agent_name": "Leia Concierge VIP (Google Gemini)",
+                "model_used": gem_res.get("model_used", "gemini-flash-latest"),
+                "channel": "gemini",
+                "latency_ms": elapsed_ms,
+                "error": None
+            }
+        else:
+            return {
+                "success": False,
+                "reply": gem_res.get("reply", ""),
+                "agent": requested_agent,
+                "agent_name": "Leia Concierge VIP (Fallback Local)",
+                "model_used": gem_res.get("model_used", "fallback-local"),
+                "channel": "gemini",
+                "latency_ms": elapsed_ms,
+                "error": "Gemini no devolvió respuesta válida"
+            }
+    except asyncio.TimeoutError:
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        log.warning("Canal Gemini superó timeout estricto de %ss (latencia: %sms)", timeout_sec, elapsed_ms)
+        return {
+            "success": False,
+            "reply": "",
+            "agent": requested_agent,
+            "agent_name": "Leia Concierge VIP (Google Gemini)",
+            "model_used": "gemini-flash-latest",
+            "channel": "gemini",
+            "latency_ms": elapsed_ms,
+            "error": f"Timeout superado ({timeout_sec}s)"
+        }
+    except Exception as e:
+        elapsed_ms = round((time.time() - t0) * 1000.0, 2)
+        log.warning("Error en Canal Gemini: %s", e)
+        return {
+            "success": False,
+            "reply": "",
+            "agent": requested_agent,
+            "agent_name": "Leia Concierge VIP (Google Gemini)",
+            "model_used": "gemini-flash-latest",
+            "channel": "gemini",
+            "latency_ms": elapsed_ms,
+            "error": str(e)
+        }
+
+
+async def orchestrate_dual_ai_chat(
+    msg: str,
+    session_id: str,
+    is_customer: bool = True,
+    primary_engine: str = "teamily",
+    timeout_sec: float = 8.0,
+    history: Optional[List[dict]] = None,
+    requested_agent: str = "margaret",
+    board_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Orquesta los dos canales independientes de IA (Teamily y Gemini)
+    respetando estrictamente:
+    1. Cuál es la Inteligencia Primaria (elegida en el panel de IA).
+    2. Cuál es la Inteligencia de Respaldo (la contraparte automática).
+    3. El tiempo de espera (timeout) configurado antes de conmutar.
+    """
+    primary = "gemini" if str(primary_engine).lower() in ["gemini", "make"] else "teamily"
+    backup = "teamily" if primary == "gemini" else "gemini"
+
+    failover_triggered = False
+    failover_reason = None
+    res = None
+
+    if primary == "teamily":
+        # Canal 1 Primario: Teamily
+        res = await _execute_teamily_channel(
+            msg=msg,
+            session_id=session_id,
+            is_customer=is_customer,
+            timeout_sec=timeout_sec,
+            board_id=board_id
+        )
+        if not res.get("success") or not res.get("reply"):
+            failover_triggered = True
+            failover_reason = res.get("error") or f"Timeout o falla en Teamily (> {timeout_sec}s)"
+            log.info("Dualidad IA: Conmutando al Canal de Respaldo (Gemini). Razón: %s", failover_reason)
+            res = await _execute_gemini_channel(
+                msg=msg,
+                history=history,
+                requested_agent=requested_agent,
+                timeout_sec=max(timeout_sec, 6.0)
+            )
+    else:
+        # Canal 2 Primario: Gemini
+        res = await _execute_gemini_channel(
+            msg=msg,
+            history=history,
+            requested_agent=requested_agent,
+            timeout_sec=timeout_sec
+        )
+        if not res.get("success") or not res.get("reply"):
+            failover_triggered = True
+            failover_reason = res.get("error") or f"Timeout o falla en Gemini (> {timeout_sec}s)"
+            log.info("Dualidad IA: Conmutando al Canal de Respaldo (Teamily). Razón: %s", failover_reason)
+            res = await _execute_teamily_channel(
+                msg=msg,
+                session_id=session_id,
+                is_customer=is_customer,
+                timeout_sec=max(timeout_sec, 6.0),
+                board_id=board_id
+            )
+
+    reply_text = res.get("reply") if res else ""
+    if not reply_text:
+        reply_text = (
+            "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal."
+        )
+        responder_agent = requested_agent
+        responder_name = "Leia Concierge VIP (Fallback Local)"
+        model_used = "fallback-local"
+    else:
+        responder_agent = res.get("agent", requested_agent)
+        responder_name = res.get("agent_name", "Leia Concierge VIP")
+        model_used = res.get("model_used", "dual-engine")
+
+    return {
+        "reply": reply_text,
+        "agent": responder_agent,
+        "agent_name": responder_name,
+        "model_used": model_used,
+        "latency_ms": res.get("latency_ms", 0.0) if res else 0.0,
+        "primary_engine": primary,
+        "backup_engine": backup,
+        "active_channel": res.get("channel", "fallback") if res else "fallback",
+        "failover_triggered": failover_triggered,
+        "failover_reason": failover_reason
+    }
+
+
 @app.post("/api/v1/leia/chat")
 async def leia_chat_v1(request: Request):
     body = {}
@@ -2226,24 +2504,12 @@ async def leia_chat_v1(request: Request):
         body = {}
 
     user_message = str(body.get("message") or body.get("input") or body.get("prompt") or "").strip()
-    ai_model = body.get("model") or body.get("aiModel")
-    if not ai_model or ai_model == "auto":
-        try:
-            if AGENT_STUDIO_CONFIG_PATH.exists():
-                with open(AGENT_STUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
-                    p_engine = cfg.get("primaryEngine", "teamily")
-                    ai_model = "gemini-3.8-flash" if p_engine == "make" else "teamly-orchestrator"
-        except Exception:
-            ai_model = "teamly-orchestrator"
-    if not ai_model:
-        ai_model = "teamly-orchestrator"
-
     user_type = body.get("userType") or body.get("user_type") or "client"
     user_name = body.get("userName") or body.get("user_name") or "Cliente VIP"
     pet_name = body.get("petName") or body.get("pet_name") or ""
     history = body.get("history") or []
     session_id = body.get("sessionId") or f"SESS-{uuid.uuid4().hex[:8]}"
+    target_agent = (body.get("agent_id") or body.get("agent_slug") or body.get("requested_slug") or "margaret").lower()
 
     if not user_message:
         return {"status": "error", "reply": "El mensaje no puede estar vacío.", "response_text": "El mensaje no puede estar vacío."}
@@ -2258,7 +2524,6 @@ async def leia_chat_v1(request: Request):
         "event": "leia_chat_conversation",
         "sessionId": session_id,
         "message": user_message,
-        "aiModel": ai_model,
         "userType": user_type,
         "userName": user_name,
         "petName": pet_name,
@@ -2268,50 +2533,30 @@ async def leia_chat_v1(request: Request):
     }
     _async_notify_make_webhook(make_url, make_payload)
 
-    target_agent = (body.get("agent_id") or body.get("agent_slug") or body.get("requested_slug") or "margaret").lower()
-    timeout_val = float(body.get("timeoutSeconds") or body.get("timeout") or 8.0)
+    # 1. Configuración de Gobernanza de IA (Primaria vs Respaldo y Timeout fijado)
+    cfg_primary, cfg_timeout = get_primary_ai_engine()
+    ai_model = body.get("model") or body.get("aiModel")
+    if ai_model and "teamly" in str(ai_model).lower():
+        primary_engine = "teamily"
+    elif ai_model and "gemini" in str(ai_model).lower():
+        primary_engine = "gemini"
+    else:
+        primary_engine = (body.get("primaryEngine") or body.get("primary_engine") or cfg_primary).lower()
+
+    timeout_sec = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout)
     is_customer = (str(user_type).lower() not in ["staff", "staff_admin", "admin", "war_room"])
 
-    # Si el modelo activo es de la familia Teamily (Canal Principal con Failover Automático a Gemini)
-    if "teamly" in str(ai_model).lower() and teamily_geo_a_client and TeamilyGeoARequest:
-        try:
-            t0_team = time.time()
-            board_to_use = None if is_customer else getattr(teamily_geo_a_client, "board_id", None)
-            req = TeamilyGeoARequest(
-                input=user_message,
-                board_id=board_to_use,
-                session_id=session_id,
-                is_customer=is_customer,
-                timeout=timeout_val
-            )
-            res = await asyncio.wait_for(
-                asyncio.to_thread(teamily_geo_a_client.send_message, req),
-                timeout=timeout_val + 0.5
-            )
-            elapsed_ms = round((time.time() - t0_team) * 1000.0, 2)
-            if res.success and res.response_text:
-                return {
-                    "status": "success",
-                    "agent": "geo-a",
-                    "agent_name": "Charly (GEO A • Teamily)",
-                    "reply": res.response_text,
-                    "response_text": res.response_text,
-                    "model_used": "teamily-geo-a",
-                    "latency_ms": elapsed_ms,
-                    "session_id": session_id,
-                    "user_type": user_type
-                }
-        except Exception as e:
-            log.warning("Fallo o timeout en Teamily, ejecutando Failover Automático hacia Gemini: %s", e)
-
-    # Inferencia inteligente con Google Gemini (Primario o Failover Automático)
-    gem_res = _call_gemini_for_leia_engine(
-        user_message=user_message,
+    # 2. Orquestación Dual con Canales Independientes
+    orch = await orchestrate_dual_ai_chat(
+        msg=user_message,
+        session_id=session_id,
+        is_customer=is_customer,
+        primary_engine=primary_engine,
+        timeout_sec=timeout_sec,
         history=history,
-        requested_model=ai_model if "gemini" in str(ai_model).lower() else "gemini-flash-latest",
-        requested_agent=target_agent
+        requested_agent=target_agent,
+        board_id=body.get("board_id")
     )
-    reply_text = gem_res.get("reply") or ""
 
     if centralita_router:
         try:
@@ -2319,22 +2564,28 @@ async def leia_chat_v1(request: Request):
                 message_id=f"{target_agent.upper()}-{uuid.uuid4().hex[:6]}",
                 agente_origen="Tutor / Staff",
                 agente_destino=target_agent,
-                webhook_utilizado=f"Google Gemini ({gem_res.get('model_used')}) [Dualidad Failover]",
+                webhook_utilizado=f"Dual IA [{orch['active_channel'].upper()}] (Primario: {orch['primary_engine']})",
                 estado="ATENCION_ATENDIDA",
-                respuesta_preview=reply_text[:90]
+                respuesta_preview=orch["reply"][:90]
             )
         except Exception:
             pass
 
     return {
         "status": "success",
-        "agent": target_agent,
-        "agent_name": "Leia Concierge VIP (Google Gemini)" if gem_res.get("success") else "Leia Concierge VIP (Fallback Local)",
-        "success": gem_res.get("success", True),
-        "reply": reply_text,
-        "response_text": reply_text,
-        "model_used": gem_res.get("model_used"),
-        "latency_ms": gem_res.get("latency_ms"),
+        "agent": orch["agent"],
+        "agent_name": orch["agent_name"],
+        "success": bool(orch["reply"]),
+        "reply": orch["reply"],
+        "response_text": orch["reply"],
+        "model_used": orch["model_used"],
+        "latency_ms": orch["latency_ms"],
+        "primary_engine": orch["primary_engine"],
+        "backup_engine": orch["backup_engine"],
+        "active_channel": orch["active_channel"],
+        "failover_triggered": orch["failover_triggered"],
+        "failover_reason": orch.get("failover_reason"),
+        "timeout_seconds": timeout_sec,
         "session_id": session_id,
         "user_type": user_type
     }
@@ -5212,69 +5463,115 @@ async def agent_studio_dispatch_test(request: Request):
     except Exception:
         body = {}
 
-    channel = body.get("channel") or "make"
+    channel = str(body.get("channel") or "auto").lower()
     payload = body.get("payload") or {"test": "agent_studio_live_dispatch", "timestamp": datetime.now(timezone.utc).isoformat()}
-    teamily_url = body.get("teamilyUrl") or "https://teamily.ai/v1/agents/geo-a/responses"
-    make_url = body.get("makeUrl") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
-    timeout_sec = int(body.get("timeout") or 20)
+    prompt_test = body.get("message") or body.get("prompt") or payload.get("message") or "¿Cuáles son los horarios de atención y el servicio de spa?"
+    timeout_sec = float(body.get("timeout") or 8.0)
+    session_id = f"test_studio_{uuid.uuid4().hex[:6]}"
 
-    t0 = time.time()
-    ctx_ssl = ssl.create_default_context()
-    ctx_ssl.check_hostname = False
-    ctx_ssl.verify_mode = ssl.CERT_NONE
-
-    if channel == "make":
-        target_url = make_url
-        req_data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            target_url,
-            data=req_data,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST"
+    # Canal 1 Independiente: Teamily
+    if channel == "teamily":
+        res_team = await _execute_teamily_channel(
+            msg=prompt_test,
+            session_id=session_id,
+            is_customer=True,
+            timeout_sec=timeout_sec
         )
-        try:
-            with urllib.request.urlopen(req, context=ctx_ssl, timeout=timeout_sec) as resp:
-                resp_text = resp.read().decode("utf-8", errors="ignore") or "Accepted"
-                latency_ms = int((time.time() - t0) * 1000)
-                return {
-                    "status": 200,
-                    "latencyMs": latency_ms,
-                    "url": target_url,
-                    "finalChannel": "make",
-                    "response": resp_text,
-                    "failoverTriggered": False
-                }
-        except urllib.error.HTTPError as he:
-            latency_ms = int((time.time() - t0) * 1000)
-            err_text = he.read().decode("utf-8", errors="ignore")
-            return {
-                "status": he.code,
-                "latencyMs": latency_ms,
-                "url": target_url,
-                "finalChannel": "make",
-                "response": err_text or f"HTTP {he.code}",
-                "failoverTriggered": False
-            }
-        except Exception as e:
-            latency_ms = int((time.time() - t0) * 1000)
-            return {
-                "status": 500,
-                "latencyMs": latency_ms,
-                "url": target_url,
-                "finalChannel": "make",
-                "response": str(e),
-                "failoverTriggered": False
-            }
-    else:
-        latency_ms = int((time.time() - t0) * 1000)
         return {
-            "status": 200,
-            "latencyMs": max(latency_ms, 280),
-            "url": teamily_url,
+            "status": 200 if res_team["success"] else 500,
+            "latencyMs": res_team["latency_ms"],
+            "url": "https://teamily.ai/v1/agents/geo-a/responses",
             "finalChannel": "teamily",
-            "response": "Teamily Orchestration Gateway Activo",
+            "agent": res_team["agent"],
+            "agent_name": res_team["agent_name"],
+            "response": res_team["reply"] or res_team.get("error", "Error en Teamily"),
             "failoverTriggered": False
         }
+
+    # Canal 2 Independiente: Gemini (o Make)
+    if channel in ["make", "gemini"]:
+        res_gem = await _execute_gemini_channel(
+            msg=prompt_test,
+            history=[],
+            timeout_sec=timeout_sec
+        )
+        return {
+            "status": 200 if res_gem["success"] else 500,
+            "latencyMs": res_gem["latency_ms"],
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest",
+            "finalChannel": "gemini",
+            "agent": res_gem["agent"],
+            "agent_name": res_gem["agent_name"],
+            "response": res_gem["reply"] or res_gem.get("error", "Error en Gemini"),
+            "failoverTriggered": False
+        }
+
+    # Modo Dual / Auto-Failover:
+    cfg_primary, _ = get_primary_ai_engine()
+    orch = await orchestrate_dual_ai_chat(
+        msg=prompt_test,
+        session_id=session_id,
+        is_customer=True,
+        primary_engine=cfg_primary,
+        timeout_sec=timeout_sec
+    )
+    return {
+        "status": 200,
+        "latencyMs": orch["latency_ms"],
+        "url": orch["active_channel"],
+        "finalChannel": orch["active_channel"],
+        "agent": orch["agent"],
+        "agent_name": orch["agent_name"],
+        "response": orch["reply"],
+        "failoverTriggered": orch["failover_triggered"],
+        "failoverReason": orch.get("failover_reason")
+    }
+
+
+@app.post("/api/v1/channels/teamily/test")
+async def test_teamily_channel_endpoint(request: Request):
+    """Prueba 100% independiente del Canal Teamily sin failover."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    msg = body.get("message") or body.get("input") or "Hola, prueba independiente de canal Teamily"
+    timeout_sec = float(body.get("timeout") or body.get("timeoutSeconds") or 8.0)
+    session_id = str(body.get("sessionId") or f"test_tmly_{uuid.uuid4().hex[:6]}")
+    res = await _execute_teamily_channel(
+        msg=msg,
+        session_id=session_id,
+        is_customer=True,
+        timeout_sec=timeout_sec
+    )
+    return {
+        "status": "success" if res["success"] else "error",
+        "channel": "teamily",
+        "result": res
+    }
+
+
+@app.post("/api/v1/channels/gemini/test")
+async def test_gemini_channel_endpoint(request: Request):
+    """Prueba 100% independiente del Canal Google Gemini sin failover."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    msg = body.get("message") or body.get("input") or "Hola, prueba independiente de canal Gemini"
+    timeout_sec = float(body.get("timeout") or body.get("timeoutSeconds") or 8.0)
+    res = await _execute_gemini_channel(
+        msg=msg,
+        history=body.get("history") or [],
+        timeout_sec=timeout_sec
+    )
+    return {
+        "status": "success" if res["success"] else "error",
+        "channel": "gemini",
+        "result": res
+    }
 
 
 @app.get("/api/v1/war-room/ping")
@@ -6469,8 +6766,15 @@ async def teamily_chat(request: Request):
         u_name = body.get("userName") or body.get("context", {}).get("userName") or ""
         p_name = body.get("petName") or body.get("context", {}).get("petName") or ""
         ph_num = body.get("phone") or body.get("context", {}).get("phone") or ""
-        session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
-        timeout_sec = float(body.get("timeoutSeconds") or body.get("timeout") or 8.0)
+        # 1. Configuración de Gobernanza de IA (Primaria vs Respaldo y Timeout fijado)
+        cfg_primary, cfg_timeout = get_primary_ai_engine()
+        primary_engine = (body.get("primaryEngine") or body.get("primary_engine") or cfg_primary).lower()
+        if primary_engine in ["gemini", "make"]:
+            primary_engine = "gemini"
+        else:
+            primary_engine = "teamily"
+
+        timeout_sec = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout)
         user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
         is_customer = (user_type not in ["staff", "staff_admin", "admin", "war_room"])
 
@@ -6480,68 +6784,25 @@ async def teamily_chat(request: Request):
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
         teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
 
-        responder_agent = "margaret"
-        responder_name = "Leia Concierge VIP (Google Gemini)"
-        model_used = "gemini-flash-latest"
-        call_latency_ms = 0.0
+        # 3. Orquestación Dual con Canales Independientes (respeta Primario, Respaldo y Timeout)
+        orch = await orchestrate_dual_ai_chat(
+            msg=teamily_msg,
+            session_id=session_id,
+            is_customer=is_customer,
+            primary_engine=primary_engine,
+            timeout_sec=timeout_sec,
+            history=body.get("history") or [],
+            requested_agent="margaret",
+            board_id=body.get("board_id")
+        )
 
-        if teamily_geo_a_client and msg and TeamilyGeoARequest:
-            try:
-                t0_team = time.time()
-                # AISLAMIENTO ESTRICTO: Los clientes NUNCA usan el board compartido del War Room para evitar fuga de privacidad
-                board_to_use = None if is_customer else (body.get("board_id") or getattr(teamily_geo_a_client, "board_id", None))
-                req = TeamilyGeoARequest(
-                    input=teamily_msg,
-                    board_id=board_to_use,
-                    session_id=session_id,
-                    is_customer=is_customer,
-                    timeout=timeout_sec
-                )
-                res = await asyncio.wait_for(
-                    asyncio.to_thread(teamily_geo_a_client.send_message, req),
-                    timeout=timeout_sec + 0.5
-                )
-                call_latency_ms = round((time.time() - t0_team) * 1000.0, 2)
-                if res.success and res.response_text:
-                    res_text = res.response_text
-                    # ATRIBUCIÓN HONESTA: El agente de Teamily es GEO-A (Charly)
-                    responder_agent = "geo-a"
-                    responder_name = "Charly (GEO A • Teamily)"
-                    model_used = "teamily-geo-a"
-            except asyncio.TimeoutError:
-                log.warning("Timeout del servidor (%ss) agotado esperando a Teamily, ejecutando failover inmediato a Gemini", timeout_sec)
-            except Exception as _e_m:
-                log.warning("Llamada externa a Teamily falló para Margaret: %s", _e_m)
+        res_text = orch["reply"]
+        responder_agent = orch["agent"]
+        responder_name = orch["agent_name"]
+        model_used = orch["model_used"]
+        call_latency_ms = orch["latency_ms"]
 
-        # Fallback dinámico a Google Gemini si Teamily no respondió o superó timeout
-        if not res_text and msg:
-            try:
-                t0_gem = time.time()
-                gem_res = await asyncio.to_thread(
-                    _call_gemini_for_leia_engine,
-                    user_message=teamily_msg,
-                    history=body.get("history") or [],
-                    requested_model=body.get("model") or "gemini-flash-latest",
-                    requested_agent="margaret"
-                )
-                call_latency_ms = round((time.time() - t0_gem) * 1000.0, 2)
-                if gem_res.get("success") and gem_res.get("reply"):
-                    res_text = gem_res["reply"]
-                    responder_agent = "margaret"
-                    responder_name = "Leia Concierge VIP (Google Gemini)"
-                    model_used = gem_res.get("model_used", "gemini-flash-latest")
-            except Exception as _e_gem:
-                log.warning("Failover a Gemini falló para Margaret: %s", _e_gem)
-
-        if not res_text:
-            res_text = (
-                "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal."
-            )
-            responder_agent = "margaret"
-            responder_name = "Leia Concierge VIP (Fallback Local)"
-            model_used = "fallback-local"
-
-        # 3. Procesar y persistir reserva si los datos están completos
+        # 4. Procesar y persistir reserva si los datos están completos
         booking_data = None
         try:
             booking_data = process_and_persist_booking(
@@ -6560,6 +6821,12 @@ async def teamily_chat(request: Request):
             "model_used": model_used,
             "latency_ms": call_latency_ms,
             "session_id": session_id,
+            "primary_engine": orch["primary_engine"],
+            "backup_engine": orch["backup_engine"],
+            "active_channel": orch["active_channel"],
+            "failover_triggered": orch["failover_triggered"],
+            "failover_reason": orch.get("failover_reason"),
+            "timeout_seconds": timeout_sec,
             "reply": res_text,
             "response_text": res_text,
             "bcv_rate": eff_rate,
