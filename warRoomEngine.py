@@ -75,8 +75,8 @@ WAR_ROOM_PARTICIPANTS = {
     "super_agent": {
         "sender_id": "super_agent",
         "channel_id": "channel_super_agent",
-        "name": "Super Agent (Teamly)",
-        "role": "Coordinación Operativa & Enjambre de Agentes",
+        "name": "Charly / Super Agent (Teamily)",
+        "role": "Asistente Ejecutivo & Coordinación Operativa (Teamily)",
         "icon": "🤝",
         "type": "ai_agent"
     },
@@ -95,6 +95,14 @@ WAR_ROOM_PARTICIPANTS = {
         "role": "Razonamiento Multimodal & Diagnóstico Central",
         "icon": "✨",
         "type": "ai_agent"
+    },
+    "make": {
+        "sender_id": "make",
+        "channel_id": "channel_make",
+        "name": "Make.com (Webhooks & Omnicanalidad)",
+        "role": "Pasarela de Automatización & Webhook Omnicanal",
+        "icon": "🔗",
+        "type": "automation_gateway"
     },
     "guest": {
         "sender_id": "guest",
@@ -125,10 +133,10 @@ WAR_ROOM_CHANNELS = {
     },
     "channel_super_agent": {
         "channel_id": "channel_super_agent",
-        "name": "Canal Super Agent",
+        "name": "Canal Teamily (Charly / Super Agent)",
         "authorized_sender_id": "super_agent",
-        "participant": "Super Agent (Teamly)",
-        "role": "Coordinación Operativa & Enjambre de Agentes",
+        "participant": "Charly / Super Agent (Teamily)",
+        "role": "Asistente Ejecutivo & Coordinación Operativa (Teamily)",
         "icon": "🤝"
     },
     "channel_antigravity": {
@@ -146,14 +154,23 @@ WAR_ROOM_CHANNELS = {
         "participant": "Gemini AI",
         "role": "Razonamiento Multimodal & Diagnóstico Central",
         "icon": "✨"
+    },
+    "channel_make": {
+        "channel_id": "channel_make",
+        "name": "Canal Make.com Webhook Omnicanal",
+        "authorized_sender_id": "make",
+        "participant": "Make.com (Webhooks & Omnicanalidad)",
+        "role": "Pasarela de Automatización & Webhooks",
+        "icon": "🔗"
     }
 }
 
 VALID_CHANNELS = {
     "channel_mrspets": "Canal Mrs. PETS CORP (Dirección General)",
-    "channel_super_agent": "Canal Super Agent (Teamly)",
+    "channel_super_agent": "Canal Teamily (Charly / Super Agent)",
     "channel_antigravity": "Canal Google AntiGravity",
     "channel_gemini": "Canal Gemini AI",
+    "channel_make": "Canal Make.com (Webhooks & Omnicanalidad)",
     "deliberacion": "Sala Común de Deliberación (Vista General)"
 }
 DEFAULT_CHANNEL = "deliberacion"
@@ -165,7 +182,7 @@ def normalize_sender_id(sender_raw: Optional[str]) -> str:
     s = str(sender_raw).strip().lower()
     if any(k in s for k in ["mrspets", "mrs pets", "harry", "daly", "talibel", "direccion", "director"]):
         return "mrspets"
-    if any(k in s for k in ["super_agent", "superagent", "teamly", "teamily", "agente"]):
+    if any(k in s for k in ["super_agent", "superagent", "teamly", "teamily", "charly", "charlie", "tembly", "agente"]):
         return "super_agent"
     if any(k in s for k in ["antigravity", "anti-gravity", "anti gravity"]):
         return "antigravity"
@@ -173,7 +190,9 @@ def normalize_sender_id(sender_raw: Optional[str]) -> str:
         return "gemini"
     if any(k in s for k in ["soporte", "guest", "externo", "tecnico", "técnico", "q-vet", "qvet"]):
         return "guest"
-    if any(k in s for k in ["sistema", "system", "monitor", "alerta", "vigilancia", "make"]):
+    if any(k in s for k in ["make", "webhook"]):
+        return "make"
+    if any(k in s for k in ["sistema", "system", "monitor", "alerta", "vigilancia"]):
         return "system"
     if "volturi" in s:
         return "volturi"
@@ -186,12 +205,14 @@ def normalize_channel_id(channel_raw: Optional[str]) -> str:
     c = str(channel_raw).strip().lower()
     if any(k in c for k in ["mrspets", "harry", "daly"]):
         return "channel_mrspets"
-    if any(k in c for k in ["super_agent", "superagent", "teamly", "teamily"]):
+    if any(k in c for k in ["super_agent", "superagent", "teamly", "teamily", "charly", "charlie", "tembly"]):
         return "channel_super_agent"
     if any(k in c for k in ["antigravity", "anti-gravity"]):
         return "channel_antigravity"
     if any(k in c for k in ["gemini"]):
         return "channel_gemini"
+    if any(k in c for k in ["make", "webhook"]):
+        return "channel_make"
     if c in ("deliberacion", "general", "todos"):
         return "deliberacion"
     return c
@@ -337,14 +358,28 @@ class WarRoomEngine:
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": os.environ.get(
                 "MAKE_WEBHOOK_URL_WAR_ROOM",
-                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a")
+                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
-            "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
+            "teamly_status": "ASINCRONO_SIN_API_PUBLICA",
+            "teamily_endpoint_url": (
+                os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
+                or os.environ.get("TEAMILY_AGENT_ENDPOINT")
+                or "https://teamily.ai/v1/agents/geo-a/responses"
+            ),
+            "teamily_board_id": (
+                os.environ.get("TEAMILY_BOARD_ID")
+                or os.environ.get("TEAMILY_WAR_ROOM_BOARD_ID")
+                or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+            ),
+            "teamily_server_key": os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or "",
             "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
             "gemini_api_key": _get_default_gemini_key(),
-            "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
+            "antigravity_endpoint_url": (
+                os.environ.get("ANTIGRAVITY_ENDPOINT_URL")
+                or "https://generativelanguage.googleapis.com/v1beta"
+            ),
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
         }
         self.chat_history: List[Dict[str, Any]] = [
@@ -356,12 +391,18 @@ class WarRoomEngine:
                 "role": "Ingeniería de Software & Resiliencia Autónoma",
                 "message": "Cuarto de Guerra inicializado. Canales independientes en línea y sincronizados.",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "verified": True,
-                "latency_ms": 1,
+                "verified": False,
+                "latency_ms": None,
                 "node_id": "antigravity"
             }
         ]
         
+        # Modos de Pausa Operativa solicitados por Dirección General
+        self.gemini_paused: bool = True     # Pausa total de inferencias Gemini AI
+        self.teamily_paused: bool = True    # Pausa de tablero/agentes Teamily
+        self.sheets_paused: bool = True     # Pausa de sincronización a Google Sheets / tablas
+        self.alerts_paused: bool = True     # Pausa de alarmas automáticas e incidencias críticas
+
         # Inicializar nodos del sistema en Cuarto de Guerra (Volturi excluido: es canal bilateral)
         self.nodes = {
             "harryt": {
@@ -380,10 +421,10 @@ class WarRoomEngine:
                 "name": "Google AntiGravity",
                 "title": "Ingeniería de Software & Resiliencia Autónoma",
                 "role": "Ingeniería Autónoma",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.gemini_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "⚡",
-                "state_desc": "Vigilancia de endpoints, autocuración y orquestación de parches.",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.gemini_paused else "Vigilancia de endpoints, autocuración y orquestación de parches.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "gemini": {
@@ -391,10 +432,10 @@ class WarRoomEngine:
                 "name": "Gemini AI",
                 "title": "Inteligencia Artificial Central & Razonamiento",
                 "role": "Diagnóstico Central",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.gemini_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "✨",
-                "state_desc": "Inferencia multimodal Gemini activa y enlazada.",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.gemini_paused else "Inferencia multimodal Gemini activa y enlazada.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "make": {
@@ -405,18 +446,18 @@ class WarRoomEngine:
                 "status": "ESTABLE",
                 "ping_ms": None,
                 "icon": "🔗",
-                "state_desc": "Escuchando webhooks (POS, WhatsApp Cloud API, Google Sheets).",
+                "state_desc": "🎯 CANAL ACTIVO: Escuchando y despachando al Webhook de Make.com.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "teamly": {
                 "id": "teamly",
-                "name": "Super Agent (Teamly)",
-                "title": "Enjambre de Agentes Autónomos & Coordinación Operativa",
-                "role": "Coordinación de Agentes",
-                "status": "ESTABLE",
+                "name": "Charly / Super Agent (Teamily)",
+                "title": "Asistente Ejecutivo & Coordinación Operativa",
+                "role": "Coordinación Operativa (Teamily)",
+                "status": "PAUSADO" if self.teamily_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "🤝",
-                "state_desc": "Tablero conectado (Board ID: 5803df5a-7127-4d28-b97c-5c840d47cdc7).",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.teamily_paused else "Coordinación operativa de agentes en Teamily.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             }
         }
@@ -498,12 +539,14 @@ class WarRoomEngine:
                     msg_copy["channel_id"] = "channel_super_agent"
                 elif sid == "gemini":
                     msg_copy["channel_id"] = "channel_gemini"
+                elif sid == "make":
+                    msg_copy["channel_id"] = "channel_make"
                 else:
                     msg_copy["channel_id"] = DEFAULT_CHANNEL
 
-            # Campo verified auditable
+            # Campo verified auditable (B3: default honesto es False sin evidencia de ejecución real)
             if "verified" not in msg_copy:
-                msg_copy["verified"] = True
+                msg_copy["verified"] = False
             if "latency_ms" not in msg_copy:
                 msg_copy["latency_ms"] = None
             if not msg_copy.get("node_id"):
@@ -821,6 +864,16 @@ class WarRoomEngine:
         """
         Activa un estado de ALERTA con paquete JSON estructurado de diagnóstico.
         """
+        if getattr(self, "alerts_paused", False):
+            return {
+                "status": "paused",
+                "message": "Sistema de alertas automáticas en pausa por orden de Dirección General.",
+                "incident_id": f"INC-PAUSED-{secrets.token_hex(2).upper()}",
+                "severity": "PAUSADO",
+                "structured_diagnostic": {"status": "PAUSADO", "http_status": 200},
+                "proposed_solution": {"action_title": "Operaciones en Pausa", "safety_verified": True}
+            }
+
         now = datetime.now(timezone.utc)
         incident_id = f"INC-{now.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
         affected = affected_nodes or ["make", "antigravity"]
@@ -1326,97 +1379,201 @@ class WarRoomEngine:
 
     def generate_antigravity_evaluation(self, problem_description: str, channel_id: str = "channel_antigravity") -> Dict[str, Any]:
         """
-        Evaluación diagnóstica técnica generada in-process por Google AntiGravity.
-        Examina telemetría viva, base de datos, webhooks, estado del servidor y procesos.
-        Escribe exclusivamente en channel_antigravity con sender_id: antigravity.
-        """
-        t0 = time.time()
-        now_iso = datetime.now(timezone.utc).isoformat()
-        msg_lower = (problem_description or "").lower()
-
-        # Inspección real de telemetría del entorno
-        db_engine = "Postgres" if (db and getattr(db, "IS_POSTGRES", False)) else "SQLite"
-        active_inc_count = len(self.active_incidents)
-        make_url_masked = mask_secret(self.node_configs.get("make_webhook_url", ""))
+        Evaluación diagnóstica emitida en channel_antigravity.
         
-        detected_services = []
-        if any(k in msg_lower for k in ["leia", "concierge", "agente", "chat", "convers"]):
-            detected_services.append("Leia Concierge / Teamily Swarm")
-        if any(k in msg_lower for k in ["make", "webhook", "foto", "imagen", "hook"]):
-            detected_services.append("Make.com Webhooks")
-        if any(k in msg_lower for k in ["bcv", "tasa", "dolar", "cambio"]):
-            detected_services.append("BCV Exchange Rate Sync")
-        if any(k in msg_lower for k in ["bd", "base de datos", "cliente", "guardar", "ficha"]):
-            detected_services.append(f"Persistencia ({db_engine})")
-
-        scope_str = ", ".join(detected_services) if detected_services else "Infraestructura General & Endpoints"
-
-        reply = (
-            f"⚡ Google AntiGravity [Ingeniería]: Analizando incidencia reportada sobre [{scope_str}].\n"
-            f"• Telemetría Viva: BD {db_engine} conectada | Webhook: {make_url_masked} | Incidencias activas: {active_inc_count}.\n"
-            f"• Diagnóstico Autónomo: Endpoints y servicios en monitoreo. Contingencia preparada para ejecución inmediata tras autorización de Dirección."
-        )
-
-        elapsed_ms = max(1, int((time.time() - t0) * 1000))
+        ARQUITECTURA DUAL & REGLA DE HONESTIDAD (A5, B2, D1):
+        Configurable mediante WAR_ROOM_ANTIGRAVITY_BACKEND:
+        - 'teamily' (por defecto): Enruta la consulta al agente Teamily GEO-A. No envía identidades
+          falsas en el prompt; solicita la evaluación técnica objetiva y declara en la respuesta
+          quién respondió de verdad: 'Charly (Teamily GEO-A)'.
+        - 'gemini': Enruta la consulta al motor Google Gemini AI usando las credenciales del portal,
+          actuando como el evaluador técnico Google AntiGravity.
+          
+        REGLA DE HONESTIDAD:
+        - Si no hay llamada o el canal está cortado (ej. credencial ausente, fallo de red):
+          verified=False, latency_ms=None, y el mensaje dice explícitamente "canal NO DISPONIBLE".
+          Cero latencias inventadas, cero defaults verdaderos.
+        - Si responde con éxito: verified=True y latency_ms con la medición real en milisegundos.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
+        backend = os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "gemini").strip().lower()
+
+        verified = False
+        latency_ms: Optional[int] = None
+        sender = "Google AntiGravity"
+        role = WAR_ROOM_PARTICIPANTS["antigravity"]["role"]
+        reply_text = ""
+
+        if backend == "gemini":
+            sender = "Google AntiGravity (Gemini AI)"
+            role = "Ingeniería de Software & Resiliencia Autónoma"
+            gemini_res = self.call_gemini_api(
+                target_node_id="antigravity",
+                user_message=problem_description,
+                channel_id=channel_id,
+                sender_name="Mrs. PETS CORP"
+            )
+            if gemini_res.get("success"):
+                verified = True
+                latency_ms = gemini_res.get("latency_ms")
+                reply_text = str(gemini_res.get("reply", ""))
+            else:
+                verified = False
+                latency_ms = None
+                err_detail = gemini_res.get("error") or "Fallo de comunicación con Gemini"
+                reply_text = f"canal NO DISPONIBLE: No se pudo contactar a Gemini AI ({err_detail})."
+
+        else:
+            # Backend por defecto: Teamily GEO-A (Charly)
+            sender = "Charly (Teamily GEO-A)"
+            role = "Asistente Ejecutivo de Operaciones (Teamily GEO-A)"
+            try:
+                import teamilyClient
+                geo_client = teamilyClient.TeamilyGeoAClient(
+                    endpoint=self.node_configs.get("antigravity_endpoint_url")
+                )
+            except Exception as import_err:
+                geo_client = None
+                init_err = str(import_err)
+
+            if not geo_client or not geo_client.server_key:
+                verified = False
+                latency_ms = None
+                reply_text = "canal NO DISPONIBLE: Credencial de autenticación no configurada (TEAMILEY_SERVER_KEY requerida)."
+            else:
+                # A5: El prompt NO debe ordenar una identidad falsa ("Eres Google AntiGravity").
+                # Solicita formalmente la evaluación técnica y operativa de la incidencia.
+                prompt_input = (
+                    f"[Cuarto de Guerra Mrs. Pets — Solicitud de Evaluación Operativa y Técnica]\n"
+                    f"Incidencia / Planteamiento reportado por Dirección General:\n{problem_description}\n\n"
+                    f"Favor emitir diagnóstico operativo, estado del servicio y recomendaciones de contingencia."
+                )
+                req = teamilyClient.TeamilyGeoARequest(
+                    input=prompt_input,
+                    wait=True,
+                    board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                    is_customer=False
+                )
+                try:
+                    resp_obj = geo_client.send_message(req)
+                    if resp_obj.success and resp_obj.response_text:
+                        verified = True
+                        latency_ms = int(resp_obj.latency_ms) if resp_obj.latency_ms is not None else None
+                        reply_text = resp_obj.response_text
+                    else:
+                        verified = False
+                        latency_ms = None
+                        reply_text = f"canal NO DISPONIBLE: No se pudo contactar al agente Teamily GEO-A ({resp_obj.error or 'Respuesta vacía o error HTTP'})."
+                except Exception as call_err:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: Fallo al conectar con Teamily GEO-A ({str(call_err)})."
 
         if "antigravity" in self.nodes:
-            self.nodes["antigravity"]["ping_ms"] = elapsed_ms
+            self.nodes["antigravity"]["ping_ms"] = latency_ms
             self.nodes["antigravity"]["last_ping"] = now_iso
-            self.nodes["antigravity"]["status"] = "ESTABLE"
-            self.nodes["antigravity"]["state_desc"] = f"● Telemetría activa ({elapsed_ms}ms) — Diagnóstico emitido"
+            if verified:
+                self.nodes["antigravity"]["status"] = "ESTABLE"
+                self.nodes["antigravity"]["state_desc"] = f"● Telemetría activa ({latency_ms}ms) — Diagnóstico emitido"
+            else:
+                self.nodes["antigravity"]["status"] = "DEGRADADO"
+                self.nodes["antigravity"]["state_desc"] = "● Canal NO DISPONIBLE (Fallo de conectividad o credencial ausente)"
 
         ag_msg = {
             "id": msg_id,
             "channel_id": "channel_antigravity",
             "sender_id": "antigravity",
-            "sender": WAR_ROOM_PARTICIPANTS["antigravity"]["name"],
-            "role": WAR_ROOM_PARTICIPANTS["antigravity"]["role"],
-            "message": reply,
+            "sender": sender,
+            "role": role,
+            "message": reply_text,
             "timestamp": now_iso,
             "node_id": "antigravity",
-            "verified": True,
-            "latency_ms": elapsed_ms
+            "verified": verified,
+            "latency_ms": latency_ms
         }
         return ag_msg
 
     def generate_super_agent_evaluation(self, problem_description: str, channel_id: str = "channel_super_agent") -> Dict[str, Any]:
         """
-        Evaluación operativa generada por Super Agent (Teamly).
-        Examina el estado del enjambre de agentes autónomos, tablero y asignación de flujos.
-        Escribe exclusivamente en channel_super_agent con sender_id: super_agent.
-        """
-        t0 = time.time()
-        now_iso = datetime.now(timezone.utc).isoformat()
-        board_id = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
-        agents_monitored = ["Leia Concierge", "Margaret Grooming", "Valeria POS", "Mike Tasa BCV"]
+        Evaluación operativa emitida por Teamily (Charly / Super Agent) en channel_super_agent.
         
-        reply = (
-            f"🤝 Super Agent (Teamly) [Operaciones]: Recibido planteamiento en Cuarto de Guerra.\n"
-            f"• Tablero Operativo: Board {board_id[:8]}... enlazado.\n"
-            f"• Estado del Enjambre: Supervisando agentes ({', '.join(agents_monitored)}). Cola operativa en verificación. Sincronizando tareas con AntiGravity para asegurar continuidad del servicio."
-        )
-
-        elapsed_ms = max(1, int((time.time() - t0) * 1000))
+        ARQUITECTURA DE VOZ PROPIA Y HONESTIDAD (Anti-Solapamiento):
+        Teamily tiene su propia voz y responde a través de su agente real configurado en el board (Charly).
+        Nadie solapa ni responde por Teamily. Si el canal está cortado o no hay credencial, se declara
+        honestamente 'canal NO DISPONIBLE' con verified=False y latency_ms=None.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
 
+        verified = False
+        latency_ms: Optional[int] = None
+        sender = WAR_ROOM_PARTICIPANTS["super_agent"]["name"]
+        role = WAR_ROOM_PARTICIPANTS["super_agent"]["role"]
+        reply_text = ""
+
+        try:
+            import teamilyClient
+            geo_client = teamilyClient.TeamilyGeoAClient(
+                endpoint=self.node_configs.get("teamily_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT,
+                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID
+            )
+        except Exception as import_err:
+            geo_client = None
+            init_err = str(import_err)
+
+        if not geo_client or not geo_client.server_key:
+            verified = False
+            latency_ms = None
+            reply_text = "canal NO DISPONIBLE: Credencial de autenticación de Teamily no configurada (TEAMILEY_SERVER_KEY requerida)."
+        else:
+            prompt_input = (
+                f"[Cuarto de Guerra Mrs. Pets — Coordinación Operativa & Enjambre]\n"
+                f"Planteamiento / Consulta recibida de Dirección General:\n{problem_description}\n\n"
+                f"Favor emitir análisis operativo, estado de coordinación del enjambre y acciones del equipo."
+            )
+            req = teamilyClient.TeamilyGeoARequest(
+                input=prompt_input,
+                wait=True,
+                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                is_customer=False
+            )
+            try:
+                resp_obj = geo_client.send_message(req)
+                if resp_obj.success and resp_obj.response_text:
+                    verified = True
+                    latency_ms = int(resp_obj.latency_ms) if resp_obj.latency_ms is not None else None
+                    reply_text = resp_obj.response_text
+                else:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: No se pudo contactar al agente Teamily ({resp_obj.error or 'Respuesta vacía o error HTTP'})."
+            except Exception as call_err:
+                verified = False
+                latency_ms = None
+                reply_text = f"canal NO DISPONIBLE: Fallo al conectar con Teamily ({str(call_err)})."
+
         if "teamly" in self.nodes:
-            self.nodes["teamly"]["ping_ms"] = elapsed_ms
+            self.nodes["teamly"]["ping_ms"] = latency_ms
             self.nodes["teamly"]["last_ping"] = now_iso
-            self.nodes["teamly"]["status"] = "ESTABLE"
-            self.nodes["teamly"]["state_desc"] = f"● Coordinación operativa nominal ({elapsed_ms}ms)"
+            if verified:
+                self.nodes["teamly"]["status"] = "ESTABLE"
+                self.nodes["teamly"]["state_desc"] = f"● Coordinación operativa nominal ({latency_ms}ms)"
+            else:
+                self.nodes["teamly"]["status"] = "DEGRADADO"
+                self.nodes["teamly"]["state_desc"] = "● Canal NO DISPONIBLE (Fallo de conectividad o credencial ausente)"
 
         sa_msg = {
             "id": msg_id,
             "channel_id": "channel_super_agent",
             "sender_id": "super_agent",
-            "sender": WAR_ROOM_PARTICIPANTS["super_agent"]["name"],
-            "role": WAR_ROOM_PARTICIPANTS["super_agent"]["role"],
-            "message": reply,
+            "sender": sender,
+            "role": role,
+            "message": reply_text,
             "timestamp": now_iso,
             "node_id": "teamly",
-            "verified": True,
-            "latency_ms": elapsed_ms
+            "verified": verified,
+            "latency_ms": latency_ms
         }
         return sa_msg
 
@@ -1471,6 +1628,122 @@ class WarRoomEngine:
         }
         return g_msg
 
+    def generate_make_evaluation(
+        self,
+        problem_description: str,
+        sender: str = "Mrs. PETS CORP",
+        target_node_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Despacha en vivo el mensaje de la Sala de Conversación hacia el webhook
+        de Make.com configurado y registra la respuesta real devuelta por el escenario.
+        
+        Mide latencia real (ms) y verifica honestamente la recepción HTTP 200/201/202.
+        Si Make.com no responde o falla, reporta verified=False y latency_ms=None.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        msg_id = f"MSG-{secrets.token_hex(4)}"
+
+        target_url = (
+            self.node_configs.get("make_webhook_url")
+            or os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
+            or os.environ.get("MAKE_WEBHOOK_URL")
+            or self.node_configs.get("make_fallback_url")
+            or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        ).strip()
+
+        verified = False
+        latency_ms: Optional[int] = None
+        reply_text = ""
+        http_code = 0
+
+        payload = {
+            "event": "war_room_chat_message",
+            "source": "Cuarto de Guerra Mrs. Pets",
+            "sender": sender,
+            "role": "Dirección General & Mando Operativo",
+            "message": problem_description,
+            "text": problem_description,
+            "target_node": target_node_id or "make",
+            "channel_id": "channel_make",
+            "timestamp": now_iso
+        }
+        req_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+        t0 = time.time()
+        try:
+            make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "User-Agent": "MrsPets-WarRoom-Chat/2.0"
+            }
+            if make_key:
+                headers["x-make-apikey"] = make_key
+                headers["Authorization"] = f"Bearer {make_key}"
+
+            req = urllib.request.Request(
+                target_url,
+                data=req_data,
+                headers=headers,
+                method="POST"
+            )
+            ctx_ssl = ssl.create_default_context()
+            ctx_ssl.check_hostname = False
+            ctx_ssl.verify_mode = ssl.CERT_NONE
+
+            with urllib.request.urlopen(req, timeout=8.0, context=ctx_ssl) as resp:
+                elapsed_ms = int((time.time() - t0) * 1000)
+                http_code = resp.status
+                resp_text = resp.read().decode("utf-8", errors="ignore").strip()
+                if http_code in (200, 201, 202):
+                    verified = True
+                    latency_ms = elapsed_ms
+                    if resp_text and resp_text.lower() not in ("accepted", "ok"):
+                        reply_text = f"🔗 Make.com ({http_code} OK &bull; {elapsed_ms}ms): {resp_text}"
+                    else:
+                        reply_text = f"🔗 Webhook Make.com confirmó recepción ({resp_text or 'Accepted'}). Latencia: {elapsed_ms}ms. Escenario disparado correctamente."
+                else:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {http_code}: {resp_text}"
+        except urllib.error.HTTPError as he:
+            elapsed_ms = int((time.time() - t0) * 1000)
+            verified = False
+            latency_ms = None
+            err_body = ""
+            try:
+                err_body = he.read().decode("utf-8", errors="ignore").strip()
+            except Exception:
+                pass
+            reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {he.code} {err_body}".strip()
+        except Exception as exc:
+            verified = False
+            latency_ms = None
+            reply_text = f"canal NO DISPONIBLE: Error de conexión con Make.com ({str(exc)})"
+
+        # Actualizar telemetría del nodo make
+        if "make" in self.nodes:
+            self.nodes["make"]["ping_ms"] = latency_ms
+            self.nodes["make"]["last_ping"] = now_iso
+            self.nodes["make"]["status"] = "ESTABLE" if verified else "ALERTA"
+            self.nodes["make"]["state_desc"] = (
+                f"● Enlace Make.com verificado ({latency_ms}ms)" if verified else f"⚠️ Despacho fallido: {reply_text}"
+            )
+
+        make_msg = {
+            "id": msg_id,
+            "channel_id": "channel_make",
+            "sender_id": "make",
+            "sender": WAR_ROOM_PARTICIPANTS["make"]["name"],
+            "role": WAR_ROOM_PARTICIPANTS["make"]["role"],
+            "message": reply_text,
+            "timestamp": now_iso,
+            "node_id": "make",
+            "verified": verified,
+            "latency_ms": latency_ms
+        }
+        return make_msg
+
     def process_chat(
         self,
         sender: str,
@@ -1510,7 +1783,7 @@ class WarRoomEngine:
 
         # Si Mrs. PETS CORP escribe desde la UI visualizando el canal de una IA,
         # asegurar que su mensaje se registre en su canal legítimo ('channel_mrspets') con la IA como destinataria
-        if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini"]:
+        if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini", "channel_make"]:
             if not target_node_id or target_node_id == "gemini":
                 target_node_id = clean_channel_id.replace("channel_", "")
             clean_channel_id = "channel_mrspets"
@@ -1554,50 +1827,58 @@ class WarRoomEngine:
 
         # Si el emisor es Mrs. PETS CORP planteando un tema en la sala:
         if clean_sender_id == "mrspets":
-            # Si se reporta una falla ("problema", "falla", "no conversa", "alerta", "incidencia"), abrir incidencia en Cuadro de Fallas
-            has_issue = any(k in msg_lower for k in [
-                "problema", "falla", "no conversa", "no responde", "error", "caído", "caido", "timeout", "leia", "make", "alerta", "incidencia"
-            ])
-            if has_issue:
-                target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
-                if not self.active_incidents:
-                    self.trigger_incident(
-                        service=target_service,
-                        title=f"Reporte en Canal '{clean_channel_id}': {message[:50]}...",
-                        error_code="REPORTED_USER_INCIDENT",
-                        details={
-                            "reported_by": sender,
-                            "report_text": message,
-                            "component": target_service,
-                            "status": "ANOMALIA_DETECTADA",
-                            "recommendation": "Conmutación a canal secundario y purga de cola"
-                        },
-                        affected_nodes=["make", "antigravity", "teamly"]
-                    )
-                    # Incorporar la alerta crítica generada por el monitor del sistema a las respuestas de la sala
-                    if self.chat_history and self.chat_history[-1].get("sender_id") in ("make", "system"):
-                        responses.append(self.chat_history[-1])
+            # 1. Alertas automáticas (Pausadas por orden de Dirección General)
+            if not getattr(self, "alerts_paused", False):
+                has_issue = any(k in msg_lower for k in [
+                    "problema", "falla", "falló", "fallo", "no conversa", "no responde", "error", "caído", "caido", "timeout", "alerta crítica", "incidencia crítica"
+                ])
+                if has_issue:
+                    target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
+                    if not self.active_incidents:
+                        self.trigger_incident(
+                            service=target_service,
+                            title=f"Reporte en Canal '{clean_channel_id}': {message[:50]}...",
+                            error_code="REPORTED_USER_INCIDENT",
+                            details={
+                                "reported_by": sender,
+                                "report_text": message,
+                                "component": target_service,
+                                "status": "ANOMALIA_DETECTADA",
+                                "recommendation": "Conmutación a canal secundario y purga de cola"
+                            },
+                            affected_nodes=["make", "antigravity", "teamly"]
+                        )
+                        # Incorporar la alerta crítica generada por el monitor del sistema a las respuestas de la sala
+                        if self.chat_history and self.chat_history[-1].get("sender_id") in ("make", "system"):
+                            responses.append(self.chat_history[-1])
 
-            elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "adelante"]):
-                if self.active_incidents:
-                    inc_id = self.active_incidents[0]["incident_id"]
-                    self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
+                elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "adelante"]):
+                    if self.active_incidents:
+                        inc_id = self.active_incidents[0]["incident_id"]
+                        self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
 
-            # Deliberación autónoma en canales independientes:
-            # 1. Super Agent responde en channel_super_agent
-            sa_eval = self.generate_super_agent_evaluation(message)
-            self.chat_history.append(sa_eval)
-            responses.append(sa_eval)
+            # 2. Despacho EXCLUSIVO a Make.com (CANAL ACTIVO ENFOCADO)
+            make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id)
+            self.chat_history.append(make_eval)
+            responses.append(make_eval)
 
-            # 2. Google AntiGravity responde en channel_antigravity
-            ag_eval = self.generate_antigravity_evaluation(message)
-            self.chat_history.append(ag_eval)
-            responses.append(ag_eval)
+            # 3. Super Agent / Teamily (Pausado por orden de Dirección General)
+            if not getattr(self, "teamily_paused", False):
+                sa_eval = self.generate_super_agent_evaluation(message)
+                self.chat_history.append(sa_eval)
+                responses.append(sa_eval)
 
-            # 3. Gemini AI responde en channel_gemini (real o '[Gemini AI] no respondió' si falla)
-            gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
-            self.chat_history.append(gemini_eval)
-            responses.append(gemini_eval)
+            # 4. Google AntiGravity (Pausado por orden de Dirección General)
+            if not getattr(self, "gemini_paused", False):
+                ag_eval = self.generate_antigravity_evaluation(message)
+                self.chat_history.append(ag_eval)
+                responses.append(ag_eval)
+
+            # 5. Gemini AI (Pausado por orden de Dirección General)
+            if not getattr(self, "gemini_paused", False):
+                gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                self.chat_history.append(gemini_eval)
+                responses.append(gemini_eval)
 
         else:
             # Mensaje emitido directamente por un agente en su propio canal
@@ -1613,7 +1894,16 @@ class WarRoomEngine:
             "responses_count": len(responses)
         })
 
-        primary_reply = responses[-1]["message"] if responses else ""
+        if target_node_id == "make":
+            primary_reply = make_eval["message"] if 'make_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id in ("antigravity", "engineering"):
+            primary_reply = ag_eval["message"] if 'ag_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id in ("super_agent", "teamly"):
+            primary_reply = sa_eval["message"] if 'sa_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id == "gemini":
+            primary_reply = gemini_eval["message"] if 'gemini_eval' in locals() else (responses[-1]["message"] if responses else "")
+        else:
+            primary_reply = responses[-1]["message"] if responses else ""
         return {
             "status": "success",
             "channel_id": clean_channel_id,
@@ -1676,6 +1966,9 @@ class WarRoomEngine:
         Registra el evento de resolución en Google Sheets (Hoja 'Registro de Interacciones')
         a través de googleSheetsEngine y el webhook de Make.com.
         """
+        if getattr(self, "sheets_paused", False):
+            return {"status": "paused", "reason": "Sincronización a Google Sheets pausada por orden de Dirección General."}
+
         if not google_sheets_engine:
             return {"status": "skipped", "reason": "google_sheets_engine no disponible"}
             

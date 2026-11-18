@@ -20,17 +20,18 @@
       this.allActiveIncidents = [];
       this.nodes = {};
       this.chatMessages = [];
-      this.selectedTargetNode = 'gemini'; // Nodo destinatario activo para conversación directa
-      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'channel_mrspets', 'channel_super_agent', 'channel_antigravity', 'channel_gemini')
+      this.selectedTargetNode = 'make'; // Nodo destinatario activo: Make.com (Pausa en Gemini/Teamily)
+      this.selectedChannel = 'channel_make'; // Canal activo: Make.com Webhooks (Pausa en Gemini/Teamily)
       this.channelsList = [
         { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
         { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
-        { id: 'channel_super_agent', name: 'Super Agent (Teamly)', icon: '🤝' },
+        { id: 'channel_super_agent', name: 'Teamily (Charly / Super Agent)', icon: '🤝' },
         { id: 'channel_antigravity', name: 'Google AntiGravity', icon: '⚡' },
-        { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' }
+        { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' },
+        { id: 'channel_make', name: 'Make.com Webhooks', icon: '🔗' }
       ];
       this.nodeConfigs = {
-        make_webhook_url: 'https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a',
+        make_webhook_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         make_api_key: '',
         make_fallback_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
@@ -112,11 +113,11 @@
       if (!nodeId) return;
       this.selectedTargetNode = nodeId;
       const nodeLabels = {
-        harryt: 'Harryt & Dalybell (Dirección General)',
-        volturi: 'Charlie / Comité Volturi (Gobernanza & Ética)',
-        antigravity: 'Google AntiGravity (Ingeniería & Código)',
-        make: 'Make.com (Webhooks & Flujos)',
-        teamly: 'Super Agent / Teamly (Operaciones & Agentes)'
+        harryt: 'Mrs. PETS CORP (Dirección General)',
+        gemini: 'Gemini AI (Razonamiento & Causa Raíz)',
+        antigravity: 'Google AntiGravity (Ingeniería Autónoma)',
+        make: 'Make.com (Webhooks & Omnicanalidad)',
+        teamly: 'Charly / Super Agent (Teamily Operaciones)'
       };
       const label = nodeLabels[nodeId] || nodeId.toUpperCase();
 
@@ -785,7 +786,7 @@
         { id: 'gemini', name: 'Gemini AI', icon: '✨', role: 'Razonamiento Multimodal', desc: 'Diagnóstico cognitivo y causa raíz' },
         { id: 'antigravity', name: 'Google AntiGravity', icon: '⚡', role: 'Ingeniería Autónoma', desc: 'Diagnóstico y resiliencia de endpoints' },
         { id: 'make', name: 'Make.com', icon: '🔗', role: 'Webhooks & Omnicanalidad', desc: 'Flujos Make, POS y WhatsApp' },
-        { id: 'teamly', name: 'Super Agent (Teamly)', icon: '🤝', role: 'Coordinación Operativa', desc: 'Enjambre de agentes y tableros' }
+        { id: 'teamly', name: 'Charly / Super Agent (Teamily)', icon: '🤝', role: 'Coordinación Operativa', desc: 'Canal vivo Teamily (Agente GEO-A: Charly)' }
       ];
 
       const nodesHtml = nodesList.map(item => {
@@ -931,6 +932,19 @@
 
       return `
         <div class="wr-chat-container">
+          <!-- AVISO DE PAUSA OPERATIVA -->
+          <div style="padding:10px 16px; background:linear-gradient(135deg, rgba(30,58,138,0.35), rgba(15,23,42,0.8)); border-bottom:1.5px solid rgba(59,130,246,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">⏸️</span>
+              <span style="font-size:0.76rem; color:#93C5FD; font-weight:700;">
+                <strong>Pausa Operativa Activa:</strong> Gemini IA, Teamily, Google Sheets y Alertas en pausa.
+              </span>
+            </div>
+            <span style="background:rgba(16,185,129,0.25); border:1px solid #10B981; color:#34D399; font-weight:800; font-size:0.7rem; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
+              <span>🎯</span> ENFOQUE EXCLUSIVO: MAKE.COM WEBHOOK
+            </span>
+          </div>
+
           <!-- 1. BARRA DE NAVEGACIÓN DE CANALES SEPARADOS -->
           <div style="padding:10px 16px; background:#0B0F19; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; overflow-x:auto;">
             <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase; white-space:nowrap;">Canales:</span>
@@ -982,11 +996,11 @@
             <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('antigravity'); window.warRoomEngine.quickReportIssue('AntiGravity: ¿Cuál es la versión actual del backend FastAPI, arquitectura de rutas y estado de despliegue en Render?')">
               ⚡ Diagnóstico AntiGravity
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('volturi'); window.warRoomEngine.quickReportIssue('Comité Volturi: Solicito dictamen ético sobre riesgo de hotfixes y endpoints de integración.')">
-              🏛️ Dictamen Volturi
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('gemini'); window.warRoomEngine.quickReportIssue('Gemini AI: Análisis cognitivo de causa raíz del estado actual del sistema.')">
+              ✨ Causa Raíz Gemini
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('make'); window.warRoomEngine.quickReportIssue('Make.com: Reporta estado de enlaces de webhooks, buffers y última confirmación HTTP 200.')">
-              🔗 Enlace Make
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('make'); window.warRoomEngine.quickReportIssue('prueba')">
+              🔗 Enlace Make (prueba)
             </button>
             <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('teamly'); window.warRoomEngine.quickReportIssue('Teamly: Estado del enjambre de agentes y tablero operativo en curso.')">
               🤝 Estado Teamly
@@ -1142,6 +1156,28 @@
       this.chatMessages.push(optimisticMsg);
       if (input) input.value = '';
       this.renderChatFeedOnly();
+
+      // Despacho directo y complementario desde el navegador hacia Make.com (modo no-cors)
+      // Garantiza que cuando el usuario escriba en la sala de conversación, Make.com reciba el evento en vivo desde el cliente
+      const makeTargetUrl = (this.nodeConfigs && this.nodeConfigs.make_webhook_url) || 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
+      if (makeTargetUrl && makeTargetUrl.startsWith('https://hook.')) {
+        try {
+          fetch(makeTargetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'war_room_chat_message',
+              source: 'Cuarto de Guerra Mrs. Pets (Sala de Conversación)',
+              sender: 'Mrs. PETS CORP',
+              message: text,
+              target_node: targetNode,
+              channel: activeChannel,
+              timestamp: new Date().toISOString()
+            }),
+            mode: 'no-cors'
+          }).catch(() => {});
+        } catch (_) {}
+      }
 
       try {
         const resp = await fetch('/api/v1/war-room/chat', {
@@ -2712,29 +2748,30 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Modelo vigente de alta velocidad y razonamiento para el War Room.</div>
             </div>
 
-            <!-- TEAMLY (ENJAMBRE DE AGENTES) -->
+            <!-- TEAMLY (ENJAMBRE DE AGENTES & CHARLY) -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamly / Elías (Agentes Autónomos):</label>
-                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">ℹ️ Sin API REST directa</span>
+                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamily (Charly / GEO-A Endpoint):</label>
+                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">—</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" readonly value="Modalidad: Asíncrono vía Webhooks de Make.com" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
-                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', '')" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
-                  ⚡ Info
+                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', document.getElementById('wr-cfg-teamly').value)" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
+                  ⚡ Ping
                 </button>
               </div>
-              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Teamily opera mediante flujos Make; no expone API pública de orquestación por espacio.</div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Canal REST directo con agente Charly (GEO-A) en Teamily.</div>
             </div>
 
             <!-- ANTIGRAVITY ENDPOINT -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#34D399;">⚡ Google AntiGravity Endpoint:</label>
-                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● 1ms In-Process</span>
+                <!-- B1: Latencia no inventada. Se muestra '—' hasta que haya medición real -->
+                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#94A3B8; font-weight:700;">—</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || '/api/v1/war-room/execute-patch')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('antigravity', document.getElementById('wr-cfg-antigravity').value)" style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>

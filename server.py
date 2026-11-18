@@ -1706,9 +1706,9 @@ async def war_room_execute_patch(request: Request):
     qp_token = str(request.query_params.get("api_key") or request.query_params.get("token") or "").strip()
     provided_token = bearer_token or api_key_header or qp_token or str(body.get("token") or body.get("api_key") or "").strip()
     authorized_by_field = str(body.get("authorized_by") or body.get("operator") or "").strip()
+    # B4: Exigir token de autorización estricto siempre. authorized_by es un dato de auditoría, NUNCA una credencial.
     is_valid = bool(
-        (provided_token and (provided_token == WAR_ROOM_API_KEY or provided_token == "mrspets_warroom_admin_key_2026"))
-        or bool(authorized_by_field)
+        provided_token and (provided_token == WAR_ROOM_API_KEY or provided_token == "mrspets_warroom_admin_key_2026")
     )
 
     if is_valid:
@@ -1723,9 +1723,10 @@ async def war_room_execute_patch(request: Request):
             except Exception:
                 pass
 
+        # B5: Declarar con honestidad que se ejecutó el script local de contingencia
         return {
             "status": "success",
-            "message": "Parche ejecutado y verificado por AntiGravity. Ecosistema restablecido.",
+            "message": f"Parche de contingencia ejecutado en servidor. Autorizado por: {operator}.",
             "authenticated": True,
             "auth_mode": "API_KEY",
             "incident": {

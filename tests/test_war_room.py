@@ -15,6 +15,7 @@ import unittest
 import json
 import urllib.request
 import urllib.error
+from unittest.mock import patch, MagicMock
 
 # Agregar rutas locales
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -24,9 +25,15 @@ from warRoomEngine import war_room_engine, is_authorized_war_room_admin
 
 class TestWarRoomEngine(unittest.TestCase):
     def setUp(self):
-        # Asegurar estado base limpio
+        # Asegurar estado base limpio para tests
         war_room_engine.status = "ESTABLE"
         war_room_engine.active_incidents = []
+        war_room_engine.alerts_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        war_room_engine.sheets_paused = False
+        for nid in war_room_engine.nodes:
+            war_room_engine.nodes[nid]["status"] = "ESTABLE"
 
     def test_01_five_nodes_initialized(self):
         status = war_room_engine.get_status()
@@ -145,19 +152,27 @@ class TestWarRoomEngine(unittest.TestCase):
         status = war_room_engine.get_status()
         recent_messages = status["chat_messages"][-10:]
 
-        # Verificar AntiGravity en channel_antigravity
+        # Verificar AntiGravity en channel_antigravity (B2 & Regla de Honestidad)
         ag_msgs = [m for m in recent_messages if m.get("sender_id") == "antigravity"]
         self.assertTrue(len(ag_msgs) > 0, "AntiGravity debe haber respondido en su canal")
         self.assertEqual(ag_msgs[-1]["channel_id"], "channel_antigravity")
-        self.assertTrue(ag_msgs[-1]["verified"])
-        self.assertEqual(ag_msgs[-1]["sender"], "Google AntiGravity")
+        self.assertIn(ag_msgs[-1]["sender"], ["Charly (Teamily GEO-A)", "Google AntiGravity (Gemini AI)", "Google AntiGravity"])
+        if ag_msgs[-1]["verified"]:
+            self.assertIsNotNone(ag_msgs[-1]["latency_ms"])
+        else:
+            self.assertIsNone(ag_msgs[-1]["latency_ms"])
+            self.assertIn("canal NO DISPONIBLE", ag_msgs[-1]["message"])
 
-        # Verificar Super Agent en channel_super_agent
+        # Verificar Super Agent (Teamily) en channel_super_agent (Voz Propia y Regla de Honestidad)
         sa_msgs = [m for m in recent_messages if m.get("sender_id") == "super_agent"]
         self.assertTrue(len(sa_msgs) > 0, "Super Agent debe haber respondido en su canal")
         self.assertEqual(sa_msgs[-1]["channel_id"], "channel_super_agent")
-        self.assertTrue(sa_msgs[-1]["verified"])
-        self.assertEqual(sa_msgs[-1]["sender"], "Super Agent (Teamly)")
+        self.assertIn(sa_msgs[-1]["sender"], ["Charly / Super Agent (Teamily)", "Charly (Teamily GEO-A)", "Super Agent (Teamly)"])
+        if sa_msgs[-1]["verified"]:
+            self.assertIsNotNone(sa_msgs[-1]["latency_ms"])
+        else:
+            self.assertIsNone(sa_msgs[-1]["latency_ms"])
+            self.assertIn("canal NO DISPONIBLE", sa_msgs[-1]["message"])
 
         # Verificar Gemini en channel_gemini
         gem_msgs = [m for m in recent_messages if m.get("sender_id") == "gemini"]
@@ -292,6 +307,98 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertEqual(res["sender_id"], "mrspets")
         self.assertTrue(res["verified"])
         self.assertGreaterEqual(len(res["responses"]), 3)
+
+    @patch("urllib.request.urlopen")
+    def test_11_chat_with_make_node_live_dispatch(self, mock_urlopen):
+        """Verifica que al conversar con el nodo Make.com en la Sala de Chat, se despache un POST real con el mensaje."""
+        # 1. Simular respuesta HTTP 200 de Make.com
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"Accepted"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        # 2. Despachar mensaje de chat hacia Make.com
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="esto es una prueba para make",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertTrue(res["verified"])
+        
+        # Verificar que Make.com recibió la llamada HTTP POST entre las llamadas realizadas
+        mock_urlopen.assert_called()
+        make_calls = [c for c in mock_urlopen.call_args_list if hasattr(c[0][0], "full_url") and "https://hook.us2.make.com" in c[0][0].full_url]
+        self.assertGreaterEqual(len(make_calls), 1, "Debe haberse realizado un POST HTTP a Make.com")
+        req_obj = make_calls[0][0][0]
+        self.assertEqual(req_obj.get_method(), "POST")
+        req_body = json.loads(req_obj.data.decode("utf-8"))
+        self.assertEqual(req_body["message"], "esto es una prueba para make")
+        self.assertEqual(req_body["target_node"], "make")
+
+        # Verificar respuesta de Make en la sala
+        make_replies = [r for r in res["responses"] if r["sender_id"] == "make"]
+        self.assertEqual(len(make_replies), 1)
+        self.assertTrue(make_replies[0]["verified"])
+        self.assertIsNotNone(make_replies[0]["latency_ms"])
+        self.assertIn("Accepted", make_replies[0]["message"])
+        self.assertIn("Accepted", res["reply"])
+
+        # 3. Probar canal caído / error de Make.com
+        mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
+        res_fail = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="segunda prueba make offline",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        fail_replies = [r for r in res_fail["responses"] if r["sender_id"] == "make"]
+        self.assertEqual(len(fail_replies), 1)
+        self.assertFalse(fail_replies[0]["verified"])
+        self.assertIsNone(fail_replies[0]["latency_ms"])
+        self.assertIn("canal NO DISPONIBLE", fail_replies[0]["message"])
+
+    @patch("urllib.request.urlopen")
+    def test_12_operational_pause_mode(self, mock_urlopen):
+        """Verifica que en Modo Pausa no haya llamadas a Gemini, ni Teamily, ni Sheets, ni Alertas, y solo Make responda."""
+        war_room_engine.alerts_paused = True
+        war_room_engine.gemini_paused = True
+        war_room_engine.teamily_paused = True
+        war_room_engine.sheets_paused = True
+
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"Accepted"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        # 1. trigger_incident debe retornar paused sin abrir incidentes
+        inc = war_room_engine.trigger_incident()
+        self.assertEqual(inc["status"], "paused")
+
+        # 2. execute_patch debe retornar sheets_dispatch como paused
+        patch_res = war_room_engine.execute_patch(incident_id="INC-TEST", authorized_by="Harryt")
+        self.assertEqual(patch_res["sheets_dispatch"]["status"], "paused")
+
+        # 3. Chat: enviar mensaje solo genera respuesta de Make.com
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="prueba en modo pausa exclusiva make",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(len(res["responses"]), 1)
+        self.assertEqual(res["responses"][0]["sender_id"], "make")
+        self.assertIn("Make.com", res["responses"][0]["sender"])
 
 if __name__ == "__main__":
     unittest.main()
