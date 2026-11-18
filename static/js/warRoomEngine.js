@@ -20,8 +20,8 @@
       this.allActiveIncidents = [];
       this.nodes = {};
       this.chatMessages = [];
-      this.selectedTargetNode = 'gemini'; // Nodo destinatario activo para conversación directa
-      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'channel_mrspets', 'channel_super_agent', 'channel_antigravity', 'channel_gemini', 'channel_make')
+      this.selectedTargetNode = 'make'; // Nodo destinatario activo: Make.com (Pausa en Gemini/Teamily)
+      this.selectedChannel = 'channel_make'; // Canal activo: Make.com Webhooks (Pausa en Gemini/Teamily)
       this.channelsList = [
         { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
         { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
@@ -932,6 +932,19 @@
 
       return `
         <div class="wr-chat-container">
+          <!-- AVISO DE PAUSA OPERATIVA -->
+          <div style="padding:10px 16px; background:linear-gradient(135deg, rgba(30,58,138,0.35), rgba(15,23,42,0.8)); border-bottom:1.5px solid rgba(59,130,246,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">⏸️</span>
+              <span style="font-size:0.76rem; color:#93C5FD; font-weight:700;">
+                <strong>Pausa Operativa Activa:</strong> Gemini IA, Teamily, Google Sheets y Alertas en pausa.
+              </span>
+            </div>
+            <span style="background:rgba(16,185,129,0.25); border:1px solid #10B981; color:#34D399; font-weight:800; font-size:0.7rem; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
+              <span>🎯</span> ENFOQUE EXCLUSIVO: MAKE.COM WEBHOOK
+            </span>
+          </div>
+
           <!-- 1. BARRA DE NAVEGACIÓN DE CANALES SEPARADOS -->
           <div style="padding:10px 16px; background:#0B0F19; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; overflow-x:auto;">
             <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase; white-space:nowrap;">Canales:</span>

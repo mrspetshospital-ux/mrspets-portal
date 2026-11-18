@@ -397,6 +397,12 @@ class WarRoomEngine:
             }
         ]
         
+        # Modos de Pausa Operativa solicitados por Dirección General
+        self.gemini_paused: bool = True     # Pausa total de inferencias Gemini AI
+        self.teamily_paused: bool = True    # Pausa de tablero/agentes Teamily
+        self.sheets_paused: bool = True     # Pausa de sincronización a Google Sheets / tablas
+        self.alerts_paused: bool = True     # Pausa de alarmas automáticas e incidencias críticas
+
         # Inicializar nodos del sistema en Cuarto de Guerra (Volturi excluido: es canal bilateral)
         self.nodes = {
             "harryt": {
@@ -415,10 +421,10 @@ class WarRoomEngine:
                 "name": "Google AntiGravity",
                 "title": "Ingeniería de Software & Resiliencia Autónoma",
                 "role": "Ingeniería Autónoma",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.gemini_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "⚡",
-                "state_desc": "Vigilancia de endpoints, autocuración y orquestación de parches.",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.gemini_paused else "Vigilancia de endpoints, autocuración y orquestación de parches.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "gemini": {
@@ -426,10 +432,10 @@ class WarRoomEngine:
                 "name": "Gemini AI",
                 "title": "Inteligencia Artificial Central & Razonamiento",
                 "role": "Diagnóstico Central",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.gemini_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "✨",
-                "state_desc": "Inferencia multimodal Gemini activa y enlazada.",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.gemini_paused else "Inferencia multimodal Gemini activa y enlazada.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "make": {
@@ -440,7 +446,7 @@ class WarRoomEngine:
                 "status": "ESTABLE",
                 "ping_ms": None,
                 "icon": "🔗",
-                "state_desc": "Escuchando webhooks (POS, WhatsApp Cloud API, Google Sheets).",
+                "state_desc": "🎯 CANAL ACTIVO: Escuchando y despachando al Webhook de Make.com.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "teamly": {
@@ -448,10 +454,10 @@ class WarRoomEngine:
                 "name": "Charly / Super Agent (Teamily)",
                 "title": "Asistente Ejecutivo & Coordinación Operativa",
                 "role": "Coordinación Operativa (Teamily)",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.teamily_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "🤝",
-                "state_desc": "Canal vivo Teamily (Agente GEO-A: Charly en Board 5803df5a...).",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.teamily_paused else "Coordinación operativa de agentes en Teamily.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             }
         }
@@ -858,6 +864,16 @@ class WarRoomEngine:
         """
         Activa un estado de ALERTA con paquete JSON estructurado de diagnóstico.
         """
+        if getattr(self, "alerts_paused", False):
+            return {
+                "status": "paused",
+                "message": "Sistema de alertas automáticas en pausa por orden de Dirección General.",
+                "incident_id": f"INC-PAUSED-{secrets.token_hex(2).upper()}",
+                "severity": "PAUSADO",
+                "structured_diagnostic": {"status": "PAUSADO", "http_status": 200},
+                "proposed_solution": {"action_title": "Operaciones en Pausa", "safety_verified": True}
+            }
+
         now = datetime.now(timezone.utc)
         incident_id = f"INC-{now.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
         affected = affected_nodes or ["make", "antigravity"]
@@ -1811,55 +1827,58 @@ class WarRoomEngine:
 
         # Si el emisor es Mrs. PETS CORP planteando un tema en la sala:
         if clean_sender_id == "mrspets":
-            # Si se reporta una falla ("problema", "falla", "caído", "error"), abrir incidencia en Cuadro de Fallas
-            has_issue = any(k in msg_lower for k in [
-                "problema", "falla", "falló", "fallo", "no conversa", "no responde", "error", "caído", "caido", "timeout", "alerta crítica", "incidencia crítica"
-            ])
-            if has_issue:
-                target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
-                if not self.active_incidents:
-                    self.trigger_incident(
-                        service=target_service,
-                        title=f"Reporte en Canal '{clean_channel_id}': {message[:50]}...",
-                        error_code="REPORTED_USER_INCIDENT",
-                        details={
-                            "reported_by": sender,
-                            "report_text": message,
-                            "component": target_service,
-                            "status": "ANOMALIA_DETECTADA",
-                            "recommendation": "Conmutación a canal secundario y purga de cola"
-                        },
-                        affected_nodes=["make", "antigravity", "teamly"]
-                    )
-                    # Incorporar la alerta crítica generada por el monitor del sistema a las respuestas de la sala
-                    if self.chat_history and self.chat_history[-1].get("sender_id") in ("make", "system"):
-                        responses.append(self.chat_history[-1])
+            # 1. Alertas automáticas (Pausadas por orden de Dirección General)
+            if not getattr(self, "alerts_paused", False):
+                has_issue = any(k in msg_lower for k in [
+                    "problema", "falla", "falló", "fallo", "no conversa", "no responde", "error", "caído", "caido", "timeout", "alerta crítica", "incidencia crítica"
+                ])
+                if has_issue:
+                    target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
+                    if not self.active_incidents:
+                        self.trigger_incident(
+                            service=target_service,
+                            title=f"Reporte en Canal '{clean_channel_id}': {message[:50]}...",
+                            error_code="REPORTED_USER_INCIDENT",
+                            details={
+                                "reported_by": sender,
+                                "report_text": message,
+                                "component": target_service,
+                                "status": "ANOMALIA_DETECTADA",
+                                "recommendation": "Conmutación a canal secundario y purga de cola"
+                            },
+                            affected_nodes=["make", "antigravity", "teamly"]
+                        )
+                        # Incorporar la alerta crítica generada por el monitor del sistema a las respuestas de la sala
+                        if self.chat_history and self.chat_history[-1].get("sender_id") in ("make", "system"):
+                            responses.append(self.chat_history[-1])
 
-            elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "adelante"]):
-                if self.active_incidents:
-                    inc_id = self.active_incidents[0]["incident_id"]
-                    self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
+                elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "adelante"]):
+                    if self.active_incidents:
+                        inc_id = self.active_incidents[0]["incident_id"]
+                        self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
 
-            # Deliberación autónoma en canales independientes (5 Nodos Activos):
-            # 1. Make.com Webhook Omnicanal responde en channel_make (despacho real en vivo)
+            # 2. Despacho EXCLUSIVO a Make.com (CANAL ACTIVO ENFOCADO)
             make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id)
             self.chat_history.append(make_eval)
             responses.append(make_eval)
 
-            # 2. Super Agent responde en channel_super_agent
-            sa_eval = self.generate_super_agent_evaluation(message)
-            self.chat_history.append(sa_eval)
-            responses.append(sa_eval)
+            # 3. Super Agent / Teamily (Pausado por orden de Dirección General)
+            if not getattr(self, "teamily_paused", False):
+                sa_eval = self.generate_super_agent_evaluation(message)
+                self.chat_history.append(sa_eval)
+                responses.append(sa_eval)
 
-            # 3. Google AntiGravity responde en channel_antigravity
-            ag_eval = self.generate_antigravity_evaluation(message)
-            self.chat_history.append(ag_eval)
-            responses.append(ag_eval)
+            # 4. Google AntiGravity (Pausado por orden de Dirección General)
+            if not getattr(self, "gemini_paused", False):
+                ag_eval = self.generate_antigravity_evaluation(message)
+                self.chat_history.append(ag_eval)
+                responses.append(ag_eval)
 
-            # 4. Gemini AI responde en channel_gemini (real o '[Gemini AI] no respondió' si falla)
-            gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
-            self.chat_history.append(gemini_eval)
-            responses.append(gemini_eval)
+            # 5. Gemini AI (Pausado por orden de Dirección General)
+            if not getattr(self, "gemini_paused", False):
+                gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                self.chat_history.append(gemini_eval)
+                responses.append(gemini_eval)
 
         else:
             # Mensaje emitido directamente por un agente en su propio canal
@@ -1947,6 +1966,9 @@ class WarRoomEngine:
         Registra el evento de resolución en Google Sheets (Hoja 'Registro de Interacciones')
         a través de googleSheetsEngine y el webhook de Make.com.
         """
+        if getattr(self, "sheets_paused", False):
+            return {"status": "paused", "reason": "Sincronización a Google Sheets pausada por orden de Dirección General."}
+
         if not google_sheets_engine:
             return {"status": "skipped", "reason": "google_sheets_engine no disponible"}
             

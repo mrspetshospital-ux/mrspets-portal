@@ -25,9 +25,15 @@ from warRoomEngine import war_room_engine, is_authorized_war_room_admin
 
 class TestWarRoomEngine(unittest.TestCase):
     def setUp(self):
-        # Asegurar estado base limpio
+        # Asegurar estado base limpio para tests
         war_room_engine.status = "ESTABLE"
         war_room_engine.active_incidents = []
+        war_room_engine.alerts_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        war_room_engine.sheets_paused = False
+        for nid in war_room_engine.nodes:
+            war_room_engine.nodes[nid]["status"] = "ESTABLE"
 
     def test_01_five_nodes_initialized(self):
         status = war_room_engine.get_status()
@@ -357,6 +363,42 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertFalse(fail_replies[0]["verified"])
         self.assertIsNone(fail_replies[0]["latency_ms"])
         self.assertIn("canal NO DISPONIBLE", fail_replies[0]["message"])
+
+    @patch("urllib.request.urlopen")
+    def test_12_operational_pause_mode(self, mock_urlopen):
+        """Verifica que en Modo Pausa no haya llamadas a Gemini, ni Teamily, ni Sheets, ni Alertas, y solo Make responda."""
+        war_room_engine.alerts_paused = True
+        war_room_engine.gemini_paused = True
+        war_room_engine.teamily_paused = True
+        war_room_engine.sheets_paused = True
+
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"Accepted"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        # 1. trigger_incident debe retornar paused sin abrir incidentes
+        inc = war_room_engine.trigger_incident()
+        self.assertEqual(inc["status"], "paused")
+
+        # 2. execute_patch debe retornar sheets_dispatch como paused
+        patch_res = war_room_engine.execute_patch(incident_id="INC-TEST", authorized_by="Harryt")
+        self.assertEqual(patch_res["sheets_dispatch"]["status"], "paused")
+
+        # 3. Chat: enviar mensaje solo genera respuesta de Make.com
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="prueba en modo pausa exclusiva make",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(len(res["responses"]), 1)
+        self.assertEqual(res["responses"][0]["sender_id"], "make")
+        self.assertIn("Make.com", res["responses"][0]["sender"])
 
 if __name__ == "__main__":
     unittest.main()
