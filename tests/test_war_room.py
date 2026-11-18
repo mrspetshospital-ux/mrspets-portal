@@ -278,5 +278,20 @@ class TestWarRoomEngine(unittest.TestCase):
         if cfg_unmasked.get("gemini_api_key"):
             self.assertEqual(cfg_unmasked["gemini_api_key"], war_room_engine.node_configs["gemini_api_key"])
 
+    def test_10_safe_channel_routing_for_mrspets(self):
+        """Verifica que los mensajes de Mrs. PETS CORP visualizando canales de IA se asignen a su canal legítimo y no se rechacen."""
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Alerta: verificando canal de AntiGravity",
+            channel_id="channel_antigravity",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(res["channel_id"], "channel_mrspets")
+        self.assertEqual(res["sender_id"], "mrspets")
+        self.assertTrue(res["verified"])
+        self.assertGreaterEqual(len(res["responses"]), 3)
+
 if __name__ == "__main__":
     unittest.main()

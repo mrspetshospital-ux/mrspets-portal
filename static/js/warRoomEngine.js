@@ -1010,10 +1010,14 @@
 
     getFormattedMessagesHtml() {
       const activeChannel = this.selectedChannel || 'deliberacion';
+      const cleanNode = activeChannel.replace('channel_', '');
       const channelMsgs = (this.chatMessages || []).filter(msg => {
         if (activeChannel === 'deliberacion') return true;
         const ch = msg.channel_id || 'deliberacion';
-        return ch === activeChannel;
+        if (ch === activeChannel) return true;
+        if (ch === 'deliberacion') return true;
+        if (msg.sender_id === 'mrspets' && (msg.target_node_id === cleanNode || msg.node_id === cleanNode)) return true;
+        return false;
       });
 
       if (!channelMsgs || channelMsgs.length === 0) {
@@ -1112,8 +1116,12 @@
       if (!text) return;
 
       const adminName = this.getAuthorizedAdminName() || 'Mrs. PETS CORP';
-      const targetNode = this.selectedTargetNode || 'gemini';
-      const activeChannel = (this.selectedChannel && this.selectedChannel !== 'deliberacion') ? this.selectedChannel : 'channel_mrspets';
+      let targetNode = this.selectedTargetNode || 'gemini';
+      if (this.selectedChannel && this.selectedChannel.startsWith('channel_') && this.selectedChannel !== 'channel_mrspets') {
+        targetNode = this.selectedChannel.replace('channel_', '');
+      }
+      // Mrs. PETS CORP siempre emite desde su canal legítimo: channel_mrspets (o sala deliberacion)
+      const activeChannel = (this.selectedChannel === 'deliberacion') ? 'deliberacion' : 'channel_mrspets';
 
       this.isSending = true;
 
@@ -1125,8 +1133,9 @@
         role: 'Dirección General & Mando Operativo',
         message: text,
         timestamp: new Date().toISOString(),
-        node_id: 'harryt',
+        node_id: 'mrspets',
         channel_id: 'channel_mrspets',
+        target_node_id: targetNode,
         verified: true,
         latency_ms: null
       };
@@ -1149,6 +1158,29 @@
         });
 
         const data = await resp.json();
+
+        // Control riguroso de errores o rechazos: mostrar de inmediato en la sala de conversación
+        if (!resp.ok || data.status === 'rejected' || data.status === 'error') {
+          const errText = data.message || data.error || `HTTP ${resp.status}: Error al emitir mensaje en el Cuarto de Guerra`;
+          this.chatMessages.push({
+            id: 'ERR-' + Date.now(),
+            sender: 'Sistema Cuarto de Guerra',
+            sender_id: 'system',
+            role: 'Control de Seguridad & Canales',
+            message: `⚠️ ${errText}`,
+            timestamp: new Date().toISOString(),
+            node_id: 'system',
+            channel_id: 'deliberacion',
+            verified: false,
+            latency_ms: null
+          });
+          this.renderChatFeedOnly();
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(errText, 'error');
+          }
+          return;
+        }
+
         // Incorporar las respuestas autónomas de cada canal independiente
         if (data && data.responses && Array.isArray(data.responses)) {
           data.responses.forEach(r => {
@@ -1166,6 +1198,19 @@
         setTimeout(() => this.fetchStatus(), 400);
       } catch (err) {
         console.warn('War Room Chat network error:', err);
+        this.chatMessages.push({
+          id: 'ERR-NET-' + Date.now(),
+          sender: 'Sistema Cuarto de Guerra',
+          sender_id: 'system',
+          role: 'Error de Red',
+          message: `🚨 Error de red al comunicar con el Cuarto de Guerra: ${err.message}`,
+          timestamp: new Date().toISOString(),
+          node_id: 'system',
+          channel_id: 'deliberacion',
+          verified: false,
+          latency_ms: null
+        });
+        this.renderChatFeedOnly();
       } finally {
         this.isSending = false;
       }
@@ -1793,6 +1838,9 @@
             const is401 = String(respBody).includes('401') || String(respBody).includes('Unauthorized');
             window.app.showToast(is401 ? '⚠️ Make respondió HTTP 401 Unauthorized (Webhook nuevo o desvinculado).' : '⚠️ No se pudo confirmar recepción en Make.com.', 'warning');
           }
+          // Subir la falla de inmediato a la sala de conversación del Cuarto de Guerra para deliberación
+          await this.sendChatMessage(`🚨 **Falla / Incidencia Detectada en Make.com:** [${selectedSource}] Make no confirmó recepción (${respBody}). Status: \`${selectedStatus}\` &bull; Telemetría: \`${telemetryText || desc}\`. Se abre discusión y deliberación en el Cuarto de Guerra.`);
+          await this.fetchStatus();
         }
       } catch (err) {
         if (confirmationArea) {
@@ -1802,6 +1850,8 @@
             </div>
           `;
         }
+        await this.sendChatMessage(`🚨 **Excepción al Despachar Incidencia a Make.com:** [${selectedSource}] Error de red: ${err.message}. Requiere deliberación de contingencia en el Cuarto de Guerra.`);
+        await this.fetchStatus();
       } finally {
         if (btn) {
           btn.disabled = false;

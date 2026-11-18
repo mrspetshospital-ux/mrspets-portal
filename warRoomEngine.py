@@ -95,6 +95,22 @@ WAR_ROOM_PARTICIPANTS = {
         "role": "Razonamiento Multimodal & Diagnóstico Central",
         "icon": "✨",
         "type": "ai_agent"
+    },
+    "guest": {
+        "sender_id": "guest",
+        "channel_id": "channel_mrspets",
+        "name": "Soporte Técnico Externo",
+        "role": "Especialista Invitado (Q-Vet)",
+        "icon": "🩺",
+        "type": "guest_specialist"
+    },
+    "system": {
+        "sender_id": "system",
+        "channel_id": "deliberacion",
+        "name": "Sistema Cuarto de Guerra",
+        "role": "Monitor Automático & Seguridad",
+        "icon": "🚨",
+        "type": "system_monitor"
     }
 }
 
@@ -155,6 +171,10 @@ def normalize_sender_id(sender_raw: Optional[str]) -> str:
         return "antigravity"
     if any(k in s for k in ["gemini", "google_gemini"]):
         return "gemini"
+    if any(k in s for k in ["soporte", "guest", "externo", "tecnico", "técnico", "q-vet", "qvet"]):
+        return "guest"
+    if any(k in s for k in ["sistema", "system", "monitor", "alerta", "vigilancia", "make"]):
+        return "system"
     if "volturi" in s:
         return "volturi"
     return s
@@ -187,6 +207,10 @@ def validate_channel_sender(channel_id: str, sender_id: str) -> tuple[bool, str]
     if clean_channel == "deliberacion":
         if clean_sender not in WAR_ROOM_PARTICIPANTS:
             return False, f"El emisor '{sender_id}' no es un participante reconocido del Cuarto de Guerra."
+        return True, "OK"
+
+    # Si es invitado externo o monitor del sistema publicando en canal operativo
+    if clean_sender in ("guest", "system"):
         return True, "OK"
 
     if clean_channel not in WAR_ROOM_CHANNELS:
@@ -1484,6 +1508,13 @@ class WarRoomEngine:
                 "verified": False
             }
 
+        # Si Mrs. PETS CORP escribe desde la UI visualizando el canal de una IA,
+        # asegurar que su mensaje se registre en su canal legítimo ('channel_mrspets') con la IA como destinataria
+        if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini"]:
+            if not target_node_id or target_node_id == "gemini":
+                target_node_id = clean_channel_id.replace("channel_", "")
+            clean_channel_id = "channel_mrspets"
+
         # Regla 2: Validación estricta de canal y emisor (nadie puede hablar por otro)
         is_valid, err_msg = validate_channel_sender(clean_channel_id, clean_sender_id)
         if not is_valid:
@@ -1512,6 +1543,7 @@ class WarRoomEngine:
             "timestamp": now_iso,
             "node_id": clean_sender_id,
             "channel_id": clean_channel_id,
+            "target_node_id": target_node_id or "deliberacion",
             "verified": True,
             "latency_ms": None
         }
@@ -1522,9 +1554,9 @@ class WarRoomEngine:
 
         # Si el emisor es Mrs. PETS CORP planteando un tema en la sala:
         if clean_sender_id == "mrspets":
-            # Si se reporta una falla ("problema", "falla", "no conversa"), abrir incidencia en Cuadro de Fallas
+            # Si se reporta una falla ("problema", "falla", "no conversa", "alerta", "incidencia"), abrir incidencia en Cuadro de Fallas
             has_issue = any(k in msg_lower for k in [
-                "problema", "falla", "no conversa", "no responde", "error", "caído", "caido", "timeout", "leia", "make"
+                "problema", "falla", "no conversa", "no responde", "error", "caído", "caido", "timeout", "leia", "make", "alerta", "incidencia"
             ])
             if has_issue:
                 target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
@@ -1542,6 +1574,9 @@ class WarRoomEngine:
                         },
                         affected_nodes=["make", "antigravity", "teamly"]
                     )
+                    # Incorporar la alerta crítica generada por el monitor del sistema a las respuestas de la sala
+                    if self.chat_history and self.chat_history[-1].get("sender_id") in ("make", "system"):
+                        responses.append(self.chat_history[-1])
 
             elif any(k in msg_lower for k in ["autorizo", "ejecutar", "parche", "resolver", "adelante"]):
                 if self.active_incidents:
