@@ -96,6 +96,14 @@ WAR_ROOM_PARTICIPANTS = {
         "icon": "✨",
         "type": "ai_agent"
     },
+    "make": {
+        "sender_id": "make",
+        "channel_id": "channel_make",
+        "name": "Make.com (Webhooks & Omnicanalidad)",
+        "role": "Pasarela de Automatización & Webhook Omnicanal",
+        "icon": "🔗",
+        "type": "automation_gateway"
+    },
     "guest": {
         "sender_id": "guest",
         "channel_id": "channel_mrspets",
@@ -146,6 +154,14 @@ WAR_ROOM_CHANNELS = {
         "participant": "Gemini AI",
         "role": "Razonamiento Multimodal & Diagnóstico Central",
         "icon": "✨"
+    },
+    "channel_make": {
+        "channel_id": "channel_make",
+        "name": "Canal Make.com Webhook Omnicanal",
+        "authorized_sender_id": "make",
+        "participant": "Make.com (Webhooks & Omnicanalidad)",
+        "role": "Pasarela de Automatización & Webhooks",
+        "icon": "🔗"
     }
 }
 
@@ -154,6 +170,7 @@ VALID_CHANNELS = {
     "channel_super_agent": "Canal Teamily (Charly / Super Agent)",
     "channel_antigravity": "Canal Google AntiGravity",
     "channel_gemini": "Canal Gemini AI",
+    "channel_make": "Canal Make.com (Webhooks & Omnicanalidad)",
     "deliberacion": "Sala Común de Deliberación (Vista General)"
 }
 DEFAULT_CHANNEL = "deliberacion"
@@ -173,7 +190,9 @@ def normalize_sender_id(sender_raw: Optional[str]) -> str:
         return "gemini"
     if any(k in s for k in ["soporte", "guest", "externo", "tecnico", "técnico", "q-vet", "qvet"]):
         return "guest"
-    if any(k in s for k in ["sistema", "system", "monitor", "alerta", "vigilancia", "make"]):
+    if any(k in s for k in ["make", "webhook"]):
+        return "make"
+    if any(k in s for k in ["sistema", "system", "monitor", "alerta", "vigilancia"]):
         return "system"
     if "volturi" in s:
         return "volturi"
@@ -192,6 +211,8 @@ def normalize_channel_id(channel_raw: Optional[str]) -> str:
         return "channel_antigravity"
     if any(k in c for k in ["gemini"]):
         return "channel_gemini"
+    if any(k in c for k in ["make", "webhook"]):
+        return "channel_make"
     if c in ("deliberacion", "general", "todos"):
         return "deliberacion"
     return c
@@ -337,7 +358,7 @@ class WarRoomEngine:
         self.node_configs: Dict[str, str] = {
             "make_webhook_url": os.environ.get(
                 "MAKE_WEBHOOK_URL_WAR_ROOM",
-                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a")
+                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
@@ -512,6 +533,8 @@ class WarRoomEngine:
                     msg_copy["channel_id"] = "channel_super_agent"
                 elif sid == "gemini":
                     msg_copy["channel_id"] = "channel_gemini"
+                elif sid == "make":
+                    msg_copy["channel_id"] = "channel_make"
                 else:
                     msg_copy["channel_id"] = DEFAULT_CHANNEL
 
@@ -1589,6 +1612,122 @@ class WarRoomEngine:
         }
         return g_msg
 
+    def generate_make_evaluation(
+        self,
+        problem_description: str,
+        sender: str = "Mrs. PETS CORP",
+        target_node_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Despacha en vivo el mensaje de la Sala de Conversación hacia el webhook
+        de Make.com configurado y registra la respuesta real devuelta por el escenario.
+        
+        Mide latencia real (ms) y verifica honestamente la recepción HTTP 200/201/202.
+        Si Make.com no responde o falla, reporta verified=False y latency_ms=None.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        msg_id = f"MSG-{secrets.token_hex(4)}"
+
+        target_url = (
+            self.node_configs.get("make_webhook_url")
+            or os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
+            or os.environ.get("MAKE_WEBHOOK_URL")
+            or self.node_configs.get("make_fallback_url")
+            or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        ).strip()
+
+        verified = False
+        latency_ms: Optional[int] = None
+        reply_text = ""
+        http_code = 0
+
+        payload = {
+            "event": "war_room_chat_message",
+            "source": "Cuarto de Guerra Mrs. Pets",
+            "sender": sender,
+            "role": "Dirección General & Mando Operativo",
+            "message": problem_description,
+            "text": problem_description,
+            "target_node": target_node_id or "make",
+            "channel_id": "channel_make",
+            "timestamp": now_iso
+        }
+        req_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+        t0 = time.time()
+        try:
+            make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "User-Agent": "MrsPets-WarRoom-Chat/2.0"
+            }
+            if make_key:
+                headers["x-make-apikey"] = make_key
+                headers["Authorization"] = f"Bearer {make_key}"
+
+            req = urllib.request.Request(
+                target_url,
+                data=req_data,
+                headers=headers,
+                method="POST"
+            )
+            ctx_ssl = ssl.create_default_context()
+            ctx_ssl.check_hostname = False
+            ctx_ssl.verify_mode = ssl.CERT_NONE
+
+            with urllib.request.urlopen(req, timeout=8.0, context=ctx_ssl) as resp:
+                elapsed_ms = int((time.time() - t0) * 1000)
+                http_code = resp.status
+                resp_text = resp.read().decode("utf-8", errors="ignore").strip()
+                if http_code in (200, 201, 202):
+                    verified = True
+                    latency_ms = elapsed_ms
+                    if resp_text and resp_text.lower() not in ("accepted", "ok"):
+                        reply_text = f"🔗 Make.com ({http_code} OK &bull; {elapsed_ms}ms): {resp_text}"
+                    else:
+                        reply_text = f"🔗 Webhook Make.com confirmó recepción ({resp_text or 'Accepted'}). Latencia: {elapsed_ms}ms. Escenario disparado correctamente."
+                else:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {http_code}: {resp_text}"
+        except urllib.error.HTTPError as he:
+            elapsed_ms = int((time.time() - t0) * 1000)
+            verified = False
+            latency_ms = None
+            err_body = ""
+            try:
+                err_body = he.read().decode("utf-8", errors="ignore").strip()
+            except Exception:
+                pass
+            reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {he.code} {err_body}".strip()
+        except Exception as exc:
+            verified = False
+            latency_ms = None
+            reply_text = f"canal NO DISPONIBLE: Error de conexión con Make.com ({str(exc)})"
+
+        # Actualizar telemetría del nodo make
+        if "make" in self.nodes:
+            self.nodes["make"]["ping_ms"] = latency_ms
+            self.nodes["make"]["last_ping"] = now_iso
+            self.nodes["make"]["status"] = "ESTABLE" if verified else "ALERTA"
+            self.nodes["make"]["state_desc"] = (
+                f"● Enlace Make.com verificado ({latency_ms}ms)" if verified else f"⚠️ Despacho fallido: {reply_text}"
+            )
+
+        make_msg = {
+            "id": msg_id,
+            "channel_id": "channel_make",
+            "sender_id": "make",
+            "sender": WAR_ROOM_PARTICIPANTS["make"]["name"],
+            "role": WAR_ROOM_PARTICIPANTS["make"]["role"],
+            "message": reply_text,
+            "timestamp": now_iso,
+            "node_id": "make",
+            "verified": verified,
+            "latency_ms": latency_ms
+        }
+        return make_msg
+
     def process_chat(
         self,
         sender: str,
@@ -1628,7 +1767,7 @@ class WarRoomEngine:
 
         # Si Mrs. PETS CORP escribe desde la UI visualizando el canal de una IA,
         # asegurar que su mensaje se registre en su canal legítimo ('channel_mrspets') con la IA como destinataria
-        if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini"]:
+        if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini", "channel_make"]:
             if not target_node_id or target_node_id == "gemini":
                 target_node_id = clean_channel_id.replace("channel_", "")
             clean_channel_id = "channel_mrspets"
@@ -1672,9 +1811,9 @@ class WarRoomEngine:
 
         # Si el emisor es Mrs. PETS CORP planteando un tema en la sala:
         if clean_sender_id == "mrspets":
-            # Si se reporta una falla ("problema", "falla", "no conversa", "alerta", "incidencia"), abrir incidencia en Cuadro de Fallas
+            # Si se reporta una falla ("problema", "falla", "caído", "error"), abrir incidencia en Cuadro de Fallas
             has_issue = any(k in msg_lower for k in [
-                "problema", "falla", "no conversa", "no responde", "error", "caído", "caido", "timeout", "leia", "make", "alerta", "incidencia"
+                "problema", "falla", "falló", "fallo", "no conversa", "no responde", "error", "caído", "caido", "timeout", "alerta crítica", "incidencia crítica"
             ])
             if has_issue:
                 target_service = "Leia Concierge & Teamily IA" if "leia" in msg_lower else "Make.com Webhooks"
@@ -1701,18 +1840,23 @@ class WarRoomEngine:
                     inc_id = self.active_incidents[0]["incident_id"]
                     self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
 
-            # Deliberación autónoma en canales independientes:
-            # 1. Super Agent responde en channel_super_agent
+            # Deliberación autónoma en canales independientes (5 Nodos Activos):
+            # 1. Make.com Webhook Omnicanal responde en channel_make (despacho real en vivo)
+            make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id)
+            self.chat_history.append(make_eval)
+            responses.append(make_eval)
+
+            # 2. Super Agent responde en channel_super_agent
             sa_eval = self.generate_super_agent_evaluation(message)
             self.chat_history.append(sa_eval)
             responses.append(sa_eval)
 
-            # 2. Google AntiGravity responde en channel_antigravity
+            # 3. Google AntiGravity responde en channel_antigravity
             ag_eval = self.generate_antigravity_evaluation(message)
             self.chat_history.append(ag_eval)
             responses.append(ag_eval)
 
-            # 3. Gemini AI responde en channel_gemini (real o '[Gemini AI] no respondió' si falla)
+            # 4. Gemini AI responde en channel_gemini (real o '[Gemini AI] no respondió' si falla)
             gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
             self.chat_history.append(gemini_eval)
             responses.append(gemini_eval)
@@ -1731,7 +1875,16 @@ class WarRoomEngine:
             "responses_count": len(responses)
         })
 
-        primary_reply = responses[-1]["message"] if responses else ""
+        if target_node_id == "make":
+            primary_reply = make_eval["message"] if 'make_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id in ("antigravity", "engineering"):
+            primary_reply = ag_eval["message"] if 'ag_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id in ("super_agent", "teamly"):
+            primary_reply = sa_eval["message"] if 'sa_eval' in locals() else (responses[-1]["message"] if responses else "")
+        elif target_node_id == "gemini":
+            primary_reply = gemini_eval["message"] if 'gemini_eval' in locals() else (responses[-1]["message"] if responses else "")
+        else:
+            primary_reply = responses[-1]["message"] if responses else ""
         return {
             "status": "success",
             "channel_id": clean_channel_id,

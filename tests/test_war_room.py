@@ -15,6 +15,7 @@ import unittest
 import json
 import urllib.request
 import urllib.error
+from unittest.mock import patch, MagicMock
 
 # Agregar rutas locales
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -300,6 +301,62 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertEqual(res["sender_id"], "mrspets")
         self.assertTrue(res["verified"])
         self.assertGreaterEqual(len(res["responses"]), 3)
+
+    @patch("urllib.request.urlopen")
+    def test_11_chat_with_make_node_live_dispatch(self, mock_urlopen):
+        """Verifica que al conversar con el nodo Make.com en la Sala de Chat, se despache un POST real con el mensaje."""
+        # 1. Simular respuesta HTTP 200 de Make.com
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"Accepted"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        # 2. Despachar mensaje de chat hacia Make.com
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="esto es una prueba para make",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertTrue(res["verified"])
+        
+        # Verificar que Make.com recibió la llamada HTTP POST entre las llamadas realizadas
+        mock_urlopen.assert_called()
+        make_calls = [c for c in mock_urlopen.call_args_list if hasattr(c[0][0], "full_url") and "https://hook.us2.make.com" in c[0][0].full_url]
+        self.assertGreaterEqual(len(make_calls), 1, "Debe haberse realizado un POST HTTP a Make.com")
+        req_obj = make_calls[0][0][0]
+        self.assertEqual(req_obj.get_method(), "POST")
+        req_body = json.loads(req_obj.data.decode("utf-8"))
+        self.assertEqual(req_body["message"], "esto es una prueba para make")
+        self.assertEqual(req_body["target_node"], "make")
+
+        # Verificar respuesta de Make en la sala
+        make_replies = [r for r in res["responses"] if r["sender_id"] == "make"]
+        self.assertEqual(len(make_replies), 1)
+        self.assertTrue(make_replies[0]["verified"])
+        self.assertIsNotNone(make_replies[0]["latency_ms"])
+        self.assertIn("Accepted", make_replies[0]["message"])
+        self.assertIn("Accepted", res["reply"])
+
+        # 3. Probar canal caído / error de Make.com
+        mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
+        res_fail = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="segunda prueba make offline",
+            target_node_id="make",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        fail_replies = [r for r in res_fail["responses"] if r["sender_id"] == "make"]
+        self.assertEqual(len(fail_replies), 1)
+        self.assertFalse(fail_replies[0]["verified"])
+        self.assertIsNone(fail_replies[0]["latency_ms"])
+        self.assertIn("canal NO DISPONIBLE", fail_replies[0]["message"])
 
 if __name__ == "__main__":
     unittest.main()

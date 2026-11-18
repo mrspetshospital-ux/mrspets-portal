@@ -21,16 +21,17 @@
       this.nodes = {};
       this.chatMessages = [];
       this.selectedTargetNode = 'gemini'; // Nodo destinatario activo para conversación directa
-      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'channel_mrspets', 'channel_super_agent', 'channel_antigravity', 'channel_gemini')
+      this.selectedChannel = 'deliberacion'; // Canal activo ('deliberacion', 'channel_mrspets', 'channel_super_agent', 'channel_antigravity', 'channel_gemini', 'channel_make')
       this.channelsList = [
         { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
         { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
         { id: 'channel_super_agent', name: 'Teamily (Charly / Super Agent)', icon: '🤝' },
         { id: 'channel_antigravity', name: 'Google AntiGravity', icon: '⚡' },
-        { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' }
+        { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' },
+        { id: 'channel_make', name: 'Make.com Webhooks', icon: '🔗' }
       ];
       this.nodeConfigs = {
-        make_webhook_url: 'https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a',
+        make_webhook_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         make_api_key: '',
         make_fallback_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
@@ -112,11 +113,11 @@
       if (!nodeId) return;
       this.selectedTargetNode = nodeId;
       const nodeLabels = {
-        harryt: 'Harryt & Dalybell (Dirección General)',
-        volturi: 'Charlie / Comité Volturi (Gobernanza & Ética)',
-        antigravity: 'Google AntiGravity (Ingeniería & Código)',
-        make: 'Make.com (Webhooks & Flujos)',
-        teamly: 'Charly / Super Agent (Teamily - Operaciones & Agentes)'
+        harryt: 'Mrs. PETS CORP (Dirección General)',
+        gemini: 'Gemini AI (Razonamiento & Causa Raíz)',
+        antigravity: 'Google AntiGravity (Ingeniería Autónoma)',
+        make: 'Make.com (Webhooks & Omnicanalidad)',
+        teamly: 'Charly / Super Agent (Teamily Operaciones)'
       };
       const label = nodeLabels[nodeId] || nodeId.toUpperCase();
 
