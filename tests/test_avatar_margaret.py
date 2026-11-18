@@ -129,6 +129,60 @@ class TestAvatarMargaret(unittest.TestCase):
         except ImportError:
             pass
 
+    def test_09_db_lookup_and_booking_pipeline(self):
+        """Verifica la búsqueda en BD (cliente existente vs nuevo) y la persistencia de reservas."""
+        from receptionBridge import lookup_client_in_mrs_pets_db, format_margaret_system_directive, process_and_persist_booking
+
+        # 1. Búsqueda de cliente no existente (cliente nuevo)
+        new_client = lookup_client_in_mrs_pets_db(text="Hola buenas noches, no tengo ficha previa", phone="04149999999")
+        self.assertFalse(new_client["found"])
+        dir_new = format_margaret_system_directive(new_client)
+        self.assertIn("CLIENTE NUEVO", dir_new)
+        self.assertIn("Ficha de Admisión", dir_new)
+        self.assertIn("📷 Foto", dir_new)
+
+        # 2. Procesamiento de reserva en modo manual (aprobación staff)
+        booking_manual = process_and_persist_booking(
+            msg="Deseo agendar cita de grooming para mi perrito Toby mañana a las 10 am, mi telefono es 04146799510 y me llamo Carlos",
+            client_info=new_client,
+            body={"userName": "Carlos", "petName": "Toby"},
+            approval_mode="manual"
+        )
+        self.assertIsNotNone(booking_manual)
+        self.assertIn("PEND-", booking_manual["id"])
+        self.assertEqual(booking_manual["status"], "Pendiente por Aprobación Staff")
+        self.assertEqual(booking_manual["account_email"], "mrspetshospital@gmail.com")
+        self.assertIn("Solicitud de Cita Registrada", booking_manual["confirmation_text"])
+        self.assertIn("8:00 - 8:30 a.m.", booking_manual["confirmation_text"])
+
+        # 3. Procesamiento de reserva en modo automático
+        booking_auto = process_and_persist_booking(
+            msg="Quiero una cita de consulta veterinaria para Toby hoy a las 3 pm",
+            client_info=new_client,
+            body={"userName": "Carlos", "petName": "Toby"},
+            approval_mode="auto"
+        )
+        self.assertIsNotNone(booking_auto)
+        self.assertIn("Aprobado por IA Leia 🤖", booking_auto["status"])
+        self.assertIn("Reserva Confirmada", booking_auto["confirmation_text"])
+
+    def test_10_google_calendar_account_target(self):
+        """Verifica que el motor de calendario apunte a mrspetshospital@gmail.com."""
+        from calendarEngine import calendar_engine
+        self.assertIsNotNone(calendar_engine)
+        self.assertEqual(calendar_engine.config.get("google_calendar_id"), "mrspetshospital@gmail.com")
+        payload = calendar_engine.build_make_gcal_payload("appointment_created", {
+            "id": "APT-TEST-01",
+            "pet": "Toby",
+            "tutor": "Carlos",
+            "service": "Grooming Spa",
+            "area": "grooming",
+            "date": "2026-11-18",
+            "time": "10:00"
+        })
+        self.assertEqual(payload.get("calendar_id"), "mrspetshospital@gmail.com")
+        self.assertEqual(payload.get("account_email"), "mrspetshospital@gmail.com")
+
 
 if __name__ == "__main__":
     unittest.main()

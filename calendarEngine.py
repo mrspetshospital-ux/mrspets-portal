@@ -93,7 +93,8 @@ class CalendarEngine:
                 }
             },
             "make_calendar_webhook_url": os.environ.get("MAKE_WEBHOOK_URL_LEIA", "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg"),
-            "google_calendar_id": "primary",
+            "google_calendar_id": os.environ.get("GOOGLE_CALENDAR_ID", "mrspetshospital@gmail.com"),
+            "account_email": "mrspetshospital@gmail.com",
             "timezone": "America/Caracas",
             "last_synced_at": None
         }
@@ -464,7 +465,8 @@ class CalendarEngine:
             "event": event_type,
             "source": "mrs_pets_calendar_engine",
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "calendar_id": self.config.get("google_calendar_id", "primary"),
+            "calendar_id": self.config.get("google_calendar_id", "mrspetshospital@gmail.com"),
+            "account_email": self.config.get("account_email", "mrspetshospital@gmail.com"),
             "timezone": self.config.get("timezone", "America/Caracas"),
             "sala": {
                 "id": room.get("id"),

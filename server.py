@@ -6415,6 +6415,17 @@ async def teamily_orchestrate(request: Request):
     }
 
 
+# =====================================================================
+# RECEPCIÓN INTELIGENTE: ASISTENCIA BD & GESTIÓN DE CITAS MARGARET
+# =====================================================================
+from receptionBridge import (
+    lookup_client_in_mrs_pets_db,
+    format_margaret_system_directive,
+    process_and_persist_booking,
+    TARGET_GCAL_ACCOUNT
+)
+
+
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
 async def teamily_chat(request: Request):
@@ -6440,10 +6451,22 @@ async def teamily_chat(request: Request):
         res_text = ""
         bcv_cfg = get_bcv_config_data()
         eff_rate = bcv_cfg.get("effective_rate", 914.02)
+        approval_mode = body.get("approval_mode") or "manual"
+
+        # 1. Consulta previa a la Base de Datos de Mrs. Pets (Tutores y Mascotas)
+        u_name = body.get("userName") or body.get("context", {}).get("userName") or ""
+        p_name = body.get("petName") or body.get("context", {}).get("petName") or ""
+        ph_num = body.get("phone") or body.get("context", {}).get("phone") or ""
+        client_info = lookup_client_in_mrs_pets_db(text=msg, user_name=u_name, phone=ph_num, pet_name=p_name)
+        db_directive = format_margaret_system_directive(client_info)
+
+        # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
+        teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
+
         if teamily_geo_a_client and msg and TeamilyGeoARequest:
             try:
                 board_id = body.get("board_id") or getattr(teamily_geo_a_client, "board_id", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
-                req = TeamilyGeoARequest(input=msg, board_id=board_id)
+                req = TeamilyGeoARequest(input=teamily_msg, board_id=board_id)
                 res = await asyncio.to_thread(teamily_geo_a_client.send_message, req)
                 if res.success and res.response_text:
                     res_text = res.response_text
@@ -6455,7 +6478,7 @@ async def teamily_chat(request: Request):
             try:
                 gem_res = await asyncio.to_thread(
                     _call_gemini_for_leia_engine,
-                    user_message=msg,
+                    user_message=teamily_msg,
                     history=body.get("history") or [],
                     requested_model=body.get("model") or "gemini-3.8-flash",
                     requested_agent="margaret"
@@ -6470,14 +6493,36 @@ async def teamily_chat(request: Request):
                 "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal."
             )
 
-        return {
+        # 3. Procesar y persistir reserva si los datos están completos
+        booking_data = None
+        try:
+            booking_data = process_and_persist_booking(
+                msg=msg,
+                client_info=client_info,
+                body=body,
+                approval_mode=approval_mode
+            )
+        except Exception as _e_book:
+            log.warning("Error procesando reserva: %s", _e_book)
+
+        out_response = {
             "status": "success",
             "agent": "margaret",
             "agent_name": "Margaret (actuando como Leia Concierge VIP)",
             "reply": res_text,
             "response_text": res_text,
-            "bcv_rate": eff_rate
+            "bcv_rate": eff_rate,
+            "client_found": client_info.get("found", False)
         }
+
+        if booking_data:
+            out_response["booking"] = booking_data
+            # Si se generó la cita, anexar el mensaje oficial de confirmación si no está presente
+            if booking_data.get("confirmation_text") and not ("Reserva Confirmada" in res_text or "Solicitud de Cita Registrada" in res_text):
+                out_response["reply"] = f"{res_text}\n\n{booking_data['confirmation_text']}"
+                out_response["response_text"] = out_response["reply"]
+
+        return out_response
 
     # O'Neil: Marketing & Telemercadeo
     if agent in ["oneil", "oneal", "mercadeo"]:

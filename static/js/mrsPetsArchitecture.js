@@ -1570,6 +1570,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
     const agentName = 'Margaret (actuando como Leia Concierge VIP)';
     const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 50;
+    const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
     const agentPayload = {
       message_id: messageId,
@@ -1582,9 +1583,13 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       agent_name: agentName,
       board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
       model: activeModel.id,
+      approval_mode: activeApprovalMode,
+      phone: (session && session.phone) || '',
       context: {
         userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
         petName: this.lastActivePetName || (session && session.activePetName) || '',
+        phone: (session && session.phone) || '',
+        approval_mode: activeApprovalMode,
         userType: (session && session.userType) || 'client',
         channel: `Widget Circular (${agentDisplayName})`,
         activeModel: activeModel.id
@@ -1616,6 +1621,11 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
               : (data.response_text || (data.output && data.output.text) || data.reply);
             if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
               serverReplyText = rawReply;
+            }
+            if (data.booking && data.booking.id) {
+              if (window.adminEngine && typeof window.adminEngine.addPendingAppointment === 'function') {
+                window.adminEngine.addPendingAppointment(data.booking);
+              }
             }
           }
         }

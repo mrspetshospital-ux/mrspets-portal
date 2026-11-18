@@ -28,6 +28,7 @@ SQLITE_PATH = os.getenv("SQLITE_PATH", "mrspets_local.db")
 def _to_sqlite(sql: str) -> str:
     """Traduce lo mínimo indispensable de Postgres a SQLite."""
     sql = sql.replace("%s", "?")
+    sql = re.sub(r"\bILIKE\b", "LIKE", sql, flags=re.I)
     sql = re.sub(r"\bNOW\(\)", "CURRENT_TIMESTAMP", sql, flags=re.I)
     sql = re.sub(r"\bTRUE\b", "1", sql)
     sql = re.sub(r"\bFALSE\b", "0", sql)

@@ -812,6 +812,7 @@
             const user = this.getCurrentUser();
             const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 50;
             const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+            const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
             this.showTypingIndicator(true);
 
@@ -840,12 +841,14 @@
                         userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                         petName: this.lastActivePetName || '',
                         userType: isStaff ? 'staff_admin' : 'client',
+                        approval_mode: activeApprovalMode,
                         context: {
                             userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                             petName: this.lastActivePetName || '',
                             userType: isStaff ? 'staff_admin' : 'client',
                             channel: 'Widget Search (Leia Concierge VIP)',
-                            as_leia: true
+                            as_leia: true,
+                            approval_mode: activeApprovalMode
                         }
                     }),
                     signal: abortCtrl.signal
@@ -860,6 +863,12 @@
 
                     if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
                         replyObtained = rawReply;
+                    }
+
+                    if (data && data.booking && data.booking.id) {
+                        if (window.adminEngine && typeof window.adminEngine.addPendingAppointment === 'function') {
+                            window.adminEngine.addPendingAppointment(data.booking);
+                        }
                     }
                 }
             } catch (teamilyErr) {
