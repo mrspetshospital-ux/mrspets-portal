@@ -88,10 +88,13 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
 
     return ep
 
+# Registro en memoria de hilos por sesión de cliente para aislamiento estricto y prevención de fuga de datos
+_client_threads: Dict[str, str] = {}
+
 @dataclass
 class TeamilyThreadConfig:
     """Configuración tipada del hilo de conversación."""
-    mode: str = "new"  # 'new' | 'continue' | 'stateless'
+    mode: str = "new"  # 'new' | 'continue' | 'auto'
     thread_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -104,17 +107,34 @@ class TeamilyThreadConfig:
 class TeamilyGeoARequest:
     """Estructura de petición tipada para el agente Teamily GEO A."""
     input: str
-    thread: TeamilyThreadConfig = field(default_factory=TeamilyThreadConfig)
+    thread: Optional[Any] = None
     wait: bool = True
     board_id: Optional[str] = None
+    session_id: Optional[str] = None
+    is_customer: bool = False
+    timeout: Optional[float] = None
 
     def to_payload(self) -> Dict[str, Any]:
+        thread_payload: Dict[str, Any] = {"mode": "new"}
+        if isinstance(self.thread, TeamilyThreadConfig):
+            thread_payload = self.thread.to_dict()
+        elif isinstance(self.thread, dict):
+            thread_payload = self.thread
+        elif self.session_id:
+            cached_thread = _client_threads.get(self.session_id)
+            if cached_thread:
+                thread_payload = {"mode": "continue", "thread_id": cached_thread}
+            else:
+                thread_payload = {"mode": "new"}
+
         payload: Dict[str, Any] = {
             "input": self.input,
-            "thread": self.thread.to_dict() if isinstance(self.thread, TeamilyThreadConfig) else self.thread,
+            "thread": thread_payload,
             "wait": self.wait
         }
-        if self.board_id:
+        # AISLAMIENTO ESTRICTO: NUNCA inyectar el board compartido en chats de clientes
+        # para evitar fuga de privacidad entre tutores
+        if self.board_id and not self.is_customer:
             payload["board_id"] = self.board_id
         return payload
 
@@ -204,11 +224,12 @@ class TeamilyGeoAClient:
         - Content-Type: application/json
         """
         payload = request.to_payload()
-        if not payload.get("board_id") and self.board_id:
+        if not payload.get("board_id") and self.board_id and not request.is_customer:
             payload["board_id"] = self.board_id
 
         target_endpoint = normalize_teamily_endpoint(endpoint_override or self.endpoint, default_endpoint=self.endpoint)
         target_server_key = server_key_override or self.server_key
+        req_timeout = request.timeout if request.timeout is not None else self.timeout
 
         body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = {
@@ -236,12 +257,12 @@ class TeamilyGeoAClient:
         start_time = time.time()
         try:
             try:
-                resp_ctx = urllib.request.urlopen(req, timeout=self.timeout, context=ssl_ctx)
+                resp_ctx = urllib.request.urlopen(req, timeout=req_timeout, context=ssl_ctx)
             except (ssl.SSLCertVerificationError, urllib.error.URLError) as ssl_err:
                 # Fallback resiliente si los certificados del emisor local no están en el keychain de LibreSSL
                 if "CERTIFICATE_VERIFY_FAILED" in str(ssl_err):
                     unverified_ctx = ssl._create_unverified_context()
-                    resp_ctx = urllib.request.urlopen(req, timeout=self.timeout, context=unverified_ctx)
+                    resp_ctx = urllib.request.urlopen(req, timeout=req_timeout, context=unverified_ctx)
                 else:
                     raise ssl_err
 
@@ -264,12 +285,12 @@ class TeamilyGeoAClient:
                         "Accept": "application/json",
                         "User-Agent": "MrsPets-Teamily-GEO-A-Client/2.4 (Maracaibo, Venezuela)"
                     }
-                    poll_deadline = time.time() + min(max(self.timeout - (time.time() - start_time), 10.0), 35.0)
+                    poll_deadline = time.time() + min(max(req_timeout - (time.time() - start_time), 2.0), 30.0)
                     while time.time() < poll_deadline:
                         time.sleep(2.0)
                         try:
                             poll_req = urllib.request.Request(url=poll_url, headers=poll_headers, method="GET")
-                            with urllib.request.urlopen(poll_req, timeout=12, context=ssl_ctx) as p_resp:
+                            with urllib.request.urlopen(poll_req, timeout=min(req_timeout, 12), context=ssl_ctx) as p_resp:
                                 p_raw = p_resp.read().decode("utf-8")
                                 p_data = json.loads(p_raw)
                                 if isinstance(p_data, dict):
@@ -281,6 +302,13 @@ class TeamilyGeoAClient:
                         except Exception as poll_err:
                             print(f"[TEAMILEY POLLING] Error sondeando {poll_url}: {poll_err}")
                             break
+
+                # Guardar thread_id para continuidad de la sesión del cliente (aislamiento estricto)
+                resp_thread = None
+                if isinstance(data, dict):
+                    resp_thread = data.get("thread_id") or (data.get("thread", {}).get("thread_id") if isinstance(data.get("thread"), dict) else None) or data.get("thread")
+                if request.session_id and resp_thread and isinstance(resp_thread, str):
+                    _client_threads[request.session_id] = resp_thread
 
                 # Extraer texto de respuesta según estructura típica de Teamily (soporta {output: {text: ...}})
                 response_text = ""
@@ -318,7 +346,7 @@ class TeamilyGeoAClient:
                     latency_ms=elapsed_ms,
                     error=None,
                     endpoint=target_endpoint,
-                    board_id=request.board_id or self.board_id
+                    board_id=request.board_id or (self.board_id if not request.is_customer else "")
                 )
 
                 self._log_audit("GEO_A_SUCCESS", {

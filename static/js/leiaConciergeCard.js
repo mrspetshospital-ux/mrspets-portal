@@ -241,8 +241,9 @@
             const abortCtrl = new AbortController();
             const timeoutTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
             const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+            const chatSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
 
-            const res = await fetch('/api/v1/teamily/agent-chat', {
+            const res = await fetch('/api/v1/avatar/chat', {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
@@ -253,10 +254,9 @@
                 agente_origen: 'user',
                 input: userText,
                 message: userText,
-                model: 'teamly-orchestrator',
-                agent_slug: 'leia',
-                agent_name: 'Leia Concierge VIP & Asistencia CEO',
-                board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+                sessionId: chatSessionId,
+                timeoutSeconds: timeoutSec,
+                agent_slug: 'margaret',
                 context: {
                   userName: 'Cliente VIP',
                   channel: 'Modal Concierge Card (Leia Concierge)'

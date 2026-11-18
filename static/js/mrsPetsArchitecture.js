@@ -1621,16 +1621,19 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 50;
     const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
+    const isStaff = (typeof this.isStaffMode === 'function') ? this.isStaffMode() : false;
+    const chatSessionId = (typeof this.getChatSessionId === 'function') ? this.getChatSessionId() : ((session && session.sessionId) || ('sess_' + Math.random().toString(36).substring(2, 9)));
+
     const agentPayload = {
       message_id: messageId,
-      agente_origen: 'user',
+      agente_origen: isStaff ? 'staff' : 'user',
       input: cleanText,
       message: cleanText,
       prompt: cleanText,
       agent_id: agentSlug,
       agent_slug: agentSlug,
-      agent_name: agentName,
-      board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
+      sessionId: chatSessionId,
+      timeoutSeconds: timeoutSec,
       model: activeModel.id,
       approval_mode: activeApprovalMode,
       phone: (session && session.phone) || '',
@@ -1639,11 +1642,14 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         petName: this.lastActivePetName || (session && session.activePetName) || '',
         phone: (session && session.phone) || '',
         approval_mode: activeApprovalMode,
-        userType: (session && session.userType) || 'client',
+        userType: isStaff ? 'staff' : ((session && session.userType) || 'client'),
         channel: `Widget Circular (${agentDisplayName})`,
         activeModel: activeModel.id
       }
     };
+    if (isStaff) {
+      agentPayload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
+    }
 
     if (isMargaret) {
       // =========================================================================
@@ -1655,7 +1661,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       try {
         const abortCtrl = new AbortController();
         const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
-        const res = await fetch('/api/v1/teamily/agent-chat', {
+        const res = await fetch('/api/v1/avatar/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(agentPayload),
@@ -1721,7 +1727,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         try {
           const abortCtrl = new AbortController();
           const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
-          const res = await fetch('/api/v1/teamily/agent-chat', {
+          const res = await fetch('/api/v1/avatar/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(agentPayload),

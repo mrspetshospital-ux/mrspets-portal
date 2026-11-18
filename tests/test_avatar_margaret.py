@@ -204,6 +204,68 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertIn("circBtn.style.display", content)
         self.assertIn("isStaffMode()", content)
 
+    def test_12_avatar_chat_endpoint_and_session_isolation(self):
+        """Verifica que POST /api/v1/avatar/chat esté registrado en la app y no devuelva latencia fija de 350ms."""
+        # 1. Verificación estática del código fuente
+        server_path = os.path.join(os.path.dirname(__file__), "..", "server.py")
+        with open(server_path, "r", encoding="utf-8") as f:
+            server_src = f.read()
+        self.assertIn('@app.post("/api/v1/avatar/chat")', server_src)
+        self.assertIn('@app.post("/api/v1/teamily/agent-chat")', server_src)
+        self.assertNotIn('"model_used": "teamly-orchestrator"', server_src, "No debe existir el mock literal teamly-orchestrator con 350ms")
+
+        # 2. Verificación dinámica si fastapi/starlette están disponibles
+        try:
+            from starlette.testclient import TestClient
+            from server import app
+            route_paths = [getattr(r, "path", None) for r in app.routes]
+            self.assertIn("/api/v1/avatar/chat", route_paths)
+
+            client = TestClient(app)
+            sess_id = "test_sess_isolated_99"
+            res = client.post("/api/v1/avatar/chat", json={
+                "agent_id": "margaret",
+                "message": "¿Cuáles son los horarios de atención y el servicio de spa?",
+                "sessionId": sess_id,
+                "timeoutSeconds": 5.0
+            })
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data.get("status"), "success")
+            self.assertTrue(bool(data.get("reply")))
+            self.assertNotEqual(data.get("latency_ms"), 350)
+            self.assertEqual(data.get("session_id"), sess_id)
+            self.assertIn(data.get("agent"), ["margaret", "geo-a"])
+        except ImportError:
+            pass
+
+    def test_13_no_shared_board_leakage_for_clients(self):
+        """Verifica que para clientes (is_customer=True) NUNCA se inyecte el board compartido en el payload."""
+        from teamilyClient import TeamilyGeoARequest, _client_threads
+        req_customer = TeamilyGeoARequest(
+            input="Hola, soy cliente nuevo",
+            session_id="customer_unique_sess_1",
+            is_customer=True,
+            board_id="5803df5a-7127-4d28-b97c-5c840d47cdc7"
+        )
+        payload_cust = req_customer.to_payload()
+        self.assertNotIn("board_id", payload_cust, "El board compartido del War Room no debe existir en peticiones de clientes")
+        self.assertEqual(payload_cust["thread"]["mode"], "new")
+
+        # Simular que Teamily respondió con thread_id
+        _client_threads["customer_unique_sess_1"] = "tmly_thread_abc_123"
+
+        # Segunda petición con la misma sesión debe continuar el hilo aislado
+        req_customer_2 = TeamilyGeoARequest(
+            input="¿Recuerdas mi nombre?",
+            session_id="customer_unique_sess_1",
+            is_customer=True
+        )
+        payload_cust_2 = req_customer_2.to_payload()
+        self.assertEqual(payload_cust_2["thread"]["mode"], "continue")
+        self.assertEqual(payload_cust_2["thread"]["thread_id"], "tmly_thread_abc_123")
+        self.assertNotIn("board_id", payload_cust_2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -818,39 +818,45 @@
 
             let replyObtained = null;
 
-            // 1. CANAL PRINCIPAL: TEAMILEY LIVE API (Margarette en vivo personificando a Leia)
+            // 1. CANAL PRINCIPAL: AVATAR / TEAMILEY LIVE API (Aislamiento por sesión)
             try {
                 const abortCtrl = new AbortController();
                 const timeoutId = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
-                const res = await fetch('/api/v1/teamily/agent-chat', {
+                const chatSessionId = this.currentSessionId || ('sess_' + Math.random().toString(36).substring(2, 9));
+                const payload = {
+                    message_id: messageId,
+                    agente_origen: isStaff ? 'staff' : 'user',
+                    input: userText,
+                    message: userText,
+                    prompt: userText,
+                    agent_id: 'margaret',
+                    agent_slug: 'margaret',
+                    sessionId: chatSessionId,
+                    timeoutSeconds: timeoutSec,
+                    userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                    petName: this.lastActivePetName || '',
+                    userType: isStaff ? 'staff_admin' : 'client',
+                    approval_mode: activeApprovalMode,
+                    context: {
+                        userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
+                        petName: this.lastActivePetName || '',
+                        userType: isStaff ? 'staff_admin' : 'client',
+                        channel: 'Widget Search (Leia Concierge VIP)',
+                        as_leia: true,
+                        approval_mode: activeApprovalMode
+                    }
+                };
+                if (isStaff) {
+                    payload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
+                }
+
+                const res = await fetch('/api/v1/avatar/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'x-message-id': messageId
                     },
-                    body: JSON.stringify({
-                        message_id: messageId,
-                        agente_origen: 'user',
-                        input: userText,
-                        message: userText,
-                        prompt: userText,
-                        agent_id: 'margaret',
-                        agent_slug: 'margaret',
-                        agent_name: 'Margaret (actuando como Leia Concierge VIP)',
-                        board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-                        userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                        petName: this.lastActivePetName || '',
-                        userType: isStaff ? 'staff_admin' : 'client',
-                        approval_mode: activeApprovalMode,
-                        context: {
-                            userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                            petName: this.lastActivePetName || '',
-                            userType: isStaff ? 'staff_admin' : 'client',
-                            channel: 'Widget Search (Leia Concierge VIP)',
-                            as_leia: true,
-                            approval_mode: activeApprovalMode
-                        }
-                    }),
+                    body: JSON.stringify(payload),
                     signal: abortCtrl.signal
                 });
                 clearTimeout(timeoutId);
