@@ -2246,7 +2246,7 @@ async def _execute_teamily_channel(
     board_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Canal 1 Independiente: Teamily Live API (GEO-A / Charly).
+    Canal 1 Independiente: Teamily Live API (Margaret / Comité Volturi @9000376919168475).
     - Hilo único por cliente (aislamiento de datos estricto sin mezclar board compartido)
     - Medición de latencia real
     - Forzamiento estricto de timeout
@@ -2255,9 +2255,9 @@ async def _execute_teamily_channel(
         return {
             "success": False,
             "reply": "",
-            "agent": "geo-a",
-            "agent_name": "Charly (GEO A • Teamily)",
-            "model_used": "teamily-geo-a",
+            "agent": "margaret",
+            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": 0.0,
             "error": "Cliente Teamily no disponible o mensaje vacío"
@@ -2265,8 +2265,12 @@ async def _execute_teamily_channel(
 
     t0 = time.time()
     try:
+        teamily_input = msg
+        if "[DIRECTIVA" not in msg and "VOLTURI" not in msg:
+            teamily_input = f"[DIRECTIVA COMITÉ VOLTURI - MARGARET @9000376919168475 (GERENCIA DE ATENCIÓN AL CLIENTE)]:\n{msg}"
+
         req = TeamilyGeoARequest(
-            input=msg,
+            input=teamily_input,
             board_id=board_id if not is_customer else None,
             session_id=session_id,
             is_customer=is_customer,
@@ -2281,9 +2285,9 @@ async def _execute_teamily_channel(
             return {
                 "success": True,
                 "reply": res.response_text,
-                "agent": "geo-a",
-                "agent_name": "Charly (GEO A • Teamily)",
-                "model_used": "teamily-geo-a",
+                "agent": "margaret",
+                "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+                "model_used": "teamily-volturi",
                 "channel": "teamily",
                 "latency_ms": elapsed_ms,
                 "error": None
@@ -2292,9 +2296,9 @@ async def _execute_teamily_channel(
             return {
                 "success": False,
                 "reply": "",
-                "agent": "geo-a",
-                "agent_name": "Charly (GEO A • Teamily)",
-                "model_used": "teamily-geo-a",
+                "agent": "margaret",
+                "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+                "model_used": "teamily-volturi",
                 "channel": "teamily",
                 "latency_ms": elapsed_ms,
                 "error": res.error or "Respuesta vacía recibida de Teamily"
@@ -2305,9 +2309,9 @@ async def _execute_teamily_channel(
         return {
             "success": False,
             "reply": "",
-            "agent": "geo-a",
-            "agent_name": "Charly (GEO A • Teamily)",
-            "model_used": "teamily-geo-a",
+            "agent": "margaret",
+            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": elapsed_ms,
             "error": f"Timeout superado ({timeout_sec}s)"
@@ -2318,9 +2322,9 @@ async def _execute_teamily_channel(
         return {
             "success": False,
             "reply": "",
-            "agent": "geo-a",
-            "agent_name": "Charly (GEO A • Teamily)",
-            "model_used": "teamily-geo-a",
+            "agent": "margaret",
+            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": elapsed_ms,
             "error": str(e)
