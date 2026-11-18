@@ -1495,8 +1495,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
 
     const session = this.getActiveSessionContext();
     const isStaff = session && session.userType === 'staff_admin';
-    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
-    const isMargaret = primaryAgent.includes('margaret');
+    const isMargaret = true;
     const agentSlug = 'margaret';
     const agentDisplayName = 'Leia';
 
@@ -1569,8 +1568,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     let serverReplyText = null;
     const isTeamlyPrimary = (activeModel.id && activeModel.id.includes('teamly'));
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-    const agentName = isMargaret ? 'Margaret — Gerente de Atención al Cliente' : 'Leia Concierge VIP & Asistencia CEO';
-    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
+    const agentName = 'Margaret (actuando como Leia Concierge VIP)';
+    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 50;
 
     const agentPayload = {
       message_id: messageId,

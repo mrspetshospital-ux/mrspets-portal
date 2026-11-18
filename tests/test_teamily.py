@@ -77,5 +77,15 @@ class TestTeamilyAndSubagents(unittest.TestCase):
         self.assertEqual(st["agent"], "geo-a")
         self.assertIn("board_id", st)
 
+    def test_05_margaret_teamily_request(self):
+        """Verifica que las solicitudes para Margarette se construyan correctamente sin respuestas prefabricadas."""
+        req = TeamilyGeoARequest(
+            input="buenas noches",
+            board_id="5803df5a-7127-4d28-b97c-5c840d47cdc7"
+        )
+        p = req.to_payload()
+        self.assertEqual(p["input"], "buenas noches")
+        self.assertEqual(p["board_id"], "5803df5a-7127-4d28-b97c-5c840d47cdc7")
+
 if __name__ == "__main__":
     unittest.main()

@@ -6422,7 +6422,15 @@ async def teamily_chat(request: Request):
         body = await request.json()
     except Exception:
         body = {}
-    msg = body.get("message") or body.get("prompt") or request.query_params.get("message") or request.query_params.get("prompt") or ""
+    msg = (
+        body.get("message")
+        or body.get("input")
+        or body.get("prompt")
+        or body.get("userQuery")
+        or request.query_params.get("message")
+        or request.query_params.get("prompt")
+        or ""
+    )
     body_agent = body.get("agent_id") or body.get("agent_slug") or body.get("agent") or body.get("slug")
     qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
     agent = (body_agent or qp_agent or "margaret").lower()
@@ -6436,21 +6444,30 @@ async def teamily_chat(request: Request):
             try:
                 board_id = body.get("board_id") or getattr(teamily_geo_a_client, "board_id", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
                 req = TeamilyGeoARequest(input=msg, board_id=board_id)
-                res = teamily_geo_a_client.send_message(req)
+                res = await asyncio.to_thread(teamily_geo_a_client.send_message, req)
                 if res.success and res.response_text:
                     res_text = res.response_text
             except Exception as _e_m:
                 log.warning("Llamada externa a Teamily falló para Margaret: %s", _e_m)
 
-        if not res_text and centralita_router:
-            res_text = centralita_router.synthesize_agent_response("margaret", "Margaret — Gerente de Atención al Cliente", msg, body.get("context"))
+        # Fallback dinámico a Google Gemini (Margaret personificando a Leia) si Teamily no respondió o superó timeout
+        if not res_text and msg:
+            try:
+                gem_res = await asyncio.to_thread(
+                    _call_gemini_for_leia_engine,
+                    user_message=msg,
+                    history=body.get("history") or [],
+                    requested_model=body.get("model") or "gemini-3.8-flash",
+                    requested_agent="margaret"
+                )
+                if gem_res.get("success") and gem_res.get("reply"):
+                    res_text = gem_res["reply"]
+            except Exception as _e_gem:
+                log.warning("Failover a Gemini falló para Margaret: %s", _e_gem)
 
         if not res_text:
             res_text = (
-                f"🎀 **Leia (Concierge VIP):**\n\n"
-                f"¡Hola! Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
-                f"Con mucho amor te oriento en citas para **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**. "
-                f"Tasa oficial BCV de hoy: **{eff_rate:,.2f} Bs/$**. ¿Cómo podemos consentir a tu consentido(a) hoy? ✨🐾"
+                "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal."
             )
 
         return {
