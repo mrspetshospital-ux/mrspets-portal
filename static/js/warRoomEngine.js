@@ -480,8 +480,15 @@
           this.chatMessages = data.chat_messages;
         }
         if (data.node_configs && typeof data.node_configs === 'object') {
-          if (data.node_configs.make_webhook_url && (data.node_configs.make_webhook_url.includes('p8netq49') || !data.node_configs.make_webhook_url.startsWith('https://hook.'))) {
-            data.node_configs.make_webhook_url = 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
+          const incomingMake = data.node_configs.make_webhook_url;
+          if (incomingMake && (
+              incomingMake.includes('****') ||
+              incomingMake.includes('642a') ||
+              incomingMake.includes('1fl313') ||
+              incomingMake.includes('p8netq49') ||
+              !incomingMake.startsWith('https://hook.')
+          )) {
+            data.node_configs.make_webhook_url = this.savedManualWebhookUrl || 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
           }
           this.nodeConfigs = Object.assign({}, this.nodeConfigs, data.node_configs);
         }
@@ -945,6 +952,22 @@
             </span>
           </div>
 
+          <!-- BARRA DE CONFIGURACIÓN DIRECTA DEL WEBHOOK MAKE.COM -->
+          <div style="padding:8px 16px; background:#0B132B; border-bottom:1px solid rgba(16,185,129,0.25); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:300px;">
+              <span style="font-size:0.72rem; color:#10B981; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
+                <span>🔗</span> ENDPOINT WEBHOOK MAKE (US-2):
+              </span>
+              <input type="text" id="wr-chat-webhook-input" value="${this.escapeHtml(this.savedManualWebhookUrl || (this.nodeConfigs && this.nodeConfigs.make_webhook_url) || 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4')}"
+                oninput="window.warRoomEngine.nodeConfigs.make_webhook_url = this.value; window.warRoomEngine.savedManualWebhookUrl = this.value;"
+                placeholder="https://hook.us2.make.com/..."
+                style="flex:1; background:#090D16; border:1px solid rgba(16,185,129,0.35); border-radius:8px; padding:6px 10px; font-size:0.75rem; color:#F1F5F9; font-family:'JetBrains Mono', monospace; outline:none;" />
+            </div>
+            <span style="font-size:0.7rem; color:#34D399; font-weight:700;">
+              ● Destino Omnicanal Activo
+            </span>
+          </div>
+
           <!-- 1. BARRA DE NAVEGACIÓN DE CANALES SEPARADOS -->
           <div style="padding:10px 16px; background:#0B0F19; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; overflow-x:auto;">
             <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase; white-space:nowrap;">Canales:</span>
@@ -1157,9 +1180,23 @@
       if (input) input.value = '';
       this.renderChatFeedOnly();
 
+      // Determinar URL de Make limpia (sin asteriscos **** ni cadenas viejas)
+      const chatWebhookInput = document.getElementById('wr-chat-webhook-input');
+      let makeTargetUrl = (
+        (chatWebhookInput ? chatWebhookInput.value : null) ||
+        this.savedManualWebhookUrl ||
+        (this.nodeConfigs && this.nodeConfigs.make_webhook_url) ||
+        'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4'
+      ).trim();
+
+      if (makeTargetUrl.includes('****') || makeTargetUrl.includes('642a') || makeTargetUrl.includes('1fl313') || makeTargetUrl.includes('p8netq49') || !makeTargetUrl.startsWith('https://hook.')) {
+        makeTargetUrl = 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
+      }
+      this.nodeConfigs.make_webhook_url = makeTargetUrl;
+      this.savedManualWebhookUrl = makeTargetUrl;
+
       // Despacho directo y complementario desde el navegador hacia Make.com (modo no-cors)
       // Garantiza que cuando el usuario escriba en la sala de conversación, Make.com reciba el evento en vivo desde el cliente
-      const makeTargetUrl = (this.nodeConfigs && this.nodeConfigs.make_webhook_url) || 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
       if (makeTargetUrl && makeTargetUrl.startsWith('https://hook.')) {
         try {
           fetch(makeTargetUrl, {
@@ -1189,7 +1226,8 @@
             role: 'Dirección General & Mando Operativo',
             message: text,
             target_node_id: targetNode,
-            channel_id: activeChannel
+            channel_id: activeChannel,
+            target_webhook_url: makeTargetUrl
           })
         });
 

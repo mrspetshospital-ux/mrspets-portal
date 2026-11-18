@@ -355,11 +355,13 @@ class WarRoomEngine:
         self.active_incidents: List[Dict[str, Any]] = []
         self.resolved_incidents: List[Dict[str, Any]] = []
         self.ephemeral_tokens: Dict[str, Dict[str, Any]] = {}
+        make_env_cand = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM") or os.environ.get("MAKE_WEBHOOK_URL")
+        if not make_env_cand or any(bad in str(make_env_cand) for bad in ["****", "1fl313", "642a", "p8netq49"]):
+            default_make_url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        else:
+            default_make_url = str(make_env_cand).strip()
         self.node_configs: Dict[str, str] = {
-            "make_webhook_url": os.environ.get(
-                "MAKE_WEBHOOK_URL_WAR_ROOM",
-                os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
-            ),
+            "make_webhook_url": default_make_url,
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",
@@ -585,10 +587,14 @@ class WarRoomEngine:
         Ejecuta una prueba completa de enlace para confirmar que las conexiones
         están recibiendo y procesando la información de Make.com.
         """
-        url = target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
+        raw_url = str(target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
             os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
-        )
+        )).strip()
+        if any(bad in raw_url for bad in ["****", "1fl313", "642a", "p8netq49"]) or not raw_url.startswith("https://hook."):
+            url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        else:
+            url = raw_url
         test_id = f"TEST-MAKE-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -716,10 +722,14 @@ class WarRoomEngine:
         Despacha un paquete JSON arbitrario (personalizado o generado por Gemini) hacia el webhook de Make.com.
         Devuelve el estado HTTP exacto, latencia en ms, cuerpo de respuesta de Make y las variables detectadas.
         """
-        url = (target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
+        raw_url = str(target_url or self.node_configs.get("make_webhook_url") or os.environ.get(
             "MAKE_WEBHOOK_URL_WAR_ROOM",
             os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4")
         )).strip()
+        if any(bad in raw_url for bad in ["****", "1fl313", "642a", "p8netq49"]) or not raw_url.startswith("https://hook."):
+            url = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        else:
+            url = raw_url
 
         dispatch_id = f"DISPATCH-JSON-{uuid.uuid4().hex[:8].upper()}"
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -1632,30 +1642,60 @@ class WarRoomEngine:
         self,
         problem_description: str,
         sender: str = "Mrs. PETS CORP",
-        target_node_id: Optional[str] = None
+        target_node_id: Optional[str] = None,
+        target_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Despacha en vivo el mensaje de la Sala de Conversación hacia el webhook
         de Make.com configurado y registra la respuesta real devuelta por el escenario.
         
         Mide latencia real (ms) y verifica honestamente la recepción HTTP 200/201/202.
-        Si Make.com no responde o falla, reporta verified=False y latency_ms=None.
+        Soporta conmutación por falla (fallback en cascada ante HTTP 410 / timeout).
         """
         now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
 
-        target_url = (
-            self.node_configs.get("make_webhook_url")
-            or os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
-            or os.environ.get("MAKE_WEBHOOK_URL")
-            or self.node_configs.get("make_fallback_url")
-            or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
-        ).strip()
+        # 1. Armar lista de candidatos válidos descartando URLs rotas o con máscaras ****
+        clean_candidates: List[str] = []
+
+        def _is_valid_candidate(u: Optional[str]) -> bool:
+            if not u or not isinstance(u, str):
+                return False
+            u_clean = u.strip()
+            if not u_clean.startswith("https://hook."):
+                return False
+            if any(bad in u_clean for bad in ["****", "1fl313", "642a", "p8netq49"]):
+                return False
+            return True
+
+        if _is_valid_candidate(target_url):
+            clean_candidates.append(str(target_url).strip())
+
+        cfg_url = self.node_configs.get("make_webhook_url")
+        if _is_valid_candidate(cfg_url) and str(cfg_url).strip() not in clean_candidates:
+            clean_candidates.append(str(cfg_url).strip())
+
+        env_wr = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
+        if _is_valid_candidate(env_wr) and str(env_wr).strip() not in clean_candidates:
+            clean_candidates.append(str(env_wr).strip())
+
+        env_gen = os.environ.get("MAKE_WEBHOOK_URL")
+        if _is_valid_candidate(env_gen) and str(env_gen).strip() not in clean_candidates:
+            clean_candidates.append(str(env_gen).strip())
+
+        cfg_fallback = self.node_configs.get("make_fallback_url")
+        if _is_valid_candidate(cfg_fallback) and str(cfg_fallback).strip() not in clean_candidates:
+            clean_candidates.append(str(cfg_fallback).strip())
+
+        master_active = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+        if master_active not in clean_candidates:
+            clean_candidates.append(master_active)
 
         verified = False
         latency_ms: Optional[int] = None
         reply_text = ""
         http_code = 0
+        last_error = ""
 
         payload = {
             "event": "war_room_chat_message",
@@ -1670,56 +1710,61 @@ class WarRoomEngine:
         }
         req_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
-        t0 = time.time()
-        try:
-            make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
-            headers = {
-                "Content-Type": "application/json; charset=utf-8",
-                "User-Agent": "MrsPets-WarRoom-Chat/2.0"
-            }
-            if make_key:
-                headers["x-make-apikey"] = make_key
-                headers["Authorization"] = f"Bearer {make_key}"
-
-            req = urllib.request.Request(
-                target_url,
-                data=req_data,
-                headers=headers,
-                method="POST"
-            )
-            ctx_ssl = ssl.create_default_context()
-            ctx_ssl.check_hostname = False
-            ctx_ssl.verify_mode = ssl.CERT_NONE
-
-            with urllib.request.urlopen(req, timeout=8.0, context=ctx_ssl) as resp:
-                elapsed_ms = int((time.time() - t0) * 1000)
-                http_code = resp.status
-                resp_text = resp.read().decode("utf-8", errors="ignore").strip()
-                if http_code in (200, 201, 202):
-                    verified = True
-                    latency_ms = elapsed_ms
-                    if resp_text and resp_text.lower() not in ("accepted", "ok"):
-                        reply_text = f"🔗 Make.com ({http_code} OK &bull; {elapsed_ms}ms): {resp_text}"
-                    else:
-                        reply_text = f"🔗 Webhook Make.com confirmó recepción ({resp_text or 'Accepted'}). Latencia: {elapsed_ms}ms. Escenario disparado correctamente."
-                else:
-                    verified = False
-                    latency_ms = None
-                    reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {http_code}: {resp_text}"
-        except urllib.error.HTTPError as he:
-            elapsed_ms = int((time.time() - t0) * 1000)
-            verified = False
-            latency_ms = None
-            err_body = ""
+        for idx, endpoint in enumerate(clean_candidates):
+            t0 = time.time()
             try:
-                err_body = he.read().decode("utf-8", errors="ignore").strip()
-            except Exception:
-                pass
-            reply_text = f"canal NO DISPONIBLE: Webhook Make.com respondió HTTP {he.code} {err_body}".strip()
-        except Exception as exc:
-            verified = False
-            latency_ms = None
-            reply_text = f"canal NO DISPONIBLE: Error de conexión con Make.com ({str(exc)})"
+                make_key = str(self.node_configs.get("make_api_key") or os.environ.get("MAKE_API_KEY") or "").strip()
+                headers = {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "User-Agent": "MrsPets-WarRoom-Chat/2.0"
+                }
+                if make_key:
+                    headers["x-make-apikey"] = make_key
+                    headers["Authorization"] = f"Bearer {make_key}"
+
+                req = urllib.request.Request(
+                    endpoint,
+                    data=req_data,
+                    headers=headers,
+                    method="POST"
+                )
+                ctx_ssl = ssl.create_default_context()
+                ctx_ssl.check_hostname = False
+                ctx_ssl.verify_mode = ssl.CERT_NONE
+
+                with urllib.request.urlopen(req, timeout=8.0, context=ctx_ssl) as resp:
+                    elapsed_ms = int((time.time() - t0) * 1000)
+                    http_code = resp.status
+                    resp_text = resp.read().decode("utf-8", errors="ignore").strip()
+                    if http_code in (200, 201, 202):
+                        verified = True
+                        latency_ms = elapsed_ms
+                        self.node_configs["make_webhook_url"] = endpoint
+                        fb_note = " (vía fallback)" if idx > 0 else ""
+                        if resp_text and resp_text.lower() not in ("accepted", "ok"):
+                            reply_text = f"🔗 Make.com ({http_code} OK &bull; {elapsed_ms}ms{fb_note}): {resp_text}"
+                        else:
+                            reply_text = f"🔗 Webhook Make.com confirmó recepción ({resp_text or 'Accepted'}{fb_note}). Latencia: {elapsed_ms}ms. Escenario disparado correctamente."
+                        break
+                    else:
+                        last_error = f"HTTP {http_code}: {resp_text}"
+            except urllib.error.HTTPError as he:
+                elapsed_ms = int((time.time() - t0) * 1000)
+                err_body = ""
+                try:
+                    err_body = he.read().decode("utf-8", errors="ignore").strip()
+                except Exception:
+                    pass
+                last_error = f"HTTP {he.code} {err_body}".strip()
+                log.warning("[WAR ROOM MAKE] Intento a %s falló con %s, probando siguiente candidato...", endpoint, last_error)
+                continue
+            except Exception as exc:
+                last_error = str(exc)
+                log.warning("[WAR ROOM MAKE] Intento a %s falló con excepción %s, probando siguiente...", endpoint, last_error)
+                continue
+
+        if not verified:
+            reply_text = f"canal NO DISPONIBLE: Webhook Make.com no respondió ({last_error})"
 
         # Actualizar telemetría del nodo make
         if "make" in self.nodes:
@@ -1752,7 +1797,8 @@ class WarRoomEngine:
         target_node_id: Optional[str] = None,
         channel_id: Optional[str] = None,
         sender_id: Optional[str] = None,
-        override_api_key: Optional[str] = None
+        override_api_key: Optional[str] = None,
+        target_webhook_url: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Procesa intervenciones en los canales independientes del Cuarto de Guerra:
@@ -1858,7 +1904,7 @@ class WarRoomEngine:
                         self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
 
             # 2. Despacho EXCLUSIVO a Make.com (CANAL ACTIVO ENFOCADO)
-            make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id)
+            make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
             self.chat_history.append(make_eval)
             responses.append(make_eval)
 

@@ -1766,16 +1766,19 @@ def war_room_get_config(request: Request):
     is_admin = check_is_war_room_admin(request)
     if war_room_engine:
         return war_room_engine.get_node_configs_for_user(is_admin=is_admin)
+    active_make_webhook = os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM") or os.environ.get("MAKE_WEBHOOK_URL") or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+    if any(bad in str(active_make_webhook) for bad in ["****", "1fl313", "642a", "p8netq49"]):
+        active_make_webhook = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     if is_admin:
         return {
-            "make_webhook_url": os.environ.get("MAKE_WEBHOOK_URL", "https://hook.us2.make.com/1fl313b968gttb0vebv8shcip5ul642a"),
+            "make_webhook_url": active_make_webhook,
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
             "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
         }
     return {
-        "make_webhook_url": "https://hook.us2.make.com/****642a",
+        "make_webhook_url": "https://hook.us2.make.com/****j7d4",
         "make_api_key": "",
         "make_fallback_url": "https://hook.us2.make.com/****j7d4",
         "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
@@ -1797,6 +1800,7 @@ async def war_room_post_chat(request: Request):
     message = str(body.get("message", "")).strip()
     target_node_id = body.get("target_node_id") or body.get("node_id")
     channel_id = body.get("channel_id")
+    target_webhook_url = body.get("target_webhook_url") or body.get("target_url") or body.get("url")
     override_api_key = (
         body.get("api_key")
         or body.get("gemini_api_key")
@@ -1826,7 +1830,8 @@ async def war_room_post_chat(request: Request):
             target_node_id=target_node_id,
             channel_id=channel_id,
             sender_id=sender_id,
-            override_api_key=override_api_key
+            override_api_key=override_api_key,
+            target_webhook_url=target_webhook_url
         )
         if result.get("status") == "rejected":
             return JSONResponse(status_code=400, content=result)
@@ -2020,17 +2025,22 @@ def _dispatch_make_with_fallback(primary_url: str, payload_dict: dict, timeout: 
     al webhook activo de respaldo si la primaria responde con error (ej. HTTP 410 Gone / timeout).
     """
     targets = []
-    if primary_url and str(primary_url).strip():
-        targets.append(str(primary_url).strip())
+    clean_primary = str(primary_url or "").strip()
+    if clean_primary and not any(bad in clean_primary for bad in ["****", "1fl313", "642a", "p8netq49"]):
+        targets.append(clean_primary)
     
-    fallback_url = (
+    fallback_candidate = (
         os.environ.get("MAKE_WEBHOOK_URL_ACTIVE")
-        or os.environ.get("MAKE_WEBHOOK_URL_POS")
+        or os.environ.get("MAKE_WEBHOOK_URL_WAR_ROOM")
         or os.environ.get("MAKE_WEBHOOK_URL")
-        or "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
     )
-    if fallback_url and fallback_url not in targets:
-        targets.append(fallback_url)
+    if fallback_candidate and not any(bad in fallback_candidate for bad in ["****", "1fl313", "642a", "p8netq49"]):
+        if fallback_candidate not in targets:
+            targets.append(fallback_candidate)
+
+    master_fallback = "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4"
+    if master_fallback not in targets:
+        targets.append(master_fallback)
 
     req_data = json.dumps(payload_dict, ensure_ascii=False).encode("utf-8")
     ctx_ssl = ssl.create_default_context()

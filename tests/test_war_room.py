@@ -13,6 +13,7 @@ import sys
 import os
 import unittest
 import json
+import io
 import urllib.request
 import urllib.error
 from unittest.mock import patch, MagicMock
@@ -399,6 +400,34 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertEqual(len(res["responses"]), 1)
         self.assertEqual(res["responses"][0]["sender_id"], "make")
         self.assertIn("Make.com", res["responses"][0]["sender"])
+
+    @patch("urllib.request.urlopen")
+    def test_13_make_resilience_and_410_fallback(self, mock_urlopen):
+        """Verifica que si Make responde HTTP 410 Gone, el motor conmute automáticamente al endpoint de fallback."""
+        import urllib.error
+        # El primer intento falla con HTTP 410 Gone; el segundo intento (fallback) responde 200 Accepted
+        mock_success = MagicMock()
+        mock_success.status = 200
+        mock_success.read.return_value = b"Accepted"
+        mock_success.__enter__.return_value = mock_success
+
+        err_410 = urllib.error.HTTPError(
+            url="https://hook.us2.make.com/broken_endpoint",
+            code=410,
+            msg="Gone",
+            hdrs={},
+            fp=io.BytesIO(b'{"message": "Webhook is gone"}')
+        )
+        mock_urlopen.side_effect = [err_410, mock_success]
+
+        res = war_room_engine.generate_make_evaluation(
+            problem_description="prueba fallback 410",
+            target_url="https://hook.us2.make.com/broken_endpoint_testing"
+        )
+        self.assertTrue(res["verified"])
+        self.assertIn("Make.com", res["message"])
+        self.assertIn("vía fallback", res["message"])
+
 
 if __name__ == "__main__":
     unittest.main()
