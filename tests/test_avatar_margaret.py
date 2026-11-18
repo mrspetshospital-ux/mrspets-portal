@@ -61,18 +61,13 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertIn("Banco Central de Venezuela", resp_tasa)
         self.assertIn("BCV", resp_tasa)
 
-    def test_03_margaret_identity_isolation_from_leia(self):
-        """Verifica que Margaret (👩‍💼) nunca firme como Leia (🎀) ni use su vocabulario."""
-        resp = centralita_router.synthesize_agent_response("margaret", "Margaret", "Hola, buenas tardes")
-        self.assertIn("👩‍💼", resp)
-        self.assertIn("Margaret", resp)
-        self.assertNotIn("🎀", resp)
-        self.assertNotIn("Leia Concierge", resp)
-
-        # Verificar avatar registrado en AGENT_REGISTRY
-        margaret_meta = AGENT_REGISTRY["margaret"]
-        self.assertEqual(margaret_meta["avatar"], "assets/margaret_avatar.svg")
-        self.assertEqual(margaret_meta["icon"], "👩‍💼")
+    def test_03_margaret_acting_as_leia_for_clients(self):
+        """Verifica que Margarette de Teamily asuma la identidad pública de Leia (🎀) de cara a los clientes."""
+        resp = centralita_router.synthesize_agent_response("margaret", "Margaret", "Hola, buenas tardes", context={"persona": "leia"})
+        self.assertIn("🎀", resp)
+        self.assertIn("Leia", resp)
+        self.assertIn("Concierge VIP", resp)
+        self.assertIn("Mrs. Pets", resp)
 
     def test_04_teamily_client_ask_margaret_request(self):
         """Verifica que teamily_geo_a_client disponga de ask_margaret y construya la petición con el board oficial."""
@@ -92,7 +87,7 @@ class TestAvatarMargaret(unittest.TestCase):
         resp_admin = centralita_router.synthesize_agent_response("margaret", "Margaret", "Deseo hablar con Talibel o la Administración")
         self.assertIn("Talibel", resp_admin)
         self.assertIn("Administración", resp_admin)
-        self.assertIn("escalar", resp_admin.lower())
+        self.assertIn("prioridad", resp_admin.lower())
 
     def test_06_no_fake_confirmation_on_complaints(self):
         """Verifica que ante quejas se abra auditoría formal y no se generen confirmaciones ficticias."""
@@ -102,16 +97,14 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertNotIn("serverMsgID", resp_queja)
 
     def test_07_buenas_noches_reception_greeting(self):
-        """Verifica que un saludo simple como 'buenas noches' sea respondido por Margaret como recepcionista y nunca por Leia."""
-        resp = centralita_router.synthesize_agent_response("margaret", "Margaret", "buenas noches")
-        self.assertIn("Margaret", resp)
+        """Verifica que un saludo simple como 'buenas noches' sea respondido con la identidad pública de Leia pero motor de Margarette."""
+        resp = centralita_router.synthesize_agent_response("margaret", "Margaret", "buenas noches", context={"persona": "leia"})
+        self.assertIn("Leia", resp)
         self.assertIn("Avenida 2 El Milagro", resp)
-        self.assertIn("👩‍💼", resp)
-        self.assertNotIn("Leia", resp)
-        self.assertNotIn("🎀", resp)
+        self.assertIn("🎀", resp)
 
     def test_08_api_endpoints_buenas_noches(self):
-        """Verifica que los endpoints HTTP de Teamily y Gemini respondan con Margaret ante 'buenas noches'."""
+        """Verifica que los endpoints HTTP de Teamily y Gemini respondan con Leia de cara al cliente ante 'buenas noches'."""
         try:
             from starlette.testclient import TestClient
             from server import app
@@ -122,8 +115,8 @@ class TestAvatarMargaret(unittest.TestCase):
             self.assertEqual(res_team.status_code, 200)
             data_team = res_team.json()
             self.assertEqual(data_team.get("agent"), "margaret")
-            self.assertIn("Margaret", data_team.get("reply", ""))
-            self.assertNotIn("Leia", data_team.get("reply", ""))
+            self.assertIn("Leia", data_team.get("reply", ""))
+            self.assertIn("🎀", data_team.get("reply", ""))
 
             # 2. Endpoint Leia/Margaret fallback chat
             res_gem = client.post("/api/v1/leia/chat", json={"agent_id": "margaret", "requested_slug": "margaret", "message": "buenas noches"})
@@ -131,8 +124,8 @@ class TestAvatarMargaret(unittest.TestCase):
             data_gem = res_gem.json()
             self.assertEqual(data_gem.get("agent"), "margaret")
             reply_gem = data_gem.get("reply", "")
-            self.assertIn("Margaret", reply_gem)
-            self.assertNotIn("Leia", reply_gem)
+            self.assertIn("Leia", reply_gem)
+            self.assertIn("🎀", reply_gem)
         except ImportError:
             pass
 

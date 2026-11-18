@@ -400,16 +400,12 @@ class MrsPetsArchitectureEngine {
     widget.style.zIndex = '999';
     widget.style.cursor = 'pointer';
 
-    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
-    const isMargaret = primaryAgent.includes('margaret');
-    const avatarImg = isMargaret ? 'assets/margaret_avatar.svg' : 'assets/leia_avatar.jpg';
-    const avatarTitle = isMargaret ? 'Margaret 👩‍💼 • Recepción & Atención al Cliente' : 'Leia 🎀 • Concierge de Clientes';
-    const headerTitle = isMargaret ? 'Margaret 👩‍💼' : 'Leia 🎀';
-    const headerBadge = isMargaret ? 'Recepción & Atención' : 'Atención a Clientes';
-    const initialGreeting = isMargaret
-      ? `¡Hola! Le atiende <strong style="color:#fef08a !important;">Margaret 👩‍💼</strong>, Gerente de Atención al Cliente de <strong>Mrs. Pets</strong> (Avenida 2 El Milagro).<br><br>Estoy a su entera disposición para asistirle con reservas de <strong>Grooming Spa</strong>, <strong>Clínica Veterinaria</strong> y <strong>Hotel 5★</strong>, o comunicarle con la Administración. ¿En qué podemos apoyar a su príncipe o princesa hoy?`
-      : `¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás hoy? ✨🐾<br><br>Qué alegría tenerte en nuestra casa. <strong style="color:#fef08a !important;">¿Con quién tengo el gusto de hablar?</strong><br>Estoy aquí para ayudarte a coordinar la mejor atención para tu consentido:`;
-    const inputPlaceholder = isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia (Atención al Cliente)...';
+    const avatarImg = 'assets/leia_avatar.jpg';
+    const avatarTitle = 'Leia 🎀 • Concierge VIP';
+    const headerTitle = 'Leia 🎀';
+    const headerBadge = 'Concierge VIP';
+    const initialGreeting = `¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, Concierge VIP de <strong>Mrs. Pets</strong> (Avenida 2 El Milagro).<br><br>Estoy a tu entera disposición para consentir a tu consentido(a) y coordinar turnos de <strong>Grooming Spa</strong> (con hidratación botánica de pulpejos siempre incluida 🐾), <strong>Clínica Veterinaria IDEXX</strong> y <strong>Hotel VIP 5★</strong>. ¿En qué podemos apoyarte hoy? ✨🐾`;
+    const inputPlaceholder = 'Escribe a Leia (Concierge VIP)...';
 
     widget.innerHTML = `
       <div id="leia-avatar-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event)" title="${avatarTitle}" style="position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); display:flex; align-items:center; justify-content:center; transition:transform 0.3s ease;">
@@ -515,12 +511,10 @@ class MrsPetsArchitectureEngine {
   }
 
   syncAvatarIdentity() {
-    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
-    const isMargaret = primaryAgent.includes('margaret');
-    const avatarImg = isMargaret ? 'assets/margaret_avatar.svg' : 'assets/leia_avatar.jpg';
-    const avatarTitle = isMargaret ? 'Margaret 👩‍💼 • Recepción & Atención al Cliente' : 'Leia 🎀 • Concierge de Clientes';
-    const headerBadge = isMargaret ? 'Recepción & Atención' : 'Atención a Clientes';
-    const placeholder = isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia (Atención al Cliente)...';
+    const avatarImg = 'assets/leia_avatar.jpg';
+    const avatarTitle = 'Leia 🎀 • Concierge VIP';
+    const headerBadge = 'Concierge VIP';
+    const placeholder = 'Escribe a Leia (Concierge VIP)...';
 
     const btn = document.getElementById('leia-avatar-btn');
     if (btn) btn.title = avatarTitle;
@@ -1503,15 +1497,15 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const isStaff = session && session.userType === 'staff_admin';
     const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
     const isMargaret = primaryAgent.includes('margaret');
-    const agentSlug = isMargaret ? 'margaret' : 'leia';
-    const agentDisplayName = isMargaret ? 'Margaret' : 'Leia';
+    const agentSlug = 'margaret';
+    const agentDisplayName = 'Leia';
 
     // 2. Bloquear input y botón para evitar congelamiento o envíos dobles
     const inputEl = document.getElementById('leia-chat-input');
     const sendBtn = document.getElementById('btn-leia-chat-send');
     if (inputEl) {
       inputEl.disabled = true;
-      inputEl.setAttribute('placeholder', `${agentDisplayName} está respondiendo...`);
+      inputEl.setAttribute('placeholder', 'Leia está respondiendo...');
     }
     if (sendBtn) {
       sendBtn.disabled = true;
@@ -1542,7 +1536,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       typingDiv.style.gap = '4px';
       typingDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
 
-      const roleBadge = isMargaret ? '👩‍💼 Margaret • Recepción & Atención al Cliente' : '🎀 Leia • Concierge VIP';
+      const roleBadge = '🎀 Leia • Concierge VIP';
       // TRANSPARENCIA TOTAL PARA CLIENTES: nunca ver modelos técnicos
       const modelDetailHtml = isStaff
         ? `<span>${roleBadge} • <strong style="color:#fef08a;">${cleanModelName}</strong></span>`
@@ -1551,7 +1545,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       typingDiv.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="spinner-border spinner-border-sm" role="status" style="width:14px; height:14px; border-width:2px; color:#fbbf24;"></span>
-          <strong>${agentDisplayName} está respondiendo a tu consulta...</strong>
+          <strong>Leia está respondiendo a tu consulta...</strong>
         </div>
         <div style="font-size:0.73rem; color:#94a3b8; font-style:italic; display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
           ${modelDetailHtml}
@@ -1749,7 +1743,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
 
     if (inputEl) {
       inputEl.disabled = false;
-      inputEl.setAttribute('placeholder', isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia Concierge...');
+      inputEl.setAttribute('placeholder', 'Escribe a Leia (Concierge VIP)...');
       setTimeout(() => inputEl.focus(), 60);
     }
     if (sendBtn) {
@@ -1771,13 +1765,11 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       const formattedHtml = this.formatMarkdownToHtml(serverReplyText);
       this.appendLeiaMessage(formattedHtml, 'bot');
       if (isStaff && window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast(`Respuesta de ${isMargaret ? 'Margaret' : 'Leia'} recibida (${cleanModelName}) ✨`, 'success');
+        window.app.showToast(`Respuesta de Leia recibida (${cleanModelName}) ✨`, 'success');
       }
     } else {
       // Manejo seguro y explícito de indisponibilidad sin respuestas simuladas ni confirmaciones falsas
-      const fallbackMsg = isMargaret
-        ? "👩‍💼 **Margaret:** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo de recepción y administración en sucursal."
-        : "🎀 **Leia:** En este momento nuestro enlace de asistencia inteligente está en pausa por mantenimiento o reconexión de red. Por favor reintenta en breve.";
+      const fallbackMsg = "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal.";
       this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg), 'bot');
     }
   }

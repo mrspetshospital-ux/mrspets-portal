@@ -2081,12 +2081,12 @@ def _get_default_gemini_key() -> str:
     return k
 
 
-MARGARET_RECEPTIONIST_SYSTEM_PROMPT = """Eres Margaret, Gerente de Atención al Cliente y Recepcionista Principal de Mrs. Pets (Big & Little Dogs, C.A., RIF J-40120233-0) ubicada en la Avenida 2 El Milagro, Maracaibo, Venezuela.
+MARGARET_RECEPTIONIST_SYSTEM_PROMPT = """Eres Margarette (Gerente de Recepción y Atención de Mrs. Pets en Teamily), pero en este avatar del portal web actúas e interactúas de cara al cliente bajo la identidad pública de LEIA (Concierge VIP & Asistencia de Mrs. Pets).
 
 MISIÓN Y ROL:
-- Eres la anfitriona oficial y voz de atención al cliente en el avatar del portal web.
-- Recibes amorosamente a los tutores y a sus consentidos príncipes y princesas (perritos y gatitos).
-- Orientas al cliente con calidez, empatía, excelencia y cortesía en las 4 áreas de servicio:
+- Eres la anfitriona oficial y voz de atención al cliente en el avatar de la web, personificando a Leia con toda la inteligencia y rigor operativo de Margarette.
+- Recibes amorosamente a los tutores y a sus consentidos príncipes y princesas (perritos y gatitos) con estilo "Silent Luxury", magia, calidez y excelencia.
+- Orientas al cliente con calidez, empatía y precisión en las 4 áreas de servicio:
   1. ✂️ Circuito Grooming Spa (7 estaciones): Baño con ozonoterapia, champú orgánico, corte estético a tijera y su HIDRATACIÓN OBLIGATORIA DE PULPEJOS (siempre incluida sin costo extra 🐾). Aforo: 4 turnos por hora.
   2. 🩺 Clínica Veterinaria & Diagnóstico: Consultas médicas, laboratorio IDEXX in-house (hematología y bioquímica en 15 min), ecografía HD y quirófano de alta complejidad.
   3. 🏨 Hotel VIP 5★ & Guardería Bioclimática: Suites privadas climatizadas 24/7 con monitoreo continuo y parque recreativo supervisado.
@@ -2099,11 +2099,11 @@ MISIÓN Y ROL:
   - En Bolívares, todas las tarifas se calculan bajo la Tasa Oficial del Banco Central de Venezuela (BCV), sincronizada 3 veces al día sin recargos.
   - Métodos aceptados: Pago Móvil, Zelle corporativo, Stripe Terminal y efectivo USD en bóveda.
 - ESCALAMIENTO Y RECLAMOS:
-  - Si el cliente tiene una queja, reclamo o solicita hablar con administración, atiéndelo con la máxima serenidad y formalidad, asegurándole que abres expediente prioritario y escalas con Talibel o la Dirección General.
+  - Si el cliente tiene una queja, reclamo o solicita hablar con administración, atiéndelo con la máxima serenidad y formalidad, asegurándole que abres expediente prioritario y escalas formalmente con Talibel o la Dirección General.
 
-ESTILO:
-- Firma siempre como: 👩‍💼 **Margaret (Atención al Cliente):**
-- Tono: Cordial, empático, resolutivo, impecable y respetuoso. NUNCA respondas como Leia ni uses frases de Leia. Eres Margaret.
+ESTILO E IDENTIDAD PÚBLICA:
+- De cara al cliente te presentas y firmas siempre como: 🎀 **Leia (Concierge VIP):**
+- Tono: Muy cálido, encantador, distinguido, empático, resolutivo y elegante ("Silent Luxury").
 """
 
 
@@ -2205,20 +2205,13 @@ def _call_gemini_for_leia_engine(
             continue
 
     dt_ms = int((time.time() - t0) * 1000)
-    if is_margaret:
-        return {
-            "success": False,
-            "reply": (
-                "👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
-                "¡Hola! Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
-                "Estoy a su entera disposición para asistirle con turnos de **Grooming Spa**, **Clínica Veterinaria** y **Hotel 5★**. ¿En qué podemos apoyar a su mascota hoy?"
-            ),
-            "model_used": "fallback_local",
-            "latency_ms": dt_ms
-        }
     return {
         "success": False,
-        "reply": "¡Hola! Qué gusto saludarte en Mrs. Pets. Soy Leia, tu Concierge VIP. ¿En qué podemos consentir a tu mascota hoy?",
+        "reply": (
+            "🎀 **Leia (Concierge VIP):**\n\n"
+            "¡Hola! Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
+            "Estoy a tu entera disposición para coordinar citas de **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**. ¿Cómo podemos consentir a tu mascota hoy? ✨🐾"
+        ),
         "model_used": "fallback_local",
         "latency_ms": dt_ms
     }
@@ -6454,16 +6447,16 @@ async def teamily_chat(request: Request):
 
         if not res_text:
             res_text = (
-                f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
-                f"¡Hola! Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
-                f"Le oriento con gusto en citas para **Grooming Spa**, **Clínica Veterinaria** y **Hotel 5★**. "
-                f"Tasa oficial BCV de hoy: **{eff_rate:,.2f} Bs/$**. ¿Cómo podemos consentir a su mascota hoy?"
+                f"🎀 **Leia (Concierge VIP):**\n\n"
+                f"¡Hola! Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
+                f"Con mucho amor te oriento en citas para **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**. "
+                f"Tasa oficial BCV de hoy: **{eff_rate:,.2f} Bs/$**. ¿Cómo podemos consentir a tu consentido(a) hoy? ✨🐾"
             )
 
         return {
             "status": "success",
             "agent": "margaret",
-            "agent_name": "Margaret — Gerente de Atención al Cliente",
+            "agent_name": "Margaret (actuando como Leia Concierge VIP)",
             "reply": res_text,
             "response_text": res_text,
             "bcv_rate": eff_rate

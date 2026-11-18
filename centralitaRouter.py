@@ -292,67 +292,71 @@ class CentralitaRouter:
                 f"Es un placer recibirle en nuestra plataforma. Estoy a su disposición para coordinar servicios bajo el protocolo Silent Luxury, agendar citas en nuestras 4 áreas o comunicarle con la Dirección General."
             )
 
-        # 2. MARGARET (Recepción & Gerencia de Atención al Cliente)
+        # 2. MARGARET (Recepción & Atención al Cliente de Teamily - De cara al cliente en widget web personifica a Leia Concierge VIP)
         if slug in ["margaret", "margarette", "atencion", "recepcion"]:
+            as_leia = bool(ctx.get("as_leia") or ctx.get("persona") == "leia" or (ctx.get("channel") and "Widget" in str(ctx.get("channel"))))
+            pfx = "🎀 **Leia (Concierge VIP):**" if as_leia else "👩‍💼 **Margaret (Recepción & Atención al Cliente):**"
+            intro = "Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets**" if as_leia else "Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets**"
+
             if any(w in inp_lower for w in ["talibel", "administra", "gerencia", "direccion", "dirección"]):
                 return (
-                    f"👩‍💼 **Margaret (Gerente de Atención al Cliente):**\n\n"
-                    f"He registrado su solicitud formal. En este instante procedo a escalar su expediente con **Talibel** y el área de Administración Ejecutiva para su oportuno seguimiento."
+                    f"{pfx}\n\n"
+                    f"He registrado tu solicitud con la máxima prioridad. En este instante procedo a comunicarte formalmente con **Talibel** y el área de Administración Ejecutiva para su oportuno seguimiento."
                 )
 
             if any(w in inp_lower for w in ["reclamo", "queja", "inconformidad", "problema", "molesto", "error", "falla"]):
                 return (
-                    f"👩‍💼 **Margaret (Gerente de Atención al Cliente):**\n\n"
-                    f"Lamento profundamente la situación que nos comparte. En Mrs. Pets la satisfacción de los tutores y el bienestar de los consentidos es nuestra máxima prioridad.\n\n"
-                    f"He aperturado un expediente de auditoría interna inmediata para revisar lo sucedido. Por favor indíqueme el nombre de su consentido y la fecha de su última visita para darle una solución hoy mismo."
+                    f"{pfx}\n\n"
+                    f"Lamento profundamente lo que nos compartes. En Mrs. Pets el bienestar y la felicidad de nuestros consentidos es nuestra razón de ser.\n\n"
+                    f"He aperturado un expediente de auditoría interna inmediata para revisar lo sucedido. Por favor indícame el nombre de tu consentido y la fecha de su última visita para darte una solución hoy mismo."
                 )
 
             if any(w in inp_lower for w in ["reserva", "reservar", "cita", "agendar", "turno", "disponib", "horario"]):
                 return (
-                    f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
-                    f"¡Con el mayor gusto le asisto con su reserva en **Mrs. Pets** (Av. 2 El Milagro)!\n\n"
+                    f"{pfx}\n\n"
+                    f"¡Con el mayor amor te asisto con tu reserva en **Mrs. Pets** (Av. 2 El Milagro)! ✨🐾\n\n"
                     f"📅 **Horario Oficial:** Lunes a Sábado de 8:00 a.m. a 6:00 p.m. (18:00 cierre estricto de sucursal).\n"
-                    f"⛔ **Domingos:** CERRADO para descanso médico del personal y mantenimiento profundo.\n\n"
-                    f"¿Para cuál de nuestras áreas desea el turno?\n"
-                    f"• ✂️ **Grooming Spa 7 Estaciones:** Con hidratación obligatoria de pulpejos (4 cupos/h).\n"
-                    f"• 🩺 **Clínica Veterinaria:** Consulta general, ecografía y laboratorio IDEXX.\n"
+                    f"⛔ **Domingos:** CERRADO para descanso médico de nuestro equipo y sanitización profunda.\n\n"
+                    f"¿Para cuál de nuestras áreas deseas el turno?\n"
+                    f"• ✂️ **Grooming Spa 7 Estaciones:** Con hidratación botánica obligatoria de pulpejos (4 cupos/h).\n"
+                    f"• 🩺 **Clínica Veterinaria:** Consulta general, ecografía y laboratorio IDEXX en 15 min.\n"
                     f"• 🏨 **Hotel VIP 5★:** Suites climatizadas con monitoreo 24/7.\n\n"
-                    f"Indíqueme la fecha de su preferencia y el nombre de su consentido para coordinar."
+                    f"Indícame la fecha de tu preferencia y el nombre de tu consentido(a) para coordinar."
                 )
 
             if any(w in inp_lower for w in ["grooming", "baño", "corte", "spa", "peluqueria", "pulpejo"]):
                 return (
-                    f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                    f"{pfx}\n\n"
                     f"✂️ **Circuito Grooming Spa 7 Estaciones (Aforo: 4 turnos por hora):**\n\n"
                     f"• **Protocolo Completo:** Baño con ozonoterapia, champú orgánico de avena/aloe, desenredo profesional, corte estético a tijera y secado silencioso antiestrés.\n"
                     f"• **Hidratación de Pulpejos:** 100% incluida y obligatoria en cada servicio sin costo extra 🐾.\n"
                     f"• **Cierre Operativo:** Último turno a las 5:00 p.m.; entrega puntual a las 6:00 p.m.\n\n"
-                    f"¿Desea que agendemos el turno de su consentido?"
+                    f"¿Deseas que coordinemos el turno de tu consentido(a)?"
                 )
 
             if any(w in inp_lower for w in ["clinica", "clínica", "veterinario", "medico", "médico", "vacuna", "idexx"]):
                 return (
-                    f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                    f"{pfx}\n\n"
                     f"🩺 **Clínica Veterinaria Mrs. Pets:**\n\n"
                     f"• **Cuerpo Médico:** Médicos veterinarios de guardia de lunes a sábado de 8:00 a.m. a 6:00 p.m.\n"
                     f"• **Laboratorio IDEXX in-house:** Hematología completa y química sanguínea en 15 minutos.\n"
                     f"• **Diagnóstico Avanzado:** Ecografía HD, visor radiológico PACS y quirófano estéril.\n\n"
-                    f"¿Desea una consulta preventiva o coordinar un triaje de atención?"
+                    f"¿Deseas una consulta preventiva o coordinar un triaje de atención?"
                 )
 
             if any(w in inp_lower for w in ["hotel", "guarderia", "guardería", "hospedaje", "suite"]):
                 return (
-                    f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                    f"{pfx}\n\n"
                     f"🏨 **Hotel VIP 5★ & Guardería Bioclimática:**\n\n"
                     f"• Suites privadas con climatización controlada, luz natural y música ambiental.\n"
                     f"• Monitoreo 24/7 y parque recreativo supervisado.\n"
                     f"• Requisitos: Esquema vacunal al día y desparasitación vigente.\n\n"
-                    f"¿Para qué fecha planifica la estadía de su consentido?"
+                    f"¿Para qué fecha planificas la estadía de tu consentido(a)?"
                 )
 
             if any(w in inp_lower for w in ["tasa", "dolar", "dólar", "bcv", "precio", "bolivar", "bolívar", "costo"]):
                 return (
-                    f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                    f"{pfx}\n\n"
                     f"💵 **Transparencia en Precios & Tasa Oficial BCV:**\n\n"
                     f"En Mrs. Pets todas nuestras tarifas en Bolívares se calculan estrictamente con la **Tasa Oficial del Banco Central de Venezuela (BCV)**:\n"
                     f"• **Referencia Oficial Vigente:** **{bcv_rate:,.2f} Bs/USD** (Sincronizada a las 08:30, 12:00 y 16:00).\n"
@@ -361,9 +365,9 @@ class CentralitaRouter:
                 )
 
             return (
-                f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
-                f"¡Hola! Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
-                f"Estoy aquí para recibirle amorosamente, asistirle con reservas de **Grooming Spa**, **Clínica Veterinaria**, **Hotel 5★**, o comunicarle con la Administración. ¿En qué podemos consentir a su príncipe o princesa hoy?"
+                f"{pfx}\n\n"
+                f"¡Hola! {intro} (Avenida 2 El Milagro).\n\n"
+                f"Es un inmenso placer recibirte en nuestra plataforma. Estoy a tu entera disposición para consentir a tu mascota, coordinar citas de **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**, o comunicarte con la Administración. ¿Cómo podemos consentir a tu consentido(a) hoy? ✨🐾"
             )
 
         # 3. MANOLO
