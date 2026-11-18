@@ -75,8 +75,8 @@ WAR_ROOM_PARTICIPANTS = {
     "super_agent": {
         "sender_id": "super_agent",
         "channel_id": "channel_super_agent",
-        "name": "Super Agent (Teamly)",
-        "role": "Coordinación Operativa & Enjambre de Agentes",
+        "name": "Charly / Super Agent (Teamily)",
+        "role": "Asistente Ejecutivo & Coordinación Operativa (Teamily)",
         "icon": "🤝",
         "type": "ai_agent"
     },
@@ -125,10 +125,10 @@ WAR_ROOM_CHANNELS = {
     },
     "channel_super_agent": {
         "channel_id": "channel_super_agent",
-        "name": "Canal Super Agent",
+        "name": "Canal Teamily (Charly / Super Agent)",
         "authorized_sender_id": "super_agent",
-        "participant": "Super Agent (Teamly)",
-        "role": "Coordinación Operativa & Enjambre de Agentes",
+        "participant": "Charly / Super Agent (Teamily)",
+        "role": "Asistente Ejecutivo & Coordinación Operativa (Teamily)",
         "icon": "🤝"
     },
     "channel_antigravity": {
@@ -151,7 +151,7 @@ WAR_ROOM_CHANNELS = {
 
 VALID_CHANNELS = {
     "channel_mrspets": "Canal Mrs. PETS CORP (Dirección General)",
-    "channel_super_agent": "Canal Super Agent (Teamly)",
+    "channel_super_agent": "Canal Teamily (Charly / Super Agent)",
     "channel_antigravity": "Canal Google AntiGravity",
     "channel_gemini": "Canal Gemini AI",
     "deliberacion": "Sala Común de Deliberación (Vista General)"
@@ -165,7 +165,7 @@ def normalize_sender_id(sender_raw: Optional[str]) -> str:
     s = str(sender_raw).strip().lower()
     if any(k in s for k in ["mrspets", "mrs pets", "harry", "daly", "talibel", "direccion", "director"]):
         return "mrspets"
-    if any(k in s for k in ["super_agent", "superagent", "teamly", "teamily", "agente"]):
+    if any(k in s for k in ["super_agent", "superagent", "teamly", "teamily", "charly", "charlie", "tembly", "agente"]):
         return "super_agent"
     if any(k in s for k in ["antigravity", "anti-gravity", "anti gravity"]):
         return "antigravity"
@@ -186,7 +186,7 @@ def normalize_channel_id(channel_raw: Optional[str]) -> str:
     c = str(channel_raw).strip().lower()
     if any(k in c for k in ["mrspets", "harry", "daly"]):
         return "channel_mrspets"
-    if any(k in c for k in ["super_agent", "superagent", "teamly", "teamily"]):
+    if any(k in c for k in ["super_agent", "superagent", "teamly", "teamily", "charly", "charlie", "tembly"]):
         return "channel_super_agent"
     if any(k in c for k in ["antigravity", "anti-gravity"]):
         return "channel_antigravity"
@@ -341,15 +341,23 @@ class WarRoomEngine:
             ),
             "make_api_key": os.environ.get("MAKE_API_KEY", ""),
             "make_fallback_url": "https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4",
-            "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
-            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
-            "gemini_api_key": _get_default_gemini_key(),
-            "antigravity_endpoint_url": (
+            "teamly_status": "ASINCRONO_SIN_API_PUBLICA",
+            "teamily_endpoint_url": (
                 os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
                 or os.environ.get("TEAMILY_AGENT_ENDPOINT")
                 or "https://teamily.ai/v1/agents/geo-a/responses"
-                if os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "teamily").strip().lower() != "gemini"
-                else "https://generativelanguage.googleapis.com/v1beta"
+            ),
+            "teamily_board_id": (
+                os.environ.get("TEAMILY_BOARD_ID")
+                or os.environ.get("TEAMILY_WAR_ROOM_BOARD_ID")
+                or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+            ),
+            "teamily_server_key": os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or "",
+            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
+            "gemini_api_key": _get_default_gemini_key(),
+            "antigravity_endpoint_url": (
+                os.environ.get("ANTIGRAVITY_ENDPOINT_URL")
+                or "https://generativelanguage.googleapis.com/v1beta"
             ),
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
         }
@@ -416,13 +424,13 @@ class WarRoomEngine:
             },
             "teamly": {
                 "id": "teamly",
-                "name": "Super Agent (Teamly)",
-                "title": "Enjambre de Agentes Autónomos & Coordinación Operativa",
-                "role": "Coordinación de Agentes",
+                "name": "Charly / Super Agent (Teamily)",
+                "title": "Asistente Ejecutivo & Coordinación Operativa",
+                "role": "Coordinación Operativa (Teamily)",
                 "status": "ESTABLE",
                 "ping_ms": None,
                 "icon": "🤝",
-                "state_desc": "Tablero conectado (Board ID: 5803df5a-7127-4d28-b97c-5c840d47cdc7).",
+                "state_desc": "Canal vivo Teamily (Agente GEO-A: Charly en Board 5803df5a...).",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             }
         }
@@ -1350,7 +1358,7 @@ class WarRoomEngine:
         """
         now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
-        backend = os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "teamily").strip().lower()
+        backend = os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "gemini").strip().lower()
 
         verified = False
         latency_ms: Optional[int] = None
@@ -1449,41 +1457,84 @@ class WarRoomEngine:
 
     def generate_super_agent_evaluation(self, problem_description: str, channel_id: str = "channel_super_agent") -> Dict[str, Any]:
         """
-        Evaluación operativa generada por Super Agent (Teamly).
-        Examina el estado del enjambre de agentes autónomos, tablero y asignación de flujos.
-        Escribe exclusivamente en channel_super_agent con sender_id: super_agent.
-        """
-        t0 = time.time()
-        now_iso = datetime.now(timezone.utc).isoformat()
-        board_id = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
-        agents_monitored = ["Leia Concierge", "Margaret Grooming", "Valeria POS", "Mike Tasa BCV"]
+        Evaluación operativa emitida por Teamily (Charly / Super Agent) en channel_super_agent.
         
-        reply = (
-            f"🤝 Super Agent (Teamly) [Operaciones]: Recibido planteamiento en Cuarto de Guerra.\n"
-            f"• Tablero Operativo: Board {board_id[:8]}... enlazado.\n"
-            f"• Estado del Enjambre: Supervisando agentes ({', '.join(agents_monitored)}). Cola operativa en verificación. Sincronizando tareas con AntiGravity para asegurar continuidad del servicio."
-        )
-
-        elapsed_ms = max(1, int((time.time() - t0) * 1000))
+        ARQUITECTURA DE VOZ PROPIA Y HONESTIDAD (Anti-Solapamiento):
+        Teamily tiene su propia voz y responde a través de su agente real configurado en el board (Charly).
+        Nadie solapa ni responde por Teamily. Si el canal está cortado o no hay credencial, se declara
+        honestamente 'canal NO DISPONIBLE' con verified=False y latency_ms=None.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
 
+        verified = False
+        latency_ms: Optional[int] = None
+        sender = WAR_ROOM_PARTICIPANTS["super_agent"]["name"]
+        role = WAR_ROOM_PARTICIPANTS["super_agent"]["role"]
+        reply_text = ""
+
+        try:
+            import teamilyClient
+            geo_client = teamilyClient.TeamilyGeoAClient(
+                endpoint=self.node_configs.get("teamily_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT,
+                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID
+            )
+        except Exception as import_err:
+            geo_client = None
+            init_err = str(import_err)
+
+        if not geo_client or not geo_client.server_key:
+            verified = False
+            latency_ms = None
+            reply_text = "canal NO DISPONIBLE: Credencial de autenticación de Teamily no configurada (TEAMILEY_SERVER_KEY requerida)."
+        else:
+            prompt_input = (
+                f"[Cuarto de Guerra Mrs. Pets — Coordinación Operativa & Enjambre]\n"
+                f"Planteamiento / Consulta recibida de Dirección General:\n{problem_description}\n\n"
+                f"Favor emitir análisis operativo, estado de coordinación del enjambre y acciones del equipo."
+            )
+            req = teamilyClient.TeamilyGeoARequest(
+                input=prompt_input,
+                wait=True,
+                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                is_customer=False
+            )
+            try:
+                resp_obj = geo_client.send_message(req)
+                if resp_obj.success and resp_obj.response_text:
+                    verified = True
+                    latency_ms = int(resp_obj.latency_ms) if resp_obj.latency_ms is not None else None
+                    reply_text = resp_obj.response_text
+                else:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: No se pudo contactar al agente Teamily ({resp_obj.error or 'Respuesta vacía o error HTTP'})."
+            except Exception as call_err:
+                verified = False
+                latency_ms = None
+                reply_text = f"canal NO DISPONIBLE: Fallo al conectar con Teamily ({str(call_err)})."
+
         if "teamly" in self.nodes:
-            self.nodes["teamly"]["ping_ms"] = elapsed_ms
+            self.nodes["teamly"]["ping_ms"] = latency_ms
             self.nodes["teamly"]["last_ping"] = now_iso
-            self.nodes["teamly"]["status"] = "ESTABLE"
-            self.nodes["teamly"]["state_desc"] = f"● Coordinación operativa nominal ({elapsed_ms}ms)"
+            if verified:
+                self.nodes["teamly"]["status"] = "ESTABLE"
+                self.nodes["teamly"]["state_desc"] = f"● Coordinación operativa nominal ({latency_ms}ms)"
+            else:
+                self.nodes["teamly"]["status"] = "DEGRADADO"
+                self.nodes["teamly"]["state_desc"] = "● Canal NO DISPONIBLE (Fallo de conectividad o credencial ausente)"
 
         sa_msg = {
             "id": msg_id,
             "channel_id": "channel_super_agent",
             "sender_id": "super_agent",
-            "sender": WAR_ROOM_PARTICIPANTS["super_agent"]["name"],
-            "role": WAR_ROOM_PARTICIPANTS["super_agent"]["role"],
-            "message": reply,
+            "sender": sender,
+            "role": role,
+            "message": reply_text,
             "timestamp": now_iso,
             "node_id": "teamly",
-            "verified": True,
-            "latency_ms": elapsed_ms
+            "verified": verified,
+            "latency_ms": latency_ms
         }
         return sa_msg
 

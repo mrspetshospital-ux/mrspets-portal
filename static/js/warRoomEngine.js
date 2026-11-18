@@ -25,7 +25,7 @@
       this.channelsList = [
         { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
         { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
-        { id: 'channel_super_agent', name: 'Super Agent (Teamly)', icon: '🤝' },
+        { id: 'channel_super_agent', name: 'Teamily (Charly / Super Agent)', icon: '🤝' },
         { id: 'channel_antigravity', name: 'Google AntiGravity', icon: '⚡' },
         { id: 'channel_gemini', name: 'Gemini AI', icon: '✨' }
       ];
@@ -116,7 +116,7 @@
         volturi: 'Charlie / Comité Volturi (Gobernanza & Ética)',
         antigravity: 'Google AntiGravity (Ingeniería & Código)',
         make: 'Make.com (Webhooks & Flujos)',
-        teamly: 'Super Agent / Teamly (Operaciones & Agentes)'
+        teamly: 'Charly / Super Agent (Teamily - Operaciones & Agentes)'
       };
       const label = nodeLabels[nodeId] || nodeId.toUpperCase();
 
@@ -785,7 +785,7 @@
         { id: 'gemini', name: 'Gemini AI', icon: '✨', role: 'Razonamiento Multimodal', desc: 'Diagnóstico cognitivo y causa raíz' },
         { id: 'antigravity', name: 'Google AntiGravity', icon: '⚡', role: 'Ingeniería Autónoma', desc: 'Diagnóstico y resiliencia de endpoints' },
         { id: 'make', name: 'Make.com', icon: '🔗', role: 'Webhooks & Omnicanalidad', desc: 'Flujos Make, POS y WhatsApp' },
-        { id: 'teamly', name: 'Super Agent (Teamly)', icon: '🤝', role: 'Coordinación Operativa', desc: 'Enjambre de agentes y tableros' }
+        { id: 'teamly', name: 'Charly / Super Agent (Teamily)', icon: '🤝', role: 'Coordinación Operativa', desc: 'Canal vivo Teamily (Agente GEO-A: Charly)' }
       ];
 
       const nodesHtml = nodesList.map(item => {
@@ -2712,19 +2712,19 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Modelo vigente de alta velocidad y razonamiento para el War Room.</div>
             </div>
 
-            <!-- TEAMLY (ENJAMBRE DE AGENTES) -->
+            <!-- TEAMLY (ENJAMBRE DE AGENTES & CHARLY) -->
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamly / Elías (Agentes Autónomos):</label>
-                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">ℹ️ Sin API REST directa</span>
+                <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamily (Charly / GEO-A Endpoint):</label>
+                <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">—</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" readonly value="Modalidad: Asíncrono vía Webhooks de Make.com" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
-                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', '')" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
-                  ⚡ Info
+                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <button type="button" onclick="window.warRoomEngine.pingNode('teamly', document.getElementById('wr-cfg-teamly').value)" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
+                  ⚡ Ping
                 </button>
               </div>
-              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Teamily opera mediante flujos Make; no expone API pública de orquestación por espacio.</div>
+              <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Canal REST directo con agente Charly (GEO-A) en Teamily.</div>
             </div>
 
             <!-- ANTIGRAVITY ENDPOINT -->

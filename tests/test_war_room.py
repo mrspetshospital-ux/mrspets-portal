@@ -156,12 +156,16 @@ class TestWarRoomEngine(unittest.TestCase):
             self.assertIsNone(ag_msgs[-1]["latency_ms"])
             self.assertIn("canal NO DISPONIBLE", ag_msgs[-1]["message"])
 
-        # Verificar Super Agent en channel_super_agent
+        # Verificar Super Agent (Teamily) en channel_super_agent (Voz Propia y Regla de Honestidad)
         sa_msgs = [m for m in recent_messages if m.get("sender_id") == "super_agent"]
         self.assertTrue(len(sa_msgs) > 0, "Super Agent debe haber respondido en su canal")
         self.assertEqual(sa_msgs[-1]["channel_id"], "channel_super_agent")
-        self.assertTrue(sa_msgs[-1]["verified"])
-        self.assertEqual(sa_msgs[-1]["sender"], "Super Agent (Teamly)")
+        self.assertIn(sa_msgs[-1]["sender"], ["Charly / Super Agent (Teamily)", "Charly (Teamily GEO-A)", "Super Agent (Teamly)"])
+        if sa_msgs[-1]["verified"]:
+            self.assertIsNotNone(sa_msgs[-1]["latency_ms"])
+        else:
+            self.assertIsNone(sa_msgs[-1]["latency_ms"])
+            self.assertIn("canal NO DISPONIBLE", sa_msgs[-1]["message"])
 
         # Verificar Gemini en channel_gemini
         gem_msgs = [m for m in recent_messages if m.get("sender_id") == "gemini"]
