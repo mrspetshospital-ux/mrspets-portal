@@ -983,11 +983,11 @@
             <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('antigravity'); window.warRoomEngine.quickReportIssue('AntiGravity: ¿Cuál es la versión actual del backend FastAPI, arquitectura de rutas y estado de despliegue en Render?')">
               ⚡ Diagnóstico AntiGravity
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('volturi'); window.warRoomEngine.quickReportIssue('Comité Volturi: Solicito dictamen ético sobre riesgo de hotfixes y endpoints de integración.')">
-              🏛️ Dictamen Volturi
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('gemini'); window.warRoomEngine.quickReportIssue('Gemini AI: Análisis cognitivo de causa raíz del estado actual del sistema.')">
+              ✨ Causa Raíz Gemini
             </button>
-            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('make'); window.warRoomEngine.quickReportIssue('Make.com: Reporta estado de enlaces de webhooks, buffers y última confirmación HTTP 200.')">
-              🔗 Enlace Make
+            <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('make'); window.warRoomEngine.quickReportIssue('prueba')">
+              🔗 Enlace Make (prueba)
             </button>
             <button type="button" class="wr-quick-chip" onclick="window.warRoomEngine.setTargetNode('teamly'); window.warRoomEngine.quickReportIssue('Teamly: Estado del enjambre de agentes y tablero operativo en curso.')">
               🤝 Estado Teamly
@@ -1143,6 +1143,28 @@
       this.chatMessages.push(optimisticMsg);
       if (input) input.value = '';
       this.renderChatFeedOnly();
+
+      // Despacho directo y complementario desde el navegador hacia Make.com (modo no-cors)
+      // Garantiza que cuando el usuario escriba en la sala de conversación, Make.com reciba el evento en vivo desde el cliente
+      const makeTargetUrl = (this.nodeConfigs && this.nodeConfigs.make_webhook_url) || 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4';
+      if (makeTargetUrl && makeTargetUrl.startsWith('https://hook.')) {
+        try {
+          fetch(makeTargetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'war_room_chat_message',
+              source: 'Cuarto de Guerra Mrs. Pets (Sala de Conversación)',
+              sender: 'Mrs. PETS CORP',
+              message: text,
+              target_node: targetNode,
+              channel: activeChannel,
+              timestamp: new Date().toISOString()
+            }),
+            mode: 'no-cors'
+          }).catch(() => {});
+        } catch (_) {}
+      }
 
       try {
         const resp = await fetch('/api/v1/war-room/chat', {
