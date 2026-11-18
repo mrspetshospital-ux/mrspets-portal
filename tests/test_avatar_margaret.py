@@ -310,6 +310,41 @@ class TestAvatarMargaret(unittest.TestCase):
         except ImportError:
             pass
 
+    def test_09_avatar_chat_endpoint_execution(self):
+        """Verifica que el endpoint teamily_chat responda con session_id y status success sin NameError."""
+        try:
+            from server import teamily_chat
+            from starlette.requests import Request
+            import asyncio
+
+            scope = {
+                "type": "http",
+                "method": "POST",
+                "path": "/api/v1/avatar/chat",
+                "headers": [(b"content-type", b"application/json")],
+                "query_string": b"",
+            }
+
+            async def receive():
+                return {
+                    "type": "http.request",
+                    "body": json.dumps({
+                        "message": "Hola, prueba de endpoint",
+                        "primaryEngine": "gemini",
+                        "timeoutSeconds": 3.0
+                    }).encode("utf-8")
+                }
+
+            req = Request(scope, receive)
+            res = asyncio.run(teamily_chat(req))
+            self.assertEqual(res.get("status"), "success")
+            self.assertTrue(str(res.get("session_id", "")).startswith("sess_"))
+            self.assertEqual(res.get("primary_engine"), "gemini")
+            self.assertEqual(res.get("backup_engine"), "teamily")
+            self.assertTrue(bool(res.get("reply")))
+        except ImportError:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

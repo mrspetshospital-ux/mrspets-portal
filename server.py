@@ -6758,6 +6758,7 @@ async def teamily_chat(request: Request):
     body_agent = body.get("agent_id") or body.get("agent_slug") or body.get("agent") or body.get("slug")
     qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
     agent = (body_agent or qp_agent or "margaret").lower()
+    session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
 
     # Margaret / Margarette: Recepción & Atención al Cliente
     if agent in ["margaret", "margarette", "atencion", "atención", "recepcion", "recepción", "cliente"]:
