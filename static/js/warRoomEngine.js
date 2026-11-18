@@ -2731,10 +2731,11 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#34D399;">⚡ Google AntiGravity Endpoint:</label>
-                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● 1ms In-Process</span>
+                <!-- B1: Latencia no inventada. Se muestra '—' hasta que haya medición real -->
+                <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#94A3B8; font-weight:700;">—</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || '/api/v1/war-room/execute-patch')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('antigravity', document.getElementById('wr-cfg-antigravity').value)" style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>

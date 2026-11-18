@@ -344,7 +344,13 @@ class WarRoomEngine:
             "teamly_status": "ASINCRONO_SIN_API_PUBLICA",  # Teamily no tiene API pública REST por workspace
             "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
             "gemini_api_key": _get_default_gemini_key(),
-            "antigravity_endpoint_url": "/api/v1/war-room/execute-patch",
+            "antigravity_endpoint_url": (
+                os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
+                or os.environ.get("TEAMILY_AGENT_ENDPOINT")
+                or "https://teamily.ai/v1/agents/geo-a/responses"
+                if os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "teamily").strip().lower() != "gemini"
+                else "https://generativelanguage.googleapis.com/v1beta"
+            ),
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"
         }
         self.chat_history: List[Dict[str, Any]] = [
@@ -356,8 +362,8 @@ class WarRoomEngine:
                 "role": "Ingeniería de Software & Resiliencia Autónoma",
                 "message": "Cuarto de Guerra inicializado. Canales independientes en línea y sincronizados.",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "verified": True,
-                "latency_ms": 1,
+                "verified": False,
+                "latency_ms": None,
                 "node_id": "antigravity"
             }
         ]
@@ -501,9 +507,9 @@ class WarRoomEngine:
                 else:
                     msg_copy["channel_id"] = DEFAULT_CHANNEL
 
-            # Campo verified auditable
+            # Campo verified auditable (B3: default honesto es False sin evidencia de ejecución real)
             if "verified" not in msg_copy:
-                msg_copy["verified"] = True
+                msg_copy["verified"] = False
             if "latency_ms" not in msg_copy:
                 msg_copy["latency_ms"] = None
             if not msg_copy.get("node_id"):
@@ -1326,57 +1332,118 @@ class WarRoomEngine:
 
     def generate_antigravity_evaluation(self, problem_description: str, channel_id: str = "channel_antigravity") -> Dict[str, Any]:
         """
-        Evaluación diagnóstica técnica generada in-process por Google AntiGravity.
-        Examina telemetría viva, base de datos, webhooks, estado del servidor y procesos.
-        Escribe exclusivamente en channel_antigravity con sender_id: antigravity.
-        """
-        t0 = time.time()
-        now_iso = datetime.now(timezone.utc).isoformat()
-        msg_lower = (problem_description or "").lower()
-
-        # Inspección real de telemetría del entorno
-        db_engine = "Postgres" if (db and getattr(db, "IS_POSTGRES", False)) else "SQLite"
-        active_inc_count = len(self.active_incidents)
-        make_url_masked = mask_secret(self.node_configs.get("make_webhook_url", ""))
+        Evaluación diagnóstica emitida en channel_antigravity.
         
-        detected_services = []
-        if any(k in msg_lower for k in ["leia", "concierge", "agente", "chat", "convers"]):
-            detected_services.append("Leia Concierge / Teamily Swarm")
-        if any(k in msg_lower for k in ["make", "webhook", "foto", "imagen", "hook"]):
-            detected_services.append("Make.com Webhooks")
-        if any(k in msg_lower for k in ["bcv", "tasa", "dolar", "cambio"]):
-            detected_services.append("BCV Exchange Rate Sync")
-        if any(k in msg_lower for k in ["bd", "base de datos", "cliente", "guardar", "ficha"]):
-            detected_services.append(f"Persistencia ({db_engine})")
-
-        scope_str = ", ".join(detected_services) if detected_services else "Infraestructura General & Endpoints"
-
-        reply = (
-            f"⚡ Google AntiGravity [Ingeniería]: Analizando incidencia reportada sobre [{scope_str}].\n"
-            f"• Telemetría Viva: BD {db_engine} conectada | Webhook: {make_url_masked} | Incidencias activas: {active_inc_count}.\n"
-            f"• Diagnóstico Autónomo: Endpoints y servicios en monitoreo. Contingencia preparada para ejecución inmediata tras autorización de Dirección."
-        )
-
-        elapsed_ms = max(1, int((time.time() - t0) * 1000))
+        ARQUITECTURA DUAL & REGLA DE HONESTIDAD (A5, B2, D1):
+        Configurable mediante WAR_ROOM_ANTIGRAVITY_BACKEND:
+        - 'teamily' (por defecto): Enruta la consulta al agente Teamily GEO-A. No envía identidades
+          falsas en el prompt; solicita la evaluación técnica objetiva y declara en la respuesta
+          quién respondió de verdad: 'Charly (Teamily GEO-A)'.
+        - 'gemini': Enruta la consulta al motor Google Gemini AI usando las credenciales del portal,
+          actuando como el evaluador técnico Google AntiGravity.
+          
+        REGLA DE HONESTIDAD:
+        - Si no hay llamada o el canal está cortado (ej. credencial ausente, fallo de red):
+          verified=False, latency_ms=None, y el mensaje dice explícitamente "canal NO DISPONIBLE".
+          Cero latencias inventadas, cero defaults verdaderos.
+        - Si responde con éxito: verified=True y latency_ms con la medición real en milisegundos.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
         msg_id = f"MSG-{secrets.token_hex(4)}"
+        backend = os.environ.get("WAR_ROOM_ANTIGRAVITY_BACKEND", "teamily").strip().lower()
+
+        verified = False
+        latency_ms: Optional[int] = None
+        sender = "Google AntiGravity"
+        role = WAR_ROOM_PARTICIPANTS["antigravity"]["role"]
+        reply_text = ""
+
+        if backend == "gemini":
+            sender = "Google AntiGravity (Gemini AI)"
+            role = "Ingeniería de Software & Resiliencia Autónoma"
+            gemini_res = self.call_gemini_api(
+                target_node_id="antigravity",
+                user_message=problem_description,
+                channel_id=channel_id,
+                sender_name="Mrs. PETS CORP"
+            )
+            if gemini_res.get("success"):
+                verified = True
+                latency_ms = gemini_res.get("latency_ms")
+                reply_text = str(gemini_res.get("reply", ""))
+            else:
+                verified = False
+                latency_ms = None
+                err_detail = gemini_res.get("error") or "Fallo de comunicación con Gemini"
+                reply_text = f"canal NO DISPONIBLE: No se pudo contactar a Gemini AI ({err_detail})."
+
+        else:
+            # Backend por defecto: Teamily GEO-A (Charly)
+            sender = "Charly (Teamily GEO-A)"
+            role = "Asistente Ejecutivo de Operaciones (Teamily GEO-A)"
+            try:
+                import teamilyClient
+                geo_client = teamilyClient.TeamilyGeoAClient(
+                    endpoint=self.node_configs.get("antigravity_endpoint_url")
+                )
+            except Exception as import_err:
+                geo_client = None
+                init_err = str(import_err)
+
+            if not geo_client or not geo_client.server_key:
+                verified = False
+                latency_ms = None
+                reply_text = "canal NO DISPONIBLE: Credencial de autenticación no configurada (TEAMILEY_SERVER_KEY requerida)."
+            else:
+                # A5: El prompt NO debe ordenar una identidad falsa ("Eres Google AntiGravity").
+                # Solicita formalmente la evaluación técnica y operativa de la incidencia.
+                prompt_input = (
+                    f"[Cuarto de Guerra Mrs. Pets — Solicitud de Evaluación Operativa y Técnica]\n"
+                    f"Incidencia / Planteamiento reportado por Dirección General:\n{problem_description}\n\n"
+                    f"Favor emitir diagnóstico operativo, estado del servicio y recomendaciones de contingencia."
+                )
+                req = teamilyClient.TeamilyGeoARequest(
+                    input=prompt_input,
+                    wait=True,
+                    board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                    is_customer=False
+                )
+                try:
+                    resp_obj = geo_client.send_message(req)
+                    if resp_obj.success and resp_obj.response_text:
+                        verified = True
+                        latency_ms = int(resp_obj.latency_ms) if resp_obj.latency_ms is not None else None
+                        reply_text = resp_obj.response_text
+                    else:
+                        verified = False
+                        latency_ms = None
+                        reply_text = f"canal NO DISPONIBLE: No se pudo contactar al agente Teamily GEO-A ({resp_obj.error or 'Respuesta vacía o error HTTP'})."
+                except Exception as call_err:
+                    verified = False
+                    latency_ms = None
+                    reply_text = f"canal NO DISPONIBLE: Fallo al conectar con Teamily GEO-A ({str(call_err)})."
 
         if "antigravity" in self.nodes:
-            self.nodes["antigravity"]["ping_ms"] = elapsed_ms
+            self.nodes["antigravity"]["ping_ms"] = latency_ms
             self.nodes["antigravity"]["last_ping"] = now_iso
-            self.nodes["antigravity"]["status"] = "ESTABLE"
-            self.nodes["antigravity"]["state_desc"] = f"● Telemetría activa ({elapsed_ms}ms) — Diagnóstico emitido"
+            if verified:
+                self.nodes["antigravity"]["status"] = "ESTABLE"
+                self.nodes["antigravity"]["state_desc"] = f"● Telemetría activa ({latency_ms}ms) — Diagnóstico emitido"
+            else:
+                self.nodes["antigravity"]["status"] = "DEGRADADO"
+                self.nodes["antigravity"]["state_desc"] = "● Canal NO DISPONIBLE (Fallo de conectividad o credencial ausente)"
 
         ag_msg = {
             "id": msg_id,
             "channel_id": "channel_antigravity",
             "sender_id": "antigravity",
-            "sender": WAR_ROOM_PARTICIPANTS["antigravity"]["name"],
-            "role": WAR_ROOM_PARTICIPANTS["antigravity"]["role"],
-            "message": reply,
+            "sender": sender,
+            "role": role,
+            "message": reply_text,
             "timestamp": now_iso,
             "node_id": "antigravity",
-            "verified": True,
-            "latency_ms": elapsed_ms
+            "verified": verified,
+            "latency_ms": latency_ms
         }
         return ag_msg
 

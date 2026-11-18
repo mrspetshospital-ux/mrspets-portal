@@ -145,12 +145,16 @@ class TestWarRoomEngine(unittest.TestCase):
         status = war_room_engine.get_status()
         recent_messages = status["chat_messages"][-10:]
 
-        # Verificar AntiGravity en channel_antigravity
+        # Verificar AntiGravity en channel_antigravity (B2 & Regla de Honestidad)
         ag_msgs = [m for m in recent_messages if m.get("sender_id") == "antigravity"]
         self.assertTrue(len(ag_msgs) > 0, "AntiGravity debe haber respondido en su canal")
         self.assertEqual(ag_msgs[-1]["channel_id"], "channel_antigravity")
-        self.assertTrue(ag_msgs[-1]["verified"])
-        self.assertEqual(ag_msgs[-1]["sender"], "Google AntiGravity")
+        self.assertIn(ag_msgs[-1]["sender"], ["Charly (Teamily GEO-A)", "Google AntiGravity (Gemini AI)", "Google AntiGravity"])
+        if ag_msgs[-1]["verified"]:
+            self.assertIsNotNone(ag_msgs[-1]["latency_ms"])
+        else:
+            self.assertIsNone(ag_msgs[-1]["latency_ms"])
+            self.assertIn("canal NO DISPONIBLE", ag_msgs[-1]["message"])
 
         # Verificar Super Agent en channel_super_agent
         sa_msgs = [m for m in recent_messages if m.get("sender_id") == "super_agent"]

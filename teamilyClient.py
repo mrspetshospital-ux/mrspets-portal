@@ -50,41 +50,46 @@ def load_project_env() -> Dict[str, str]:
 load_project_env()
 
 # Parámetros Canónicos Exactos Teamily GEO A
-DEFAULT_ENDPOINT = "https://teamily.ai/v1/agents/geo-a/responses"
+# A1: Endpoint configurable por entorno, con geo-a como valor por defecto canónico documentado
+DEFAULT_ENDPOINT = os.environ.get("TEAMILEY_GEO_A_ENDPOINT") or os.environ.get("TEAMILY_AGENT_ENDPOINT") or "https://teamily.ai/v1/agents/geo-a/responses"
 DEFAULT_DOCS_URL = "https://teamily.ai/v1"
-DEFAULT_BOARD_ID = "5803df5a-7127-4d28-b97c-5c840d47cdc7"
-DEFAULT_SERVER_KEY = "tmly_sk_live_-2IXyLuZMZD9UOFDdrm4uUFBWtrow0k44PvCTx8Vac8"
+
+# A2: Board del Cuarto de Guerra (espacio compartido en Teamily donde atiende Charly / GEO-A)
+# Configurable por entorno para permitir boards dedicados
+DEFAULT_BOARD_ID = os.environ.get("TEAMILY_BOARD_ID") or os.environ.get("TEAMILY_WAR_ROOM_BOARD_ID") or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+
+# C1: Credencial del servidor cargada exclusivamente desde variable de entorno (nunca hardcodeada)
+def get_default_server_key() -> str:
+    return os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or ""
+
+DEFAULT_SERVER_KEY = get_default_server_key()
 
 def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT) -> str:
     """
-    Normaliza cualquier URL ingresada por el usuario (incluyendo URLs copiadas del navegador web como
-    https://teamily.ai/agent/5803df5a-...) hacia la URL canónica de API REST POST terminada en /responses.
+    Normaliza cualquier URL ingresada por el usuario hacia la URL canónica de API REST POST terminada en /responses.
+    
+    A3: Se eliminan redirects duros silenciosos. Si se ingresa una URL de Charly u otro agente, se respeta
+    la intención y cualquier ajuste de formato (añadir /responses) queda explícito en logs.
     """
     if not endpoint:
         return default_endpoint
     ep = str(endpoint).strip()
-
-    # Si es Charlie / Charly, siempre apunta al agente activo canónico GEO A
-    if "/charlie" in ep or "/charly" in ep:
-        return default_endpoint
-
-    # Board ID o Agente principal del usuario en Teamily
-    if "5803df5a-7127-4d28-b97c-5c840d47cdc7" in ep:
-        return default_endpoint
 
     # Si el usuario pegó la URL de navegación web del navegador (ej: https://teamily.ai/agent/<slug_o_uuid>)
     import re
     uuid_match = re.search(r'([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})', ep)
     if not ep.endswith("/responses"):
         if uuid_match:
-            return f"https://teamily.ai/v1/agents/{uuid_match.group(1)}/responses"
+            normalized = f"https://teamily.ai/v1/agents/{uuid_match.group(1)}/responses"
         elif "/agent/" in ep or "/agents/" in ep:
             slug = ep.rstrip("/").split("/")[-1]
-            return f"https://teamily.ai/v1/agents/{slug}/responses"
+            normalized = f"https://teamily.ai/v1/agents/{slug}/responses"
         elif ep.startswith("http"):
-            return f"{ep.rstrip('/')}/responses"
+            normalized = f"{ep.rstrip('/')}/responses"
         else:
-            return f"https://teamily.ai/v1/agents/{ep}/responses"
+            normalized = f"https://teamily.ai/v1/agents/{ep}/responses"
+        print(f"[TEAMILEY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
+        return normalized
 
     return ep
 
@@ -105,7 +110,19 @@ class TeamilyThreadConfig:
 
 @dataclass
 class TeamilyGeoARequest:
-    """Estructura de petición tipada para el agente Teamily GEO A."""
+    """
+    Estructura de petición tipada para el agente Teamily GEO A.
+    
+    DOCUMENTACIÓN DE ARQUITECTURA (A4):
+    El agente que responde en Teamily está determinado única y exclusivamente por la URL del
+    endpoint (ej. https://teamily.ai/v1/agents/geo-a/responses) y por la configuración interna del
+    board de destino.
+    Pruebas empíricas verificadas en vivo confirman que campos hipotéticos en el payload JSON tales
+    como 'agent_id', 'agent', 'node_id', 'persona' o 'sender_id' con valor 'antigravity' son ignorados
+    por el backend de Teamily, respondiendo siempre el agente configurado en la URL (Charly).
+    Por tanto, el payload JSON solo envía los campos oficialmente soportados por la API:
+    input, thread, wait, board_id.
+    """
     input: str
     thread: Optional[Any] = None
     wait: bool = True
@@ -176,7 +193,10 @@ class TeamilyGeoAClient:
         timeout: int = 45
     ):
         load_project_env()
-        self.server_key = server_key or os.environ.get("TEAMILEY_GEO_A_SERVER_KEY") or DEFAULT_SERVER_KEY
+        if server_key is not None:
+            self.server_key = server_key
+        else:
+            self.server_key = os.environ.get("TEAMILEY_GEO_A_SERVER_KEY") or os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or get_default_server_key()
         self.board_id = board_id or os.environ.get("TEAMILEY_GEO_A_BOARD_ID") or DEFAULT_BOARD_ID
         self.endpoint = endpoint or os.environ.get("TEAMILEY_GEO_A_ENDPOINT") or DEFAULT_ENDPOINT
         self.docs_url = os.environ.get("TEAMILEY_GEO_A_DOCS_URL") or DEFAULT_DOCS_URL
@@ -230,6 +250,29 @@ class TeamilyGeoAClient:
         target_endpoint = normalize_teamily_endpoint(endpoint_override or self.endpoint, default_endpoint=self.endpoint)
         target_server_key = server_key_override or self.server_key
         req_timeout = request.timeout if request.timeout is not None else self.timeout
+
+        # C1: Si no hay credencial configurada en entorno, fallar de inmediato con error claro y tipado
+        if not target_server_key:
+            err_msg = "Credencial no configurada: TEAMILEY_SERVER_KEY requerida"
+            res_obj = TeamilyGeoAResponse(
+                status_code=401,
+                success=False,
+                response_text="",
+                data={"error": err_msg},
+                raw_body="",
+                latency_ms=0.0,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=request.board_id or (self.board_id if not request.is_customer else "")
+            )
+            self._log_audit("GEO_A_AUTH_ERROR", {
+                "input_snippet": request.input[:80],
+                "status_code": 401,
+                "error": err_msg,
+                "endpoint": target_endpoint,
+                "latency_ms": 0.0
+            })
+            return res_obj
 
         body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = {
