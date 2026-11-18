@@ -307,6 +307,9 @@ class App {
       if (window.mrsPetsArch && typeof window.mrsPetsArch.updateHotelCamControls === 'function') {
         window.mrsPetsArch.updateHotelCamControls();
       }
+      if (window.mrsPetsArch && typeof window.mrsPetsArch.updateLeiaRoleControls === 'function') {
+        window.mrsPetsArch.updateLeiaRoleControls();
+      }
     }
 
     // Update Nav UI: Highlight exact clicked element cleanly!

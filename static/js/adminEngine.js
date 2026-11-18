@@ -1385,6 +1385,9 @@ class AdminEngine {
     if (window.mrsPetsArch && typeof window.mrsPetsArch.updateHotelCamControls === 'function') {
       window.mrsPetsArch.updateHotelCamControls();
     }
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.updateLeiaRoleControls === 'function') {
+      window.mrsPetsArch.updateLeiaRoleControls();
+    }
     return true;
   }
 

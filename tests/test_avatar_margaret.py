@@ -183,6 +183,27 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertEqual(payload.get("calendar_id"), "mrspetshospital@gmail.com")
         self.assertEqual(payload.get("account_email"), "mrspetshospital@gmail.com")
 
+    def test_11_dual_avatar_architecture(self):
+        """Verifica la arquitectura dual de avatares: rectangular grande para clientes y circular para administración."""
+        arch_js_path = os.path.join(os.path.dirname(__file__), "..", "static", "js", "mrsPetsArchitecture.js")
+        with open(arch_js_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # 1. Avatar Rectangular Grande para Clientes
+        self.assertIn("leia-avatar-rectangular-btn", content)
+        self.assertIn("avatar-rectangular-img", content)
+        self.assertIn("Concierge VIP 24/7", content)
+
+        # 2. Avatar Circular para Staff / Administración
+        self.assertIn("leia-avatar-circular-btn", content)
+        self.assertIn("avatar-circular-img", content)
+
+        # 3. Conmutador de Roles en updateLeiaRoleControls
+        self.assertIn("updateLeiaRoleControls()", content)
+        self.assertIn("rectBtn.style.display", content)
+        self.assertIn("circBtn.style.display", content)
+        self.assertIn("isStaffMode()", content)
+
 
 if __name__ == "__main__":
     unittest.main()

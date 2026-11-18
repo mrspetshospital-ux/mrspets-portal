@@ -196,7 +196,7 @@ class MrsPetsArchitectureEngine {
     this.playTinkerbellSound();
 
     // 2. Animación de pulso mágico en el elemento
-    const target = anchorEl || document.getElementById('leia-avatar-btn');
+    const target = anchorEl || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
     if (target) {
       target.classList.remove('leia-avatar-magic-active');
       void target.offsetWidth; // Forzar reflow para reiniciar la animación
@@ -211,7 +211,7 @@ class MrsPetsArchitectureEngine {
   }
 
   spawnPixieDust(anchorEl) {
-    const el = anchorEl || document.getElementById('leia-avatar-btn');
+    const el = anchorEl || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
     let originX = window.innerWidth - 70;
     let originY = window.innerHeight - 130;
 
@@ -343,9 +343,9 @@ class MrsPetsArchitectureEngine {
         return;
       }
     }
-    const target = anchorEl || (event && event.currentTarget) || document.getElementById('leia-avatar-btn');
+    const target = anchorEl || (event && event.currentTarget) || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
     this.triggerTinkerbellEffect(target);
-    this.toggleLeiaChat();
+    this.toggleLeiaChat(target);
   }
 
   toggleSidebar() {
@@ -408,13 +408,36 @@ class MrsPetsArchitectureEngine {
     const inputPlaceholder = 'Escribe a Leia (Concierge VIP)...';
 
     widget.innerHTML = `
-      <div id="leia-avatar-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event)" title="${avatarTitle}" style="position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); display:flex; align-items:center; justify-content:center; transition:transform 0.3s ease;">
-        <img id="avatar-floating-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:78px; height:78px; border-radius:50%; object-fit:cover; object-position:center 15%; pointer-events:none;">
-        <span style="position:absolute; top:4px; right:4px; width:18px; height:18px; background:#10b981; border:2.5px solid #070a11; border-radius:50%;"></span>
+      <!-- CONTENEDOR DUAL DE AVATAR (RECTANGULAR GRANDE PARA CLIENTES • CIRCULAR PARA STAFF) -->
+      <div id="leia-avatar-wrapper" style="position:relative;">
+        <!-- 1. AVATAR RECTANGULAR GRANDE PARA CLIENTES Y VISITANTES (LLAMATIVO, FOTO COMPLETA VISIBLE) -->
+        <div id="leia-avatar-rectangular-btn" class="leia-avatar-interactive-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)" title="${avatarTitle}" style="display:flex; align-items:center; gap:12px; background:linear-gradient(135deg, #070a11, #131b2a); border:2.5px solid #fbbf24; border-radius:20px; padding:8px 14px 8px 8px; box-shadow:0 14px 40px rgba(0,0,0,0.7), 0 0 25px rgba(251, 191, 36, 0.45); cursor:pointer; transition:all 0.25s ease; max-width:285px;">
+          <div style="position:relative; width:78px; height:92px; flex-shrink:0; border-radius:14px; overflow:hidden; border:2px solid #fbbf24; box-shadow:0 4px 14px rgba(0,0,0,0.5); background:#0c111d;">
+            <img id="avatar-rectangular-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:100%; height:100%; object-fit:cover; object-position:center 15%; pointer-events:none;">
+            <span style="position:absolute; top:4px; right:4px; width:13px; height:13px; background:#10b981; border:2px solid #070a11; border-radius:50%; box-shadow:0 0 8px #10b981;"></span>
+          </div>
+          <div style="display:flex; flex-direction:column; justify-content:center; gap:2px; pointer-events:none;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="color:#ffffff; font-weight:900; font-size:0.98rem; letter-spacing:-0.01em;">Leia 🎀</span>
+              <span style="font-size:0.62rem; background:#10b981; color:white; padding:1px 6px; border-radius:8px; font-weight:700;">En línea</span>
+            </div>
+            <span style="color:#fbbf24; font-size:0.78rem; font-weight:800; letter-spacing:0.02em;">Concierge VIP 24/7</span>
+            <span style="color:#cbd5e1; font-size:0.72rem; line-height:1.2; margin-top:2px;">¿Deseas agendar o consultar? Toca aquí ✨🐾</span>
+          </div>
+        </div>
+
+        <!-- 2. AVATAR CIRCULAR PARA ADMINISTRACIÓN / STAFF BACK-OFFICE (DISCRETO Y ELEGANTE) -->
+        <div id="leia-avatar-circular-btn" class="leia-avatar-interactive-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)" title="${avatarTitle}" style="display:none; position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); align-items:center; justify-content:center; transition:transform 0.3s ease; cursor:pointer;">
+          <img id="avatar-circular-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:78px; height:78px; border-radius:50%; object-fit:cover; object-position:center 15%; pointer-events:none;">
+          <span style="position:absolute; top:4px; right:4px; width:18px; height:18px; background:#10b981; border:2.5px solid #070a11; border-radius:50%; box-shadow:0 0 8px #10b981;"></span>
+        </div>
+
+        <!-- Elemento fantasma para preservar compatibilidad con referencias externas -->
+        <div id="leia-avatar-btn" style="display:none;"></div>
       </div>
 
       <!-- LEIA / MARGARET CONCIERGE CHAT POPUP MODAL -->
-      <div id="leia-chat-card" class="card" onclick="event.stopPropagation()" style="display:none; position:absolute; bottom:95px; right:0; width:385px; max-width:calc(100vw - 32px); background:#070a11; color:white; border:1px solid #fbbf24; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.75); overflow:hidden; z-index:1000; cursor:default;">
+      <div id="leia-chat-card" class="card" onclick="event.stopPropagation()" style="display:none; position:absolute; bottom:115px; right:0; width:385px; max-width:calc(100vw - 32px); background:#070a11; color:white; border:1px solid #fbbf24; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.75); overflow:hidden; z-index:1000; cursor:default;">
         <div style="background:linear-gradient(135deg, #171003, #070a11); padding:14px 16px; border-bottom:1px solid rgba(251,191,36,0.3); display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:12px;">
             <img id="avatar-header-img" src="${avatarImg}" alt="${headerTitle}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" onclick="mrsPetsArch.triggerTinkerbellEffect(this)" style="width:54px; height:54px; border-radius:50%; border:2.5px solid #fbbf24; object-fit:cover; object-position:center 15%; cursor:pointer;">
@@ -500,14 +523,18 @@ class MrsPetsArchitectureEngine {
 
     document.body.appendChild(widget);
     this.syncModelSelectors();
+    this.updateLeiaRoleControls();
 
-    // Soporte táctil móvil directo para disparar la magia instantáneamente sin retraso
-    const avatarBtn = widget.querySelector('#leia-avatar-btn');
-    if (avatarBtn) {
-      avatarBtn.addEventListener('touchstart', (e) => {
-        this.handleLeiaAvatarClick(e, avatarBtn);
-      }, { passive: true });
-    }
+    // Soporte táctil móvil directo para disparar la magia instantáneamente en ambos avatares
+    const rectBtn = widget.querySelector('#leia-avatar-rectangular-btn');
+    const circBtn = widget.querySelector('#leia-avatar-circular-btn');
+    [rectBtn, circBtn].forEach(b => {
+      if (b) {
+        b.addEventListener('touchstart', (e) => {
+          this.handleLeiaAvatarClick(e, b);
+        }, { passive: true });
+      }
+    });
   }
 
   syncAvatarIdentity() {
@@ -516,17 +543,27 @@ class MrsPetsArchitectureEngine {
     const headerBadge = 'Concierge VIP';
     const placeholder = 'Escribe a Leia (Concierge VIP)...';
 
+    const rectBtn = document.getElementById('leia-avatar-rectangular-btn');
+    if (rectBtn) rectBtn.title = avatarTitle;
+    const circBtn = document.getElementById('leia-avatar-circular-btn');
+    if (circBtn) circBtn.title = avatarTitle;
     const btn = document.getElementById('leia-avatar-btn');
     if (btn) btn.title = avatarTitle;
+
+    const rectImg = document.getElementById('avatar-rectangular-img');
+    if (rectImg) rectImg.src = avatarImg;
+    const circImg = document.getElementById('avatar-circular-img');
+    if (circImg) circImg.src = avatarImg;
     const floatImg = document.getElementById('avatar-floating-img');
     if (floatImg) floatImg.src = avatarImg;
+
     const headImg = document.getElementById('avatar-header-img');
     if (headImg) headImg.src = avatarImg;
     const badge = document.getElementById('leia-chat-session-badge');
     if (badge) badge.textContent = headerBadge;
     const input = document.getElementById('leia-chat-input');
     if (input) input.placeholder = placeholder;
-  },
+  }
 
   toggleAuraChat() { this.toggleLeiaChat(); }
   toggleLeiaChat(anchorEl) {
@@ -535,7 +572,7 @@ class MrsPetsArchitectureEngine {
     if (card) {
       card.style.display = this.isAuraOpen ? 'block' : 'none';
       if (this.isAuraOpen) {
-        const target = anchorEl || document.getElementById('leia-avatar-btn');
+        const target = anchorEl || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
         if (target) this.triggerTinkerbellEffect(target);
         this.updateChatHeaderSessionBadge();
         this.syncModelSelectors();
@@ -561,8 +598,20 @@ class MrsPetsArchitectureEngine {
   }
 
   updateLeiaRoleControls() {
-    const session = this.getActiveSessionContext();
-    const isStaff = session && session.userType === 'staff_admin';
+    const isStaff = this.isStaffMode();
+
+    // 0. Dual Avatar: Rectangular grande para Clientes vs Circular para Staff Administrativo
+    const rectBtn = document.getElementById('leia-avatar-rectangular-btn');
+    const circBtn = document.getElementById('leia-avatar-circular-btn');
+    if (rectBtn && circBtn) {
+      if (isStaff) {
+        rectBtn.style.display = 'none';
+        circBtn.style.display = 'flex';
+      } else {
+        rectBtn.style.display = 'flex';
+        circBtn.style.display = 'none';
+      }
+    }
 
     // 1. Botón de Calendario en Cabecera de la Tarjeta del Avatar
     const headerCalBtn = document.getElementById('btn-leia-header-calendar');
@@ -1488,7 +1537,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     this.appendLeiaMessage(this.escapeHtml(cleanText), 'user');
 
     // Efecto visual en avatar
-    const chatAvatar = document.querySelector('#leia-chat-card img') || document.getElementById('leia-avatar-btn');
+    const chatAvatar = document.querySelector('#leia-chat-card img') || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
     if (chatAvatar) {
       this.triggerTinkerbellEffect(chatAvatar);
     }
