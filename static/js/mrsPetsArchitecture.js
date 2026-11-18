@@ -400,19 +400,30 @@ class MrsPetsArchitectureEngine {
     widget.style.zIndex = '999';
     widget.style.cursor = 'pointer';
 
+    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+    const isMargaret = primaryAgent.includes('margaret');
+    const avatarImg = isMargaret ? 'assets/margaret_avatar.svg' : 'assets/leia_avatar.jpg';
+    const avatarTitle = isMargaret ? 'Margaret 👩‍💼 • Recepción & Atención al Cliente' : 'Leia 🎀 • Concierge de Clientes';
+    const headerTitle = isMargaret ? 'Margaret 👩‍💼' : 'Leia 🎀';
+    const headerBadge = isMargaret ? 'Recepción & Atención' : 'Atención a Clientes';
+    const initialGreeting = isMargaret
+      ? `¡Hola! Le atiende <strong style="color:#fef08a !important;">Margaret 👩‍💼</strong>, Gerente de Atención al Cliente de <strong>Mrs. Pets</strong> (Avenida 2 El Milagro).<br><br>Estoy a su entera disposición para asistirle con reservas de <strong>Grooming Spa</strong>, <strong>Clínica Veterinaria</strong> y <strong>Hotel 5★</strong>, o comunicarle con la Administración. ¿En qué podemos apoyar a su príncipe o princesa hoy?`
+      : `¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás hoy? ✨🐾<br><br>Qué alegría tenerte en nuestra casa. <strong style="color:#fef08a !important;">¿Con quién tengo el gusto de hablar?</strong><br>Estoy aquí para ayudarte a coordinar la mejor atención para tu consentido:`;
+    const inputPlaceholder = isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia (Atención al Cliente)...';
+
     widget.innerHTML = `
-      <div id="leia-avatar-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event)" title="Leia 🎀 • Concierge de Clientes" style="position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); display:flex; align-items:center; justify-content:center; transition:transform 0.3s ease;">
-        <img src="assets/leia_avatar.jpg" onerror="this.onerror=null; this.src='assets/media__1787694901704.jpg';" style="width:78px; height:78px; border-radius:50%; object-fit:cover; object-position:center 15%; pointer-events:none;">
+      <div id="leia-avatar-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event)" title="${avatarTitle}" style="position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); display:flex; align-items:center; justify-content:center; transition:transform 0.3s ease;">
+        <img id="avatar-floating-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:78px; height:78px; border-radius:50%; object-fit:cover; object-position:center 15%; pointer-events:none;">
         <span style="position:absolute; top:4px; right:4px; width:18px; height:18px; background:#10b981; border:2.5px solid #070a11; border-radius:50%;"></span>
       </div>
 
-      <!-- LEIA CONCIERGE CHAT POPUP MODAL -->
+      <!-- LEIA / MARGARET CONCIERGE CHAT POPUP MODAL -->
       <div id="leia-chat-card" class="card" onclick="event.stopPropagation()" style="display:none; position:absolute; bottom:95px; right:0; width:385px; max-width:calc(100vw - 32px); background:#070a11; color:white; border:1px solid #fbbf24; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.75); overflow:hidden; z-index:1000; cursor:default;">
         <div style="background:linear-gradient(135deg, #171003, #070a11); padding:14px 16px; border-bottom:1px solid rgba(251,191,36,0.3); display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:12px;">
-            <img src="assets/leia_avatar.jpg" alt="Leia" onerror="this.onerror=null; this.src='assets/media__1787694901704.jpg';" onclick="mrsPetsArch.triggerTinkerbellEffect(this)" style="width:54px; height:54px; border-radius:50%; border:2.5px solid #fbbf24; object-fit:cover; object-position:center 15%; cursor:pointer;">
+            <img id="avatar-header-img" src="${avatarImg}" alt="${headerTitle}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" onclick="mrsPetsArch.triggerTinkerbellEffect(this)" style="width:54px; height:54px; border-radius:50%; border:2.5px solid #fbbf24; object-fit:cover; object-position:center 15%; cursor:pointer;">
             <div>
-              <div style="font-weight:900; font-size:0.95rem; color:#fffbeb; display:flex; align-items:center; gap:6px;">Leia 🎀 <span id="leia-chat-session-badge" style="font-size:0.62rem; background:#10b981; color:white; padding:2px 7px; border-radius:10px; font-weight:700;">Atención a Clientes</span></div>
+              <div style="font-weight:900; font-size:0.95rem; color:#fffbeb; display:flex; align-items:center; gap:6px;">${headerTitle} <span id="leia-chat-session-badge" style="font-size:0.62rem; background:#10b981; color:white; padding:2px 7px; border-radius:10px; font-weight:700;">${headerBadge}</span></div>
               <div id="leia-chat-session-subtitle" style="font-size:0.72rem; color:#94a3b8;">Avenida 2 El Milagro • Canal Exclusivo Clientes</div>
             </div>
           </div>
@@ -439,9 +450,7 @@ class MrsPetsArchitectureEngine {
 
         <div id="leia-chat-messages" style="padding:14px; max-height:280px; overflow-y:auto; font-size:0.88rem; display:flex; flex-direction:column; gap:10px; scrollbar-width:thin; color:#ffffff !important;">
           <div class="leia-client-bot-bubble" style="background:#1e293b !important; color:#ffffff !important; padding:12px 14px; border-radius:14px 14px 14px 2px; border:1px solid rgba(251,191,36,0.35); line-height:1.5;">
-            <span style="color:#ffffff !important;">¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong>, ¿cómo estás hoy? ✨🐾<br><br>
-            Qué alegría tenerte en nuestra casa. <strong style="color:#fef08a !important;">¿Con quién tengo el gusto de hablar?</strong><br>
-            Estoy aquí para ayudarte a coordinar la mejor atención para tu consentido:</span>
+            <span style="color:#ffffff !important;">${initialGreeting}</span>
             <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:800; font-size:0.8rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>
             </div>
@@ -485,7 +494,7 @@ class MrsPetsArchitectureEngine {
 
         <!-- INTERACTIVE CHAT INPUT FORM -->
         <form id="leia-chat-form" onsubmit="mrsPetsArch.handleLeiaChatSubmit(event)" style="padding:10px 12px; border-top:1px solid rgba(251,191,36,0.3); background:#0c111d; display:flex; gap:8px; align-items:center;">
-          <input type="text" id="leia-chat-input" placeholder="Escribe a Leia (Atención al Cliente)..." onkeydown="if(event.key==='Enter' && !event.shiftKey){ mrsPetsArch.handleLeiaChatSubmit(event); }" style="flex:1; background:#0f172a !important; color:#ffffff !important; border:1.5px solid rgba(251,191,36,0.45) !important; border-radius:12px; padding:10px 14px; font-size:0.88rem; outline:none;" autocomplete="off">
+          <input type="text" id="leia-chat-input" placeholder="${inputPlaceholder}" onkeydown="if(event.key==='Enter' && !event.shiftKey){ mrsPetsArch.handleLeiaChatSubmit(event); }" style="flex:1; background:#0f172a !important; color:#ffffff !important; border:1.5px solid rgba(251,191,36,0.45) !important; border-radius:12px; padding:10px 14px; font-size:0.88rem; outline:none;" autocomplete="off">
           <button type="submit" id="btn-leia-chat-send" class="btn" style="background:linear-gradient(135deg, #fbbf24, #d97706); color:#101820 !important; border:none; border-radius:12px; padding:10px 15px; font-weight:900; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">
             <span>Enviar</span> 🚀
           </button>
@@ -504,6 +513,26 @@ class MrsPetsArchitectureEngine {
       }, { passive: true });
     }
   }
+
+  syncAvatarIdentity() {
+    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+    const isMargaret = primaryAgent.includes('margaret');
+    const avatarImg = isMargaret ? 'assets/margaret_avatar.svg' : 'assets/leia_avatar.jpg';
+    const avatarTitle = isMargaret ? 'Margaret 👩‍💼 • Recepción & Atención al Cliente' : 'Leia 🎀 • Concierge de Clientes';
+    const headerBadge = isMargaret ? 'Recepción & Atención' : 'Atención a Clientes';
+    const placeholder = isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia (Atención al Cliente)...';
+
+    const btn = document.getElementById('leia-avatar-btn');
+    if (btn) btn.title = avatarTitle;
+    const floatImg = document.getElementById('avatar-floating-img');
+    if (floatImg) floatImg.src = avatarImg;
+    const headImg = document.getElementById('avatar-header-img');
+    if (headImg) headImg.src = avatarImg;
+    const badge = document.getElementById('leia-chat-session-badge');
+    if (badge) badge.textContent = headerBadge;
+    const input = document.getElementById('leia-chat-input');
+    if (input) input.placeholder = placeholder;
+  },
 
   toggleAuraChat() { this.toggleLeiaChat(); }
   toggleLeiaChat(anchorEl) {
@@ -1542,19 +1571,28 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     let serverReplyText = null;
     const isTeamlyPrimary = (activeModel.id && activeModel.id.includes('teamly'));
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+    const isMargaret = primaryAgent.includes('margaret');
+    const agentSlug = isMargaret ? 'margaret' : 'leia';
+    const agentName = isMargaret ? 'Margaret — Gerente de Atención al Cliente' : 'Leia Concierge VIP & Asistencia CEO';
+    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
+
     const agentPayload = {
       message_id: messageId,
       agente_origen: 'user',
       input: cleanText,
-      agent_slug: 'leia',
-      agent_name: 'Leia Concierge VIP & Asistencia CEO',
+      message: cleanText,
+      prompt: cleanText,
+      agent_id: agentSlug,
+      agent_slug: agentSlug,
+      agent_name: agentName,
       board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
       model: activeModel.id,
       context: {
         userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
         petName: this.lastActivePetName || (session && session.activePetName) || '',
         userType: (session && session.userType) || 'client',
-        channel: 'Widget Circular (Leia Concierge)',
+        channel: `Widget Circular (${isMargaret ? 'Margaret' : 'Leia'})`,
         activeModel: activeModel.id
       }
     };
@@ -1563,7 +1601,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       // Prioridad: Teamily Live API
       try {
         const abortCtrl = new AbortController();
-        const fetchTimer = setTimeout(() => abortCtrl.abort(), 16000);
+        const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
         const res = await fetch('/api/v1/teamily/agent-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1583,7 +1621,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
           }
         }
       } catch (err) {
-        console.warn("[LEIA CHAT] Teamily no disponible, activando failover a Make/Gemini:", err);
+        console.warn(`[AVATAR CHAT] Teamily (${agentSlug}) superó timeout de ${timeoutSec}s o falló, activando failover a Make/Gemini:`, err);
       }
 
       // Failover a Make.com + Gemini si Teamily no respondió
@@ -1601,7 +1639,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         } catch (e) {}
       }
     } else {
-      // Prioridad 1: Escenario Make.com exclusivo de Leia (Google Drive + Gemini + Webhook Response)
+      // Prioridad 1: Escenario Make.com exclusivo (Google Drive + Gemini + Webhook Response)
       try {
         const makeRes = await this.dispatchChatBidirectional({
           sessionId: this.getChatSessionId(),
@@ -1611,10 +1649,10 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         });
         if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
           serverReplyText = makeRes.replyText;
-          console.log("[LEIA CHAT] Respuesta viva recibida desde Make.com (Drive + Gemini):", serverReplyText);
+          console.log("[AVATAR CHAT] Respuesta viva recibida desde Make.com:", serverReplyText);
         }
       } catch (e) {
-        console.warn("[LEIA CHAT] Make.com no devolvió texto, activando inferencia directa de respaldo:", e);
+        console.warn("[AVATAR CHAT] Make.com no devolvió texto, activando inferencia directa de respaldo:", e);
       }
 
       // Prioridad 2: Si Make.com no respondió (o hizo timeout), invocar Google Gemini directo en el backend
@@ -1627,6 +1665,9 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: cleanText,
+              agent_id: agentSlug,
+              agent_slug: agentSlug,
+              requested_slug: agentSlug,
               model: activeModel.id,
               userType: session.userType,
               userName: session.userName,
@@ -1644,7 +1685,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             }
           }
         } catch (e) {
-          console.warn("[LEIA CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
+          console.warn("[AVATAR CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
         }
       }
 
@@ -1652,7 +1693,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       if (!serverReplyText) {
         try {
           const abortCtrl = new AbortController();
-          const fetchTimer = setTimeout(() => abortCtrl.abort(), 14000);
+          const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
           const res = await fetch('/api/v1/teamily/agent-chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1672,7 +1713,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             }
           }
         } catch (err) {
-          console.warn("[LEIA CHAT] Failover de Teamily también agotado:", err);
+          console.warn("[AVATAR CHAT] Failover de Teamily también agotado:", err);
         }
       }
     }
@@ -1686,7 +1727,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
 
     if (inputEl) {
       inputEl.disabled = false;
-      inputEl.setAttribute('placeholder', 'Escribe a Leia Concierge...');
+      inputEl.setAttribute('placeholder', isMargaret ? 'Escribe a Margaret (Atención al Cliente)...' : 'Escribe a Leia Concierge...');
       setTimeout(() => inputEl.focus(), 60);
     }
     if (sendBtn) {
@@ -1695,7 +1736,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       sendBtn.style.cursor = 'pointer';
     }
 
-    // 6. Renderizar respuesta viva del servidor / Teamily / Gemini o activar Fallback contextual
+    // 6. Renderizar respuesta viva del servidor / Teamily / Gemini o activar Fallback contextual transparente
     const isTechnicalError = serverReplyText && (
       String(serverReplyText).includes('[ERROR GEMINI') ||
       String(serverReplyText).includes('quota') ||
@@ -1704,17 +1745,18 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       String(serverReplyText).includes('Traceback (most recent call last')
     );
 
-    // Para clientes o visitantes, nunca renderizar errores técnicos de cuota o HTTP;
-    // se activa el fallback elegante de Lujo Silencioso.
     if (serverReplyText && (!isTechnicalError || isStaff)) {
       const formattedHtml = this.formatMarkdownToHtml(serverReplyText);
       this.appendLeiaMessage(formattedHtml, 'bot');
       if (isStaff && window.app && typeof window.app.showToast === 'function') {
-        window.app.showToast(`Respuesta de Leia recibida (${cleanModelName}) ✨`, 'success');
+        window.app.showToast(`Respuesta de ${isMargaret ? 'Margaret' : 'Leia'} recibida (${cleanModelName}) ✨`, 'success');
       }
     } else {
-      // Fallback contextual elegante bajo la doctrina de Lujo Silencioso
-      this.generateLeiaResponse(cleanText, session);
+      // Manejo seguro y explícito de indisponibilidad sin respuestas simuladas ni confirmaciones falsas
+      const fallbackMsg = isMargaret
+        ? "👩‍💼 **Margaret:** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo de recepción y administración en sucursal."
+        : "🎀 **Leia:** En este momento nuestro enlace de asistencia inteligente está en pausa por mantenimiento o reconexión de red. Por favor reintenta en breve.";
+      this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg), 'bot');
     }
   }
 

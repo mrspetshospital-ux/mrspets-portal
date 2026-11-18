@@ -945,10 +945,15 @@
                 const isTeamly = activeModel.includes('teamly');
                 const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
 
+                const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+                const isMargaret = primaryAgent.includes('margaret');
+                const agentSlug = isMargaret ? 'margaret' : 'leia';
+                const agentName = isMargaret ? 'Margaret — Gerente de Atención al Cliente' : 'Leia Concierge VIP & Asistencia CEO';
+
                 let replyObtained = null;
 
                 // =========================================================================
-                // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DE 20S
+                // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DINÁMICO
                 // =========================================================================
                 if (isTeamly) {
                     try {
@@ -967,8 +972,9 @@
                                 input: userText,
                                 message: userText,
                                 model: activeModel,
-                                agent_slug: 'leia',
-                                agent_name: 'Leia Concierge VIP & Asistencia CEO',
+                                agent_id: agentSlug,
+                                agent_slug: agentSlug,
+                                agent_name: agentName,
                                 board_id: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
                                 userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                                 petName: this.lastActivePetName || '',
@@ -977,7 +983,7 @@
                                     userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                                     petName: this.lastActivePetName || '',
                                     userType: isStaff ? 'staff_admin' : 'client',
-                                    channel: 'Widget Search (Leia Search)',
+                                    channel: `Widget Search (${isMargaret ? 'Margaret' : 'Leia'})`,
                                     activeModel: activeModel
                                 }
                             }),
@@ -997,7 +1003,7 @@
                             }
                         }
                     } catch (teamilyErr) {
-                        console.warn(`[LeiaChatEngine] Teamily superó el lapso de ${timeoutSec}s o falló. Activando Failover Automático hacia Gemini...`, teamilyErr);
+                        console.warn(`[AvatarChatEngine] Teamily (${agentSlug}) superó el lapso de ${timeoutSec}s o falló. Activando Failover Automático hacia Gemini...`, teamilyErr);
                         if (window.agentStudio) {
                             window.agentStudio.makeFailoverAlerts = (window.agentStudio.makeFailoverAlerts || 0) + 1;
                             window.agentStudio.updateKpiCounters();
@@ -1025,8 +1031,10 @@
                                 input: userText,
                                 message: userText,
                                 model: 'gemini-3.8-flash',
-                                agent_slug: 'leia',
-                                agent_name: 'Leia Concierge VIP & Asistencia CEO',
+                                agent_id: agentSlug,
+                                agent_slug: agentSlug,
+                                requested_slug: agentSlug,
+                                agent_name: agentName,
                                 userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                                 petName: this.lastActivePetName || '',
                                 userType: isStaff ? 'staff_admin' : 'client',
@@ -1034,7 +1042,7 @@
                                     userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
                                     petName: this.lastActivePetName || '',
                                     userType: isStaff ? 'staff_admin' : 'client',
-                                    channel: 'Widget Search (Failover Gemini)'
+                                    channel: `Widget Search (Failover Gemini • ${isMargaret ? 'Margaret' : 'Leia'})`
                                 }
                             }),
                             signal: gemAbort.signal
@@ -1050,7 +1058,7 @@
                             }
                         }
                     } catch (gemErr) {
-                        console.warn('[LeiaChatEngine] Error en Gemini fallback:', gemErr);
+                        console.warn('[AvatarChatEngine] Error en Gemini fallback:', gemErr);
                     }
                 }
 
@@ -1067,23 +1075,43 @@
                     if (isBookingContext) {
                         dynamicButtons = [
                             '✂️ Cita Grooming Spa',
-                            '🩺 Consulta Dra. Margaret',
+                            '🩺 Consulta Veterinaria',
                             '🏨 Suite Hotel VIP 5★',
                             '📅 Ver Disponibilidad'
                         ];
                     }
 
                     this.addMessage({
-                        sender: 'leia',
+                        sender: agentSlug,
                         text: replyObtained,
                         buttons: dynamicButtons,
                         timestamp: new Date()
                     });
                     return;
+                } else {
+                    const offlineMsg = isMargaret
+                        ? "👩‍💼 **Margaret:** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo de recepción y administración en sucursal."
+                        : "🎀 **Leia:** En este momento nuestro canal de asistencia inteligente está en pausa por mantenimiento o reconexión de red. Por favor reintenta en breve.";
+                    this.addMessage({
+                        sender: agentSlug,
+                        text: offlineMsg,
+                        timestamp: new Date()
+                    });
+                    return;
                 }
             } catch (err) {
-                // Contingencia de red o timeout: activación instantánea de base de conocimiento local
                 this.showTypingIndicator(false);
+                const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+                const isMargaret = primaryAgent.includes('margaret');
+                const offlineMsg = isMargaret
+                    ? "👩‍💼 **Margaret:** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo de recepción y administración en sucursal."
+                    : "🎀 **Leia:** En este momento nuestro canal de asistencia inteligente está en pausa por mantenimiento o reconexión de red. Por favor reintenta en breve.";
+                this.addMessage({
+                    sender: isMargaret ? 'margaret' : 'leia',
+                    text: offlineMsg,
+                    timestamp: new Date()
+                });
+                return;
             }
 
             // 2. Si el usuario se presenta o saluda con su nombre ("Soy Harry", "Harry Luzardo", "Carlos", etc.)

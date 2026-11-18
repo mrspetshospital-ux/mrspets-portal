@@ -30,6 +30,7 @@ class AgentStudio {
     this.primaryEngine = 'teamily'; // 'teamily' | 'make' | 'auto'
     this.failoverTimeoutSeconds = 20; // Estándar predeterminado: 20 segundos
     this.autoFailoverEnabled = true;
+    this.primaryAttentionAgent = localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret';
 
     // Métricas y Contadores
     this.queriesToday = 148;
@@ -422,6 +423,17 @@ class AgentStudio {
       if (window.app && typeof window.app.showToast === 'function') {
         window.app.showToast(`⏱️ Estándar de ${val}s aplicado: Si Teamily no responde en ${val} segundos, Gemini toma el control.`, 'info');
       }
+    }
+  }
+
+  setPrimaryAttentionAgent(agentId, save = true) {
+    const val = (agentId || 'margaret').toLowerCase();
+    this.primaryAttentionAgent = val;
+    if (save) {
+      localStorage.setItem('mrspets_avatar_primary_agent', val);
+    }
+    if (window.mrsPetsArch && typeof window.mrsPetsArch.syncAvatarIdentity === 'function') {
+      window.mrsPetsArch.syncAvatarIdentity();
     }
   }
 

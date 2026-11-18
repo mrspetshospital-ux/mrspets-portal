@@ -423,6 +423,16 @@ class TeamilyGeoAClient:
         )
         return self.send_message(req)
 
+    def ask_margaret(self, prompt: str, thread_mode: str = "new", wait: bool = True) -> TeamilyGeoAResponse:
+        """Método de conveniencia para invocar al agente Margaret (Recepción & Atención al Cliente) de Teamily."""
+        req = TeamilyGeoARequest(
+            input=prompt,
+            thread=TeamilyThreadConfig(mode=thread_mode),
+            wait=wait,
+            board_id=self.board_id
+        )
+        return self.send_message(req)
+
     def ask_oneil(self, prompt: str, station: Optional[str] = None, thread_mode: str = "new", wait: bool = True) -> TeamilyGeoAResponse:
         """
         Invoca al Agente O'Neil (Marketing & QC Grooming) inyectando el Modelo de Aprendizaje

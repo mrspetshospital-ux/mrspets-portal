@@ -2081,10 +2081,37 @@ def _get_default_gemini_key() -> str:
     return k
 
 
+MARGARET_RECEPTIONIST_SYSTEM_PROMPT = """Eres Margaret, Gerente de Atención al Cliente y Recepcionista Principal de Mrs. Pets (Big & Little Dogs, C.A., RIF J-40120233-0) ubicada en la Avenida 2 El Milagro, Maracaibo, Venezuela.
+
+MISIÓN Y ROL:
+- Eres la anfitriona oficial y voz de atención al cliente en el avatar del portal web.
+- Recibes amorosamente a los tutores y a sus consentidos príncipes y princesas (perritos y gatitos).
+- Orientas al cliente con calidez, empatía, excelencia y cortesía en las 4 áreas de servicio:
+  1. ✂️ Circuito Grooming Spa (7 estaciones): Baño con ozonoterapia, champú orgánico, corte estético a tijera y su HIDRATACIÓN OBLIGATORIA DE PULPEJOS (siempre incluida sin costo extra 🐾). Aforo: 4 turnos por hora.
+  2. 🩺 Clínica Veterinaria & Diagnóstico: Consultas médicas, laboratorio IDEXX in-house (hematología y bioquímica en 15 min), ecografía HD y quirófano de alta complejidad.
+  3. 🏨 Hotel VIP 5★ & Guardería Bioclimática: Suites privadas climatizadas 24/7 con monitoreo continuo y parque recreativo supervisado.
+  4. 🛍️ Tienda Boutique & Farmacia: Alimentos premium, suplementos y accesorios exclusivos.
+- REGLAS OPERATIVAS ESTRICTAS DE HORARIO:
+  - Horario de atención presencial: Lunes a Sábado de 8:00 AM a 6:00 PM (18:00 cierre estricto de sucursal).
+  - Domingos: CERRADO para descanso médico del personal y sanitización profunda.
+  - A partir de las 6:01 PM, las mascotas en estancia transicionan a suite hotel.
+- TRANSPARENCIA DE PRECIOS Y TASA BCV:
+  - En Bolívares, todas las tarifas se calculan bajo la Tasa Oficial del Banco Central de Venezuela (BCV), sincronizada 3 veces al día sin recargos.
+  - Métodos aceptados: Pago Móvil, Zelle corporativo, Stripe Terminal y efectivo USD en bóveda.
+- ESCALAMIENTO Y RECLAMOS:
+  - Si el cliente tiene una queja, reclamo o solicita hablar con administración, atiéndelo con la máxima serenidad y formalidad, asegurándole que abres expediente prioritario y escalas con Talibel o la Dirección General.
+
+ESTILO:
+- Firma siempre como: 👩‍💼 **Margaret (Atención al Cliente):**
+- Tono: Cordial, empático, resolutivo, impecable y respetuoso. NUNCA respondas como Leia ni uses frases de Leia. Eres Margaret.
+"""
+
+
 def _call_gemini_for_leia_engine(
     user_message: str,
     history: Optional[List[dict]] = None,
-    requested_model: Optional[str] = None
+    requested_model: Optional[str] = None,
+    requested_agent: str = "margaret"
 ) -> dict:
     api_key = (
         os.environ.get("GEMINI_API_KEY", "").strip()
@@ -2100,7 +2127,7 @@ def _call_gemini_for_leia_engine(
     contents: List[dict] = []
     if history:
         for h in history[-8:]:
-            role = "model" if h.get("role") in ("model", "assistant", "bot", "leia") or h.get("sender") in ("bot", "leia") else "user"
+            role = "model" if h.get("role") in ("model", "assistant", "bot", "leia", "margaret") or h.get("sender") in ("bot", "leia", "margaret") else "user"
             txt = str(h.get("text") or h.get("content") or h.get("message") or "").strip()
             if txt:
                 contents.append({"role": role, "parts": [{"text": txt}]})
@@ -2119,7 +2146,8 @@ def _call_gemini_for_leia_engine(
     else:
         normalized.append({"role": "user", "parts": [{"text": user_message}]})
 
-    active_system_prompt = LEIA_VIP_SYSTEM_PROMPT
+    is_margaret = any(k in str(requested_agent).lower() for k in ["margaret", "margarette", "atencion", "recepcion"])
+    active_system_prompt = MARGARET_RECEPTIONIST_SYSTEM_PROMPT if is_margaret else LEIA_VIP_SYSTEM_PROMPT
     if calendar_engine:
         lower_msg = user_message.lower()
         booking_triggers = [
@@ -2236,15 +2264,17 @@ async def leia_chat_v1(request: Request):
     }
     _async_notify_make_webhook(make_url, make_payload)
 
+    target_agent = (body.get("agent_id") or body.get("agent_slug") or body.get("requested_slug") or "margaret").lower()
+
     # Si el modelo activo es de la familia Teamily (Canal Principal con Failover Automático a Gemini)
     if "teamly" in str(ai_model).lower():
-        message_id = f"MSG-LEIA-{uuid.uuid4().hex[:6]}"
+        message_id = f"MSG-{target_agent.upper()}-{uuid.uuid4().hex[:6]}"
         if centralita_router:
             try:
                 route_res = centralita_router.route_message(
                     message_id=message_id,
                     user_input=user_message,
-                    requested_slug="leia",
+                    requested_slug=target_agent,
                     context={"userName": user_name, "petName": pet_name, "userType": user_type},
                     agente_origen="user"
                 )
@@ -2252,6 +2282,7 @@ async def leia_chat_v1(request: Request):
                 if reply and "serverMsgID" not in str(reply) and len(str(reply).strip()) > 0:
                     return {
                         "status": "success",
+                        "agent": target_agent,
                         "reply": reply,
                         "response_text": reply,
                         "model_used": "teamly-orchestrator",
@@ -2264,18 +2295,19 @@ async def leia_chat_v1(request: Request):
     gem_res = _call_gemini_for_leia_engine(
         user_message=user_message,
         history=history,
-        requested_model=ai_model if "gemini" in str(ai_model).lower() else "gemini-3.8-flash"
+        requested_model=ai_model if "gemini" in str(ai_model).lower() else "gemini-3.8-flash",
+        requested_agent=target_agent
     )
     reply_text = gem_res.get("reply") or ""
 
     if centralita_router:
         try:
             centralita_router.record_trace(
-                message_id=f"LEIA-{uuid.uuid4().hex[:6]}",
+                message_id=f"{target_agent.upper()}-{uuid.uuid4().hex[:6]}",
                 agente_origen="Tutor / Staff",
-                agente_destino="leia",
+                agente_destino=target_agent,
                 webhook_utilizado=f"Google Gemini ({gem_res.get('model_used')}) [Dualidad Failover]",
-                estado="CONCIERGE_ATENDIDO",
+                estado="ATENCION_ATENDIDA",
                 respuesta_preview=reply_text[:90]
             )
         except Exception:
@@ -2283,6 +2315,7 @@ async def leia_chat_v1(request: Request):
 
     return {
         "status": "success",
+        "agent": target_agent,
         "success": gem_res.get("success", True),
         "reply": reply_text,
         "response_text": reply_text,
@@ -6386,7 +6419,44 @@ async def teamily_chat(request: Request):
     except Exception:
         body = {}
     msg = body.get("message") or body.get("prompt") or request.query_params.get("message") or request.query_params.get("prompt") or ""
-    agent = (body.get("agent_id") or request.query_params.get("agent_id") or "leia").lower()
+    body_agent = body.get("agent_id") or body.get("agent_slug") or body.get("agent") or body.get("slug")
+    qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
+    agent = (body_agent or qp_agent or "margaret").lower()
+
+    # Margaret / Margarette: Recepción & Atención al Cliente
+    if agent in ["margaret", "margarette", "atencion", "atención", "recepcion", "recepción", "cliente"]:
+        res_text = ""
+        bcv_cfg = get_bcv_config_data()
+        eff_rate = bcv_cfg.get("effective_rate", 914.02)
+        if teamily_geo_a_client and msg and TeamilyGeoARequest:
+            try:
+                board_id = body.get("board_id") or getattr(teamily_geo_a_client, "board_id", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
+                req = TeamilyGeoARequest(input=msg, board_id=board_id)
+                res = teamily_geo_a_client.send_message(req)
+                if res.success and res.response_text:
+                    res_text = res.response_text
+            except Exception as _e_m:
+                log.warning("Llamada externa a Teamily falló para Margaret: %s", _e_m)
+
+        if not res_text and centralita_router:
+            res_text = centralita_router.synthesize_agent_response("margaret", "Margaret — Gerente de Atención al Cliente", msg, body.get("context"))
+
+        if not res_text:
+            res_text = (
+                f"👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                f"¡Hola! Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
+                f"Le oriento con gusto en citas para **Grooming Spa**, **Clínica Veterinaria** y **Hotel 5★**. "
+                f"Tasa oficial BCV de hoy: **{eff_rate:,.2f} Bs/$**. ¿Cómo podemos consentir a su mascota hoy?"
+            )
+
+        return {
+            "status": "success",
+            "agent": "margaret",
+            "agent_name": "Margaret — Gerente de Atención al Cliente",
+            "reply": res_text,
+            "response_text": res_text,
+            "bcv_rate": eff_rate
+        }
 
     # O'Neil: Marketing & Telemercadeo
     if agent in ["oneil", "oneal", "mercadeo"]:
