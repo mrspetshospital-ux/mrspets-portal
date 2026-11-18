@@ -154,6 +154,9 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertEqual(booking_manual["account_email"], "mrspetshospital@gmail.com")
         self.assertIn("Solicitud de Cita Registrada", booking_manual["confirmation_text"])
         self.assertIn("8:00 - 8:30 a.m.", booking_manual["confirmation_text"])
+        self.assertIn("calendar.google.com/calendar/render", booking_manual.get("gcal_url", ""))
+        self.assertIn("mrspetshospital@gmail.com", booking_manual.get("gcal_url", ""))
+        self.assertIn("Google Calendar", booking_manual["confirmation_text"])
 
         # 3. Procesamiento de reserva en modo automático
         booking_auto = process_and_persist_booking(
@@ -165,6 +168,8 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertIsNotNone(booking_auto)
         self.assertIn("Aprobado por IA Leia 🤖", booking_auto["status"])
         self.assertIn("Reserva Confirmada", booking_auto["confirmation_text"])
+        self.assertIn("calendar.google.com/calendar/render", booking_auto.get("gcal_url", ""))
+        self.assertIn("mrspetshospital@gmail.com", booking_auto.get("gcal_url", ""))
 
     def test_10_google_calendar_account_target(self):
         """Verifica que el motor de calendario apunte a mrspetshospital@gmail.com."""

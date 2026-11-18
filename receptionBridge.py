@@ -13,6 +13,7 @@ import os
 import re
 import random
 import logging
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 
@@ -228,7 +229,15 @@ def process_and_persist_booking(
                 returning=True
             )
 
-        pet_id = (mascotas[0].get("id") if mascotas else None)
+        pet_id = None
+        if mascotas:
+            for m in mascotas:
+                if str(m.get("nombre", "")).strip().lower() == pet_name.strip().lower():
+                    pet_id = m.get("id")
+                    break
+            if not pet_id and len(mascotas) > 0:
+                pet_id = mascotas[0].get("id")
+
         if not pet_id and tutor_id:
             # Crear mascota en BD
             pet_code = f"PET-{random.randint(100, 999)}"
@@ -241,33 +250,94 @@ def process_and_persist_booking(
     except Exception as _e_save_cli:
         log.warning("No se pudo persistir cliente en BD: %s", _e_save_cli)
 
-    # 2. Asignación de código y estado según modo de aprobación
-    appt_code = f"PEND-{random.randint(1000, 9999)}"
+    # 2. Código de Turno y Estado según Modo de Aprobación
+    pref = {"grooming": "G", "clinica": "C", "hotel": "H", "tienda": "T"}.get(area, "G")
+    try:
+        c_row = db.q("SELECT COUNT(*) AS c FROM citas WHERE area=%s", (area,), one=True)
+        c_num = (c_row.get("c", 0) + 1) if c_row else random.randint(10, 999)
+    except Exception:
+        c_num = random.randint(10, 999)
     is_auto = (approval_mode == "auto")
+    appt_code = f"{pref}-{c_num:03d}" if is_auto else f"PEND-{pref}-{c_num:03d}"
     appt_status = "Aprobado por IA Leia 🤖" if is_auto else "Pendiente por Aprobación Staff"
+    estado_db = "confirmada" if is_auto else "pendiente"
+    fecha_hora_str = f"{target_date} {target_time}:00-04:00"
+
+    # 3. Persistencia en Tabla Citas (PostgreSQL)
+    cita_id = None
+    if pet_id:
+        try:
+            cita_id = db.execute(
+                """INSERT INTO citas (codigo, mascota_id, area, fecha_hora, estado, notas, activo)
+                   VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                (appt_code, pet_id, area, fecha_hora_str, estado_db, f"{service_name} • Tutor: {tutor_name} ({phone})"),
+                returning=True
+            )
+        except Exception as _e_ins:
+            log.warning("Intento primario de inserción en citas (%s): %s", appt_code, _e_ins)
+            try:
+                appt_code = f"{pref}-{random.randint(100, 999)}"
+                cita_id = db.execute(
+                    """INSERT INTO citas (codigo, mascota_id, area, fecha_hora, estado, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                    (appt_code, pet_id, area, fecha_hora_str, estado_db, f"{service_name} • Tutor: {tutor_name} ({phone})"),
+                    returning=True
+                )
+            except Exception as _e_ins2:
+                log.warning("Fallo en persistencia de cita en Postgres: %s", _e_ins2)
+
+    # 4. Generación de Enlace Directo a Google Calendar
+    try:
+        clean_date = target_date.replace("-", "")
+        clean_time = target_time.replace(":", "")
+        if len(clean_time) == 4:
+            clean_time += "00"
+        h_val = int(target_time.split(":")[0])
+        m_val = int(target_time.split(":")[1])
+        end_h_val = (h_val + 1) % 24
+        end_time_str = f"{end_h_val:02d}{m_val:02d}00"
+        gcal_dates = f"{clean_date}T{clean_time}/{clean_date}T{end_time_str}"
+    except Exception:
+        gcal_dates = f"{today.strftime('%Y%m%d')}T140000/{today.strftime('%Y%m%d')}T150000"
+
+    gcal_title = f"Mrs. Pets: {service_name} — {pet_name}"
+    gcal_details = f"Cita {appt_code} • Tutor: {tutor_name} ({phone}) • Servicio: {service_name} • Estado: {appt_status} • Cuenta: {TARGET_GCAL_ACCOUNT}"
+    gcal_location = "Mrs Pets Hospital & Resort, Av. 2 El Milagro, Maracaibo, Zulia"
+
+    gcal_url = (
+        f"https://calendar.google.com/calendar/render?action=TEMPLATE"
+        f"&text={urllib.parse.quote(gcal_title)}"
+        f"&dates={gcal_dates}"
+        f"&details={urllib.parse.quote(gcal_details)}"
+        f"&location={urllib.parse.quote(gcal_location)}"
+        f"&add={TARGET_GCAL_ACCOUNT}"
+    )
 
     appt_data = {
         "id": appt_code,
         "codigo": appt_code,
+        "cita_id": cita_id,
         "pet": pet_name,
+        "pet_id": pet_id,
         "tutor": tutor_name,
+        "tutor_id": tutor_id,
         "phone": phone,
         "area": area,
         "service": service_name,
         "date": target_date,
         "time": target_time,
+        "fecha_hora": fecha_hora_str,
+        "estado": estado_db,
         "status": appt_status,
+        "gcal_url": gcal_url,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "account_email": TARGET_GCAL_ACCOUNT
     }
 
-    # 3. Guardado en tabla citas y CalendarEngine
+    # 5. Guardado en CalendarEngine y Despacho
     try:
         if calendar_engine:
             calendar_engine.add_appointment(appt_data)
-
-        # Disparo a Google Calendar (mrspetshospital@gmail.com) vía Make
-        if calendar_engine:
             gcal_payload = calendar_engine.build_make_gcal_payload(
                 "appointment_approved" if is_auto else "appointment_pending",
                 appt_data
@@ -276,11 +346,19 @@ def process_and_persist_booking(
     except Exception as _e_cal:
         log.warning("Error registrando cita en calendario/Make: %s", _e_cal)
 
-    # Mensaje de confirmación acorde a la directiva
+    # 6. Mensaje de confirmación acorde a la directiva
     if is_auto:
-        conf_msg = f"✅ **¡Reserva Confirmada!** Hemos agendado formalmente a **{pet_name}** para el **{target_date}** a las **{target_time}** en **{service_name}**. El evento ha sido sincronizado en Google Calendar (`{TARGET_GCAL_ACCOUNT}`). ¡Te esperamos con amor en Av. 2 El Milagro!"
+        conf_msg = (
+            f"✅ **¡Reserva Confirmada!** Hemos agendado formalmente a **{pet_name}** para el **{target_date}** a las **{target_time}** en **{service_name}** (Turno `{appt_code}`).\n\n"
+            f"📅 **Google Calendar:** [Haz clic aquí para agregar o verificar en Google Calendar ({TARGET_GCAL_ACCOUNT})]({gcal_url})\n\n"
+            f"¡Te esperamos con amor en Av. 2 El Milagro!"
+        )
     else:
-        conf_msg = f"📋 **Solicitud de Cita Registrada:** Hemos recibido la solicitud para **{pet_name}** ({target_date} a las {target_time} en {service_name}). Mañana a primera hora (8:00 - 8:30 a.m.) nuestro equipo de recepción estará validando la disponibilidad de sala y confirmándote formalmente para que lo traigas. Sincronizada en cola para Google Calendar (`{TARGET_GCAL_ACCOUNT}`)."
+        conf_msg = (
+            f"📋 **Solicitud de Cita Registrada:** Hemos recibido la solicitud para **{pet_name}** ({target_date} a las {target_time} en {service_name} • Turno `{appt_code}`).\n\n"
+            f"Mañana a primera hora (8:00 - 8:30 a.m.) nuestro equipo de recepción estará validando la disponibilidad de sala y confirmándote formalmente para que lo traigas.\n\n"
+            f"📅 **Google Calendar:** [Enlace directo de Google Calendar ({TARGET_GCAL_ACCOUNT})]({gcal_url})"
+        )
 
     appt_data["confirmation_text"] = conf_msg
     return appt_data

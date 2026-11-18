@@ -2835,6 +2835,12 @@ class AdminEngine {
     }
     this.saveReservationsToStorage();
 
+    // Notificar al backend la aprobación formal en base de datos PostgreSQL y sincronizar Google Calendar
+    fetch(`/api/v1/calendario/citas/${encodeURIComponent(appt.codigo || appt.id)}/aprobar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(err => console.warn('[Approve Calendar API Warning]', err));
+
     const isAlreadyBooked = this.bookedAppointments.some(a => a.id === appt.id || (a.pet === appt.pet && a.date === appt.date && a.time === appt.time));
     if (!isAlreadyBooked) {
       this.bookedAppointments.push({
@@ -3956,18 +3962,38 @@ class AdminEngine {
         const serverAppts = (Array.isArray(data.citas) && data.citas.length > 0)
           ? data.citas.map(c => ({
               id: c.codigo || c.id || 'APT',
+              codigo: c.codigo || c.id || 'APT',
               area: c.area || 'grooming',
               date: (c.fecha_dia || c.fecha_hora || c.date || '').split('T')[0],
               time: (c.fecha_hora || c.time || '').includes('T') ? c.fecha_hora.split('T')[1].substring(0, 5) : (c.time || '09:00').substring(0, 5),
               pet: c.mascota_nombre || c.pet || 'Mascota VIP',
               tutor: c.tutor_nombre || c.tutor || 'Cliente VIP',
-              service: c.notas || c.service || `Servicio ${c.area}`
+              phone: c.tutor_telefono || c.phone || '+58 414-6799510',
+              service: c.notas || c.service || `Servicio ${c.area}`,
+              estado: c.estado || 'pendiente',
+              status: c.estado === 'confirmada' ? 'Aprobado por IA / Staff' : (c.status || 'Pendiente por Aprobación Staff'),
+              gcal_url: c.gcal_url || ''
             }))
           : [];
 
-        // Combinar con citas locales sin borrar citas recién creadas en la interfaz
+        // 1. Sincronizar Citas Pendientes hacia el Espacio de Confirmación
+        const livePending = serverAppts.filter(c => c.estado === 'pendiente' || (c.status && c.status.toLowerCase().includes('pendiente')));
+        if (livePending.length > 0) {
+          const mergedPending = Array.isArray(this.pendingAppointments) ? [...this.pendingAppointments] : [];
+          for (const lp of livePending) {
+            if (!mergedPending.some(m => m.id === lp.id || m.codigo === lp.codigo || (m.pet === lp.pet && m.date === lp.date && m.time === lp.time))) {
+              mergedPending.unshift(lp);
+            }
+          }
+          this.pendingAppointments = mergedPending;
+          this.deduplicatePendingAppointments();
+          this.saveReservationsToStorage();
+        }
+
+        // 2. Combinar Citas Confirmadas para el Cronograma y Agenda
+        const liveBooked = serverAppts.filter(c => c.estado === 'confirmada' || (c.status && c.status.toLowerCase().includes('aprobado')));
         const merged = Array.isArray(this.bookedAppointments) ? [...this.bookedAppointments] : [];
-        for (const sa of serverAppts) {
+        for (const sa of (liveBooked.length > 0 ? liveBooked : serverAppts)) {
           if (!merged.some(m => m.id === sa.id || (m.pet === sa.pet && m.date === sa.date && m.time === sa.time))) {
             merged.push(sa);
           }

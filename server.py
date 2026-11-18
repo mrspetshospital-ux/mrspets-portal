@@ -2598,6 +2598,7 @@ async def leia_chat_v1(request: Request):
 # =====================================================================
 # CALENDARIO, HORARIOS, DISPONIBILIDAD & GOOGLE CALENDAR SYNC (MAKE.COM)
 # =====================================================================
+from receptionBridge import TARGET_GCAL_ACCOUNT
 
 @app.get("/api/v1/calendario/config")
 def get_calendar_config_endpoint():
@@ -2690,6 +2691,59 @@ async def add_calendar_appointment_endpoint(request: Request):
     
     appt = calendar_engine.add_appointment(body)
     return ok(cita=appt)
+
+
+@app.get("/api/v1/calendario/pendientes")
+def get_pending_calendar_appointments_endpoint():
+    """Retorna las citas en estado 'pendiente' para la bandeja de confirmación de Staff."""
+    try:
+        sql = """SELECT c.*, m.nombre AS mascota_nombre, t.nombre AS tutor_nombre, t.telefono AS tutor_telefono
+                 FROM citas c
+                 JOIN mascotas m ON m.id = c.mascota_id
+                 JOIN tutores t ON t.id = m.tutor_id
+                 WHERE c.activo=TRUE AND c.estado='pendiente'
+                 ORDER BY c.fecha_hora ASC"""
+        pendientes = db.q(sql) or []
+    except Exception:
+        pendientes = []
+    return ok(pendientes=pendientes)
+
+
+@app.post("/api/v1/calendario/citas/{code_or_id}/aprobar")
+async def approve_calendar_appointment_endpoint(code_or_id: str):
+    """Aprueba una cita pendiente, actualizando estado='confirmada' en BD y sincronizando con Google Calendar."""
+    try:
+        db.execute(
+            "UPDATE citas SET estado='confirmada', updated_at=NOW() WHERE (codigo=%s OR id::text=%s) AND activo=TRUE",
+            (code_or_id, code_or_id)
+        )
+        c = db.q(
+            """SELECT c.*, m.nombre AS mascota_nombre, t.nombre AS tutor_nombre, t.telefono AS tutor_telefono
+               FROM citas c
+               JOIN mascotas m ON m.id = c.mascota_id
+               JOIN tutores t ON t.id = m.tutor_id
+               WHERE (c.codigo=%s OR c.id::text=%s) AND c.activo=TRUE LIMIT 1""",
+            (code_or_id, code_or_id), one=True
+        )
+        if c and calendar_engine:
+            appt_dict = {
+                "id": c["codigo"],
+                "codigo": c["codigo"],
+                "pet": c.get("mascota_nombre", "Mascota VIP"),
+                "tutor": c.get("tutor_nombre", "Cliente VIP"),
+                "phone": c.get("tutor_telefono", ""),
+                "area": c.get("area", "grooming"),
+                "service": c.get("notas", "Servicio"),
+                "date": str(c.get("fecha_hora", "")).split(" ")[0].split("T")[0],
+                "time": str(c.get("fecha_hora", "")).split(" ")[1][:5] if " " in str(c.get("fecha_hora", "")) else "10:00",
+                "status": "Aprobado por Staff",
+                "account_email": TARGET_GCAL_ACCOUNT
+            }
+            gcal_payload = calendar_engine.build_make_gcal_payload("appointment_approved", appt_dict)
+            calendar_engine.dispatch_to_make(gcal_payload)
+        return ok(status="approved", codigo=code_or_id)
+    except Exception as e:
+        return ok(status="error", message=str(e))
 
 
 @app.post("/api/v1/calendario/bloquear")

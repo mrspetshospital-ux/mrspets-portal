@@ -232,17 +232,30 @@ class CalendarEngine:
         self._memory_appointments = [a for a in self._memory_appointments if a.get("id") != appt_data["id"] and a.get("codigo") != appt_data["codigo"]]
         self._memory_appointments.append(appt_data)
 
-        # También intentar persistir en DB si existe
-        try:
-            import db
-            sql = """INSERT INTO citas (codigo, area, fecha_dia, fecha_hora, notas, activo)
-                     VALUES (%s, %s, %s, %s, %s, TRUE)"""
-            fecha_hora = f"{appt_data.get('date')} {appt_data.get('time', '09:00')}:00" if "T" not in str(appt_data.get("time")) else str(appt_data.get("time"))
-            db.x(sql, (appt_data["codigo"], appt_data.get("area", "grooming"), 
-                       appt_data.get("date"), fecha_hora, 
-                       f"{appt_data.get('pet')} - {appt_data.get('tutor')} ({appt_data.get('service')})"))
-        except Exception:
-            pass
+        # También intentar persistir en DB si existe y no fue insertada previamente
+        if not appt_data.get("cita_id"):
+            try:
+                import db
+                pet_id = appt_data.get("pet_id") or appt_data.get("mascota_id")
+                if not pet_id:
+                    p_row = db.q("SELECT id FROM mascotas WHERE activo=TRUE LIMIT 1", one=True)
+                    if p_row:
+                        pet_id = p_row["id"]
+                if pet_id:
+                    fecha_hora = f"{appt_data.get('date')} {appt_data.get('time', '09:00')}:00-04:00"
+                    estado_val = "confirmada" if "Aprobado" in str(appt_data.get("status", "")) else "pendiente"
+                    sql = """INSERT INTO citas (codigo, mascota_id, area, fecha_hora, estado, notas, activo)
+                             VALUES (%s, %s, %s, %s, %s, %s, TRUE)"""
+                    db.execute(sql, (
+                        appt_data["codigo"],
+                        pet_id,
+                        appt_data.get("area", "grooming"),
+                        fecha_hora,
+                        estado_val,
+                        f"{appt_data.get('pet')} - {appt_data.get('tutor')} ({appt_data.get('service')})"
+                    ))
+            except Exception as _e_add:
+                log.warning("No se pudo persistir cita en DB desde calendarEngine: %s", _e_add)
 
         # Disparar sincronización a Google Calendar vía Make
         try:
