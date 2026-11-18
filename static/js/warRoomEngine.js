@@ -52,6 +52,7 @@
       this.lastManualDispatchResult = null;
       this.manualJsonContent = '';
       this.isManualJsonDirty = false;
+      this.operationalPause = true; // Control de Pausa Operativa (Gemini, Teamily, Sheets, Alertas)
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -472,6 +473,9 @@
         const data = await res.json();
         this.status = data.status || 'ESTABLE';
         this.isAdmin = Boolean(data.is_admin);
+        if (data.operational_pause !== undefined) {
+          this.operationalPause = Boolean(data.operational_pause);
+        }
         this.hasActiveIncident = !!data.has_active_incidents;
         this.activeIncident = data.active_incident || null;
         this.allActiveIncidents = data.all_active_incidents || [];
@@ -626,6 +630,9 @@
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
+              <button type="button" id="btn-wr-header-toggle-pause" onclick="window.warRoomEngine.togglePauseMode()" style="background:${this.operationalPause ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}; border:1.5px solid ${this.operationalPause ? '#10B981' : '#F59E0B'}; color:${this.operationalPause ? '#34D399' : '#FBBF24'}; border-radius:10px; padding:7px 14px; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Alternar pausa operativa de IAs y alertas">
+                <span>${this.operationalPause ? '▶️ Reanudar IAs' : '⏸️ Pausar IAs'}</span>
+              </button>
               <button type="button" id="btn-wr-header-test-make" onclick="window.warRoomEngine.testMakeLinksReception()" style="background:linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3)); border:1.5px solid #10B981; color:#34D399; border-radius:10px; padding:7px 14px; font-weight:800; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(16,185,129,0.25);" title="Confirmar que los enlaces están recibiendo la información de Make">
                 <span>🧪 Probar Enlace Make</span>
               </button>
@@ -889,6 +896,9 @@
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" onclick="window.warRoomEngine.togglePauseMode()" style="background:${this.operationalPause ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}; border:1.5px solid ${this.operationalPause ? '#10B981' : '#F59E0B'}; color:${this.operationalPause ? '#34D399' : '#FBBF24'}; border-radius:10px; padding:9px 16px; font-weight:800; font-size:0.78rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Alternar pausa operativa de IAs y alertas">
+              <span>${this.operationalPause ? '▶️ Reanudar IAs' : '⏸️ Pausar IAs'}</span>
+            </button>
             <button type="button" id="btn-wr-test-make-banner" onclick="window.warRoomEngine.testMakeLinksReception()" style="background:linear-gradient(135deg, #10B981, #059669); color:#FFFFFF; font-weight:900; font-size:0.78rem; padding:9px 18px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(16,185,129,0.35);" title="Enviar paquete de prueba POST JSON y confirmar recepción de enlaces">
               <span>🧪</span> <span>Probar Enlace de Make</span>
             </button>
@@ -939,17 +949,29 @@
 
       return `
         <div class="wr-chat-container">
-          <!-- AVISO DE PAUSA OPERATIVA -->
-          <div style="padding:10px 16px; background:linear-gradient(135deg, rgba(30,58,138,0.35), rgba(15,23,42,0.8)); border-bottom:1.5px solid rgba(59,130,246,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <!-- CONTROL INTERACTIVO DE PAUSA OPERATIVA -->
+          <div style="padding:10px 16px; background:${this.operationalPause ? 'linear-gradient(135deg, rgba(30,58,138,0.4), rgba(15,23,42,0.85))' : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(15,23,42,0.85))'}; border-bottom:1.5px solid ${this.operationalPause ? 'rgba(59,130,246,0.4)' : 'rgba(16,185,129,0.35)'}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.2rem;">${this.operationalPause ? '⏸️' : '▶️'}</span>
+              <div>
+                <div style="font-size:0.78rem; color:${this.operationalPause ? '#93C5FD' : '#34D399'}; font-weight:800;">
+                  ${this.operationalPause ? 'Pausa Operativa Activa' : 'Operaciones Normales Activas'}
+                </div>
+                <div style="font-size:0.7rem; color:#94A3B8;">
+                  ${this.operationalPause ? 'Gemini IA, Teamily, Sheets y Alertas en silencio. Canal exclusivo Make.com.' : 'Todas las IAs y servicios sincronizados y respondiendo.'}
+                </div>
+              </div>
+            </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:1.1rem;">⏸️</span>
-              <span style="font-size:0.76rem; color:#93C5FD; font-weight:700;">
-                <strong>Pausa Operativa Activa:</strong> Gemini IA, Teamily, Google Sheets y Alertas en pausa.
+              <button type="button" id="wr-btn-toggle-pause" onclick="window.warRoomEngine.togglePauseMode()" 
+                style="background:${this.operationalPause ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #F59E0B, #D97706)'}; color:#FFFFFF; font-weight:900; font-size:0.75rem; padding:7px 14px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(0,0,0,0.3); transition:all 0.2s ease;">
+                <span>${this.operationalPause ? '▶️' : '⏸️'}</span>
+                <span>${this.operationalPause ? 'Reanudar IAs' : 'Pausar IAs'}</span>
+              </button>
+              <span style="background:${this.operationalPause ? 'rgba(16,185,129,0.25)' : 'rgba(59,130,246,0.2)'}; border:1px solid ${this.operationalPause ? '#10B981' : '#3B82F6'}; color:${this.operationalPause ? '#34D399' : '#60A5FA'}; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
+                <span>${this.operationalPause ? '🎯 ENFOQUE EXCLUSIVO: MAKE.COM' : '🌐 ENJAMBRE ACTIVO'}</span>
               </span>
             </div>
-            <span style="background:rgba(16,185,129,0.25); border:1px solid #10B981; color:#34D399; font-weight:800; font-size:0.7rem; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
-              <span>🎯</span> ENFOQUE EXCLUSIVO: MAKE.COM WEBHOOK
-            </span>
           </div>
 
           <!-- BARRA DE CONFIGURACIÓN DIRECTA DEL WEBHOOK MAKE.COM -->
@@ -3444,6 +3466,30 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       }
     }
 
+    async togglePauseMode() {
+      const current = this.operationalPause;
+      const targetAction = current ? 'resume' : 'pause';
+      try {
+        const resp = await fetch(`/api/v1/war-room/pause-toggle?action=${targetAction}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: targetAction })
+        });
+        const data = await resp.json();
+        if (data && data.status === 'success') {
+          this.operationalPause = Boolean(data.operational_pause);
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(data.message || (this.operationalPause ? 'Pausa Operativa Activada' : 'Operaciones Reanudadas'), 'info');
+          }
+        } else {
+          this.operationalPause = !current;
+        }
+      } catch (err) {
+        this.operationalPause = !current;
+      }
+      this.refreshModalContent(true);
+    }
+
     escapeHtml(str) {
       if (!str) return '';
       return String(str)
@@ -3460,6 +3506,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
   warRoom.executeHotfix = warRoom.executeHotfix.bind(warRoom);
   warRoom.generateExternalInvite = warRoom.generateExternalInvite.bind(warRoom);
   warRoom.simulateAlertToggle = warRoom.simulateAlertToggle.bind(warRoom);
+  warRoom.togglePauseMode = warRoom.togglePauseMode.bind(warRoom);
   warRoom.switchTab = warRoom.switchTab.bind(warRoom);
   warRoom.sendChatMessage = warRoom.sendChatMessage.bind(warRoom);
   warRoom.quickReportIssue = warRoom.quickReportIssue.bind(warRoom);

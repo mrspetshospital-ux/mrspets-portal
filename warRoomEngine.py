@@ -579,6 +579,11 @@ class WarRoomEngine:
             "active_guest_tokens_count": len(self.ephemeral_tokens),
             "chat_messages": filtered_chat,
             "is_admin": is_admin,
+            "operational_pause": getattr(self, "gemini_paused", False),
+            "gemini_paused": getattr(self, "gemini_paused", False),
+            "teamily_paused": getattr(self, "teamily_paused", False),
+            "alerts_paused": getattr(self, "alerts_paused", False),
+            "sheets_paused": getattr(self, "sheets_paused", False),
             "node_configs": dict(self.node_configs) if is_admin else self.get_masked_node_configs()
         }
 

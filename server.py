@@ -1879,6 +1879,54 @@ async def war_room_save_config(request: Request):
     return {"status": "success", "node_configs": body}
 
 
+@app.post("/api/v1/war-room/pause-toggle")
+@app.get("/api/v1/war-room/pause-toggle")
+async def war_room_pause_toggle(request: Request):
+    if not war_room_engine:
+        return JSONResponse(status_code=503, content={"status": "error", "message": "Motor no inicializado"})
+    
+    action = request.query_params.get("action")
+    if not action and request.method == "POST":
+        try:
+            b = await request.json()
+            action = b.get("action")
+        except Exception:
+            action = None
+
+    if action == "pause":
+        new_state = True
+    elif action == "resume":
+        new_state = False
+    else:
+        current_state = getattr(war_room_engine, "gemini_paused", False)
+        new_state = not current_state
+
+    war_room_engine.gemini_paused = new_state
+    war_room_engine.teamily_paused = new_state
+    war_room_engine.alerts_paused = new_state
+    war_room_engine.sheets_paused = new_state
+
+    if "gemini" in war_room_engine.nodes:
+        war_room_engine.nodes["gemini"]["status"] = "PAUSADO" if new_state else "ESTABLE"
+        war_room_engine.nodes["gemini"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Inferencia multimodal Gemini activa y enlazada."
+    if "teamly" in war_room_engine.nodes:
+        war_room_engine.nodes["teamly"]["status"] = "PAUSADO" if new_state else "ESTABLE"
+        war_room_engine.nodes["teamly"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Coordinación operativa de agentes en Teamily."
+    if "antigravity" in war_room_engine.nodes:
+        war_room_engine.nodes["antigravity"]["status"] = "PAUSADO" if new_state else "ESTABLE"
+        war_room_engine.nodes["antigravity"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Vigilancia de endpoints, autocuración y orquestación de parches."
+
+    return {
+        "status": "success",
+        "operational_pause": new_state,
+        "gemini_paused": new_state,
+        "teamily_paused": new_state,
+        "alerts_paused": new_state,
+        "sheets_paused": new_state,
+        "message": "Pausa operativa activada (exclusivo Make)" if new_state else "Operaciones normales reanudadas"
+    }
+
+
 @app.post("/api/v1/war-room/pulse")
 @app.get("/api/v1/war-room/pulse")
 def war_room_pulse():

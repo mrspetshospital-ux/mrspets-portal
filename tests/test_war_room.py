@@ -428,6 +428,19 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertIn("Make.com", res["message"])
         self.assertIn("vía fallback", res["message"])
 
+    def test_14_pause_toggle_mode(self):
+        """Verifica que el estado de pausa operativa se pueda alternar y consultar en get_status."""
+        war_room_engine.gemini_paused = True
+        status = war_room_engine.get_status()
+        self.assertTrue(status["operational_pause"])
+        self.assertTrue(status["gemini_paused"])
+
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        status_unpaused = war_room_engine.get_status()
+        self.assertFalse(status_unpaused["operational_pause"])
+        self.assertFalse(status_unpaused["gemini_paused"])
+
 
 if __name__ == "__main__":
     unittest.main()
