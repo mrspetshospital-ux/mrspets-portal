@@ -341,13 +341,22 @@ class App {
         });
       } else {
         // Pestaña fuera de familias (Bienvenido Portal VIP, C.Centro MPF, Misipet 2.0):
-        // cerrar todas las familias para dejar el menú lateral limpio
-        allSidebarFamilies.forEach(other => {
-          if (other.open) {
-            other.removeAttribute('open');
-            other.open = false;
+        if (tabName === 'welcome') {
+          // En Portal de Bienvenida, mantenemos el menú principal (Grooming & Tienda) desplegado
+          const firstFamily = allSidebarFamilies[0];
+          let anyOpen = false;
+          allSidebarFamilies.forEach(f => { if (f.open) anyOpen = true; });
+          if (!anyOpen && firstFamily) {
+            firstFamily.open = true;
           }
-        });
+        } else {
+          allSidebarFamilies.forEach(other => {
+            if (other.open) {
+              other.removeAttribute('open');
+              other.open = false;
+            }
+          });
+        }
       }
     }
 

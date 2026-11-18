@@ -1055,8 +1055,8 @@
       <header class="top-header">
         <div class="header-left" style="display:flex; align-items:center; gap:12px; flex:1; max-width:440px;">
           <!-- SIDEBAR COLLAPSE TOGGLE BUTTON -->
-          <button class="btn btn-secondary btn-sm" id="btn-toggle-sidebar" onclick="mrsPetsArch.toggleSidebar()" style="padding:8px 12px; font-weight:700; border-color:#D4AF37; color:#2C2C2E;" title="Contraer / Expandir Menú Lateral">
-            <i data-lucide="panel-left-close"></i>
+          <button class="btn btn-secondary btn-sm" id="btn-toggle-sidebar" onclick="if(window.mrsPetsArch){mrsPetsArch.toggleSidebar();}else if(window.toggleSidebar){window.toggleSidebar();}" style="padding:8px 12px; font-weight:700; border-color:#D4AF37; color:#2C2C2E; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;" title="Contraer / Expandir Menú Lateral">
+            <i data-lucide="panel-left-close">☰</i>
           </button>
           
           <div style="position:relative; width:100%; max-width:540px;" id="global-search-wrapper">
@@ -8778,7 +8778,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   </div>
 
   <!-- JavaScript Modules -->
-  <script src="js/mrsPetsArchitecture.js?v=20261117_DUAL_AVATAR_V13"></script>
+  <script src="js/mrsPetsArchitecture.js?v=20261118_SIDEBAR_TOGGLE_V14"></script>
   <script src="js/voiceSimulator.js?v=20261109_LEIA_CLIENT_GREETING_V5"></script>
   <script src="js/whatsappSimulator.js?v=20261102_TEAMLY_UNIFIED_WORKSPACE_V3"></script>
   <script src="js/adminEngine.js?v=20261112_PORTAL_SAFE_RETURN_V1"></script>
@@ -8808,7 +8808,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
   <script src="js/parametricMatrixEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/sixSigmaTelemetry.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/smartContrastEngine.js?v=20261031_ZERO_JITTER_V7"></script>
-  <script src="js/app.js?v=20261112_PORTAL_SAFE_RETURN_V1"></script>
+  <script src="js/app.js?v=20261118_SIDEBAR_EXPAND_V14"></script>
   <script src="js/globalSearchEngine.js?v=20261103_HIGIENE_CUIDADO_V1"></script>
   <script src="js/financialEngine.js?v=20261031_ZERO_JITTER_V7"></script>
   <script src="js/hrRecruitmentEngine.js?v=20261031_ZERO_JITTER_V7"></script>

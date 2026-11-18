@@ -351,6 +351,7 @@ class MrsPetsArchitectureEngine {
   toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const container = document.getElementById('app-container');
+    const toggleBtn = document.getElementById('btn-toggle-sidebar');
     if (window.innerWidth <= 992) {
       let backdrop = document.getElementById('mobile-sidebar-backdrop');
       if (!backdrop) {
@@ -360,6 +361,8 @@ class MrsPetsArchitectureEngine {
         backdrop.onclick = () => {
           if (sidebar) sidebar.classList.remove('mobile-open');
           backdrop.style.display = 'none';
+          if (toggleBtn) toggleBtn.innerHTML = '<i data-lucide="menu">☰</i>';
+          if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
         };
         document.body.appendChild(backdrop);
       }
@@ -367,6 +370,10 @@ class MrsPetsArchitectureEngine {
         sidebar.classList.toggle('mobile-open');
         const isOpen = sidebar.classList.contains('mobile-open');
         backdrop.style.display = isOpen ? 'block' : 'none';
+        if (toggleBtn) {
+          toggleBtn.innerHTML = isOpen ? '<i data-lucide="panel-left-close">✕</i>' : '<i data-lucide="menu">☰</i>';
+          if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+        }
         if (window.app && typeof window.app.showToast === 'function') {
           window.app.showToast(isOpen ? '📌 Menú de navegación abierto' : '📌 Menú cerrado', 'info');
         }
@@ -376,6 +383,10 @@ class MrsPetsArchitectureEngine {
     if (sidebar) sidebar.classList.toggle('collapsed');
     if (container) container.classList.toggle('sidebar-collapsed');
     const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = isCollapsed ? '<i data-lucide="panel-left-open">☰</i>' : '<i data-lucide="panel-left-close">✕</i>';
+      if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+    }
     if (window.app && typeof window.app.showToast === 'function') {
       window.app.showToast(isCollapsed ? '📌 Menú lateral contraído' : '📌 Menú lateral expandido', 'info');
     }
@@ -1543,7 +1554,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     }
 
     const session = this.getActiveSessionContext();
-    const isStaff = session && session.userType === 'staff_admin';
+    const isStaff = (typeof this.isStaffMode === 'function') ? this.isStaffMode() : Boolean(session && session.userType === 'staff_admin');
     const isMargaret = true;
     const agentSlug = 'margaret';
     const agentDisplayName = 'Leia';
@@ -1625,7 +1636,6 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 20;
     const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
-    const isStaff = (typeof this.isStaffMode === 'function') ? this.isStaffMode() : false;
     const chatSessionId = (typeof this.getChatSessionId === 'function') ? this.getChatSessionId() : ((session && session.sessionId) || ('sess_' + Math.random().toString(36).substring(2, 9)));
 
     const agentPayload = {
@@ -3551,4 +3561,5 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
 
 const mrsPetsArch = new MrsPetsArchitectureEngine();
 window.mrsPetsArch = mrsPetsArch;
+window.toggleSidebar = () => mrsPetsArch.toggleSidebar();
 document.addEventListener('DOMContentLoaded', () => mrsPetsArch.init());
