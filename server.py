@@ -2205,6 +2205,17 @@ def _call_gemini_for_leia_engine(
             continue
 
     dt_ms = int((time.time() - t0) * 1000)
+    if is_margaret:
+        return {
+            "success": False,
+            "reply": (
+                "👩‍💼 **Margaret (Recepción & Atención al Cliente):**\n\n"
+                "¡Hola! Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
+                "Estoy a su entera disposición para asistirle con turnos de **Grooming Spa**, **Clínica Veterinaria** y **Hotel 5★**. ¿En qué podemos apoyar a su mascota hoy?"
+            ),
+            "model_used": "fallback_local",
+            "latency_ms": dt_ms
+        }
     return {
         "success": False,
         "reply": "¡Hola! Qué gusto saludarte en Mrs. Pets. Soy Leia, tu Concierge VIP. ¿En qué podemos consentir a tu mascota hoy?",

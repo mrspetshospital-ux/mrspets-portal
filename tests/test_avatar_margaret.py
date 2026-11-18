@@ -101,6 +101,41 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertIn("expediente", resp_queja.lower())
         self.assertNotIn("serverMsgID", resp_queja)
 
+    def test_07_buenas_noches_reception_greeting(self):
+        """Verifica que un saludo simple como 'buenas noches' sea respondido por Margaret como recepcionista y nunca por Leia."""
+        resp = centralita_router.synthesize_agent_response("margaret", "Margaret", "buenas noches")
+        self.assertIn("Margaret", resp)
+        self.assertIn("Avenida 2 El Milagro", resp)
+        self.assertIn("👩‍💼", resp)
+        self.assertNotIn("Leia", resp)
+        self.assertNotIn("🎀", resp)
+
+    def test_08_api_endpoints_buenas_noches(self):
+        """Verifica que los endpoints HTTP de Teamily y Gemini respondan con Margaret ante 'buenas noches'."""
+        try:
+            from starlette.testclient import TestClient
+            from server import app
+            client = TestClient(app)
+
+            # 1. Endpoint Teamily agent-chat
+            res_team = client.post("/api/v1/teamily/agent-chat", json={"agent_id": "margaret", "message": "buenas noches"})
+            self.assertEqual(res_team.status_code, 200)
+            data_team = res_team.json()
+            self.assertEqual(data_team.get("agent"), "margaret")
+            self.assertIn("Margaret", data_team.get("reply", ""))
+            self.assertNotIn("Leia", data_team.get("reply", ""))
+
+            # 2. Endpoint Leia/Margaret fallback chat
+            res_gem = client.post("/api/v1/leia/chat", json={"agent_id": "margaret", "requested_slug": "margaret", "message": "buenas noches"})
+            self.assertEqual(res_gem.status_code, 200)
+            data_gem = res_gem.json()
+            self.assertEqual(data_gem.get("agent"), "margaret")
+            reply_gem = data_gem.get("reply", "")
+            self.assertIn("Margaret", reply_gem)
+            self.assertNotIn("Leia", reply_gem)
+        except ImportError:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

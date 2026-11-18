@@ -1501,13 +1501,17 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
 
     const session = this.getActiveSessionContext();
     const isStaff = session && session.userType === 'staff_admin';
+    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
+    const isMargaret = primaryAgent.includes('margaret');
+    const agentSlug = isMargaret ? 'margaret' : 'leia';
+    const agentDisplayName = isMargaret ? 'Margaret' : 'Leia';
 
     // 2. Bloquear input y botón para evitar congelamiento o envíos dobles
     const inputEl = document.getElementById('leia-chat-input');
     const sendBtn = document.getElementById('btn-leia-chat-send');
     if (inputEl) {
       inputEl.disabled = true;
-      inputEl.setAttribute('placeholder', 'Leia está respondiendo...');
+      inputEl.setAttribute('placeholder', `${agentDisplayName} está respondiendo...`);
     }
     if (sendBtn) {
       sendBtn.disabled = true;
@@ -1538,7 +1542,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       typingDiv.style.gap = '4px';
       typingDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
 
-      const roleBadge = `🎀 Leia • Concierge VIP`;
+      const roleBadge = isMargaret ? '👩‍💼 Margaret • Recepción & Atención al Cliente' : '🎀 Leia • Concierge VIP';
       // TRANSPARENCIA TOTAL PARA CLIENTES: nunca ver modelos técnicos
       const modelDetailHtml = isStaff
         ? `<span>${roleBadge} • <strong style="color:#fef08a;">${cleanModelName}</strong></span>`
@@ -1547,7 +1551,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       typingDiv.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="spinner-border spinner-border-sm" role="status" style="width:14px; height:14px; border-width:2px; color:#fbbf24;"></span>
-          <strong>Leia está respondiendo a tu consulta...</strong>
+          <strong>${agentDisplayName} está respondiendo a tu consulta...</strong>
         </div>
         <div style="font-size:0.73rem; color:#94a3b8; font-style:italic; display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
           ${modelDetailHtml}
@@ -1567,13 +1571,10 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       }, 1000);
     }
 
-    // 4. DESPACHO MULTI-CANAL INTELIGENTE (SEGÚN MODELO SELECCIONADO POR EL STAFF)
+    // 4. DESPACHO MULTI-CANAL INTELIGENTE (SEGÚN AGENTE ACTIVO Y CONFIGURACIÓN)
     let serverReplyText = null;
     const isTeamlyPrimary = (activeModel.id && activeModel.id.includes('teamly'));
     const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-    const primaryAgent = (localStorage.getItem('mrspets_avatar_primary_agent') || 'margaret').toLowerCase();
-    const isMargaret = primaryAgent.includes('margaret');
-    const agentSlug = isMargaret ? 'margaret' : 'leia';
     const agentName = isMargaret ? 'Margaret — Gerente de Atención al Cliente' : 'Leia Concierge VIP & Asistencia CEO';
     const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
 
@@ -1592,13 +1593,18 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
         petName: this.lastActivePetName || (session && session.activePetName) || '',
         userType: (session && session.userType) || 'client',
-        channel: `Widget Circular (${isMargaret ? 'Margaret' : 'Leia'})`,
+        channel: `Widget Circular (${agentDisplayName})`,
         activeModel: activeModel.id
       }
     };
 
-    if (isTeamlyPrimary) {
-      // Prioridad: Teamily Live API
+    if (isMargaret) {
+      // =========================================================================
+      // FLUJO OFICIAL DE MARGARET (RECEPCIÓN & ATENCIÓN AL CLIENTE MRS. PETS)
+      // 1. Canal Primario: Teamily Live API con timeout dinámico configurado
+      // 2. Canal Respaldo: Google Gemini en backend con prompt de Margarette
+      // NOTA: NUNCA despachar al webhook histórico de Make de Leia para evitar suplantaciones
+      // =========================================================================
       try {
         const abortCtrl = new AbortController();
         const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
@@ -1615,16 +1621,77 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             const rawReply = typeof data.response_text === 'object' && data.response_text.text
               ? data.response_text.text
               : (data.response_text || (data.output && data.output.text) || data.reply);
-            if (rawReply && String(rawReply).trim().length > 0) {
+            if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
               serverReplyText = rawReply;
             }
           }
         }
       } catch (err) {
-        console.warn(`[AVATAR CHAT] Teamily (${agentSlug}) superó timeout de ${timeoutSec}s o falló, activando failover a Make/Gemini:`, err);
+        console.warn(`[AVATAR CHAT] Teamily (${agentSlug}) superó timeout de ${timeoutSec}s o falló, activando failover a Gemini:`, err);
       }
 
-      // Failover a Make.com + Gemini si Teamily no respondió
+      // Failover a Google Gemini en el backend si Teamily no respondió o superó timeout
+      if (!serverReplyText) {
+        try {
+          const geminiCtrl = new AbortController();
+          const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
+          const res = await fetch('/api/v1/leia/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: cleanText,
+              agent_id: 'margaret',
+              agent_slug: 'margaret',
+              requested_slug: 'margaret',
+              model: 'gemini-3.8-flash',
+              userType: session.userType,
+              userName: session.userName,
+              petName: session.petName,
+              sessionId: this.getChatSessionId()
+            }),
+            signal: geminiCtrl.signal
+          });
+          clearTimeout(geminiTimeout);
+
+          if (res.ok) {
+            const gemData = await res.json();
+            if (gemData && (gemData.reply || gemData.response_text)) {
+              serverReplyText = gemData.reply || gemData.response_text;
+            }
+          }
+        } catch (e) {
+          console.warn("[AVATAR CHAT] Fallback Gemini para Margaret no respondió:", e);
+        }
+      }
+    } else {
+      // Flujo alternativo para Leia Concierge (si el staff conmuta expresamente a Leia)
+      if (isTeamlyPrimary) {
+        try {
+          const abortCtrl = new AbortController();
+          const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
+          const res = await fetch('/api/v1/teamily/agent-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(agentPayload),
+            signal: abortCtrl.signal
+          });
+          clearTimeout(fetchTimer);
+          if (res.ok) {
+            const data = await res.json();
+            if (data) {
+              const rawReply = typeof data.response_text === 'object' && data.response_text.text
+                ? data.response_text.text
+                : (data.response_text || (data.output && data.output.text) || data.reply);
+              if (rawReply && String(rawReply).trim().length > 0) {
+                serverReplyText = rawReply;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(`[AVATAR CHAT] Teamily (${agentSlug}) superó timeout de ${timeoutSec}s o falló, activando failover a Make/Gemini:`, err);
+        }
+      }
+
       if (!serverReplyText) {
         try {
           const makeRes = await this.dispatchChatBidirectional({
@@ -1638,24 +1705,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
           }
         } catch (e) {}
       }
-    } else {
-      // Prioridad 1: Escenario Make.com exclusivo (Google Drive + Gemini + Webhook Response)
-      try {
-        const makeRes = await this.dispatchChatBidirectional({
-          sessionId: this.getChatSessionId(),
-          message: cleanText,
-          detalleAdicionales: cleanText,
-          userQuery: cleanText
-        });
-        if (makeRes && makeRes.hasCustomReply && makeRes.replyText) {
-          serverReplyText = makeRes.replyText;
-          console.log("[AVATAR CHAT] Respuesta viva recibida desde Make.com:", serverReplyText);
-        }
-      } catch (e) {
-        console.warn("[AVATAR CHAT] Make.com no devolvió texto, activando inferencia directa de respaldo:", e);
-      }
 
-      // Prioridad 2: Si Make.com no respondió (o hizo timeout), invocar Google Gemini directo en el backend
       if (!serverReplyText) {
         try {
           const geminiCtrl = new AbortController();
@@ -1685,35 +1735,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             }
           }
         } catch (e) {
-          console.warn("[AVATAR CHAT] Google Gemini no respondió, activando failover a Teamily:", e);
-        }
-      }
-
-      // Prioridad 3: Failover a Teamily Live API si Make y Gemini no respondieron
-      if (!serverReplyText) {
-        try {
-          const abortCtrl = new AbortController();
-          const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
-          const res = await fetch('/api/v1/teamily/agent-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(agentPayload),
-            signal: abortCtrl.signal
-          });
-          clearTimeout(fetchTimer);
-          if (res.ok) {
-            const data = await res.json();
-            if (data) {
-              const rawReply = typeof data.response_text === 'object' && data.response_text.text
-                ? data.response_text.text
-                : (data.response_text || (data.output && data.output.text) || data.reply);
-              if (rawReply && String(rawReply).trim().length > 0) {
-                serverReplyText = rawReply;
-              }
-            }
-          }
-        } catch (err) {
-          console.warn("[AVATAR CHAT] Failover de Teamily también agotado:", err);
+          console.warn("[AVATAR CHAT] Google Gemini no respondió:", e);
         }
       }
     }

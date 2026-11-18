@@ -953,9 +953,9 @@
                 let replyObtained = null;
 
                 // =========================================================================
-                // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DINÁMICO
+                // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DINÁMICO (Margaret siempre prioriza Teamily)
                 // =========================================================================
-                if (isTeamly) {
+                if (isTeamly || isMargaret) {
                     try {
                         const abortCtrl = new AbortController();
                         const timeoutId = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
