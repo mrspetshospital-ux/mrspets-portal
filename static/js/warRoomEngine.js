@@ -352,15 +352,33 @@
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
         .wr-chat-feed {
-          padding: 18px;
-          height: 330px;
-          overflow-y: auto;
+          padding: 20px;
+          min-height: 480px;
+          height: 60vh;
+          max-height: 720px;
+          overflow-y: scroll;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          scroll-behavior: smooth;
+          gap: 14px;
+          background: #070B12;
+        }
+        .wr-chat-feed::-webkit-scrollbar {
+          width: 10px;
+        }
+        .wr-chat-feed::-webkit-scrollbar-track {
+          background: #090D16;
+          border-radius: 6px;
+        }
+        .wr-chat-feed::-webkit-scrollbar-thumb {
+          background: rgba(212, 175, 55, 0.45);
+          border-radius: 6px;
+          border: 2px solid #090D16;
+        }
+        .wr-chat-feed::-webkit-scrollbar-thumb:hover {
+          background: rgba(212, 175, 55, 0.8);
         }
         .wr-msg-bubble {
           border-radius: 14px;
@@ -538,9 +556,17 @@
         }
       });
 
-      // 3. Si la pestaña activa es Chat, refrescar solo el feed sin tocar inputs
+      // 3. Si la pestaña activa es Chat, solo refrescar el feed si hay mensajes nuevos, PRESERVANDO estrictamente el scroll del usuario
       if (this.activeTab === 'chat') {
-        this.renderChatFeedOnly();
+        const feed = document.getElementById('wr-chat-feed');
+        if (feed) {
+          const newHtml = this.getFormattedMessagesHtml();
+          if (feed.innerHTML !== newHtml) {
+            const currentScrollTop = feed.scrollTop;
+            feed.innerHTML = newHtml;
+            feed.scrollTop = currentScrollTop; // Mantener scroll exacto donde el usuario está leyendo
+          }
+        }
       }
     }
 
@@ -878,7 +904,11 @@
         tabContentHtml = this.renderSandboxTabHtml();
       }
 
-      container.innerHTML = `
+      const isChatTab = this.activeTab === 'chat';
+
+      // En la Sala de Conversación se despeja el encabezado técnico del Cuarto de Guerra
+      // (banner y tarjetas de nodos) para otorgar lectura amplia, cómoda y 100% manual.
+      const warRoomHeaderSection = isChatTab ? '' : `
         <!-- BANNER DE PRUEBA DE ENLACE MAKE.COM -->
         <div id="wr-make-test-banner" style="background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border:1.5px solid rgba(16,185,129,0.35); border-radius:14px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 6px 20px rgba(0,0,0,0.35);">
           <div style="display:flex; align-items:center; gap:12px;">
@@ -915,6 +945,10 @@
             ${nodesHtml}
           </div>
         </div>
+      `;
+
+      container.innerHTML = `
+        ${warRoomHeaderSection}
 
         <!-- PESTAÑAS -->
         <div>
@@ -926,10 +960,6 @@
           ${tabContentHtml}
         </div>
       `;
-
-      if (this.activeTab === 'chat') {
-        this.scrollChatToBottom();
-      }
     }
 
     /* ----------------------------------------------------------------------
@@ -1027,6 +1057,25 @@
             </div>
             <div id="wr-active-target-badge" style="font-size:0.72rem; color:#A5B4FC; font-weight:700;">
               🎯 Destinatario: <span style="color:#FDE047; font-weight:800;">${activeLabel}</span>
+            </div>
+          </div>
+
+          <!-- BARRA DE CONTROL DE DESPLAZAMIENTO MANUAL -->
+          <div style="padding:8px 16px; background:#0B0F19; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:0.72rem; color:#94A3B8;">
+              📜 <strong>Desplazamiento Manual:</strong> Lee con calma hacia arriba o abajo; ningún timer automático moverá tu pantalla.
+            </span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" onclick="window.warRoomEngine.scrollChatToTop()" 
+                style="background:#1E293B; border:1px solid rgba(255,255,255,0.2); color:#F1F5F9; border-radius:8px; padding:5px 12px; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" 
+                title="Subir manualmente al inicio de la conversación">
+                <span>⬆️ Subir al inicio</span>
+              </button>
+              <button type="button" onclick="window.warRoomEngine.scrollChatToBottom()" 
+                style="background:#1E293B; border:1px solid rgba(255,255,255,0.2); color:#F1F5F9; border-radius:8px; padding:5px 12px; font-size:0.72rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" 
+                title="Bajar manualmente al mensaje más reciente">
+                <span>⬇️ Bajar al final</span>
+              </button>
             </div>
           </div>
 
@@ -1153,19 +1202,27 @@
       }).join('');
     }
 
-    renderChatFeedOnly() {
+    renderChatFeedOnly(forceScroll = false) {
       const feed = document.getElementById('wr-chat-feed');
       if (feed) {
+        const prevScroll = feed.scrollTop;
         feed.innerHTML = this.getFormattedMessagesHtml();
-        this.scrollChatToBottom();
+        if (forceScroll) {
+          feed.scrollTop = feed.scrollHeight;
+        } else {
+          feed.scrollTop = prevScroll;
+        }
       }
     }
 
+    scrollChatToTop() {
+      const feed = document.getElementById('wr-chat-feed');
+      if (feed) feed.scrollTop = 0;
+    }
+
     scrollChatToBottom() {
-      setTimeout(() => {
-        const feed = document.getElementById('wr-chat-feed');
-        if (feed) feed.scrollTop = feed.scrollHeight;
-      }, 50);
+      const feed = document.getElementById('wr-chat-feed');
+      if (feed) feed.scrollTop = feed.scrollHeight;
     }
 
     async sendChatMessage(customText) {
@@ -1226,7 +1283,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               event: 'war_room_chat_message',
-              source: 'Cuarto de Guerra Mrs. Pets (Sala de Conversación)',
+              source: 'Mrs. Pets (Sala de Conversación)',
               sender: 'Mrs. PETS CORP',
               message: text,
               target_node: targetNode,
@@ -1257,10 +1314,10 @@
 
         // Control riguroso de errores o rechazos: mostrar de inmediato en la sala de conversación
         if (!resp.ok || data.status === 'rejected' || data.status === 'error') {
-          const errText = data.message || data.error || `HTTP ${resp.status}: Error al emitir mensaje en el Cuarto de Guerra`;
+          const errText = data.message || data.error || `HTTP ${resp.status}: Error al emitir mensaje en la Sala de Conversación`;
           this.chatMessages.push({
             id: 'ERR-' + Date.now(),
-            sender: 'Sistema Cuarto de Guerra',
+            sender: 'Sistema',
             sender_id: 'system',
             role: 'Control de Seguridad & Canales',
             message: `⚠️ ${errText}`,
@@ -1296,10 +1353,10 @@
         console.warn('War Room Chat network error:', err);
         this.chatMessages.push({
           id: 'ERR-NET-' + Date.now(),
-          sender: 'Sistema Cuarto de Guerra',
+          sender: 'Sistema',
           sender_id: 'system',
           role: 'Error de Red',
-          message: `🚨 Error de red al comunicar con el Cuarto de Guerra: ${err.message}`,
+          message: `🚨 Error de red al comunicar con la Sala de Conversación: ${err.message}`,
           timestamp: new Date().toISOString(),
           node_id: 'system',
           channel_id: 'deliberacion',
@@ -3507,6 +3564,8 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
   warRoom.generateExternalInvite = warRoom.generateExternalInvite.bind(warRoom);
   warRoom.simulateAlertToggle = warRoom.simulateAlertToggle.bind(warRoom);
   warRoom.togglePauseMode = warRoom.togglePauseMode.bind(warRoom);
+  warRoom.scrollChatToTop = warRoom.scrollChatToTop.bind(warRoom);
+  warRoom.scrollChatToBottom = warRoom.scrollChatToBottom.bind(warRoom);
   warRoom.switchTab = warRoom.switchTab.bind(warRoom);
   warRoom.sendChatMessage = warRoom.sendChatMessage.bind(warRoom);
   warRoom.quickReportIssue = warRoom.quickReportIssue.bind(warRoom);

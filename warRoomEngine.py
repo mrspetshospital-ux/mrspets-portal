@@ -1704,7 +1704,7 @@ class WarRoomEngine:
 
         payload = {
             "event": "war_room_chat_message",
-            "source": "Cuarto de Guerra Mrs. Pets",
+            "source": "Mrs. Pets (Sala de Conversación)",
             "sender": sender,
             "role": "Dirección General & Mando Operativo",
             "message": problem_description,
