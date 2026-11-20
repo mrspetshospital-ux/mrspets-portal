@@ -35,7 +35,7 @@
         make_api_key: '',
         make_fallback_url: 'https://hook.us2.make.com/rsdqtjwgxit0j4uw8s58oe31sa27j7d4',
         teamly_mode: 'Asíncrono vía Webhooks (Sin API directa)',
-        gemini_model: 'gemini-2.5-flash',
+        gemini_model: 'gemini-3.8-flash',
         gemini_api_key: '',
         antigravity_endpoint_url: '/api/v1/war-room/execute-patch',
         google_sheets_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4'
@@ -53,7 +53,7 @@
       this.manualJsonContent = '';
       this.isManualJsonDirty = false;
       this.operationalPause = false; // Control de Pausa Operativa (IAs activas para pruebas y operaciones)
-      this.useMakeBackup = false; // Vía Directa (Gemini 2.5 Flash) vs Respaldo Make.com (Paracaídas de Contingencia)
+      this.useMakeBackup = false; // Vía Directa (Gemini 3.8 Flash) vs Respaldo Make.com (Paracaídas de Contingencia)
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -1008,13 +1008,13 @@
             </div>
           </div>
 
-          <!-- MODO DE COMUNICACIÓN: VÍA DIRECTA (GEMINI 2.5 FLASH) vs PARACAÍDAS MAKE.COM -->
+          <!-- MODO DE COMUNICACIÓN: VÍA DIRECTA (GEMINI 3.8 FLASH) vs PARACAÍDAS MAKE.COM -->
           <div style="padding:10px 16px; background:${this.useMakeBackup ? 'linear-gradient(135deg, rgba(234,88,12,0.25), rgba(15,23,42,0.9))' : 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(15,23,42,0.9))'}; border-bottom:1.5px solid ${this.useMakeBackup ? '#EA580C' : '#3B82F6'}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:1.3rem;">${this.useMakeBackup ? '🪂' : '🎯'}</span>
               <div>
                 <div style="font-size:0.8rem; color:${this.useMakeBackup ? '#FB923C' : '#60A5FA'}; font-weight:800; display:flex; align-items:center; gap:6px;">
-                  <span>${this.useMakeBackup ? 'Modo Contingencia: Respaldo Make.com (Paracaídas ACTIVO)' : 'Modo Nominal: Vía Directa (Gemini 2.5 Flash)'}</span>
+                  <span>${this.useMakeBackup ? 'Modo Contingencia: Respaldo Make.com (Paracaídas ACTIVO)' : 'Modo Nominal: Vía Directa (Gemini 3.8 Flash)'}</span>
                   <span style="background:${this.useMakeBackup ? 'rgba(234,88,12,0.3)' : 'rgba(16,185,129,0.2)'}; border:1px solid ${this.useMakeBackup ? '#EA580C' : '#10B981'}; color:${this.useMakeBackup ? '#FDBA74' : '#34D399'}; font-size:0.68rem; padding:2px 8px; border-radius:10px; font-weight:800;">
                     ${this.useMakeBackup ? 'MAKE EN CONDUCCIÓN' : 'LATENCIA REAL &bull; MISMO LLAMADO'}
                   </span>
@@ -2905,10 +2905,10 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#A78BFA;">🧠 Google Gemini API (Inferencia & Diagnóstico):</label>
-                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● gemini-2.5-flash</span>
+                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#10B981; font-weight:700;">● gemini-3.8-flash</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-gemini" class="wr-cfg-input" readonly value="gemini-2.5-flash (Header x-goog-api-key)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#DDD6FE; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-gemini" class="wr-cfg-input" readonly value="gemini-3.8-flash (Header x-goog-api-key)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#DDD6FE; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('gemini', '')" style="background:rgba(167,139,250,0.15); border:1px solid #A78BFA; color:#C4B5FD; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -2950,7 +2950,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
             <div style="background:#0B0F19; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <label style="font-size:0.76rem; font-weight:800; color:#A78BFA;">✨ Gemini AI (API Key):</label>
-                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#C4B5FD; font-weight:700;">● Gemini 2.5 Flash</span>
+                <span id="wr-ping-gemini-res" style="font-size:0.7rem; color:#C4B5FD; font-weight:700;">● Gemini 3.8 Flash</span>
               </div>
               <div style="display:flex; gap:8px;">
                 <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-gemini-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.gemini_api_key || '')}" placeholder="Pegar GEMINI_API_KEY (visible solo para Administrador)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
@@ -3068,7 +3068,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
           target_webhook: targetUrl,
           connected_agents: ['leia', 'margaret', 'charlie', 'manolo', 'valeria', 'mike', 'oneil', 'pandora', 'sebastian'],
           circuit_breaker: 'CLOSED',
-          active_failover: 'gemini-2.5-flash',
+          active_failover: 'gemini-3.8-flash',
           spreadsheet_id: this.nodeConfigs.google_sheets_id || '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4',
           tab: 'Registro de Interacciones'
         }
@@ -3213,7 +3213,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
           version: '2.5.0',
           connected_agents: ['leia', 'margaret', 'charlie', 'manolo', 'valeria', 'mike', 'oneil', 'pandora', 'sebastian'],
           circuit_breaker: 'CLOSED',
-          active_failover: 'gemini-2.5-flash',
+          active_failover: 'gemini-3.8-flash',
           spreadsheet_id: '1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4',
           tab: 'Registro de Interacciones'
         }
@@ -3358,7 +3358,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
             </div>
             <div style="background:#0B0F19; border:1px solid rgba(96,165,250,0.3); border-radius:12px; padding:12px;">
               <div style="font-size:0.7rem; color:#94A3B8; font-weight:700;">FAILOVER RESILIENTE</div>
-              <div style="font-size:0.92rem; color:#60A5FA; font-weight:900; margin-top:3px;">⚡ Gemini 2.5 Flash</div>
+              <div style="font-size:0.92rem; color:#60A5FA; font-weight:900; margin-top:3px;">⚡ Gemini 3.8 Flash</div>
               <div style="font-size:0.68rem; color:#64748B; margin-top:2px;">Make.com + In-house Native</div>
             </div>
             <div style="background:#0B0F19; border:1px solid rgba(212,175,55,0.3); border-radius:12px; padding:12px;">
@@ -3610,7 +3610,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
         if (data && data.status === 'success') {
           this.useMakeBackup = Boolean(data.use_make_backup);
           if (window.app && typeof window.app.showToast === 'function') {
-            window.app.showToast(data.message || (this.useMakeBackup ? '🪂 Respaldo Make.com (Paracaídas) Activado' : '🎯 Vía Directa (Gemini 2.5 Flash) Activada'), 'info');
+            window.app.showToast(data.message || (this.useMakeBackup ? '🪂 Respaldo Make.com (Paracaídas) Activado' : '🎯 Vía Directa (Gemini 3.8 Flash) Activada'), 'info');
           }
         } else {
           this.useMakeBackup = nextState;

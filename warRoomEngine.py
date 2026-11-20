@@ -401,7 +401,7 @@ class WarRoomEngine:
                 or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
             ),
             "teamily_server_key": os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or "",
-            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
             "gemini_api_key": _get_default_gemini_key(),
             "antigravity_endpoint_url": (
                 os.environ.get("ANTIGRAVITY_ENDPOINT_URL")
@@ -648,7 +648,7 @@ class WarRoomEngine:
                 "connected_agents": ["leia", "margaret", "charlie", "manolo", "valeria", "mike", "oneil", "pandora", "sebastian"],
                 "spreadsheet_id": self.node_configs.get("google_sheets_id", "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"),
                 "circuit_breaker": "CLOSED",
-                "active_failover": "gemini-2.5-flash"
+                "active_failover": "gemini-3.8-flash"
             }
         }
 
@@ -1288,13 +1288,11 @@ class WarRoomEngine:
             or _get_default_gemini_key()
         )
 
-        primary_model = self.node_configs.get("gemini_model") or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
-        if "3.8" in primary_model:
-            primary_model = "gemini-2.5-flash"
+        primary_model = self.node_configs.get("gemini_model") or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
 
-        # Paso Tres: gemini-2.5-flash como modelo prioritario con fallbacks resilientes
+        # Modelo prioritario Gemini 3.8 con fallbacks resilientes
         candidate_models = [primary_model]
-        for fallback in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]:
+        for fallback in ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]:
             if fallback not in candidate_models:
                 candidate_models.append(fallback)
 
@@ -1444,7 +1442,7 @@ class WarRoomEngine:
     ) -> Dict[str, Any]:
         """
         Vía Directa (Paso Tres y Cuatro):
-        Invoca a gemini-2.5-flash usando el system prompt del nodo seleccionado
+        Invoca a gemini-3.8-flash usando el system prompt del nodo seleccionado
         (harryt, gemini, antigravity, teamly, make) y los últimos 10 mensajes como contexto.
         Mide latencia real con time.time() y devuelve errores técnicos explícitos.
         """
@@ -1493,7 +1491,7 @@ class WarRoomEngine:
 
         latency_ms = gemini_res.get("latency_ms")
         is_success = bool(gemini_res.get("success"))
-        model_used = gemini_res.get("model_used", "gemini-2.5-flash")
+        model_used = gemini_res.get("model_used", "gemini-3.8-flash")
 
         if is_success:
             reply_text = str(gemini_res.get("reply", "")).strip()
@@ -2194,14 +2192,14 @@ class WarRoomEngine:
         primary_reply = ""
         primary_latency: Optional[int] = None
         primary_verified = True
-        primary_model = "gemini-2.5-flash"
+        primary_model = "gemini-3.8-flash"
 
         if responses:
             last_resp = responses[-1]
             primary_reply = last_resp.get("message", "")
             primary_latency = last_resp.get("latency_ms")
             primary_verified = bool(last_resp.get("verified", True))
-            primary_model = last_resp.get("model_used", "gemini-2.5-flash")
+            primary_model = last_resp.get("model_used", "gemini-3.8-flash")
 
         mode_desc = "make_backup" if (getattr(self, "use_make_backup", False) or target_norm == "make") else "direct"
 

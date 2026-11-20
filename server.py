@@ -1967,7 +1967,7 @@ async def war_room_backup_toggle(request: Request):
         "status": "success",
         "use_make_backup": new_state,
         "mode": "make_backup" if new_state else "direct",
-        "message": "🪂 Paracaídas Make.com ACTIVADO como respaldo." if new_state else "🎯 Vía Directa (Gemini 2.5 Flash) ACTIVADA."
+        "message": "🪂 Paracaídas Make.com ACTIVADO como respaldo." if new_state else "🎯 Vía Directa (Gemini 3.8 Flash) ACTIVADA."
     }
 
 
