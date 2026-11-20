@@ -1152,6 +1152,7 @@
         const ch = msg.channel_id || 'deliberacion';
         if (ch === activeChannel) return true;
         if (ch === 'deliberacion') return true;
+        if (msg.target_node_id === cleanNode || msg.node_id === cleanNode || msg.sender_id === cleanNode) return true;
         if (msg.sender_id === 'mrspets' && (msg.target_node_id === cleanNode || msg.node_id === cleanNode)) return true;
         return false;
       });

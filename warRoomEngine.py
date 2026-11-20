@@ -310,7 +310,8 @@ NODE_SYSTEM_PROMPTS = {
         "LÍMITES Y ALCANCE:\n"
         "- Hablas exclusivamente como Google AntiGravity desde tu canal (channel_antigravity).\n"
         "- Te enfocas en la estabilidad técnica, rendimiento, parches y conectividad del servidor.\n"
-        "- No defines políticas de negocio, precios de servicios ni autorizas gastos sin la aprobación de Dirección General."
+        "- No defines políticas de negocio, precios de servicios ni autorizas gastos sin la aprobación de Dirección General.\n"
+        "- Supervisas la salud y endpoints del Avatar (/api/v1/avatar/chat, assets/leia_avatar.jpg, assets/margaret_avatar.svg, motor dual Teamily/Gemini) y respondes con diagnósticos técnicos precisos ante los planteamientos de Charly / Super Agent (Teamily)."
     ),
     "teamly": (
         "Eres Charly / Super Agent (Teamily), el Asistente Ejecutivo y Coordinador Operativo del Enjambre de Agentes de Mrs. Pets Corp.\n"
@@ -1327,10 +1328,19 @@ class WarRoomEngine:
 
         system_prompt = NODE_SYSTEM_PROMPTS.get(clean_node_key, NODE_SYSTEM_PROMPTS.get("gemini", ""))
 
-        # Contexto: últimos 10 mensajes del historial de la sala o canal
+        # Contexto: últimos 10 mensajes del historial de la sala o canales de deliberación
+        valid_war_room_channels = (
+            channel_id,
+            "channel_mrspets",
+            "channel_super_agent",
+            "channel_antigravity",
+            "channel_gemini",
+            "channel_make",
+            "deliberacion"
+        )
         channel_history = [
             m for m in self.chat_history
-            if m.get("channel_id") in (channel_id, "channel_mrspets", "deliberacion")
+            if m.get("channel_id") in valid_war_room_channels
         ][-10:]
         if not channel_history and self.chat_history:
             channel_history = self.chat_history[-10:]
@@ -2175,9 +2185,84 @@ class WarRoomEngine:
                     self.chat_history.append(make_eval)
                     responses.append(make_eval)
 
-        else:
-            # Mensaje emitido directamente por un agente en su propio canal
+        elif clean_sender_id in ("super_agent", "teamly", "charly"):
+            # CASO B: El Super Agente Teamily (Charly / GEO-A) emite una comunicación o reporte
             responses.append(user_msg)
+
+            # Auto-lectura e interacción de Google AntiGravity ante mensajes de Teamily:
+            target_norm = (target_node_id or "").strip().lower()
+            is_avatar_topic = any(k in msg_lower for k in [
+                "avatar", "leia", "margaret", "margarette", "cara", "rostro", "voz",
+                "asistente", "recepcionista", "recepcion", "recepción", "animacion", "animación",
+                "foto", "imagen", "video", "chat", "widget", "frontend", "front"
+            ])
+            is_directed_to_ag = target_norm in ("antigravity", "engineering", "ingenieria") or any(k in msg_lower for k in [
+                "antigravity", "anti-gravity", "ingenieria", "ingeniería", "servidor", "endpoint", "código", "codigo", "despliegue"
+            ])
+
+            # AntiGravity responde automáticamente si:
+            # 1. El mensaje trata del avatar
+            # 2. Está dirigido a AntiGravity
+            # 3. O es una deliberación técnica / consulta abierta en el Cuarto de Guerra
+            should_ag_respond = (
+                not getattr(self, "gemini_paused", False)
+                and (is_avatar_topic or is_directed_to_ag or target_norm in ("deliberacion", "todos", "sala", ""))
+            )
+
+            if should_ag_respond:
+                # Enriquecimiento del mensaje para contexto técnico si es sobre el Avatar:
+                eval_prompt = message
+                if is_avatar_topic:
+                    eval_prompt = (
+                        f"[Lectura Automática AntiGravity - Análisis de Intervención de Teamily sobre el Avatar]\n"
+                        f"Mensaje emitido por Super Agente Teamily: \"{message}\"\n\n"
+                        f"Como Google AntiGravity (Ingeniería de Software & Resiliencia), emite tu dictamen técnico sobre el estado del avatar de Mrs. Pets:\n"
+                        f"- Endpoint activo: /api/v1/avatar/chat y /api/leia/chat\n"
+                        f"- Assets validados: assets/leia_avatar.jpg (Leia Concierge) y assets/margaret_avatar.svg (Margarette Recepción CRM)\n"
+                        f"- Gobernanza Dual: Motor Teamily (primario para recepción) con conmutación resiliencia Gemini 3.8 Flash\n"
+                        f"- Aislamiento de sesiones: sessionId único, control de latencia y prevención de desbordamiento.\n"
+                        f"Responde directamente en channel_antigravity con tu diagnóstico técnico preciso y empírico."
+                    )
+
+                ag_eval = self.generate_direct_node_evaluation(
+                    "antigravity",
+                    eval_prompt,
+                    sender=f"Super Agente Teamily ({sender})",
+                    override_api_key=override_api_key
+                )
+                self.chat_history.append(ag_eval)
+                responses.append(ag_eval)
+
+            elif getattr(self, "gemini_paused", False) and (is_avatar_topic or is_directed_to_ag):
+                paused_eval = {
+                    "id": f"MSG-{secrets.token_hex(4)}",
+                    "sender": WAR_ROOM_PARTICIPANTS["antigravity"]["name"],
+                    "sender_id": "antigravity",
+                    "role": WAR_ROOM_PARTICIPANTS["antigravity"]["role"],
+                    "message": "⏸️ Canal AntiGravity en pausa operativa por orden de Dirección General (mensaje de Teamily recibido y registrado en bitácora).",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "node_id": "antigravity",
+                    "channel_id": "channel_antigravity",
+                    "target_node_id": "channel_super_agent",
+                    "verified": False,
+                    "latency_ms": None
+                }
+                self.chat_history.append(paused_eval)
+                responses.append(paused_eval)
+
+        else:
+            # Mensaje emitido directamente por otro agente o invitado en su propio canal
+            responses.append(user_msg)
+            target_norm = (target_node_id or "").strip().lower()
+            if target_norm in ("antigravity", "engineering") and not getattr(self, "gemini_paused", False):
+                ag_eval = self.generate_direct_node_evaluation(
+                    "antigravity",
+                    message,
+                    sender=sender,
+                    override_api_key=override_api_key
+                )
+                self.chat_history.append(ag_eval)
+                responses.append(ag_eval)
 
         if len(self.chat_history) > 150:
             self.chat_history = self.chat_history[-150:]

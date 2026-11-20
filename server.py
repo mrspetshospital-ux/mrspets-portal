@@ -1853,6 +1853,57 @@ async def war_room_post_chat(request: Request):
     )
 
 
+@app.post("/api/v1/teamily/webhook")
+@app.post("/api/v1/war-room/teamily-inbound")
+async def teamily_inbound_webhook(request: Request):
+    """
+    Webhook Inbound para que el Super Agente Teamily (Charly / GEO-A) o el tablero de Teamily
+    envíe comunicaciones, reportes operativos o consultas al Cuarto de Guerra de Mrs. Pets.
+    Google AntiGravity procesa y responde automáticamente en channel_antigravity.
+    """
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    msg = (
+        body.get("message")
+        or body.get("text")
+        or body.get("content")
+        or body.get("input")
+        or body.get("query")
+        or ""
+    )
+    sender = body.get("sender") or "Charly / Super Agent (Teamily)"
+    sender_id = body.get("sender_id") or "super_agent"
+    role = body.get("role") or "Asistente Ejecutivo & Coordinación Operativa (Teamily)"
+    target_node_id = body.get("target_node_id") or body.get("node_id") or "antigravity"
+    channel_id = body.get("channel_id") or "channel_super_agent"
+
+    if not msg:
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "El payload debe contener 'message' o 'text'"}
+        )
+
+    if not war_room_engine:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "message": "Motor del Cuarto de Guerra no disponible"}
+        )
+
+    result = war_room_engine.process_chat(
+        sender=sender,
+        role=role,
+        message=msg,
+        target_node_id=target_node_id,
+        channel_id=channel_id,
+        sender_id=sender_id
+    )
+    return result
+
+
 @app.post("/api/v1/war-room/config")
 async def war_room_save_config(request: Request):
     body = {}
@@ -7001,6 +7052,16 @@ async def teamily_chat(request: Request):
             if booking_data.get("confirmation_text") and not ("Reserva Confirmada" in res_text or "Solicitud de Cita Registrada" in res_text):
                 out_response["reply"] = f"{res_text}\n\n{booking_data['confirmation_text']}"
                 out_response["response_text"] = out_response["reply"]
+
+        if orch.get("failover_triggered") and war_room_engine:
+            war_room_engine.add_chat_message(
+                sender="Sistema Cuarto de Guerra (Avatar Telemetry)",
+                role="Monitor de Telemetría Avatar",
+                message=f"⚠️ Conmutación en Avatar (/api/v1/avatar/chat): Conmutado a {orch.get('backup_engine')} por {orch.get('failover_reason')}",
+                node_id="system",
+                channel_id="deliberacion",
+                sender_id="system"
+            )
 
         return out_response
 

@@ -226,13 +226,13 @@ class TestWarRoomEngine(unittest.TestCase):
         # Configurar URLs reales de Make, Gemini, Sheets, etc.
         new_urls = {
             "make_webhook_url": "https://hook.us2.make.com/custom_test_endpoint_12345",
-            "gemini_model": "gemini-2.5-flash",
+            "gemini_model": "gemini-3.8-flash",
             "google_sheets_id": "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET"
         }
         res = war_room_engine.update_node_configs(new_urls)
         self.assertEqual(res["status"], "success")
         self.assertEqual(war_room_engine.node_configs["make_webhook_url"], "https://hook.us2.make.com/custom_test_endpoint_12345")
-        self.assertEqual(war_room_engine.node_configs["gemini_model"], "gemini-2.5-flash")
+        self.assertEqual(war_room_engine.node_configs["gemini_model"], "gemini-3.8-flash")
         self.assertEqual(war_room_engine.node_configs["google_sheets_id"], "1yfnYyG23Z8JipApuW_-wiH_TEST_SHEET")
         self.assertEqual(war_room_engine.node_configs["teamly_status"], "ASINCRONO_SIN_API_PUBLICA")
 
@@ -549,6 +549,122 @@ class TestWarRoomEngine(unittest.TestCase):
         # 4. Desactivar Paracaídas Make.com -> Regreso a Vía Directa
         war_room_engine.use_make_backup = False
         self.assertFalse(war_room_engine.use_make_backup)
+
+    @patch("urllib.request.urlopen")
+    def test_16_antigravity_auto_reads_teamily_avatar_message(self, mock_urlopen):
+        """
+        Verifica que AntiGravity lee automáticamente cuando el Super Agente Teamily
+        emite un mensaje sobre el avatar, respondiendo en channel_antigravity sin quedar mudo.
+        """
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        war_room_engine.alerts_paused = False
+        war_room_engine.node_configs["gemini_model"] = "gemini-3.8-flash"
+
+        # Mockear respuesta de Gemini 3.8 Flash para la Vía Directa de AntiGravity
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = json.dumps({
+            "candidates": [{
+                "content": {
+                    "parts": [{
+                        "text": "Dictamen AntiGravity: Endpoint /api/v1/avatar/chat verificado. Assets leia_avatar.jpg y margaret_avatar.svg nominales. Latencia 120ms."
+                    }]
+                }
+            }]
+        }).encode("utf-8")
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        # 1. El Super Agente Teamily emite un mensaje en su canal sobre el avatar
+        teamily_msg = "Equipo, reporto que el avatar en /api/v1/avatar/chat requiere revisión de assets y aislamiento de sesiones."
+        res = war_room_engine.process_chat(
+            sender="Charly / Super Agent (Teamily)",
+            role="Asistente Ejecutivo & Coordinación Operativa (Teamily)",
+            message=teamily_msg,
+            target_node_id="deliberacion",
+            channel_id="channel_super_agent",
+            sender_id="super_agent"
+        )
+
+        self.assertEqual(res["status"], "success")
+        self.assertGreaterEqual(len(res["responses"]), 2)
+
+        # Primer mensaje: el emitido por Teamily
+        self.assertEqual(res["responses"][0]["sender_id"], "super_agent")
+        self.assertEqual(res["responses"][0]["channel_id"], "channel_super_agent")
+        self.assertIn("avatar", res["responses"][0]["message"].lower())
+
+        # Segundo mensaje: AntiGravity leyendo automáticamente y respondiendo en channel_antigravity
+        ag_resp = res["responses"][1]
+        self.assertEqual(ag_resp["sender_id"], "antigravity")
+        self.assertEqual(ag_resp["channel_id"], "channel_antigravity")
+        self.assertTrue(ag_resp["verified"])
+        self.assertIn("Dictamen AntiGravity", ag_resp["message"])
+        self.assertEqual(ag_resp["model_used"], "gemini-3.8-flash")
+
+        # Verificar que el mensaje de Teamily fue incluido en el historial del canal de deliberación
+        history_channels = [m.get("channel_id") for m in war_room_engine.chat_history]
+        self.assertIn("channel_super_agent", history_channels)
+        self.assertIn("channel_antigravity", history_channels)
+
+    @patch("urllib.request.urlopen")
+    def test_17_channel_super_agent_included_in_context_history(self, mock_urlopen):
+        """
+        Verifica que call_gemini_api incluye los mensajes de channel_super_agent
+        dentro de la ventana de contexto de los últimos 10 mensajes.
+        """
+        captured_request = []
+        def fake_urlopen(req, *args, **kwargs):
+            if hasattr(req, "data"):
+                captured_request.append(json.loads(req.data.decode("utf-8")))
+            mock_resp = MagicMock()
+            mock_resp.status = 200
+            mock_resp.read.return_value = json.dumps({
+                "candidates": [{
+                    "content": {
+                        "parts": [{"text": "Evaluación con contexto completo recibida."}]
+                    }
+                }]
+            }).encode("utf-8")
+            mock_resp.__enter__.return_value = mock_resp
+            return mock_resp
+
+        mock_urlopen.side_effect = fake_urlopen
+
+        # Inyectar un mensaje de Teamily en channel_super_agent
+        war_room_engine.chat_history.append({
+            "id": "MSG-TEST-SA",
+            "sender": "Charly / Super Agent (Teamily)",
+            "sender_id": "super_agent",
+            "role": "Asistente Ejecutivo (Teamily)",
+            "message": "Mensaje histórico de Teamily sobre el avatar y CRM",
+            "timestamp": "2026-11-19T22:00:00Z",
+            "node_id": "teamly",
+            "channel_id": "channel_super_agent",
+            "target_node_id": "deliberacion",
+            "verified": True
+        })
+
+        # AntiGravity evalúa
+        eval_res = war_room_engine.generate_direct_node_evaluation(
+            "antigravity",
+            "Revisión de arquitectura solicitada",
+            sender="Mrs. PETS CORP",
+            override_api_key="test_api_key_123"
+        )
+        self.assertTrue(eval_res["verified"])
+        self.assertTrue(len(captured_request) > 0)
+        req_body = captured_request[-1]
+
+        # Verificar que el mensaje de Teamily está presente en el historial de contents enviado a Gemini
+        found_teamily_msg = False
+        for c in req_body.get("contents", []):
+            for p in c.get("parts", []):
+                if "Mensaje histórico de Teamily sobre el avatar" in p.get("text", ""):
+                    found_teamily_msg = True
+                    break
+        self.assertTrue(found_teamily_msg, "El mensaje de channel_super_agent DEBE estar presente en el contexto de Gemini.")
 
 
 if __name__ == "__main__":
