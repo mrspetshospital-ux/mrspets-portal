@@ -441,6 +441,57 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertFalse(status_unpaused["operational_pause"])
         self.assertFalse(status_unpaused["gemini_paused"])
 
+    def test_15_individual_channel_direct_dispatch(self):
+        """Verifica que al conversar con un nodo individual, solo dicho nodo responda en su canal propio."""
+        war_room_engine.alerts_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        war_room_engine.make_paused = True
+
+        # 1. Prueba directa a Teamily (Charly / Super Agent)
+        res_teamily = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Hola Charly, prueba de enlace operativo directo",
+            target_node_id="teamly",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res_teamily["status"], "success")
+        self.assertEqual(len(res_teamily["responses"]), 1)
+        self.assertEqual(res_teamily["responses"][0]["sender_id"], "super_agent")
+        self.assertEqual(res_teamily["responses"][0]["channel_id"], "channel_super_agent")
+
+        # 2. Prueba directa a Google AntiGravity
+        res_ag = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Prueba técnica AntiGravity",
+            target_node_id="antigravity",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res_ag["status"], "success")
+        self.assertEqual(len(res_ag["responses"]), 1)
+        self.assertEqual(res_ag["responses"][0]["sender_id"], "antigravity")
+        self.assertEqual(res_ag["responses"][0]["channel_id"], "channel_antigravity")
+
+        # 3. Deliberación general con Make en pausa: responden las IAs activas, Make no participa
+        res_delib = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Consulta general a la sala común",
+            target_node_id="deliberacion",
+            channel_id="deliberacion",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res_delib["status"], "success")
+        responders = [r["sender_id"] for r in res_delib["responses"]]
+        self.assertIn("super_agent", responders)
+        self.assertIn("antigravity", responders)
+        self.assertIn("gemini", responders)
+        self.assertNotIn("make", responders)
+
 
 if __name__ == "__main__":
     unittest.main()

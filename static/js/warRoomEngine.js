@@ -20,8 +20,8 @@
       this.allActiveIncidents = [];
       this.nodes = {};
       this.chatMessages = [];
-      this.selectedTargetNode = 'make'; // Nodo destinatario activo: Make.com (Pausa en Gemini/Teamily)
-      this.selectedChannel = 'channel_make'; // Canal activo: Make.com Webhooks (Pausa en Gemini/Teamily)
+      this.selectedTargetNode = 'teamly'; // Nodo destinatario activo: Charly / Super Agent (Teamily)
+      this.selectedChannel = 'channel_super_agent'; // Canal activo: Teamily (Charly / Super Agent)
       this.channelsList = [
         { id: 'deliberacion', name: 'Sala Común', icon: '📡' },
         { id: 'channel_mrspets', name: 'Mrs. PETS CORP', icon: '👑' },
@@ -52,7 +52,7 @@
       this.lastManualDispatchResult = null;
       this.manualJsonContent = '';
       this.isManualJsonDirty = false;
-      this.operationalPause = true; // Control de Pausa Operativa (Gemini, Teamily, Sheets, Alertas)
+      this.operationalPause = false; // Control de Pausa Operativa (IAs activas para pruebas y operaciones)
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -1038,10 +1038,10 @@
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span style="font-size:0.7rem; font-weight:800; color:#D4AF37; text-transform:uppercase;">Conversar con Nodo:</span>
               ${[
-                { id: 'gemini', name: 'Gemini AI', icon: '✨' },
+                { id: 'teamly', name: 'Super Agent (Teamily)', icon: '🤝' },
                 { id: 'antigravity', name: 'AntiGravity', icon: '⚡' },
+                { id: 'gemini', name: 'Gemini AI', icon: '✨' },
                 { id: 'harryt', name: 'Mrs. PETS CORP', icon: '👑' },
-                { id: 'teamly', name: 'Super Agent', icon: '🤝' },
                 { id: 'make', name: 'Make.com', icon: '🔗' }
               ].map(n => {
                 const isSelected = this.selectedTargetNode === n.id;
@@ -1274,9 +1274,8 @@
       this.nodeConfigs.make_webhook_url = makeTargetUrl;
       this.savedManualWebhookUrl = makeTargetUrl;
 
-      // Despacho directo y complementario desde el navegador hacia Make.com (modo no-cors)
-      // Garantiza que cuando el usuario escriba en la sala de conversación, Make.com reciba el evento en vivo desde el cliente
-      if (makeTargetUrl && makeTargetUrl.startsWith('https://hook.')) {
+      // Despacho directo hacia Make.com solo si el destinatario seleccionado es Make.com
+      if (targetNode === 'make' && makeTargetUrl && makeTargetUrl.startsWith('https://hook.')) {
         try {
           fetch(makeTargetUrl, {
             method: 'POST',

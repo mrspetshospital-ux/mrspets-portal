@@ -1923,7 +1923,8 @@ async def war_room_pause_toggle(request: Request):
         "teamily_paused": new_state,
         "alerts_paused": new_state,
         "sheets_paused": new_state,
-        "message": "Pausa operativa activada (exclusivo Make)" if new_state else "Operaciones normales reanudadas"
+        "make_paused": getattr(war_room_engine, "make_paused", True),
+        "message": "Pausa operativa activada" if new_state else "Operaciones normales reanudadas (IAs activas)"
     }
 
 

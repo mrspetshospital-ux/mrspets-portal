@@ -399,11 +399,12 @@ class WarRoomEngine:
             }
         ]
         
-        # Modos de Pausa Operativa solicitados por Dirección General
-        self.gemini_paused: bool = True     # Pausa total de inferencias Gemini AI
-        self.teamily_paused: bool = True    # Pausa de tablero/agentes Teamily
-        self.sheets_paused: bool = True     # Pausa de sincronización a Google Sheets / tablas
-        self.alerts_paused: bool = True     # Pausa de alarmas automáticas e incidencias críticas
+        # Modos de Operación y Pausa
+        self.gemini_paused: bool = False     # Inferencia Gemini AI activa
+        self.teamily_paused: bool = False    # Agente Teamily (Charly) activo para pruebas y operaciones
+        self.sheets_paused: bool = False     # Sincronización a Google Sheets activa
+        self.alerts_paused: bool = False     # Alarmas automáticas
+        self.make_paused: bool = True        # Escenario Make en pausa temporal por orden de Dirección General
 
         # Inicializar nodos del sistema en Cuarto de Guerra (Volturi excluido: es canal bilateral)
         self.nodes = {
@@ -445,10 +446,10 @@ class WarRoomEngine:
                 "name": "Make.com",
                 "title": "Orquestador de Webhooks & Integraciones Omnicanal",
                 "role": "Webhooks & Flow Engine",
-                "status": "ESTABLE",
+                "status": "PAUSADO" if self.make_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "🔗",
-                "state_desc": "🎯 CANAL ACTIVO: Escuchando y despachando al Webhook de Make.com.",
+                "state_desc": "⏸️ Escenario Make en pausa temporal por orden de Dirección General." if self.make_paused else "🎯 CANAL ACTIVO: Escuchando y despachando al Webhook de Make.com.",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             },
             "teamly": {
@@ -459,7 +460,7 @@ class WarRoomEngine:
                 "status": "PAUSADO" if self.teamily_paused else "ESTABLE",
                 "ping_ms": None,
                 "icon": "🤝",
-                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.teamily_paused else "Coordinación operativa de agentes en Teamily.",
+                "state_desc": "⏸️ Pausado por orden de Dirección General." if self.teamily_paused else "Coordinación operativa nominal de agentes en Teamily (Charly).",
                 "last_ping": datetime.now(timezone.utc).isoformat()
             }
         }
@@ -584,6 +585,7 @@ class WarRoomEngine:
             "teamily_paused": getattr(self, "teamily_paused", False),
             "alerts_paused": getattr(self, "alerts_paused", False),
             "sheets_paused": getattr(self, "sheets_paused", False),
+            "make_paused": getattr(self, "make_paused", True),
             "node_configs": dict(self.node_configs) if is_admin else self.get_masked_node_configs()
         }
 
@@ -1446,7 +1448,9 @@ class WarRoomEngine:
             try:
                 import teamilyClient
                 geo_client = teamilyClient.TeamilyGeoAClient(
-                    endpoint=self.node_configs.get("antigravity_endpoint_url")
+                    server_key=self.node_configs.get("teamily_server_key") or teamilyClient.get_default_server_key(),
+                    board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                    endpoint=self.node_configs.get("antigravity_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT
                 )
             except Exception as import_err:
                 geo_client = None
@@ -1530,8 +1534,9 @@ class WarRoomEngine:
         try:
             import teamilyClient
             geo_client = teamilyClient.TeamilyGeoAClient(
-                endpoint=self.node_configs.get("teamily_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT,
-                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID
+                server_key=self.node_configs.get("teamily_server_key") or teamilyClient.get_default_server_key(),
+                board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
+                endpoint=self.node_configs.get("teamily_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT
             )
         except Exception as import_err:
             geo_client = None
@@ -1833,10 +1838,8 @@ class WarRoomEngine:
             }
 
         # Si Mrs. PETS CORP escribe desde la UI visualizando el canal de una IA,
-        # asegurar que su mensaje se registre en su canal legítimo ('channel_mrspets') con la IA como destinataria
+        # asegurar que su mensaje se registre en su canal legítimo ('channel_mrspets')
         if clean_sender_id == "mrspets" and clean_channel_id in ["channel_super_agent", "channel_antigravity", "channel_gemini", "channel_make"]:
-            if not target_node_id or target_node_id == "gemini":
-                target_node_id = clean_channel_id.replace("channel_", "")
             clean_channel_id = "channel_mrspets"
 
         # Regla 2: Validación estricta de canal y emisor (nadie puede hablar por otro)
@@ -1874,11 +1877,12 @@ class WarRoomEngine:
         self.chat_history.append(user_msg)
 
         msg_lower = (message or "").lower()
+        target_norm = (target_node_id or "").strip().lower()
         responses: List[Dict[str, Any]] = []
 
         # Si el emisor es Mrs. PETS CORP planteando un tema en la sala:
         if clean_sender_id == "mrspets":
-            # 1. Alertas automáticas (Pausadas por orden de Dirección General)
+            # 1. Alertas automáticas
             if not getattr(self, "alerts_paused", False):
                 has_issue = any(k in msg_lower for k in [
                     "problema", "falla", "falló", "fallo", "no conversa", "no responde", "error", "caído", "caido", "timeout", "alerta crítica", "incidencia crítica"
@@ -1908,28 +1912,103 @@ class WarRoomEngine:
                         inc_id = self.active_incidents[0]["incident_id"]
                         self.execute_patch(inc_id, sender, f"Autorización vía canal '{clean_channel_id}': '{message[:60]}'")
 
-            # 2. Despacho EXCLUSIVO a Make.com (CANAL ACTIVO ENFOCADO)
-            make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
-            self.chat_history.append(make_eval)
-            responses.append(make_eval)
+            target_norm = (target_node_id or "").strip().lower()
 
-            # 3. Super Agent / Teamily (Pausado por orden de Dirección General)
-            if not getattr(self, "teamily_paused", False):
-                sa_eval = self.generate_super_agent_evaluation(message)
-                self.chat_history.append(sa_eval)
-                responses.append(sa_eval)
+            # CASO 1: Destinatario específico Teamily / Super Agent (Charly)
+            if target_norm in ("super_agent", "teamly"):
+                if not getattr(self, "teamily_paused", False):
+                    sa_eval = self.generate_super_agent_evaluation(message)
+                    self.chat_history.append(sa_eval)
+                    responses.append(sa_eval)
+                else:
+                    paused_eval = {
+                        "id": f"MSG-{secrets.token_hex(4)}",
+                        "sender": WAR_ROOM_PARTICIPANTS["super_agent"]["name"],
+                        "sender_id": "super_agent",
+                        "role": WAR_ROOM_PARTICIPANTS["super_agent"]["role"],
+                        "message": "⏸️ Canal Teamily en pausa operativa por orden de Dirección General.",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "node_id": "teamly",
+                        "channel_id": "channel_super_agent",
+                        "target_node_id": "channel_mrspets",
+                        "verified": False,
+                        "latency_ms": None
+                    }
+                    self.chat_history.append(paused_eval)
+                    responses.append(paused_eval)
 
-            # 4. Google AntiGravity (Pausado por orden de Dirección General)
-            if not getattr(self, "gemini_paused", False):
-                ag_eval = self.generate_antigravity_evaluation(message)
-                self.chat_history.append(ag_eval)
-                responses.append(ag_eval)
+            # CASO 2: Destinatario específico Google AntiGravity
+            elif target_norm in ("antigravity", "engineering"):
+                if not getattr(self, "gemini_paused", False):
+                    ag_eval = self.generate_antigravity_evaluation(message)
+                    self.chat_history.append(ag_eval)
+                    responses.append(ag_eval)
+                else:
+                    paused_eval = {
+                        "id": f"MSG-{secrets.token_hex(4)}",
+                        "sender": WAR_ROOM_PARTICIPANTS["antigravity"]["name"],
+                        "sender_id": "antigravity",
+                        "role": WAR_ROOM_PARTICIPANTS["antigravity"]["role"],
+                        "message": "⏸️ Canal AntiGravity en pausa operativa por orden de Dirección General.",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "node_id": "antigravity",
+                        "channel_id": "channel_antigravity",
+                        "target_node_id": "channel_mrspets",
+                        "verified": False,
+                        "latency_ms": None
+                    }
+                    self.chat_history.append(paused_eval)
+                    responses.append(paused_eval)
 
-            # 5. Gemini AI (Pausado por orden de Dirección General)
-            if not getattr(self, "gemini_paused", False):
-                gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
-                self.chat_history.append(gemini_eval)
-                responses.append(gemini_eval)
+            # CASO 3: Destinatario específico Gemini AI
+            elif target_norm == "gemini":
+                if not getattr(self, "gemini_paused", False):
+                    gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                    self.chat_history.append(gemini_eval)
+                    responses.append(gemini_eval)
+                else:
+                    paused_eval = {
+                        "id": f"MSG-{secrets.token_hex(4)}",
+                        "sender": WAR_ROOM_PARTICIPANTS["gemini"]["name"],
+                        "sender_id": "gemini",
+                        "role": WAR_ROOM_PARTICIPANTS["gemini"]["role"],
+                        "message": "⏸️ Canal Gemini en pausa operativa por orden de Dirección General.",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "node_id": "gemini",
+                        "channel_id": "channel_gemini",
+                        "target_node_id": "channel_mrspets",
+                        "verified": False,
+                        "latency_ms": None
+                    }
+                    self.chat_history.append(paused_eval)
+                    responses.append(paused_eval)
+
+            # CASO 4: Destinatario específico Make.com (Webhooks Omnicanal)
+            elif target_norm == "make":
+                make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
+                self.chat_history.append(make_eval)
+                responses.append(make_eval)
+
+            # CASO 5: Sala Común / Deliberación General (todos los agentes activos deliberan, Make queda en pausa temporal)
+            else:
+                if not getattr(self, "teamily_paused", False):
+                    sa_eval = self.generate_super_agent_evaluation(message)
+                    self.chat_history.append(sa_eval)
+                    responses.append(sa_eval)
+
+                if not getattr(self, "gemini_paused", False):
+                    ag_eval = self.generate_antigravity_evaluation(message)
+                    self.chat_history.append(ag_eval)
+                    responses.append(ag_eval)
+
+                    gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                    self.chat_history.append(gemini_eval)
+                    responses.append(gemini_eval)
+
+                if not getattr(self, "make_paused", True):
+                    make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
+                    self.chat_history.append(make_eval)
+                    responses.append(make_eval)
 
         else:
             # Mensaje emitido directamente por un agente en su propio canal
@@ -1945,13 +2024,13 @@ class WarRoomEngine:
             "responses_count": len(responses)
         })
 
-        if target_node_id == "make":
+        if target_norm == "make":
             primary_reply = make_eval["message"] if 'make_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_node_id in ("antigravity", "engineering"):
+        elif target_norm in ("antigravity", "engineering"):
             primary_reply = ag_eval["message"] if 'ag_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_node_id in ("super_agent", "teamly"):
+        elif target_norm in ("super_agent", "teamly"):
             primary_reply = sa_eval["message"] if 'sa_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_node_id == "gemini":
+        elif target_norm == "gemini":
             primary_reply = gemini_eval["message"] if 'gemini_eval' in locals() else (responses[-1]["message"] if responses else "")
         else:
             primary_reply = responses[-1]["message"] if responses else ""
