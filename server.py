@@ -1801,6 +1801,9 @@ async def war_room_post_chat(request: Request):
     target_node_id = body.get("target_node_id") or body.get("node_id")
     channel_id = body.get("channel_id")
     target_webhook_url = body.get("target_webhook_url") or body.get("target_url") or body.get("url")
+    use_make_backup = body.get("use_make_backup")
+    if use_make_backup is not None and war_room_engine:
+        war_room_engine.use_make_backup = bool(use_make_backup)
     override_api_key = (
         body.get("api_key")
         or body.get("gemini_api_key")
@@ -1925,6 +1928,46 @@ async def war_room_pause_toggle(request: Request):
         "sheets_paused": new_state,
         "make_paused": getattr(war_room_engine, "make_paused", True),
         "message": "Pausa operativa activada" if new_state else "Operaciones normales reanudadas (IAs activas)"
+    }
+
+
+@app.post("/api/v1/war-room/backup-toggle")
+@app.get("/api/v1/war-room/backup-toggle")
+async def war_room_backup_toggle(request: Request):
+    """
+    Alterna o establece el modo de contingencia:
+    - Vía Directa (use_make_backup=False): El portal habla directo con Gemini 2.5 Flash y cada nodo.
+    - Respaldo Make.com (use_make_backup=True): El portal usa Make como paracaídas de contingencia.
+    """
+    if not war_room_engine:
+        return JSONResponse(status_code=503, content={"status": "error", "message": "Motor no inicializado"})
+
+    new_state = None
+    if request.method == "POST":
+        try:
+            b = await request.json()
+            if "use_make_backup" in b:
+                new_state = bool(b.get("use_make_backup"))
+        except Exception:
+            pass
+
+    action = request.query_params.get("action")
+    if action in ("enable_make", "make", "backup", "true"):
+        new_state = True
+    elif action in ("disable_make", "direct", "gemini", "false"):
+        new_state = False
+
+    if new_state is None:
+        current_state = getattr(war_room_engine, "use_make_backup", False)
+        new_state = not current_state
+
+    war_room_engine.use_make_backup = new_state
+
+    return {
+        "status": "success",
+        "use_make_backup": new_state,
+        "mode": "make_backup" if new_state else "direct",
+        "message": "🪂 Paracaídas Make.com ACTIVADO como respaldo." if new_state else "🎯 Vía Directa (Gemini 2.5 Flash) ACTIVADA."
     }
 
 

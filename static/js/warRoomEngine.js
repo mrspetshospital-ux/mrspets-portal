@@ -53,6 +53,7 @@
       this.manualJsonContent = '';
       this.isManualJsonDirty = false;
       this.operationalPause = false; // Control de Pausa Operativa (IAs activas para pruebas y operaciones)
+      this.useMakeBackup = false; // Vía Directa (Gemini 2.5 Flash) vs Respaldo Make.com (Paracaídas de Contingencia)
       this.centralitaTraces = [];
       this.pollTimer = null;
       this.isModalOpen = false;
@@ -493,6 +494,9 @@
         this.isAdmin = Boolean(data.is_admin);
         if (data.operational_pause !== undefined) {
           this.operationalPause = Boolean(data.operational_pause);
+        }
+        if (data.use_make_backup !== undefined) {
+          this.useMakeBackup = Boolean(data.use_make_backup);
         }
         this.hasActiveIncident = !!data.has_active_incidents;
         this.activeIncident = data.active_incident || null;
@@ -1004,6 +1008,30 @@
             </div>
           </div>
 
+          <!-- MODO DE COMUNICACIÓN: VÍA DIRECTA (GEMINI 2.5 FLASH) vs PARACAÍDAS MAKE.COM -->
+          <div style="padding:10px 16px; background:${this.useMakeBackup ? 'linear-gradient(135deg, rgba(234,88,12,0.25), rgba(15,23,42,0.9))' : 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(15,23,42,0.9))'}; border-bottom:1.5px solid ${this.useMakeBackup ? '#EA580C' : '#3B82F6'}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.3rem;">${this.useMakeBackup ? '🪂' : '🎯'}</span>
+              <div>
+                <div style="font-size:0.8rem; color:${this.useMakeBackup ? '#FB923C' : '#60A5FA'}; font-weight:800; display:flex; align-items:center; gap:6px;">
+                  <span>${this.useMakeBackup ? 'Modo Contingencia: Respaldo Make.com (Paracaídas ACTIVO)' : 'Modo Nominal: Vía Directa (Gemini 2.5 Flash)'}</span>
+                  <span style="background:${this.useMakeBackup ? 'rgba(234,88,12,0.3)' : 'rgba(16,185,129,0.2)'}; border:1px solid ${this.useMakeBackup ? '#EA580C' : '#10B981'}; color:${this.useMakeBackup ? '#FDBA74' : '#34D399'}; font-size:0.68rem; padding:2px 8px; border-radius:10px; font-weight:800;">
+                    ${this.useMakeBackup ? 'MAKE EN CONDUCCIÓN' : 'LATENCIA REAL &bull; MISMO LLAMADO'}
+                  </span>
+                </div>
+                <div style="font-size:0.7rem; color:#94A3B8;">
+                  ${this.useMakeBackup ? 'Los mensajes se despachan al webhook de Make.com como contingencia controlada.' : 'El portal habla directo con cada uno de los 5 nodos con roles y límites específicos, sin intermediarios.'}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" onclick="window.warRoomEngine.toggleMakeBackupMode()" 
+                style="background:${this.useMakeBackup ? 'linear-gradient(135deg, #3B82F6, #1D4ED8)' : 'linear-gradient(135deg, #EA580C, #C2410C)'}; color:#FFFFFF; font-weight:900; font-size:0.75rem; padding:7px 14px; border-radius:10px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(0,0,0,0.3); transition:all 0.2s ease;">
+                <span>${this.useMakeBackup ? '🎯 Cambiar a Vía Directa' : '🪂 Activar Paracaídas Make'}</span>
+              </button>
+            </div>
+          </div>
+
           <!-- BARRA DE CONFIGURACIÓN DIRECTA DEL WEBHOOK MAKE.COM -->
           <div style="padding:8px 16px; background:#0B132B; border-bottom:1px solid rgba(16,185,129,0.25); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:300px;">
@@ -1303,8 +1331,10 @@
             sender_id: 'mrspets',
             role: 'Dirección General & Mando Operativo',
             message: text,
+            node_id: targetNode,
             target_node_id: targetNode,
             channel_id: activeChannel,
+            use_make_backup: this.useMakeBackup,
             target_webhook_url: makeTargetUrl
           })
         });
@@ -1333,12 +1363,34 @@
           return;
         }
 
-        // Incorporar las respuestas autónomas de cada canal independiente
-        if (data && data.responses && Array.isArray(data.responses)) {
+        // Incorporar las respuestas autónomas de cada canal independiente devueltas en el mismo llamado (Paso Cinco)
+        if (data && data.responses && Array.isArray(data.responses) && data.responses.length > 0) {
           data.responses.forEach(r => {
             if (r.sender_id !== 'mrspets') {
               this.chatMessages.push(r);
             }
+          });
+          this.renderChatFeedOnly();
+        } else if (data && data.reply) {
+          const nodeLabels = {
+            harryt: 'Mrs. PETS CORP (Dirección General)',
+            gemini: 'Gemini AI (Razonamiento & Causa Raíz)',
+            antigravity: 'Google AntiGravity (Ingeniería Autónoma)',
+            make: 'Make.com (Webhooks & Omnicanalidad)',
+            teamly: 'Charly / Super Agent (Teamily Operaciones)'
+          };
+          const replySender = data.node_id ? (nodeLabels[data.node_id] || data.node_id) : 'Agente';
+          this.chatMessages.push({
+            id: 'MSG-' + Math.random().toString(36).substring(2, 8),
+            sender: replySender,
+            sender_id: data.node_id || targetNode,
+            role: 'Respuesta Vía Directa',
+            message: data.reply,
+            timestamp: new Date().toISOString(),
+            node_id: data.node_id || targetNode,
+            channel_id: activeChannel,
+            verified: Boolean(data.verified),
+            latency_ms: data.latency_ms || null
           });
           this.renderChatFeedOnly();
         } else if (data && data.node_message) {
@@ -3546,6 +3598,29 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       this.refreshModalContent(true);
     }
 
+    async toggleMakeBackupMode() {
+      const nextState = !this.useMakeBackup;
+      try {
+        const resp = await fetch('/api/v1/war-room/backup-toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ use_make_backup: nextState })
+        });
+        const data = await resp.json();
+        if (data && data.status === 'success') {
+          this.useMakeBackup = Boolean(data.use_make_backup);
+          if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast(data.message || (this.useMakeBackup ? '🪂 Respaldo Make.com (Paracaídas) Activado' : '🎯 Vía Directa (Gemini 2.5 Flash) Activada'), 'info');
+          }
+        } else {
+          this.useMakeBackup = nextState;
+        }
+      } catch (err) {
+        this.useMakeBackup = nextState;
+      }
+      this.refreshModalContent(true);
+    }
+
     escapeHtml(str) {
       if (!str) return '';
       return String(str)
@@ -3563,6 +3638,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
   warRoom.generateExternalInvite = warRoom.generateExternalInvite.bind(warRoom);
   warRoom.simulateAlertToggle = warRoom.simulateAlertToggle.bind(warRoom);
   warRoom.togglePauseMode = warRoom.togglePauseMode.bind(warRoom);
+  warRoom.toggleMakeBackupMode = warRoom.toggleMakeBackupMode.bind(warRoom);
   warRoom.scrollChatToTop = warRoom.scrollChatToTop.bind(warRoom);
   warRoom.scrollChatToBottom = warRoom.scrollChatToBottom.bind(warRoom);
   warRoom.switchTab = warRoom.switchTab.bind(warRoom);

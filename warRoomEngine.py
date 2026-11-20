@@ -271,47 +271,72 @@ def mask_secret(value: Optional[str], visible_chars: int = 4) -> str:
     return "****" + val[-visible_chars:]
 
 
-# Mapa de Prompts por Nodo: Roles, Tonos y Límites Explícitos
+# Mapa de Prompts por Nodo: 5 Roles, Tonos y Límites Explícitos
 NODE_SYSTEM_PROMPTS = {
-    "mrspets": (
-        "Eres Mrs. PETS CORP (Dirección General & Mando Operativo).\n"
-        "ROL: Dirección General, Mando Central, Planteamiento de Desafíos y Autorizaciones.\n"
-        "TONO: Directa, ejecutiva, firme, orientada a la excelencia del Lujo Silencioso y satisfacción de tutores."
-    ),
-    "antigravity": (
-        "Eres Google AntiGravity, la entidad autónoma de Ingeniería de Software, Resiliencia y Arquitectura de Sistemas "
-        "de Mrs. Pets Corp.\n"
-        "ROL: Ingeniería Autónoma, Autocuración, Despliegues, Diagnóstico de Endpoints, Frameworks y Código.\n"
-        "TONO: Técnico, preciso, empírico, transparente, ágil y centrado en métricas y soluciones comprobadas.\n"
+    "harryt": (
+        "Eres Mrs. PETS CORP (Harryt Padrón & Dalybell Ramírez), la Dirección General y Mando Central de Mrs. Pets Corp (Maracaibo, Venezuela).\n"
+        "ROL: Dirección General, Gobernanza Ejecutiva, Decisiones Estratégicas y Liderazgo del Hospital y Spa de Mascotas.\n"
+        "TONO: Directo, ejecutivo, firme, de alto nivel, enfocado en hospitalidad, lujo silencioso y satisfacción de los tutores.\n"
         "LÍMITES Y ALCANCE:\n"
-        "- Hablas exclusivamente en tu propio canal (channel_antigravity) como Google AntiGravity.\n"
-        "- Evalúas la infraestructura tecnológica, FastAPI, Uvicorn, Render Deploy Hooks, Make.com y Google Sheets API."
+        "- No resuelves código ni infraestructura técnica por tu cuenta; delegas los parches a Google AntiGravity.\n"
+        "- No inventas diagnósticos de causa raíz; consultas el razonamiento con Gemini AI.\n"
+        "- No gestionas turnos manualmente; exiges la coordinación operativa a Charly / Teamly.\n"
+        "- No manipulas webhooks ni payloads JSON; supervisas el flujo en Make.com."
+    ),
+    "mrspets": (
+        "Eres Mrs. PETS CORP (Harryt Padrón & Dalybell Ramírez), la Dirección General y Mando Central de Mrs. Pets Corp (Maracaibo, Venezuela).\n"
+        "ROL: Dirección General, Gobernanza Ejecutiva, Decisiones Estratégicas y Liderazgo del Hospital y Spa de Mascotas.\n"
+        "TONO: Directo, ejecutivo, firme, de alto nivel, enfocado en hospitalidad, lujo silencioso y satisfacción de los tutores.\n"
+        "LÍMITES Y ALCANCE:\n"
+        "- No resuelves código ni infraestructura técnica por tu cuenta; delegas los parches a Google AntiGravity.\n"
+        "- No inventas diagnósticos de causa raíz; consultas el razonamiento con Gemini AI.\n"
+        "- No gestionas turnos manualmente; exiges la coordinación operativa a Charly / Teamly.\n"
+        "- No manipulas webhooks ni payloads JSON; supervisas el flujo en Make.com."
     ),
     "gemini": (
         "Eres Gemini AI, el motor de Inteligencia Artificial Central, Razonamiento Multimodal y Análisis Profundo de Mrs. Pets Corp.\n"
         "ROL: Análisis de Causa Raíz, Razonamiento Lógico, Diagnóstico Multimodal e Interpretación de Anomalías.\n"
-        "TONO: Analítico, objetivo, claro, estructurado y enfocado en desglosar problemas complejos.\n"
+        "TONO: Analítico, estructurado, objetivo, fundamentado en primeros principios, transparente y pedagógico.\n"
         "LÍMITES Y ALCANCE:\n"
-        "- Hablas exclusivamente desde tu propio canal (channel_gemini) como Gemini AI.\n"
-        "- NUNCA te hagas pasar por Google AntiGravity, ni por Super Agent, ni por Comité Volturi. Nadie puede hablar por otro.\n"
-        "- Analizas el problema planteado por Mrs. PETS CORP y entregas tu diagnóstico lógico y sugerencias."
+        "- Hablas exclusivamente como Gemini AI desde tu propio canal (channel_gemini).\n"
+        "- NUNCA ejecutas parches de código en producción ni despliegues en el servidor (esa atribución es exclusiva de Google AntiGravity).\n"
+        "- No despachas webhooks externos ni manejas credenciales (eso es Make.com).\n"
+        "- NUNCA suplantas la voz de otro agente ni emites respuestas prefabricadas."
     ),
-    "make": (
-        "Eres Make.com, el Orquestador Omnicanal de Webhooks, Escenarios y Flujos de Datos en Tiempo Real de Mrs. Pets Corp.\n"
-        "ROL: Motor de Integraciones, Gestión de Webhooks, Transformación de Datos y Conectividad Externa.\n"
-        "TONO: Estructurado, pragmático, enfocado en esquemas JSON, códigos de estado HTTP, routers y sincronización."
-    ),
-    "super_agent": (
-        "Eres Super Agent (Teamly), el Enjambre de Agentes Autónomos y Coordinación de Operaciones de Mrs. Pets Corp.\n"
-        "ROL: Coordinación Operativa, Enjambre de Agentes (Leia Concierge, Margaret, Valeria, Mike), Tableros y SLAs.\n"
-        "TONO: Coordinador, proactivo, resolutivo, enfocado en estado de agentes y flujos de atención a tutores.\n"
+    "antigravity": (
+        "Eres Google AntiGravity, la entidad autónoma de Ingeniería de Software, Resiliencia y Arquitectura de Sistemas de Mrs. Pets Corp.\n"
+        "ROL: Ingeniería Autónoma, Autocuración de Endpoints, Resiliencia de Servidor, FastAPI, Python, SQLite/PostgreSQL, JavaScript PWA y Despliegues en Render.\n"
+        "TONO: Altamente técnico, empírico, ágil, centrado en métricas, latencia (ms), logs del sistema y soluciones probadas.\n"
         "LÍMITES Y ALCANCE:\n"
-        "- Hablas exclusivamente en tu propio canal (channel_super_agent) como Super Agent."
+        "- Hablas exclusivamente como Google AntiGravity desde tu canal (channel_antigravity).\n"
+        "- Te enfocas en la estabilidad técnica, rendimiento, parches y conectividad del servidor.\n"
+        "- No defines políticas de negocio, precios de servicios ni autorizas gastos sin la aprobación de Dirección General."
     ),
     "teamly": (
-        "Eres Super Agent (Teamly), el Enjambre de Agentes Autónomos y Coordinación de Operaciones de Mrs. Pets Corp.\n"
-        "ROL: Coordinación Operativa, Enjambre de Agentes (Leia Concierge, Margaret, Valeria, Mike), Tableros y SLAs.\n"
-        "TONO: Coordinador, proactivo, resolutivo, enfocado en estado de agentes y flujos de atención a tutores."
+        "Eres Charly / Super Agent (Teamily), el Asistente Ejecutivo y Coordinador Operativo del Enjambre de Agentes de Mrs. Pets Corp.\n"
+        "ROL: Coordinación Operativa del Enjambre (Leia Concierge en WhatsApp, Margarette en CRM, Mike en tanques e infraestructura Don Bosco, Valeria en peluquería, Pandora en guardería), Tableros, SLAs de atención a clientes y supervisión en piso.\n"
+        "TONO: Proactivo, cálido, resolutivo, empático y orientado a tutores, mascotas y coordinación de equipos.\n"
+        "LÍMITES Y ALCANCE:\n"
+        "- Hablas exclusivamente como Charly / Super Agent desde tu canal (channel_super_agent).\n"
+        "- Tu competencia es operativa y de servicio al tutor; no modificas el código fuente del portal ni la infraestructura del servidor FastAPI.\n"
+        "- No inventas información de tutores ni violas PII."
+    ),
+    "super_agent": (
+        "Eres Charly / Super Agent (Teamily), el Asistente Ejecutivo y Coordinador Operativo del Enjambre de Agentes de Mrs. Pets Corp.\n"
+        "ROL: Coordinación Operativa del Enjambre (Leia Concierge en WhatsApp, Margarette en CRM, Mike en tanques e infraestructura Don Bosco, Valeria en peluquería, Pandora en guardería), Tableros, SLAs de atención a clientes y supervisión en piso.\n"
+        "TONO: Proactivo, cálido, resolutivo, empático y orientado a tutores, mascotas y coordinación de equipos.\n"
+        "LÍMITES Y ALCANCE:\n"
+        "- Hablas exclusivamente como Charly / Super Agent desde tu canal (channel_super_agent).\n"
+        "- Tu competencia es operativa y de servicio al tutor; no modificas el código fuente del portal ni la infraestructura del servidor FastAPI.\n"
+        "- No inventas información de tutores ni violas PII."
+    ),
+    "make": (
+        "Eres Make.com, el Orquestador Omnicanal de Webhooks, Escenarios y Pasarela de Flujos de Datos en Tiempo Real de Mrs. Pets Corp.\n"
+        "ROL: Motor de Integraciones, Transporte de Eventos, Verificación de Webhooks HTTP (200, 410, 500), Sincronización con Google Sheets, WhatsApp Cloud API y Routers de Flujo.\n"
+        "TONO: Pragmático, estructurado, enfocado en esquemas JSON, códigos de estado HTTP, routers de integración y transporte de datos.\n"
+        "LÍMITES Y ALCANCE:\n"
+        "- Hablas exclusivamente como Make.com desde tu canal (channel_make).\n"
+        "- Eres el puente de conectividad y transporte de datos; no generas razonamiento clínico ni resuelves bugs internos del código de la aplicación."
     )
 }
 
@@ -376,7 +401,7 @@ class WarRoomEngine:
                 or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
             ),
             "teamily_server_key": os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or "",
-            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
+            "gemini_model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
             "gemini_api_key": _get_default_gemini_key(),
             "antigravity_endpoint_url": (
                 os.environ.get("ANTIGRAVITY_ENDPOINT_URL")
@@ -405,6 +430,7 @@ class WarRoomEngine:
         self.sheets_paused: bool = False     # Sincronización a Google Sheets activa
         self.alerts_paused: bool = False     # Alarmas automáticas
         self.make_paused: bool = True        # Escenario Make en pausa temporal por orden de Dirección General
+        self.use_make_backup: bool = False   # Modo Paracaídas Make (False = Vía Directa Gemini 2.5 Flash, True = Respaldo Make.com)
 
         # Inicializar nodos del sistema en Cuarto de Guerra (Volturi excluido: es canal bilateral)
         self.nodes = {
@@ -586,6 +612,7 @@ class WarRoomEngine:
             "alerts_paused": getattr(self, "alerts_paused", False),
             "sheets_paused": getattr(self, "sheets_paused", False),
             "make_paused": getattr(self, "make_paused", True),
+            "use_make_backup": getattr(self, "use_make_backup", False),
             "node_configs": dict(self.node_configs) if is_admin else self.get_masked_node_configs()
         }
 
@@ -1261,13 +1288,13 @@ class WarRoomEngine:
             or _get_default_gemini_key()
         )
 
-        primary_model = self.node_configs.get("gemini_model", "gemini-3.8-flash")
-        if primary_model in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"):
-            primary_model = "gemini-3.8-flash"
+        primary_model = self.node_configs.get("gemini_model") or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+        if "3.8" in primary_model:
+            primary_model = "gemini-2.5-flash"
 
-        # Cadena de modelos prioritarios y resilientes con fallback verificado
+        # Paso Tres: gemini-2.5-flash como modelo prioritario con fallbacks resilientes
         candidate_models = [primary_model]
-        for fallback in ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-3.1-pro-preview", "gemini-flash-latest"]:
+        for fallback in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]:
             if fallback not in candidate_models:
                 candidate_models.append(fallback)
 
@@ -1288,13 +1315,27 @@ class WarRoomEngine:
                 "model_used": primary_model
             }
 
-        system_prompt = NODE_SYSTEM_PROMPTS.get(target_node_id, NODE_SYSTEM_PROMPTS.get("gemini", ""))
+        clean_node_key = str(target_node_id or "gemini").strip().lower()
+        if clean_node_key in ("super_agent", "teamly"):
+            clean_node_key = "teamly"
+        elif clean_node_key in ("antigravity", "engineering"):
+            clean_node_key = "antigravity"
+        elif clean_node_key in ("harryt", "mrspets"):
+            clean_node_key = "harryt"
+        elif clean_node_key == "make":
+            clean_node_key = "make"
+        else:
+            clean_node_key = "gemini"
 
-        # Contexto del canal específico
+        system_prompt = NODE_SYSTEM_PROMPTS.get(clean_node_key, NODE_SYSTEM_PROMPTS.get("gemini", ""))
+
+        # Contexto: últimos 10 mensajes del historial de la sala o canal
         channel_history = [
             m for m in self.chat_history
-            if m.get("channel_id", DEFAULT_CHANNEL) == channel_id
+            if m.get("channel_id") in (channel_id, "channel_mrspets", "deliberacion")
         ][-10:]
+        if not channel_history and self.chat_history:
+            channel_history = self.chat_history[-10:]
 
         contents: List[Dict[str, Any]] = []
         for h in channel_history:
@@ -1392,6 +1433,104 @@ class WarRoomEngine:
             "latency_ms": elapsed_ms,
             "http_code": last_http_code,
             "model_used": primary_model
+        }
+
+    def generate_direct_node_evaluation(
+        self,
+        node_id: str,
+        message: str,
+        sender: str = "Mrs. PETS CORP",
+        override_api_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Vía Directa (Paso Tres y Cuatro):
+        Invoca a gemini-2.5-flash usando el system prompt del nodo seleccionado
+        (harryt, gemini, antigravity, teamly, make) y los últimos 10 mensajes como contexto.
+        Mide latencia real con time.time() y devuelve errores técnicos explícitos.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        msg_id = f"MSG-{secrets.token_hex(4)}"
+
+        clean_node = str(node_id or "gemini").strip().lower()
+        if clean_node in ("teamly", "super_agent", "charly"):
+            node_key = "teamly"
+            sender_id = "super_agent"
+            channel_id = "channel_super_agent"
+            sender_name = WAR_ROOM_PARTICIPANTS["super_agent"]["name"]
+            role = WAR_ROOM_PARTICIPANTS["super_agent"]["role"]
+        elif clean_node in ("antigravity", "engineering", "ingenieria"):
+            node_key = "antigravity"
+            sender_id = "antigravity"
+            channel_id = "channel_antigravity"
+            sender_name = WAR_ROOM_PARTICIPANTS["antigravity"]["name"]
+            role = WAR_ROOM_PARTICIPANTS["antigravity"]["role"]
+        elif clean_node in ("harryt", "mrspets", "mando", "direccion"):
+            node_key = "harryt"
+            sender_id = "mrspets"
+            channel_id = "channel_mrspets"
+            sender_name = WAR_ROOM_PARTICIPANTS["mrspets"]["name"]
+            role = WAR_ROOM_PARTICIPANTS["mrspets"]["role"]
+        elif clean_node == "make":
+            node_key = "make"
+            sender_id = "make"
+            channel_id = "channel_make"
+            sender_name = WAR_ROOM_PARTICIPANTS["make"]["name"]
+            role = WAR_ROOM_PARTICIPANTS["make"]["role"]
+        else:
+            node_key = "gemini"
+            sender_id = "gemini"
+            channel_id = "channel_gemini"
+            sender_name = WAR_ROOM_PARTICIPANTS["gemini"]["name"]
+            role = WAR_ROOM_PARTICIPANTS["gemini"]["role"]
+
+        gemini_res = self.call_gemini_api(
+            target_node_id=node_key,
+            user_message=message,
+            channel_id=channel_id,
+            sender_name=sender,
+            override_api_key=override_api_key
+        )
+
+        latency_ms = gemini_res.get("latency_ms")
+        is_success = bool(gemini_res.get("success"))
+        model_used = gemini_res.get("model_used", "gemini-2.5-flash")
+
+        if is_success:
+            reply_text = str(gemini_res.get("reply", "")).strip()
+            verified = True
+            node_status = "ESTABLE"
+            state_desc = f"● Vía Directa {model_used} ({latency_ms}ms)"
+        else:
+            err_detail = gemini_res.get("error") or "Fallo de conectividad o credencial no configurada"
+            if node_key == "gemini":
+                reply_text = f"Gemini AI no respondió: canal NO DISPONIBLE ({err_detail})."
+            else:
+                reply_text = f"canal NO DISPONIBLE: No se pudo contactar a {sender_name} vía direct-API ({err_detail})."
+            verified = False
+            latency_ms = None  # Regla de honestidad: sin latencias inventadas si falla la llamada
+            node_status = "ALERTA"
+            state_desc = f"⚠️ Fallo Vía Directa: {err_detail[:40]}"
+
+        # Actualizar telemetría del nodo correspondiente si existe en self.nodes
+        telemetry_key = "teamly" if node_key in ("teamly", "super_agent") else node_key
+        if telemetry_key in self.nodes:
+            self.nodes[telemetry_key]["ping_ms"] = latency_ms
+            self.nodes[telemetry_key]["last_ping"] = now_iso
+            self.nodes[telemetry_key]["status"] = node_status
+            self.nodes[telemetry_key]["state_desc"] = state_desc
+
+        return {
+            "id": msg_id,
+            "channel_id": channel_id,
+            "sender_id": sender_id,
+            "sender": sender_name,
+            "role": role,
+            "message": reply_text,
+            "timestamp": now_iso,
+            "node_id": node_key,
+            "verified": verified,
+            "latency_ms": latency_ms,
+            "model_used": model_used
         }
 
     def generate_antigravity_evaluation(self, problem_description: str, channel_id: str = "channel_antigravity") -> Dict[str, Any]:
@@ -1919,17 +2058,63 @@ class WarRoomEngine:
 
             target_norm = (target_node_id or "").strip().lower()
 
-            # CASO 1: Destinatario específico Teamily / Super Agent (Charly)
-            if target_norm in ("super_agent", "teamly"):
-                # Disparo directo sin banderas de pausa: despertar y consultar a Teamily en vivo
-                sa_eval = self.generate_super_agent_evaluation(message)
-                self.chat_history.append(sa_eval)
-                responses.append(sa_eval)
+            # CASO 0: Modo Paracaídas Make activo globalmente (Respaldo)
+            if getattr(self, "use_make_backup", False):
+                make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_norm or "make", target_url=target_webhook_url)
+                self.chat_history.append(make_eval)
+                responses.append(make_eval)
 
-            # CASO 2: Destinatario específico Google AntiGravity
+            # CASO 1: Destinatario específico Make.com (Webhooks Omnicanal)
+            elif target_norm == "make":
+                make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
+                self.chat_history.append(make_eval)
+                responses.append(make_eval)
+
+            # CASO 2: Destinatario específico Teamily / Super Agent (Charly)
+            elif target_norm in ("super_agent", "teamly"):
+                if getattr(self, "teamily_paused", False):
+                    paused_eval = {
+                        "id": f"MSG-{secrets.token_hex(4)}",
+                        "sender": WAR_ROOM_PARTICIPANTS["super_agent"]["name"],
+                        "sender_id": "super_agent",
+                        "role": WAR_ROOM_PARTICIPANTS["super_agent"]["role"],
+                        "message": "⏸️ Canal Teamily en pausa operativa por orden de Dirección General.",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "node_id": "teamly",
+                        "channel_id": "channel_super_agent",
+                        "target_node_id": "channel_mrspets",
+                        "verified": False,
+                        "latency_ms": None
+                    }
+                    self.chat_history.append(paused_eval)
+                    responses.append(paused_eval)
+                else:
+                    has_teamily_key = bool(
+                        self.node_configs.get("teamily_server_key")
+                        or os.environ.get("TEAMILEY_SERVER_KEY")
+                        or os.environ.get("TEAMILY_SERVER_KEY")
+                    )
+                    use_direct_gemini = os.environ.get("WAR_ROOM_TEAMILY_BACKEND", "").lower() == "gemini"
+                    if has_teamily_key and not use_direct_gemini:
+                        sa_eval = self.generate_super_agent_evaluation(message)
+                        if not sa_eval.get("verified"):
+                            sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
+                    else:
+                        sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
+
+                    self.chat_history.append(sa_eval)
+                    responses.append(sa_eval)
+
+            # CASO 3: Destinatario específico Dirección General (Harryt / Mrs. Pets)
+            elif target_norm in ("harryt", "mrspets"):
+                ht_eval = self.generate_direct_node_evaluation("harryt", message, sender=sender, override_api_key=override_api_key)
+                self.chat_history.append(ht_eval)
+                responses.append(ht_eval)
+
+            # CASO 4: Destinatario específico Google AntiGravity
             elif target_norm in ("antigravity", "engineering"):
                 if not getattr(self, "gemini_paused", False):
-                    ag_eval = self.generate_antigravity_evaluation(message)
+                    ag_eval = self.generate_direct_node_evaluation("antigravity", message, sender=sender, override_api_key=override_api_key)
                     self.chat_history.append(ag_eval)
                     responses.append(ag_eval)
                 else:
@@ -1949,10 +2134,10 @@ class WarRoomEngine:
                     self.chat_history.append(paused_eval)
                     responses.append(paused_eval)
 
-            # CASO 3: Destinatario específico Gemini AI
+            # CASO 5: Destinatario específico Gemini AI
             elif target_norm == "gemini":
                 if not getattr(self, "gemini_paused", False):
-                    gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                    gemini_eval = self.generate_direct_node_evaluation("gemini", message, sender=sender, override_api_key=override_api_key)
                     self.chat_history.append(gemini_eval)
                     responses.append(gemini_eval)
                 else:
@@ -1972,24 +2157,18 @@ class WarRoomEngine:
                     self.chat_history.append(paused_eval)
                     responses.append(paused_eval)
 
-            # CASO 4: Destinatario específico Make.com (Webhooks Omnicanal)
-            elif target_norm == "make":
-                make_eval = self.generate_make_evaluation(message, sender=sender, target_node_id=target_node_id, target_url=target_webhook_url)
-                self.chat_history.append(make_eval)
-                responses.append(make_eval)
-
-            # CASO 5: Sala Común / Deliberación General (todos los agentes activos deliberan, Make queda en pausa temporal)
+            # CASO 6: Sala Común / Deliberación General (todos los agentes activos deliberan)
             else:
-                sa_eval = self.generate_super_agent_evaluation(message)
+                sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
                 self.chat_history.append(sa_eval)
                 responses.append(sa_eval)
 
                 if not getattr(self, "gemini_paused", False):
-                    ag_eval = self.generate_antigravity_evaluation(message)
+                    ag_eval = self.generate_direct_node_evaluation("antigravity", message, sender=sender, override_api_key=override_api_key)
                     self.chat_history.append(ag_eval)
                     responses.append(ag_eval)
 
-                    gemini_eval = self.generate_gemini_evaluation(message, override_api_key=override_api_key)
+                    gemini_eval = self.generate_direct_node_evaluation("gemini", message, sender=sender, override_api_key=override_api_key)
                     self.chat_history.append(gemini_eval)
                     responses.append(gemini_eval)
 
@@ -2012,24 +2191,34 @@ class WarRoomEngine:
             "responses_count": len(responses)
         })
 
-        if target_norm == "make":
-            primary_reply = make_eval["message"] if 'make_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_norm in ("antigravity", "engineering"):
-            primary_reply = ag_eval["message"] if 'ag_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_norm in ("super_agent", "teamly"):
-            primary_reply = sa_eval["message"] if 'sa_eval' in locals() else (responses[-1]["message"] if responses else "")
-        elif target_norm == "gemini":
-            primary_reply = gemini_eval["message"] if 'gemini_eval' in locals() else (responses[-1]["message"] if responses else "")
-        else:
-            primary_reply = responses[-1]["message"] if responses else ""
+        primary_reply = ""
+        primary_latency: Optional[int] = None
+        primary_verified = True
+        primary_model = "gemini-2.5-flash"
+
+        if responses:
+            last_resp = responses[-1]
+            primary_reply = last_resp.get("message", "")
+            primary_latency = last_resp.get("latency_ms")
+            primary_verified = bool(last_resp.get("verified", True))
+            primary_model = last_resp.get("model_used", "gemini-2.5-flash")
+
+        mode_desc = "make_backup" if (getattr(self, "use_make_backup", False) or target_norm == "make") else "direct"
+
         return {
             "status": "success",
+            "mode": mode_desc,
+            "use_make_backup": getattr(self, "use_make_backup", False),
+            "node_id": target_norm or "deliberacion",
             "channel_id": clean_channel_id,
             "sender_id": clean_sender_id,
             "user_message": user_msg,
             "responses": responses,
             "reply": primary_reply,
-            "verified": True
+            "latency_ms": primary_latency,
+            "verified": True,
+            "primary_verified": primary_verified,
+            "model_used": primary_model
         }
 
     def add_chat_message(

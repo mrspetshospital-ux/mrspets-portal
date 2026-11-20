@@ -492,6 +492,64 @@ class TestWarRoomEngine(unittest.TestCase):
         self.assertIn("gemini", responders)
         self.assertNotIn("make", responders)
 
+    @patch("urllib.request.urlopen")
+    def test_15_direct_node_evaluation_and_backup_parachute(self, mock_urlopen):
+        """Verifica la arquitectura de Vía Directa (5 prompts) y el modo Paracaídas Make.com."""
+        war_room_engine.alerts_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.teamily_paused = False
+        war_room_engine.use_make_backup = False
+
+        # 1. Verificar los 5 prompts en NODE_SYSTEM_PROMPTS
+        from warRoomEngine import NODE_SYSTEM_PROMPTS
+        self.assertIn("harryt", NODE_SYSTEM_PROMPTS)
+        self.assertIn("gemini", NODE_SYSTEM_PROMPTS)
+        self.assertIn("antigravity", NODE_SYSTEM_PROMPTS)
+        self.assertIn("teamly", NODE_SYSTEM_PROMPTS)
+        self.assertIn("make", NODE_SYSTEM_PROMPTS)
+
+        # 2. Vía Directa a Harryt (Dirección General)
+        res_ht = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Prueba directa a Mando Central",
+            target_node_id="harryt",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res_ht["status"], "success")
+        self.assertEqual(res_ht["mode"], "direct")
+        self.assertEqual(res_ht["node_id"], "harryt")
+        self.assertEqual(len(res_ht["responses"]), 1)
+        self.assertEqual(res_ht["responses"][0]["sender_id"], "mrspets")
+
+        # 3. Activar Paracaídas Make.com manualmente
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"Accepted"
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        war_room_engine.use_make_backup = True
+        res_backup = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Mensaje despachado con Paracaídas Make activo",
+            target_node_id="teamly",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res_backup["status"], "success")
+        self.assertEqual(res_backup["mode"], "make_backup")
+        self.assertTrue(res_backup["use_make_backup"])
+        self.assertEqual(len(res_backup["responses"]), 1)
+        self.assertEqual(res_backup["responses"][0]["sender_id"], "make")
+        self.assertIn("Make.com", res_backup["responses"][0]["sender"])
+
+        # 4. Desactivar Paracaídas Make.com -> Regreso a Vía Directa
+        war_room_engine.use_make_backup = False
+        self.assertFalse(war_room_engine.use_make_backup)
+
 
 if __name__ == "__main__":
     unittest.main()
