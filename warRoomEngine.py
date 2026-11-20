@@ -1424,8 +1424,8 @@ class WarRoomEngine:
                 last_http_code = he.code
                 err_body = he.read().decode("utf-8", errors="ignore")
                 last_error = f"HTTP {he.code}: {err_body[:250]}"
-                # Si es 503 (saturación de Google), continuar al siguiente modelo de respaldo
-                if he.code == 503:
+                # Si es 503 (saturación de Google) o 429 (límite de cuota/RPM por modelo), continuar al siguiente modelo de respaldo
+                if he.code in (503, 429):
                     continue
                 # Si es error 400 o 403 de credenciales, romper inmediatamente
                 break
@@ -1510,10 +1510,13 @@ class WarRoomEngine:
             state_desc = f"● Vía Directa {model_used} ({latency_ms}ms)"
         else:
             err_detail = gemini_res.get("error") or "Fallo de conectividad o credencial no configurada"
+            hint = ""
+            if "429" in str(err_detail):
+                hint = " (Cuota de Google AI Studio alcanzada temporalmente; activa el Paracaídas Make o reintenta en breve)"
             if node_key == "gemini":
-                reply_text = f"Gemini AI no respondió: canal NO DISPONIBLE ({err_detail})."
+                reply_text = f"Gemini AI no respondió: canal NO DISPONIBLE ({err_detail}).{hint}"
             else:
-                reply_text = f"canal NO DISPONIBLE: No se pudo contactar a {sender_name} vía direct-API ({err_detail})."
+                reply_text = f"canal NO DISPONIBLE: No se pudo contactar a {sender_name} vía direct-API ({err_detail}).{hint}"
             verified = False
             latency_ms = None  # Regla de honestidad: sin latencias inventadas si falla la llamada
             node_status = "ALERTA"
