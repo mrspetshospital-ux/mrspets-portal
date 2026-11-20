@@ -1902,7 +1902,7 @@ async def war_room_pause_toggle(request: Request):
         new_state = not current_state
 
     war_room_engine.gemini_paused = new_state
-    war_room_engine.teamily_paused = new_state
+    war_room_engine.teamily_paused = False  # Teamily permanece activo para pruebas y despacho directo
     war_room_engine.alerts_paused = new_state
     war_room_engine.sheets_paused = new_state
 
@@ -1910,8 +1910,8 @@ async def war_room_pause_toggle(request: Request):
         war_room_engine.nodes["gemini"]["status"] = "PAUSADO" if new_state else "ESTABLE"
         war_room_engine.nodes["gemini"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Inferencia multimodal Gemini activa y enlazada."
     if "teamly" in war_room_engine.nodes:
-        war_room_engine.nodes["teamly"]["status"] = "PAUSADO" if new_state else "ESTABLE"
-        war_room_engine.nodes["teamly"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Coordinación operativa de agentes en Teamily."
+        war_room_engine.nodes["teamly"]["status"] = "ESTABLE"
+        war_room_engine.nodes["teamly"]["state_desc"] = "Coordinación operativa nominal de agentes en Teamily (Charly)."
     if "antigravity" in war_room_engine.nodes:
         war_room_engine.nodes["antigravity"]["status"] = "PAUSADO" if new_state else "ESTABLE"
         war_room_engine.nodes["antigravity"]["state_desc"] = "⏸️ Pausado por orden de Dirección General." if new_state else "Vigilancia de endpoints, autocuración y orquestación de parches."
@@ -1920,7 +1920,7 @@ async def war_room_pause_toggle(request: Request):
         "status": "success",
         "operational_pause": new_state,
         "gemini_paused": new_state,
-        "teamily_paused": new_state,
+        "teamily_paused": False,
         "alerts_paused": new_state,
         "sheets_paused": new_state,
         "make_paused": getattr(war_room_engine, "make_paused", True),

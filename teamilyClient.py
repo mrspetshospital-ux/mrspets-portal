@@ -51,16 +51,36 @@ load_project_env()
 
 # Parámetros Canónicos Exactos Teamily GEO A
 # A1: Endpoint configurable por entorno, con geo-a como valor por defecto canónico documentado
-DEFAULT_ENDPOINT = os.environ.get("TEAMILEY_GEO_A_ENDPOINT") or os.environ.get("TEAMILY_AGENT_ENDPOINT") or "https://teamily.ai/v1/agents/geo-a/responses"
+DEFAULT_ENDPOINT = (
+    os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
+    or os.environ.get("TEAMILY_AGENT_ENDPOINT")
+    or os.environ.get("TEAMLY_AGENT_ENDPOINT")
+    or os.environ.get("TEAMILY_ENDPOINT_URL")
+    or "https://teamily.ai/v1/agents/geo-a/responses"
+)
 DEFAULT_DOCS_URL = "https://teamily.ai/v1"
 
 # A2: Board del Cuarto de Guerra (espacio compartido en Teamily donde atiende Charly / GEO-A)
 # Configurable por entorno para permitir boards dedicados
-DEFAULT_BOARD_ID = os.environ.get("TEAMILY_BOARD_ID") or os.environ.get("TEAMILY_WAR_ROOM_BOARD_ID") or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+DEFAULT_BOARD_ID = (
+    os.environ.get("TEAMILY_BOARD_ID")
+    or os.environ.get("TEAMLY_BOARD_ID")
+    or os.environ.get("TEAMILY_WAR_ROOM_BOARD_ID")
+    or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
+)
 
 # C1: Credencial del servidor cargada exclusivamente desde variable de entorno (nunca hardcodeada)
 def get_default_server_key() -> str:
-    return os.environ.get("TEAMILEY_SERVER_KEY") or os.environ.get("TEAMILY_SERVER_KEY") or ""
+    return (
+        os.environ.get("TEAMILEY_SERVER_KEY")
+        or os.environ.get("TEAMILY_SERVER_KEY")
+        or os.environ.get("TEAMLY_SERVER_KEY")
+        or os.environ.get("TEAMILEY_API_KEY")
+        or os.environ.get("TEAMILY_API_KEY")
+        or os.environ.get("TEAMLY_API_KEY")
+        or os.environ.get("CHARLY_API_KEY")
+        or ""
+    )
 
 DEFAULT_SERVER_KEY = get_default_server_key()
 

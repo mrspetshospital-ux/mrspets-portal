@@ -1533,8 +1533,15 @@ class WarRoomEngine:
 
         try:
             import teamilyClient
+            server_key_cand = (
+                self.node_configs.get("teamily_server_key")
+                or self.node_configs.get("teamly_server_key")
+                or self.node_configs.get("teamly_api_key")
+                or self.node_configs.get("teamily_api_key")
+                or teamilyClient.get_default_server_key()
+            )
             geo_client = teamilyClient.TeamilyGeoAClient(
-                server_key=self.node_configs.get("teamily_server_key") or teamilyClient.get_default_server_key(),
+                server_key=server_key_cand,
                 board_id=self.node_configs.get("teamily_board_id") or teamilyClient.DEFAULT_BOARD_ID,
                 endpoint=self.node_configs.get("teamily_endpoint_url") or teamilyClient.DEFAULT_ENDPOINT
             )
@@ -1547,11 +1554,7 @@ class WarRoomEngine:
             latency_ms = None
             reply_text = "canal NO DISPONIBLE: Credencial de autenticación de Teamily no configurada (TEAMILEY_SERVER_KEY requerida)."
         else:
-            prompt_input = (
-                f"[Cuarto de Guerra Mrs. Pets — Coordinación Operativa & Enjambre]\n"
-                f"Planteamiento / Consulta recibida de Dirección General:\n{problem_description}\n\n"
-                f"Favor emitir análisis operativo, estado de coordinación del enjambre y acciones del equipo."
-            )
+            prompt_input = problem_description.strip()
             req = teamilyClient.TeamilyGeoARequest(
                 input=prompt_input,
                 wait=True,
@@ -1559,7 +1562,9 @@ class WarRoomEngine:
                 is_customer=False
             )
             try:
+                print(f"[WAR ROOM TEAMILY] ⚡ Despertando agente Teamily (Charly)... Mensaje: '{prompt_input[:70]}'...")
                 resp_obj = geo_client.send_message(req)
+                print(f"[WAR ROOM TEAMILY] Respuesta Teamily status={resp_obj.status_code}, success={resp_obj.success}, latency={resp_obj.latency_ms}ms")
                 if resp_obj.success and resp_obj.response_text:
                     verified = True
                     latency_ms = int(resp_obj.latency_ms) if resp_obj.latency_ms is not None else None
@@ -1916,26 +1921,10 @@ class WarRoomEngine:
 
             # CASO 1: Destinatario específico Teamily / Super Agent (Charly)
             if target_norm in ("super_agent", "teamly"):
-                if not getattr(self, "teamily_paused", False):
-                    sa_eval = self.generate_super_agent_evaluation(message)
-                    self.chat_history.append(sa_eval)
-                    responses.append(sa_eval)
-                else:
-                    paused_eval = {
-                        "id": f"MSG-{secrets.token_hex(4)}",
-                        "sender": WAR_ROOM_PARTICIPANTS["super_agent"]["name"],
-                        "sender_id": "super_agent",
-                        "role": WAR_ROOM_PARTICIPANTS["super_agent"]["role"],
-                        "message": "⏸️ Canal Teamily en pausa operativa por orden de Dirección General.",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "node_id": "teamly",
-                        "channel_id": "channel_super_agent",
-                        "target_node_id": "channel_mrspets",
-                        "verified": False,
-                        "latency_ms": None
-                    }
-                    self.chat_history.append(paused_eval)
-                    responses.append(paused_eval)
+                # Disparo directo sin banderas de pausa: despertar y consultar a Teamily en vivo
+                sa_eval = self.generate_super_agent_evaluation(message)
+                self.chat_history.append(sa_eval)
+                responses.append(sa_eval)
 
             # CASO 2: Destinatario específico Google AntiGravity
             elif target_norm in ("antigravity", "engineering"):
@@ -1991,10 +1980,9 @@ class WarRoomEngine:
 
             # CASO 5: Sala Común / Deliberación General (todos los agentes activos deliberan, Make queda en pausa temporal)
             else:
-                if not getattr(self, "teamily_paused", False):
-                    sa_eval = self.generate_super_agent_evaluation(message)
-                    self.chat_history.append(sa_eval)
-                    responses.append(sa_eval)
+                sa_eval = self.generate_super_agent_evaluation(message)
+                self.chat_history.append(sa_eval)
+                responses.append(sa_eval)
 
                 if not getattr(self, "gemini_paused", False):
                     ag_eval = self.generate_antigravity_evaluation(message)
