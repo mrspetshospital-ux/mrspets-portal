@@ -2291,14 +2291,14 @@ class WarRoomEngine:
                             que_objeto=parsed_t2.get("que_objeto", "")
                         )
 
-                    # Si rounds == 2 y hay objeción real activa (no SIN_OBJECIÓN ni CERRADO)
-                    if sealed_rounds == 2 and estado_t2 == STATE_OBJECION_ABIERTA and not getattr(self, "teamily_paused", False):
-                        # Turno 3: Charly responde la contrapropuesta
+                    # Si sealed_rounds == 2, se ejecutan las 2 rondas completas (4 turnos) para la segunda opinión solicitada
+                    if sealed_rounds == 2 and not getattr(self, "teamily_paused", False):
+                        # Turno 3: Charly responde la contrapropuesta o amplía su dictamen para segunda opinión
                         t3_prompt = (
                             f"[RÉPLICA T3 — CICLO: {cycle_id} — RONDA 2/2]\n"
-                            f"AntiGravity ha formulado la siguiente contrapropuesta técnica a tu propuesta inicial:\n"
+                            f"AntiGravity ha evaluado tu propuesta inicial con el siguiente dictamen:\n"
                             f"{ag_eval.get('message', '')}\n\n"
-                            f"Indica con precisión si aceptas las observaciones, corriges tu postura técnica o mantienes tu posición original."
+                            f"Para esta segunda ronda solicitada por Dirección General, amplía tu postura técnica, confirma o ajusta la propuesta y responde a las observaciones."
                         )
                         sa_reply = self.generate_super_agent_evaluation(t3_prompt)
                         sa_reply["deliberation_cycle"] = cycle_id

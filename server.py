@@ -2502,7 +2502,7 @@ async def _execute_teamily_channel(
     try:
         teamily_input = msg
         if "[DIRECTIVA" not in msg and "VOLTURI" not in msg:
-            teamily_input = f"[DIRECTIVA COMITÉ VOLTURI - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID} (GERENCIA DE ATENCIÓN AL CLIENTE)]:\n{msg}"
+            teamily_input = f"[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID}]:\n{msg}"
 
         req = TeamilyGeoARequest(
             input=teamily_input,

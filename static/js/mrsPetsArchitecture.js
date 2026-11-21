@@ -1630,7 +1630,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     let storedGov = {};
     try { storedGov = savedGov ? JSON.parse(savedGov) : {}; } catch(e){}
     const primaryEngine = (window.agentStudio && window.agentStudio.primaryEngine) || storedGov.primaryEngine || 'teamily';
-    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 20;
+    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 45;
     const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
     const chatSessionId = (typeof this.getChatSessionId === 'function') ? this.getChatSessionId() : ((session && session.sessionId) || ('sess_' + Math.random().toString(36).substring(2, 9)));

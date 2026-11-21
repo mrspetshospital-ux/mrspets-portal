@@ -187,14 +187,47 @@
     }
 
     setDeliberationRounds(rounds) {
-      if (this.isDeliberationSealed) {
+      if (this.isDeliberating) {
         if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast('🔒 Rondas selladas mientras la deliberación está en curso.', 'warning');
+          window.app.showToast('🔒 Deliberación en curso en la red. Espera un momento.', 'warning');
         }
         return;
       }
       this.deliberationRounds = (Number(rounds) === 2 ? 2 : 1);
+      try {
+        localStorage.setItem('mrs_pets_war_room_rounds', String(this.deliberationRounds));
+      } catch (_) {}
+
+      // Actualizar contador previo para reflejar el total de turnos (0 de 2 o 0 de 4)
+      if (!this.deliberationStatus || !this.deliberationStatus.in_progress) {
+        const totalTurnos = this.deliberationRounds * 2;
+        if (!this.deliberationStatus) {
+          this.deliberationStatus = {
+            active: false,
+            in_progress: false,
+            rounds: this.deliberationRounds,
+            sealed_rounds: this.deliberationRounds,
+            current_turn: 0,
+            max_turnos: totalTurnos,
+            estado: 'LISTO',
+            badge_text: 'LISTO PARA DELIBERAR',
+            progress_text: `Turno 0 de ${totalTurnos}`
+          };
+        } else {
+          this.deliberationStatus.rounds = this.deliberationRounds;
+          this.deliberationStatus.sealed_rounds = this.deliberationRounds;
+          this.deliberationStatus.max_turnos = totalTurnos;
+          this.deliberationStatus.progress_text = `Turno 0 de ${totalTurnos}`;
+        }
+      }
+
       this.updateDeliberationBar();
+      if (window.app && typeof window.app.showToast === 'function') {
+        const msg = (this.deliberationRounds === 2)
+          ? '⚖️ Modo 2 rondas activado (Segunda opinión: Charly → AntiGravity → Réplica → Cierre)'
+          : '⚖️ Modo 1 ronda activado (Charly propone → AntiGravity evalúa → Decisión)';
+        window.app.showToast(msg, 'info');
+      }
     }
 
     render() {
@@ -209,14 +242,15 @@
       const stateBadge = document.getElementById('wr-delib-state-badge');
       const sealedBadge = document.getElementById('wr-delib-sealed-badge');
 
-      const isSealed = Boolean(this.isDeliberationSealed);
+      // Los botones SOLO se deshabilitan si hay una petición HTTP de deliberación en vuelo (this.isDeliberating)
+      const isSealed = Boolean(this.isDeliberating);
       const rounds = (this.deliberationRounds === 2 ? 2 : 1);
 
       if (btn1) {
         btn1.disabled = isSealed;
         btn1.style.cursor = isSealed ? 'not-allowed' : 'pointer';
-        btn1.style.opacity = isSealed ? '0.7' : '1';
-        btn1.title = isSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO';
+        btn1.style.opacity = isSealed ? '0.6' : '1';
+        btn1.title = isSealed ? '🔒 Deliberación en curso en la red...' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO';
         if (rounds === 1) {
           btn1.style.background = 'linear-gradient(135deg, #D4AF37, #B8860B)';
           btn1.style.color = '#0B0F19';
@@ -233,8 +267,8 @@
       if (btn2) {
         btn2.disabled = isSealed;
         btn2.style.cursor = isSealed ? 'not-allowed' : 'pointer';
-        btn2.style.opacity = isSealed ? '0.7' : '1';
-        btn2.title = isSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO';
+        btn2.style.opacity = isSealed ? '0.6' : '1';
+        btn2.title = isSealed ? '🔒 Deliberación en curso en la red...' : '2 rondas: Charly → AntiGravity → Réplica Charly → Cierre AntiGravity (Segunda opinión)';
         if (rounds === 2) {
           btn2.style.background = 'linear-gradient(135deg, #D4AF37, #B8860B)';
           btn2.style.color = '#0B0F19';
@@ -244,12 +278,19 @@
           btn2.style.background = 'transparent';
           btn2.style.color = '#94A3B8';
           btn2.style.boxShadow = 'none';
-          btn2.innerHTML = '○ 2 rondas';
+          btn2.innerHTML = '○ 2 rondas (2da opinión)';
         }
       }
 
       if (turnCounter) {
-        const text = (this.deliberationStatus && this.deliberationStatus.progress_text) || `Turno 0 de ${rounds * 2}`;
+        let text = '';
+        if (this.deliberationStatus && this.deliberationStatus.in_progress) {
+          text = this.deliberationStatus.progress_text || `Turno ${this.deliberationStatus.current_turn || 0} de ${rounds * 2}`;
+        } else if (this.deliberationStatus && this.deliberationStatus.estado && this.deliberationStatus.estado !== 'LISTO') {
+          text = `Turno 0 de ${rounds * 2} (${this.deliberationStatus.badge_text || this.deliberationStatus.estado})`;
+        } else {
+          text = `Turno 0 de ${rounds * 2}`;
+        }
         turnCounter.innerHTML = `⏱️ ${text}`;
       }
 
@@ -612,15 +653,19 @@
         }
         if (data.deliberation && typeof data.deliberation === 'object') {
           this.deliberationStatus = data.deliberation;
-          const isOngoing = Boolean(data.deliberation.active && data.deliberation.estado === 'EN_CURSO');
-          if (isOngoing) {
-            this.isDeliberationSealed = true;
-            if (data.deliberation.sealed_rounds) {
-              this.deliberationRounds = (Number(data.deliberation.sealed_rounds) === 2 ? 2 : 1);
-            }
+          const isOngoing = Boolean(data.deliberation.active && data.deliberation.in_progress && data.deliberation.estado === 'EN_CURSO');
+          this.isDeliberationSealed = isOngoing;
+          if (isOngoing && data.deliberation.sealed_rounds) {
+            this.deliberationRounds = (Number(data.deliberation.sealed_rounds) === 2 ? 2 : 1);
           } else {
-            // Ciclo concluido o fuera de curso: desbloquear sellado y respetar la elección del usuario (default: 1)
+            // Ciclo concluido o fuera de curso: desbloquear sellado y respetar la elección del usuario
             this.isDeliberationSealed = false;
+            try {
+              const savedRounds = localStorage.getItem('mrs_pets_war_room_rounds');
+              if (savedRounds) {
+                this.deliberationRounds = (Number(savedRounds) === 2 ? 2 : 1);
+              }
+            } catch (_) {}
           }
           this.updateDeliberationBar();
         }
@@ -1141,7 +1186,7 @@
                   ${this.operationalPause ? 'Pausa Operativa Activa' : 'Operaciones Normales Activas'}
                 </div>
                 <div style="font-size:0.7rem; color:#94A3B8;">
-                  ${this.operationalPause ? 'Gemini IA, Teamily, Sheets y Alertas en silencio. Canal exclusivo Make.com.' : 'Todas las IAs y servicios sincronizados y respondiendo.'}
+                  ${this.operationalPause ? 'Gemini IA y Alertas en pausa operativa preventiva. Teamily (Margaret y Charly) 100% activo para pruebas.' : 'Todas las IAs y servicios sincronizados y respondiendo (Margaret activa).' }
                 </div>
               </div>
             </div>
@@ -1152,7 +1197,7 @@
                 <span>${this.operationalPause ? 'Reanudar IAs' : 'Pausar IAs'}</span>
               </button>
               <span style="background:${this.operationalPause ? 'rgba(16,185,129,0.25)' : 'rgba(59,130,246,0.2)'}; border:1px solid ${this.operationalPause ? '#10B981' : '#3B82F6'}; color:${this.operationalPause ? '#34D399' : '#60A5FA'}; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:5px;">
-                <span>${this.operationalPause ? '🎯 ENFOQUE EXCLUSIVO: MAKE.COM' : '🌐 ENJAMBRE ACTIVO'}</span>
+                <span>${this.operationalPause ? '🤝 TEAMILY 100% ACTIVO' : '🌐 ENJAMBRE ACTIVO'}</span>
               </span>
             </div>
           </div>
@@ -1220,18 +1265,18 @@
                 <button type="button" 
                   id="wr-delib-round-1"
                   onclick="window.warRoomEngine.setDeliberationRounds(1)"
-                  ${this.isDeliberationSealed ? 'disabled' : ''}
-                  title="${this.isDeliberationSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO'}"
-                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 1 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.7;' : ''}">
+                  ${this.isDeliberating ? 'disabled' : ''}
+                  title="${this.isDeliberating ? '🔒 Deliberación en curso...' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberating ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 1 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberating ? 'opacity:0.6;' : ''}">
                   ${this.deliberationRounds === 1 ? '● Activa: 1 ronda' : '○ 1 ronda'}
                 </button>
                 <button type="button" 
                   id="wr-delib-round-2"
                   onclick="window.warRoomEngine.setDeliberationRounds(2)"
-                  ${this.isDeliberationSealed ? 'disabled' : ''}
-                  title="${this.isDeliberationSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO'}"
-                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 2 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.7;' : ''}">
-                  ${this.deliberationRounds === 2 ? '● Activa: 2 rondas' : '○ 2 rondas'}
+                  ${this.isDeliberating ? 'disabled' : ''}
+                  title="${this.isDeliberating ? '🔒 Deliberación en curso...' : '2 rondas: Charly → AntiGravity → Réplica Charly → Cierre AntiGravity (Segunda opinión)'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberating ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 2 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberating ? 'opacity:0.6;' : ''}">
+                  ${this.deliberationRounds === 2 ? '● Activa: 2 rondas' : '○ 2 rondas (2da opinión)'}
                 </button>
               </div>
 
@@ -1532,6 +1577,7 @@
       }
 
       try {
+        this.isDeliberating = (activeChannel === 'deliberacion');
         if (activeChannel === 'deliberacion') {
           this.isDeliberationSealed = true;
           this.updateDeliberationBar();
@@ -1639,6 +1685,7 @@
         this.renderChatFeedOnly();
       } finally {
         this.isSending = false;
+        this.isDeliberating = false;
         if (!this.deliberationStatus || this.deliberationStatus.estado !== 'EN_CURSO') {
           this.isDeliberationSealed = false;
         }

@@ -1,15 +1,15 @@
 {
   "queriesToday": 151,
   "makeFailoverAlerts": 1,
-  "teamilyWebhookUrl": "https://teamily.ai/v1/chat",
+  "teamilyWebhookUrl": "https://teamily.ai/v1/agents/geo-a/responses",
   "makeWebhookUrl": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
   "brainDriveUrl": "https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge",
-  "agentName": "Leia \ud83c\udf80 (Asistente Ejecutiva & Concierge VIP)",
+  "agentName": "Leia 🎀 (Asistente Ejecutiva & Concierge VIP)",
   "avatarUrl": "https://lh3.googleusercontent.com/d/1H8bgWAbgyrBYzKsrXUb5rHjzy-NwqcoL",
   "aiModel": "teamly-orchestrator",
   "primaryEngine": "teamily",
-  "failoverTimeout": 9,
-  "autoFailoverEnabled": true,
-  "lastSavedAt": "2026-11-01T20:30:00.000Z",
+  "failoverTimeout": 45,
+  "autoFailoverEnabled": false,
+  "lastSavedAt": "2026-11-21T13:00:00.000Z",
   "status": "active"
 }

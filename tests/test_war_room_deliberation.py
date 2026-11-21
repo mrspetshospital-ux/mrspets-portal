@@ -115,6 +115,7 @@ class TestWarRoomDeliberationFase1(unittest.TestCase):
         turns = db.q("SELECT * FROM war_room_turns WHERE run_id = %s AND turno = 1" if db.IS_POSTGRES else "SELECT * FROM war_room_turns WHERE run_id = ? AND turno = 1", (run_id,))
         self.assertEqual(len(turns), 1, "No debe haber filas duplicadas para el mismo (run_id, turno)")
         self.assertEqual(turns[0]["contenido"], "Propuesta 1 Corregida")
+        deliberation_manager.close_cycle(run_id, recomendacion="Test cerrado", estado_final=STATE_COMPLETADO)
 
     def test_06_independent_channels_unaffected(self):
         """Verifica que los canales independientes no sean interferidos por la deliberación de la sala común."""
