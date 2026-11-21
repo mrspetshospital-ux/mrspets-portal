@@ -826,8 +826,8 @@ class MrsPetsArchitectureEngine {
     }, 600);
   }
 
-  appendAuraMessage(msg, sender = 'bot') { this.appendLeiaMessage(msg, sender); }
-  appendLeiaMessage(msg, sender = 'bot') {
+  appendAuraMessage(msg, sender = 'bot', engine = 'teamily') { this.appendLeiaMessage(msg, sender, engine); }
+  appendLeiaMessage(msg, sender = 'bot', engine = 'teamily') {
     const container = document.getElementById('leia-chat-messages') || document.getElementById('aura-chat-messages');
     if (!container) return;
     const div = document.createElement('div');
@@ -839,12 +839,24 @@ class MrsPetsArchitectureEngine {
       div.style.borderRadius = '14px 14px 2px 14px';
       div.style.border = '1px solid rgba(16,185,129,0.4)';
     } else {
-      div.className = 'leia-client-bot-bubble';
+      // Regla estricta exclusiva del Avatar: Teamily responde en blanco (#FFFFFF), Gemini responde en amarillo (#FDE047)
+      const isGemini = (engine === 'gemini');
+      const textColor = isGemini ? '#FDE047' : '#FFFFFF';
+      const bubbleBorder = isGemini ? '1.5px solid rgba(250,204,21,0.65)' : '1px solid rgba(251,191,36,0.35)';
+      div.className = `leia-client-bot-bubble ${isGemini ? 'engine-gemini' : 'engine-teamily'}`;
       div.style.background = '#1e293b';
-      div.style.color = '#ffffff';
+      div.style.color = `${textColor} !important`;
       div.style.alignSelf = 'flex-start';
       div.style.borderRadius = '14px 14px 14px 2px';
-      div.style.border = '1px solid rgba(251,191,36,0.35)';
+      div.style.border = bubbleBorder;
+      div.style.padding = '12px 15px';
+      div.style.fontSize = '0.88rem';
+      div.style.lineHeight = '1.5';
+      div.style.boxShadow = '0 4px 14px rgba(0,0,0,0.4)';
+      div.innerHTML = `<span style="color:${textColor} !important;">${msg}</span>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return;
     }
     div.style.padding = '12px 15px';
     div.style.fontSize = '0.88rem';
@@ -1671,6 +1683,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       // 2. Canal Respaldo: Google Gemini en backend con prompt de Margarette
       // NOTA: NUNCA despachar al webhook histórico de Make de Leia para evitar suplantaciones
       // =========================================================================
+      let engineUsed = 'teamily';
       try {
         const abortCtrl = new AbortController();
         const fetchTimer = setTimeout(() => abortCtrl.abort(), (timeoutSec + 15) * 1000);
@@ -1689,6 +1702,12 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
               : (data.response_text || (data.output && data.output.text) || data.reply);
             if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
               serverReplyText = rawReply;
+              const isGem = Boolean(
+                data.failover_triggered || 
+                data.active_channel === 'gemini' || 
+                (data.model_used && String(data.model_used).toLowerCase().includes('gemini'))
+              );
+              engineUsed = isGem ? 'gemini' : 'teamily';
             }
             if (data.booking && data.booking.id) {
               if (window.adminEngine && typeof window.adminEngine.addPendingAppointment === 'function') {
@@ -1728,6 +1747,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             const gemData = await res.json();
             if (gemData && (gemData.reply || gemData.response_text)) {
               serverReplyText = gemData.reply || gemData.response_text;
+              engineUsed = 'gemini';
             }
           }
         } catch (e) {
@@ -1736,6 +1756,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       }
     } else {
       // Flujo alternativo para Leia Concierge (si el staff conmuta expresamente a Leia)
+      let engineUsed = 'teamily';
       if (isTeamlyPrimary) {
         try {
           const abortCtrl = new AbortController();
@@ -1755,6 +1776,12 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
                 : (data.response_text || (data.output && data.output.text) || data.reply);
               if (rawReply && String(rawReply).trim().length > 0) {
                 serverReplyText = rawReply;
+                const isGem = Boolean(
+                  data.failover_triggered || 
+                  data.active_channel === 'gemini' || 
+                  (data.model_used && String(data.model_used).toLowerCase().includes('gemini'))
+                );
+                engineUsed = isGem ? 'gemini' : 'teamily';
               }
             }
           }
@@ -1803,6 +1830,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             const gemData = await res.json();
             if (gemData && (gemData.reply || gemData.response_text)) {
               serverReplyText = gemData.reply || gemData.response_text;
+              engineUsed = 'gemini';
             }
           }
         } catch (e) {
@@ -1839,15 +1867,15 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     );
 
     if (serverReplyText && (!isTechnicalError || isStaff)) {
-      const formattedHtml = this.formatMarkdownToHtml(serverReplyText);
-      this.appendLeiaMessage(formattedHtml, 'bot');
+      const formattedHtml = this.formatMarkdownToHtml(serverReplyText, engineUsed);
+      this.appendLeiaMessage(formattedHtml, 'bot', engineUsed);
       if (isStaff && window.app && typeof window.app.showToast === 'function') {
         window.app.showToast(`Respuesta de Leia recibida (${cleanModelName}) ✨`, 'success');
       }
     } else {
       // Manejo seguro y explícito de indisponibilidad sin suplantar identidad ni prometer reintentos
       const fallbackMsg = "🐾 **Canal de Atención Mrs. Pets:**\n\nEn este momento no puedo completar tu consulta. Para no hacerte esperar, escríbenos directamente por WhatsApp al [+58 414-6799510](https://wa.me/584146799510) o visítanos en sucursal en **Avenida 2 El Milagro** — te atendemos de inmediato. Tu princesa o príncipe no se queda sin atención. ✨🐾";
-      this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg), 'system');
+      this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg, 'teamily'), 'system', 'teamily');
     }
   }
 
@@ -2068,9 +2096,11 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
       .replace(/'/g, '&#039;');
   }
 
-  formatMarkdownToHtml(markdown) {
+  formatMarkdownToHtml(markdown, engine = 'teamily') {
     if (!markdown) return '';
     let text = String(markdown).trim();
+    const isGemini = (engine === 'gemini');
+    const boldColor = isGemini ? '#fef08a' : '#ffffff';
 
     // Comprobar si el texto ya contiene etiquetas HTML nativas
     const hasHtmlTags = /<\/?(p|div|span|strong|b|em|i|br|ul|li|h1|h2|h3|h4|table|tr|td)[\s>]/i.test(text);
@@ -2100,9 +2130,9 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     // Separadores horizontales
     text = text.replace(/^(\-\-\-|\*\*\*)$/gim, '<hr style="border:0; border-top:1px solid rgba(251,191,36,0.25); margin:8px 0;">');
 
-    // Negrita
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff;">$1</strong>');
-    text = text.replace(/__(.*?)__/g, '<strong style="color:#ffffff;">$1</strong>');
+    // Negrita respetando el motor (blanco para Teamily, amarillo para Gemini)
+    text = text.replace(/\*\*(.*?)\*\*/g, `<strong style="color:${boldColor} !important;">$1</strong>`);
+    text = text.replace(/__(.*?)__/g, `<strong style="color:${boldColor} !important;">$1</strong>`);
 
     // Cursiva
     text = text.replace(/(?<!\*)\*([^\*\n]+)\*(?!\*)/g, '<em style="color:#e2e8f0;">$1</em>');

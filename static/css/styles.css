@@ -4812,6 +4812,63 @@ textarea[style*="background:#1"], textarea[style*="background: #1"],
   color: #FFFFFF !important;
 }
 
+/* =========================================================================
+   Diferenciación Visual en Avatar de Leia: Blanco (Teamily) vs Amarillo (Gemini)
+   Alcance estricto: Solo en el Avatar de Leia
+   ========================================================================= */
+.chat-bubble.leia-bubble.engine-teamily,
+.chat-bubble.leia-bubble.engine-teamily .bubble-content,
+.chat-bubble.leia-bubble.engine-teamily strong,
+.chat-bubble.leia-bubble.engine-teamily span,
+.chat-bubble.leia-bubble.engine-teamily p {
+  color: #FFFFFF !important;
+}
+
+.chat-bubble.leia-bubble.engine-gemini,
+.chat-bubble.leia-bubble.engine-gemini .bubble-content,
+.chat-bubble.leia-bubble.engine-gemini span,
+.chat-bubble.leia-bubble.engine-gemini p {
+  color: #FDE047 !important;
+}
+
+.chat-bubble.leia-bubble.engine-gemini strong {
+  color: #FEF08A !important;
+}
+
+.leia-client-bot-bubble.engine-teamily,
+.leia-client-bot-bubble.engine-teamily span,
+.leia-client-bot-bubble.engine-teamily strong,
+.leia-client-bot-bubble.engine-teamily p {
+  color: #FFFFFF !important;
+}
+
+.leia-client-bot-bubble.engine-gemini,
+.leia-client-bot-bubble.engine-gemini span,
+.leia-client-bot-bubble.engine-gemini p {
+  color: #FDE047 !important;
+}
+
+.leia-client-bot-bubble.engine-gemini strong {
+  color: #FEF08A !important;
+}
+
+.leia-message.bot.engine-teamily,
+.leia-message.bot.engine-teamily span,
+.leia-message.bot.engine-teamily strong,
+.leia-message.bot.engine-teamily p {
+  color: #FFFFFF !important;
+}
+
+.leia-message.bot.engine-gemini,
+.leia-message.bot.engine-gemini span,
+.leia-message.bot.engine-gemini p {
+  color: #FDE047 !important;
+}
+
+.leia-message.bot.engine-gemini strong {
+  color: #FEF08A !important;
+}
+
 .chat-bubble.user-bubble {
   background: linear-gradient(135deg, #10b981, #059669) !important;
   border: 1.5px solid rgba(16, 185, 129, 0.5) !important;

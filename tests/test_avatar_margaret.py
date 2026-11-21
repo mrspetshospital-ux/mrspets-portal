@@ -350,6 +350,35 @@ class TestAvatarMargaret(unittest.TestCase):
         except ImportError:
             pass
 
+    def test_15_avatar_color_differentiation_teamily_white_gemini_yellow(self):
+        """Verifica la regla exclusiva del avatar: Teamily responde en blanco (#FFFFFF) y Gemini en amarillo (#FDE047)."""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # 1. Verificar leiaChatEngine.js
+        chat_engine_path = os.path.join(base_dir, "static", "js", "leiaChatEngine.js")
+        with open(chat_engine_path, "r", encoding="utf-8") as f:
+            chat_js = f.read()
+        self.assertIn("#FDE047", chat_js)
+        self.assertIn("#FFFFFF", chat_js)
+        self.assertIn("engine-gemini", chat_js)
+        self.assertIn("engine-teamily", chat_js)
+
+        # 2. Verificar mrsPetsArchitecture.js
+        arch_path = os.path.join(base_dir, "static", "js", "mrsPetsArchitecture.js")
+        with open(arch_path, "r", encoding="utf-8") as f:
+            arch_js = f.read()
+        self.assertIn("engine === 'gemini'", arch_js)
+        self.assertIn("#FDE047", arch_js)
+        self.assertIn("#FFFFFF", arch_js)
+
+        # 3. Verificar styles.css (reglas exclusivas para el avatar)
+        css_path = os.path.join(base_dir, "static", "css", "styles.css")
+        with open(css_path, "r", encoding="utf-8") as f:
+            css = f.read()
+        self.assertIn(".chat-bubble.leia-bubble.engine-teamily", css)
+        self.assertIn(".chat-bubble.leia-bubble.engine-gemini", css)
+        self.assertIn("#FDE047", css)
+
 
 if __name__ == "__main__":
     unittest.main()

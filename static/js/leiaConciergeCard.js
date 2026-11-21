@@ -273,7 +273,12 @@
                 ? data.response_text.text
                 : (data.response_text || (data.output && data.output.text) || data.reply);
               if (reply && String(reply).trim().length > 0 && !String(reply).includes('serverMsgID')) {
-                this.appendLeiaBotMessage(reply);
+                const isGemini = Boolean(
+                  data.failover_triggered || 
+                  data.active_channel === 'gemini' || 
+                  (data.model_used && String(data.model_used).toLowerCase().includes('gemini'))
+                );
+                this.appendLeiaBotMessage(reply, isGemini ? 'gemini' : 'teamily');
                 responseReceived = true;
                 return;
               }
@@ -324,7 +329,7 @@
               ? gemData.response_text.text
               : (gemData.response_text || (gemData.output && gemData.output.text) || gemData.reply);
             if (reply && String(reply).trim().length > 0) {
-              this.appendLeiaBotMessage(reply);
+              this.appendLeiaBotMessage(reply, 'gemini');
               return;
             }
           }
@@ -371,24 +376,30 @@
       chatScreen.scrollTop = chatScreen.scrollHeight;
     },
 
-    appendLeiaBotMessage(markdownText) {
+    appendLeiaBotMessage(markdownText, engine = 'teamily') {
       const chatScreen = document.getElementById('leiaChatScreen');
       if (!chatScreen) return;
 
+      // Regla estricta exclusiva del Avatar: Teamily responde en blanco (#FFFFFF), Gemini responde en amarillo (#FDE047)
+      const isGemini = (engine === 'gemini');
+      const textColor = isGemini ? '#FDE047' : '#FFFFFF';
+      const strongColor = isGemini ? '#FEF08A' : '#FFFFFF';
+      const borderCol = isGemini ? 'rgba(250,204,21,0.65)' : 'rgba(212,175,55,0.25)';
+
       const msgDiv = document.createElement('div');
-      msgDiv.className = 'leia-message bot';
-      msgDiv.style.cssText = "background: #2a2a2a; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; max-width: 85%; align-self: flex-start; color: #fff; margin-top: 6px; border: 1px solid rgba(212,175,55,0.25); line-height: 1.45;";
+      msgDiv.className = `leia-message bot ${isGemini ? 'engine-gemini' : 'engine-teamily'}`;
+      msgDiv.style.cssText = `background: #2a2a2a; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; max-width: 85%; align-self: flex-start; color: ${textColor} !important; margin-top: 6px; border: 1px solid ${borderCol}; line-height: 1.45;`;
 
       // Simple Markdown parser for **bold** and newlines
       let html = markdownText
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\*\*(.*?)\*\*/g, `<strong style="color:${strongColor} !important;">$1</strong>`)
+        .replace(/\*(.*?)\*/g, '<em style="color:#e2e8f0 !important;">$1</em>')
         .replace(/\n/g, '<br>');
 
-      msgDiv.innerHTML = html;
+      msgDiv.innerHTML = `<span style="color:${textColor} !important;">${html}</span>`;
       chatScreen.appendChild(msgDiv);
       chatScreen.scrollTop = chatScreen.scrollHeight;
     }

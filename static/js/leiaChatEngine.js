@@ -331,6 +331,7 @@
 
                 this.addMessage({
                     sender: 'leia',
+                    engine: 'teamily',
                     text: `¡Hola! Soy **Leia 🎀**, ¿cómo estás, ${petAddress}? 🐾✨\n\nEl día de hoy, ¿cómo está, **${client.tutorHonorific}**? Qué gran alegría tenerlas en casa.\n\n¿En qué puedo orientarle hoy?`,
                     buttons: [
                         '📅 Ver Disponibilidad',
@@ -346,6 +347,7 @@
             } else if (isStaff) {
                 this.addMessage({
                     sender: 'leia',
+                    engine: 'teamily',
                     text: `¡Hola **${user.name}**! Te saluda **Leia 🎀** (Atención Ejecutiva & Staff).\n\nPuedo apoyarte con consultas administrativas, coordinación de citas o enlace con el Comité Volturi (Talibel, Manolo, Valeria, Mike, Charly). ¿En qué podemos avanzar hoy?`,
                     buttons: [
                         '📅 Calendario Grande (Staff)',
@@ -360,6 +362,7 @@
             } else {
                 this.addMessage({
                     sender: 'leia',
+                    engine: 'teamily',
                     text: `¡Hola! Soy **Leia 🎀** ✨🐾.\n\nQué gusto tenerte aquí. Estoy a tu completa disposición para orientarte sobre nuestro equipo, administración, servicios o resolver cualquier duda de **Mrs. Pets**.\n\n¿Con quién tengo el gusto de hablar y en qué puedo ayudarte hoy?`,
                     buttons: [
                         '📅 Ver Disponibilidad',
@@ -389,10 +392,25 @@
                 const isLeia = m.sender === 'leia';
                 const timeStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                // Formateo simple de markdown
+                // Regla estricta exclusiva del Avatar:
+                // Teamily responde en blanco (#FFFFFF), Gemini responde en amarillo (#FDE047)
+                const isGemini = isLeia && (
+                    m.engine === 'gemini' || 
+                    (m.model_used && String(m.model_used).toLowerCase().includes('gemini')) ||
+                    m.engineColor === 'yellow'
+                );
+                const textColor = isLeia ? (isGemini ? '#FDE047' : '#FFFFFF') : '#FFFFFF';
+                const strongColor = isLeia ? (isGemini ? '#FEF08A' : '#FFFFFF') : '#FEF08A';
+                const emColor = isLeia ? (isGemini ? '#FEF08A' : '#E2E8F0') : '#E2E8F0';
+                const engineClass = isLeia ? (isGemini ? 'engine-gemini' : 'engine-teamily') : '';
+                const bubbleBorder = isLeia 
+                    ? (isGemini ? '1.5px solid rgba(250, 204, 21, 0.65)' : '1.5px solid rgba(212, 175, 55, 0.45)') 
+                    : '1.5px solid rgba(16, 185, 129, 0.5)';
+
+                // Formateo de markdown respetando el color del motor correspondiente
                 let formattedText = m.text
-                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#fef08a !important;">$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em style="color:#e2e8f0 !important;">$1</em>')
+                    .replace(/\*\*(.*?)\*\*/g, `<strong style="color:${strongColor} !important;">$1</strong>`)
+                    .replace(/\*(.*?)\*/g, `<em style="color:${emColor} !important;">$1</em>`)
                     .replace(/\n/g, '<br>');
 
                 let attachmentHtml = '';
@@ -420,12 +438,15 @@
                 return `
                     <div class="chat-bubble-row ${isLeia ? 'leia-row' : 'user-row'}">
                         ${isLeia ? '<img src="assets/leia_avatar.jpg" alt="Leia" class="bubble-avatar">' : ''}
-                        <div class="chat-bubble ${isLeia ? 'leia-bubble' : 'user-bubble'}" style="color:#ffffff !important;">
-                            <div class="bubble-content" style="color:#ffffff !important;">${formattedText}</div>
+                        <div class="chat-bubble ${isLeia ? ('leia-bubble ' + engineClass) : 'user-bubble'}" style="color:${textColor} !important; border:${bubbleBorder} !important;">
+                            <div class="bubble-content" style="color:${textColor} !important;">${formattedText}</div>
                             ${attachmentHtml}
                             ${buttonsHtml}
                             ${isLeia ? `<div style="margin-top:6px;"><button type="button" class="btn-voice-leia" onclick="window.LeiaChatEngine.playVoice(this)" data-text="${encodeURIComponent(m.text)}" style="background: rgba(212,175,55,0.18); border: 1px solid rgba(212,175,55,0.4); color: #fef08a !important; border-radius: 6px; padding: 2px 7px; font-size: 0.68rem; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔊 Escuchar (ElevenLabs)</button></div>` : ''}
-                            <span class="bubble-time" style="color:#cbd5e1 !important;">${timeStr}</span>
+                            <div style="display:flex; justify-content:${isLeia ? 'space-between' : 'flex-end'}; align-items:center; margin-top:6px;">
+                                ${isLeia ? `<span class="leia-engine-indicator" style="font-size:0.65rem; font-weight:700; color:${isGemini ? '#FDE047' : '#FFFFFF'}; opacity:0.85;">${isGemini ? '⚡ Gemini' : '🛡️ Teamily'}</span>` : ''}
+                                <span class="bubble-time" style="color:#cbd5e1 !important; margin-top:0;">${timeStr}</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -867,6 +888,9 @@
                 });
                 clearTimeout(timeoutId);
 
+                let engineUsed = 'teamily';
+                let modelUsed = null;
+
                 if (res.ok) {
                     const data = await res.json();
                     const rawReply = (typeof data.response_text === 'object' && data.response_text.text)
@@ -875,6 +899,13 @@
 
                     if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
                         replyObtained = rawReply;
+                        const isGem = Boolean(
+                            data.failover_triggered || 
+                            data.active_channel === 'gemini' || 
+                            (data.model_used && String(data.model_used).toLowerCase().includes('gemini'))
+                        );
+                        engineUsed = isGem ? 'gemini' : 'teamily';
+                        modelUsed = data.model_used || (isGem ? 'gemini-3.8-flash' : 'teamily-margaret');
                     }
 
                     if (data && data.booking && data.booking.id) {
@@ -929,6 +960,8 @@
                             : (gemData.response_text || gemData.reply || (gemData.output && gemData.output.text));
                         if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
                             replyObtained = rawReply;
+                            engineUsed = 'gemini';
+                            modelUsed = 'gemini-3.8-flash';
                         }
                     }
                 } catch (gemErr) {
@@ -959,6 +992,8 @@
                     sender: 'leia',
                     text: replyObtained,
                     buttons: dynamicButtons,
+                    engine: engineUsed,
+                    model_used: modelUsed,
                     timestamp: new Date()
                 });
             } else {
