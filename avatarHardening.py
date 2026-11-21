@@ -30,11 +30,11 @@ WHATSAPP_CONCIERGE_PHONE = "+58 414-6799510"
 WHATSAPP_CONCIERGE_PHONE_RAW = "584146799510"
 BRANCH_ADDRESS_PHYSICAL = "Avenida 2 El Milagro, diagonal a Lago Mall, Maracaibo"
 
-# Timeout configurable: 45 segundos por defecto (o AGENT_TIMEOUT_MS=45000)
+# Timeout configurable: 90 segundos por defecto (o AGENT_TIMEOUT_MS=90000) según directriz Volturi
 DEFAULT_AGENT_TIMEOUT_SEC = float(
     os.environ.get("AGENT_TIMEOUT_SEC")
-    or (float(os.environ.get("AGENT_TIMEOUT_MS", 45000)) / 1000.0)
-    or 45.0
+    or (float(os.environ.get("AGENT_TIMEOUT_MS", 90000)) / 1000.0)
+    or 90.0
 )
 
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))

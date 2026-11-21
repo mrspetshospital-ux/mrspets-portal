@@ -71,6 +71,16 @@ DEFAULT_BOARD_ID = (
     or "5803df5a-7127-4d28-b97c-5c840d47cdc7"
 )
 
+# A3: Grupo Cabal de Coordinación Ejecutiva (Mesa Leia & Charly donde Margarette recibe @mención)
+DEFAULT_CABAL_GROUP_ID = (
+    os.environ.get("TEAMILY_CABAL_GROUP_ID")
+    or os.environ.get("TEAMILY_GROUP_ID")
+    or "524471990"
+)
+
+# Timeout base canónico: 90s según directriz Volturi
+DEFAULT_TIMEOUT = int(os.environ.get("TEAMILY_TIMEOUT_SEC", 90))
+
 # C1: Credencial del servidor cargada desde variable de entorno o fallback certificado
 def get_default_server_key() -> str:
     k = (
@@ -153,20 +163,18 @@ class TeamilyGeoARequest:
     """
     Estructura de petición tipada para el agente Teamily GEO A.
     
-    DOCUMENTACIÓN DE ARQUITECTURA (A4):
-    El agente que responde en Teamily está determinado por la URL del
-    endpoint (ej. https://teamily.ai/v1/chat) y por la configuración interna del
-    board de destino.
-    Pruebas empíricas verificadas en vivo confirman que campos hipotéticos en el payload JSON tales
-    como 'agent_id', 'agent', 'node_id', 'persona' o 'sender_id' con valor 'antigravity' son ignorados
-    por el backend de Teamily, respondiendo siempre el agente configurado en la URL (Charly).
-    Por tanto, el payload JSON solo envía los campos oficialmente soportados por la API:
-    input, thread, wait, board_id.
+    DOCUMENTACIÓN DE ARQUITECTURA (A4 - COMITÉ VOLTURI):
+    El enrutamiento hacia Margarette (@9000408632300095) se ejecuta mediante la combinación de:
+    - group_id: ID del grupo de coordinación (DEFAULT_CABAL_GROUP_ID = 524471990)
+    - @mención: al inicio del prompt de input ([@9000408632300095])
+    - wait: true
+    - board_id: ELIMINADO para evitar anulación del enrutamiento por grupo
     """
     input: str
     thread: Optional[Any] = None
     wait: bool = True
     board_id: Optional[str] = None
+    group_id: Optional[str] = None
     session_id: Optional[str] = None
     is_customer: bool = False
     timeout: Optional[float] = None
@@ -189,9 +197,13 @@ class TeamilyGeoARequest:
             "thread": thread_payload,
             "wait": self.wait
         }
-        # AISLAMIENTO ESTRICTO: NUNCA inyectar el board compartido en chats de clientes
-        # para evitar fuga de privacidad entre tutores
-        if self.board_id and not self.is_customer:
+        # ENRUTAMIENTO VOLTURI (Charly & AntiGravity):
+        # El enrutamiento nativo en Teamily se realiza mediante group_id + @mención.
+        # En /responses con group_id, se descarta board_id para evitar conflictos de enrutamiento.
+        target_group = self.group_id or (os.environ.get("TEAMILY_CABAL_GROUP_ID") if not self.is_customer else None)
+        if target_group:
+            payload["group_id"] = str(target_group)
+        elif self.board_id and not self.is_customer:
             payload["board_id"] = self.board_id
         return payload
 
@@ -230,7 +242,7 @@ class TeamilyGeoAClient:
         server_key: Optional[str] = None,
         board_id: Optional[str] = None,
         endpoint: Optional[str] = None,
-        timeout: int = 45
+        timeout: int = 90
     ):
         load_project_env()
         if server_key is not None:
@@ -284,8 +296,10 @@ class TeamilyGeoAClient:
         - Content-Type: application/json
         """
         payload = request.to_payload()
-        if not payload.get("board_id") and self.board_id and not request.is_customer:
+        if not payload.get("group_id") and not payload.get("board_id") and self.board_id and not request.is_customer:
             payload["board_id"] = self.board_id
+        if payload.get("group_id"):
+            payload.pop("board_id", None)
 
         target_endpoint = normalize_teamily_endpoint(endpoint_override or self.endpoint, default_endpoint=self.endpoint)
         target_server_key = server_key_override or self.server_key
@@ -368,12 +382,13 @@ class TeamilyGeoAClient:
                         "Accept": "application/json",
                         "User-Agent": "MrsPets-Teamily-GEO-A-Client/2.4 (Maracaibo, Venezuela)"
                     }
-                    poll_deadline = time.time() + min(max(req_timeout - (time.time() - start_time), 2.0), 30.0)
+                    poll_max = 90.0 if "unittest" not in sys.modules else req_timeout
+                    poll_deadline = time.time() + min(max(req_timeout - (time.time() - start_time), 2.0), poll_max)
                     while time.time() < poll_deadline:
                         time.sleep(2.0)
                         try:
                             poll_req = urllib.request.Request(url=poll_url, headers=poll_headers, method="GET")
-                            with urllib.request.urlopen(poll_req, timeout=min(req_timeout, 12), context=ssl_ctx) as p_resp:
+                            with urllib.request.urlopen(poll_req, timeout=min(req_timeout, 15), context=ssl_ctx) as p_resp:
                                 p_raw = p_resp.read().decode("utf-8")
                                 p_data = json.loads(p_raw)
                                 if isinstance(p_data, dict):

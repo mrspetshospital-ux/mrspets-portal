@@ -1769,31 +1769,18 @@ class TeamilyExecutiveEngine {
       }
 
       if (res.ok && rawText && rawText.length > 0) {
-        const isCharlyDispatchReceipt = rawText.includes('BLUF:') ||
-                                        rawText.includes('prueba entregada') ||
-                                        rawText.includes('No puedo verificar') ||
-                                        rawText.includes('serverMsgID') ||
-                                        rawText.includes('canalizada por Charly') ||
-                                        rawText.includes('playerType: agent');
-
-        if (agent.id !== 'charlie' && isCharlyDispatchReceipt) {
-          // Teamily solo envió el acuse de recibo de Charly; entregar la respuesta operativa directa del agente
-          replyText = this.synthesizeAgentLiveReply(agent, text, liveContext, res.status);
-        } else {
-          replyText = rawText;
-        }
+        // Respuesta legítima directa del canal Teamily (Charly / Comité Volturi)
+        replyText = rawText;
       } else if (res.ok && data?.status === 'running') {
         const runId = data.run_id || 'en_proceso';
-        replyText = `**Solicitud entregada a Teamily ✅**\n\nCharly canalizó tu instrucción hacia **${agent.name}** en la mesa correspondiente de Teamily (Run: \`${runId}\`).\n\n*Respuesta preliminar:* ${this.synthesizeAgentLiveReply(agent, text, liveContext, res.status)}`;
+        replyText = `**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: \`${runId}\`). Se encuentra procesando con el equipo.`;
+      } else if (res.ok && data?.error) {
+        replyText = `⚠️ **${agent.name} (Canal Teamily):** ${data.error}`;
       } else if (res.ok) {
-        // En caso de que Teamily retorne HTTP 200 sin cuerpo de texto explícito
-        replyText = this.synthesizeAgentLiveReply(agent, text, liveContext, res.status);
+        replyText = `⚠️ **${agent.name} (Canal Teamily):** No se recibió respuesta textual desde Teamily.`;
       } else {
-        // En caso de código de contingencia o de red:
-        // Entregar DIRECTAMENTE la síntesis ejecutiva contextual in-house del agente,
-        // garantizando una experiencia fluida, sin arrojar mensajes crudos de error de red.
-        console.warn('[Teamily Executive Engine] Utilizando síntesis operativa del agente:', agent.name);
-        replyText = this.synthesizeAgentLiveReply(agent, text, liveContext, res.status);
+        const errDetail = (data && (data.error || data.detail || data.message)) || `HTTP ${res.status}`;
+        replyText = `⚠️ **${agent.name} (Canal Teamily):** Error de comunicación con Teamily (${errDetail}).`;
       }
 
       this.directChatHistory[agent.id].push({
@@ -1803,8 +1790,8 @@ class TeamilyExecutiveEngine {
       });
       this.saveChatHistory();
     } catch (err) {
-      console.warn('[Teamily Executive Engine] Contingencia de red, activando síntesis ejecutiva:', err);
-      const replyText = this.synthesizeAgentLiveReply(agent, text, liveContext);
+      console.error('[Teamily Executive Engine] Error de conexión con canal Teamily:', err);
+      const replyText = `⚠️ **Error de conexión:** No fue posible contactar a ${agent.name} en el canal de Teamily (${err.message || 'Error de red'}).`;
       this.directChatHistory[agent.id].push({
         sender: 'agent',
         text: replyText,
@@ -1817,158 +1804,11 @@ class TeamilyExecutiveEngine {
     }
   }
 
-  // Generador de respuestas operativas enriquecidas en vivo
+  // Generador de respuestas operativas en vivo (DESACTIVADO: Sin respuestas automáticas ni simuladas)
   synthesizeAgentLiveReply(agent, userPrompt, context, httpStatus) {
-    const promptLower = userPrompt.toLowerCase();
-    const isCreditLimit = httpStatus === 402;
-    const creditNotice = isCreditLimit ? '\n\n*(Nota: Tu cuenta de Teamily.ai está sin créditos en este momento. Mañana al recargar créditos, responderé además con mi modelo generativo completo)*.' : '';
-
-    if (agent.id === 'manolo') {
-      const activePatients = (window.adminEngine && Array.isArray(window.adminEngine.patientsStatus))
-        ? window.adminEngine.patientsStatus.length
-        : 8;
-      return `👑 **Manolo (Director de Operaciones):**\n\nSaludos. Supervisando directamente las 7 estaciones de Grooming Spa en Av. 2 El Milagro:\n• **Pacientes VIP en atención:** ${activePatients} mascotas en flujo activo.\n• **Regla de Horario:** Estricto despeje de salas antes de las **6:00 p.m.** para garantizar el descanso del personal y la entrega puntual a tutores.\n• **Estaciones:** Hidromasaje, secado silencioso y estilismo funcionando a capacidad nominal.\n\nHe registrado tu instrucción: "${userPrompt}". Operaciones bajo control.${creditNotice}`;
-    }
-
-    if (agent.id === 'pandora') {
-      return `📦 **Pandora (Cadena de Suministro & ROI):**\n\nAuditoría de insumos bajo el filtro KillCritic:\n• **Champús de Ozono e Hidratación:** Stock nominal (autonomía para 22 días).\n• **Filtro KillCritic:** Toda orden de reposición debe superar ROI ≥ 25% y Lead Time ≤ 15 días.\n• **Fármacos Esenciales de Clínica:** 100% de cobertura sin alertas rojas de quiebre.\n\nProcesando tu solicitud: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'vanessa' || agent.id === 'valeria') {
-      const candidates = context.hr_candidates || [];
-
-      // 1. Evaluación específica de María Briceño
-      if (promptLower.includes('maría') || promptLower.includes('maria') || promptLower.includes('briceno') || promptLower.includes('briceño') || (promptLower.includes('evalu') && promptLower.includes('groom'))) {
-        return `💼 **Valeria (RRHH & Talento Mrs. Pets):**\n\n` +
-          `• **Candidata:** **María Briceño** (C.I. V-24.891.204 • Tel: \`+58 414-6123456\`).\n` +
-          `• **Cargo:** Estilista Canino / Groomer Master • **Residencia:** Av. Bella Vista con Calle 72, Tierra Negra.\n` +
-          `• **Experiencia Comprobable:** 4 años en estética avanzada (cortes asiáticos, tijera pura, stripping y ozonoterapia).\n` +
-          `• **Razas Gigantes:** Destreza validada con Golden Retriever, Terranova y Schnauzer Gigante sin recurrir a sedación química.\n` +
-          `• **Horario:** Disponibilidad diurna completa (alineada al cierre de sucursal 6:00 p.m.).\n` +
-          `• **Expediente Digital:** \`CV_Maria_Briceno_Estilista.pdf\` (1.4 MB).\n\n` +
-          `🏆 **Dictamen de Selección:** **PRESELECCIONADA (Calificación: 9.6/10)**.\n` +
-          `*Recomendación de Valeria:* Citarla a prueba práctica de tijera e hidratación de pulpejos en la Estación #2 con el Líder de Piso Manolo.${creditNotice}`;
-      }
-
-      // 2. Evaluación específica del Dr. Leonardo Morales
-      if (promptLower.includes('leonardo') || promptLower.includes('morales') || (promptLower.includes('evalu') && (promptLower.includes('vet') || promptLower.includes('médic') || promptLower.includes('medic')))) {
-        return `🩺 **Valeria (RRHH & Talento Mrs. Pets):**\n\n` +
-          `• **Candidato:** **Dr. Leonardo Alfonso Morales** (C.I. V-20.155.892 • Tel: \`+58 424-6338901\`).\n` +
-          `• **Cargo:** Médico Veterinario de Guardia • **Residencia:** Urb. La Virginia, Calle 65.\n` +
-          `• **Experiencia:** 6 años en medicina interna, anestesiología y emergencias menores en pequeños animales.\n` +
-          `• **Equipamiento Clínico:** Experiencia operando analizadores IDEXX in-house (Catalyst One, ProCyte) y ecografía HD.\n` +
-          `• **Expediente Digital:** \`CV_Dr_Leonardo_Morales_Vet.pdf\` (2.8 MB).\n\n` +
-          `🏆 **Dictamen de Selección:** **EN REVISIÓN AVANZADA (Calificación: 9.3/10)**.\n` +
-          `*Recomendación de Valeria:* Programar entrevista técnica para turno diurno presencial.${creditNotice}`;
-      }
-
-      // 3. Preguntas técnicas de entrevista
-      if (promptLower.includes('pregunta') || promptLower.includes('entrevista') || promptLower.includes('cuestionario')) {
-        return `📋 **Cuestionario Técnico Oficial de Entrevista (Valeria RRHH - Mrs. Pets):**\n\n` +
-          `1️⃣ **Manejo Libre de Estrés:** *¿Qué técnica de contención respetuosa aplicas ante un paciente canino de 40 kg reactivo en la bañera sin recurrir a tranquilizantes?*\n` +
-          `2️⃣ **Estándar de Acabado:** *En Mrs. Pets la hidratación de pulpejos es obligatoria. ¿Cómo garantizas la penetración del bálsamo y el secado sin que el animal lama el producto?*\n` +
-          `3️⃣ **Cortes Especializados:** *¿Cuál es tu método de corte a tijera para la caída de cabeza en Schnauzer y el acabado pompón en Caniche?*\n` +
-          `4️⃣ **Disciplina Operativa:** *Nuestras citas presenciales concluyen estrictamente a las 6:00 p.m. Si un servicio se retrasa a las 5:15 p.m., ¿cómo optimizas el circuito con Manolo?*\n` +
-          `5️⃣ **Filosofía Silent Luxury:** *Nuestro lema es: "Donde recibimos mascotas y despedimos amigos". ¿Cómo comunicas al tutor un nudo severo sin generar fricción?*${creditNotice}`;
-      }
-
-      // 4. Redacción de WhatsApp de citación
-      if (promptLower.includes('whatsapp') || promptLower.includes('citar') || promptLower.includes('mensaje') || promptLower.includes('convocar')) {
-        return `💬 **Plantilla de Citación WhatsApp Oficial (Valeria RRHH):**\n\n` +
-          `\`\`\`text\n` +
-          `¡Hola María! Te saluda Valeria del Departamento de Talento Humano y Selección de Mrs. Pets (Big & Little Dogs, C.A.) 🐾✨.\n\n` +
-          `Hemos revisado tu currículum y tu experiencia en cortes asiáticos y tijera nos ha parecido sobresaliente. Nos encantaría invitarte a una entrevista técnica presencial en nuestra sucursal de la Avenida 2 El Milagro (diagonal a Lago Mall).\n\n` +
-          `📍 Fecha propuesta: Jueves 10:00 AM\n` +
-          `⏱️ Duración estimada: 35 minutos\n` +
-          `📌 Preguntar por: Valeria (Gestión Humana) / Manolo (Operaciones)\n\n` +
-          `Por favor confírmanos si este horario te resulta conveniente. ¡Será un inmenso honor recibirte en casa!\n` +
-          `\`\`\`${creditNotice}`;
-      }
-
-      // 5. Reporte general de CVs
-      if (candidates.length > 0) {
-        const listStr = candidates.map((c, i) => `• **${c.nombre}** (${c.cedula}) - Postulado a: *${c.area_postulacion || c.cargo_deseado}* • Experiencia: *${c.anos_experiencia} años* • Tel: \`${c.telefono}\` • Estado: \`${c.estado_postulacion}\``).join('\n');
-        return `💼 **Reporte de Talento Humano (Valeria RRHH):**\n\nActualmente tenemos **${candidates.length} currículum(s) vitae** registrados en la base de datos de la página web:\n\n${listStr}\n\nPuedes pulsar cualquiera de los botones de arriba para que evalúe a un candidato, te entregue el cuestionario de entrevista o redacte la citación formal.${creditNotice}`;
-      } else {
-        return `💼 **Valeria RRHH:** No tenemos currículums nuevos pendientes en el portal en este instante. El formulario público en la web sigue activo recibiendo postulaciones.${creditNotice}`;
-      }
-    }
-
-    if (agent.id === 'nanami' || agent.id === 'leia') {
-      return `🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\nSaludos directivos. En Mrs. Pets honramos el lema **"We see pets"** y atendemos a nuestros consentidos como príncipes y princesas:\n• **Asistencia Ejecutiva al CEO:** Gestión directa de agenda, seguimiento y reportes estratégicos para Dalybell.\n• **Coordinación Transversal:** Alineada con las gerencias del ecosistema Teamily.\n• **Cultura & Silent Luxury:** Bienestar integral para príncipes y princesas sin ruidos estridentes.\n\nHe recibido tu instrucción: "${userPrompt}". BLUF: Procesada y en curso.${creditNotice}`;
-    }
-
-    if (agent.id === 'sebastian') {
-      return `📈 **Sebastian (Gerencia de Ventas):**\n\nReporte comercial de membresías y estética canina:\n• **Membresías Anuales Spa:** 14 nuevas suscripciones cerradas esta semana.\n• **Ticket Promedio:** \$42.50 USD por tutor (incrementado por up-selling de hidratación y ozonoterapia).\n• **Carritos de Citas Web:** Tasa de conversión del 78.4% tras recordatorios de WhatsApp.\n\nDirectriz procesada: "${userPrompt}". Enfocados en superar la meta de ingresos.${creditNotice}`;
-    }
-
-    if (agent.id === 'rocky') {
-      return `🚚 **Rocky (Supply Chain Strategist):**\n\nMonitoreo de cadena de suministros y abastecimiento:\n• **Ruta Maracaibo - Caracas:** En tránsito lote de filtros y bombas de repuesto para MisiPet (Lead time: 4 días hábiles).\n• **Insumos Quirúrgicos e IDEXX:** Stock regulatorio cubierto para los próximos 45 días.\n• **Despacho Don Bosco:** Rutas programadas sin cuellos de botella.\n\nEstrategia logística en marcha para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'mrspetshospital') {
-      return `🏥 **Mrs. Pets Hospital (Lead Gen & Ofertas Clínicas):**\n\nEstrategia de demanda veterinaria:\n• **Campaña Preventiva:** Paquete "Chequeo Vital Integral" (Ecografía + Hematología IDEXX + Consulta).\n• **Captación de Pacientes:** 26 nuevos tutores agendados para consulta médica preventiva.\n• **Cirugías Programadas:** Quirófano con ocupación al 85% para esterilizaciones y limpiezas dentales ultrasónicas.\n\nOferta médica formulada: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'ai_recruiter') {
-      return `🤖 **AI Recruiter (Screening Automatizado):**\n\nProcesamiento algorítmico de postulaciones entrantes:\n• **Screening de CVs:** 100% de expedientes analizados y clasificados por score técnico.\n• **Perfil Destacado:** María Briceño (Score 9.6/10) transferida al expediente prioritario de Valeria.\n• **Filtro de Seguridad:** Validación de referencias laborales y antecedentes en clínicas de la región.\n\nFiltro inteligente aplicado para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'hospitality') {
-      return `🏨 **Hospitality Guest Services (Hotel & Guardería):**\n\nReporte de bienestar para huéspedes consentidos:\n• **Ocupación de Suites VIP:** 9 de 12 suites ocupadas con climatización a 22°C.\n• **Monitoreo 24/7:** Cámaras activas, paseos recreativos en grama sintética y reportes fotográficos enviados a tutores.\n• **Guardería Diurna:** Socialización libre de estrés supervisada por etólogos.\n\nServicio de hospitalidad atendiendo: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'customer_service') {
-      return `💬 **Customer Service (Atención & Post-Venta):**\n\nMétricas de satisfacción y seguimiento:\n• **Índice CSAT:** 98.4% de satisfacción positiva en servicios de grooming y spa.\n• **Seguimiento Post-Atención:** 100% de tutores contactados a las 24 horas del baño para validar la adaptación de su consentido.\n• **Incidencias:** Cero reclamaciones abiertas en sucursal.\n\nCompromiso de servicio registrado: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'training_designer') {
-      return `🎓 **Corporate Training Designer (Protocolos & Capacitación):**\n\nProgramas de inducción y excelencia operativa:\n• **Módulo Activo:** "Protocolo Silent Luxury y Manejo Canino de Bajo Estrés" (100% del personal certificado).\n• **Próxima Sesión:** Estandarización de cortes a tijera pura bajo normas internacionales.\n• **Auditoría ISO 9001:** Checklists de apertura y cierre de estaciones completados con rigor.\n\nContenido formativo preparado para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'mauro_che') {
-      return `🎨 **Mauro Che (Director Creativo & Publicista):**\n\nStorytelling y conceptos de alto impacto:\n• **Campaña en Producción:** "Más que un baño, un tributo al amor de tu mejor amigo".\n• **Formatos:** Reels estéticos con tomas macro de agua ozonizada, tijera en cámara lenta y relax total.\n• **Copy:** "En Mrs. Pets no bañamos perros, consentimos a los reyes de la casa. Agenda su cita de Silent Luxury hoy".\n\nPropuesta creativa generada para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'super_agent') {
-      return `⚡ **Super Agent (Auditor Transversal & Maestro de Inteligencia):**\n\nSíntesis ejecutiva 360° del ecosistema Mrs. Pets:\n• **Operaciones (Manolo & Mike):** 7 estaciones nominales, autonomía hídrica > 200h, planta Cummins en ATS standby.\n• **Finanzas & Tesorería (Charly):** Conciliación al 100% bajo estricta Tasa Oficial BCV.\n• **Comercial & Marketing (O'Neil, Sebastian, Mauro):** Flujo de reservas sostenido y conversión > 75%.\n• **Talento & Selección (Valeria & AI Recruiter):** Expedientes de candidatos filtrados y listos para contratación.\n\nResolución multidisciplinaria ejecutada para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'oneal_mercadeo') {
-      return `🎯 **O'Neil (Mercadotecnia & Publicidad):**\n\nEstrategia de mercadotecnia local en Maracaibo:\n• **Pauta Geocercada:** Zona norte, Bella Vista, 5 de Julio y El Milagro con retorno publicitario 4.1x.\n• **Promoción de Cierre de Mes:** Hidratación de pulpejos bonificada en reservas de lunes a miércoles.\n• **Telemercadeo:** Seguimiento telefónico a clientes inactivos con más de 30 días sin visita.\n\nPlan de mercadotecnia activado para: "${userPrompt}".${creditNotice}`;
-    }
-
-    if (agent.id === 'oneal') {
-      if (promptLower.includes('reserva') || promptLower.includes('cita') || promptLower.includes('paciente') || promptLower.includes('calle')) {
-        const reservas = context.reservas_activas || [];
-        const sample = reservas.slice(0, 5).map(r => `• 🐾 **${r.mascota}** (Tutor: *${r.tutor}*) - Área: *${r.area}* [${r.estado}]`).join('\n');
-        return `📢 **O'Neal (Telemercadeo & Operaciones):**\n\nConfirmando desde la base de datos de la web para tu consulta (incluso si estás en la calle):\n• **Total de reservaciones de hoy:** ${context.total_reservas_hoy || reservas.length}\n\n${sample}\n\nTodas las citas están calendarizadas para finalizar su atención antes del cierre estricto de las 6:00 p.m.${creditNotice}`;
-      }
-
-      if (promptLower.includes('mantenimiento') || promptLower.includes('modific') || promptLower.includes('equipo')) {
-        const mant = context.mantenimientos_pendientes || {};
-        return `🛠️ **O'Neal (Control de Mantenimientos):**\n\nEstado operativo de máquinas y sucursal Don Bosco:\n• 🟡 **Mantenimientos Preventivos:** ${mant.amarillo_preventivo || 0}\n• 🔴 **Atención Inmediata:** ${mant.rojo_critico || 0}\n• 🟢 **Operatividad Nominal:** ${mant.verde_nominal || 14} activos al 100%.\n\nCualquier cambio se sincroniza directamente con Mike y el tablero de MisiPet.${creditNotice}`;
-      }
-
-      const camp = context.campanas_telemercadeo || {};
-      return `📢 **O'Neal (Telemercadeo):**\n\nNuestras campañas activas en redes sociales:\n• **Canal:** ${camp.canal_principal}\n• **Alcance:** ${camp.alcance_total_semanal}\n• **ROAS:** ${camp.roas_promedio}\n• **Campaña:** "${camp.campana_activa}".\n\nPodemos alimentar el centro de MPF con los resultados de conversión para optimizar la pauta digital.${creditNotice}`;
-    }
-
-    if (agent.id === 'mike') {
-      const infra = context.telemetria_infraestructura || {};
-      return `🛠️ **Mike Teamily (Infraestructura IoT):**\n\nReporte de telemetría en tiempo real:\n• 💧 **Tanques de Agua Don Bosco:** ${infra.tanques_agua_activos || 4} tanques activos • **${(infra.agua_total_litros || 18400).toLocaleString()} Litros** disponibles (Autonomía CDT: ~${infra.autonomia_hidrica_horas || '230.4'} horas).\n• ⚡ **Planta Cummins 65 kVA:** ${infra.planta_cummins_combustible_lts || 210} Litros de diésel • **${infra.planta_cummins_autonomia_horas || 38.2} Horas** de generación continua • ${infra.planta_cummins_ats_status || 'ATS Listo'}.${creditNotice}`;
-    }
-
-    if (agent.id === 'charlie') {
-      const fin = context.finanzas || {};
-      return `⚖️ **Charlie Finance:**\n\nTasa Oficial del Banco Central de Venezuela (BCV): **${fin.tasa_oficial_bcv || '887.30'} VES/USD** • IVA SENIAT: **16.0%**.\n\nTodas las transacciones en mostrador POS se concilian bajo tasa oficial única sin distorsión.${creditNotice}`;
-    }
-
-    if (agent.id === 'margaret' || (agent.name && agent.name.toLowerCase().includes('margaret')) || (agent.role && (agent.role.includes('ATENCIÓN') || agent.role.includes('ATENCION')))) {
-      return `👩‍💼 **${agent.name} (${agent.role}):**\n\n¡Un gusto saludarle! En el departamento de Atención al Cliente de Mrs. Pets (Av. 2 El Milagro):\n• **Recepción & Citas:** Asistencia personalizada para agendamiento en nuestras 7 estaciones de Grooming Spa y consultas médicas.\n• **Experiencia del Tutor:** Garantizamos un ambiente libre de ruidos, entrega puntual y bienestar absoluto para consentir a su mascota.\n• **Seguimiento Personalizado:** Contacto post-servicio para verificar el confort del consentido.\n\nHe recibido su solicitud: "${userPrompt}". Estoy a su completa disposición.${creditNotice}`;
-    }
-
-    return `🤖 **${agent.name}:** Recibido tu mensaje: "${userPrompt}". Estoy sincronizado con tu plataforma Mrs. Pets y listo para ejecutar las directrices.${creditNotice}`;
+    // Respuestas automáticas y sintéticas de la página DESACTIVADAS por directriz del Comité Volturi.
+    // La comunicación con el Comité Volturi opera exclusivamente a través del canal real de Teamily.
+    return `⚠️ Las respuestas automáticas de la página han sido desactivadas. Toda respuesta debe provenir directamente del canal oficial de Teamily.`;
   }
 
   // --- MODAL DE CONFIGURACIÓN DIRECTA DE AGENTE (CRUD) ---
