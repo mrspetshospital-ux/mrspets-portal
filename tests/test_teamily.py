@@ -85,27 +85,25 @@ class TestTeamilyAndSubagents(unittest.TestCase):
         )
         p = req.to_payload()
         self.assertEqual(p["input"], "buenas noches")
-        self.assertEqual(p["message"], "buenas noches")
-        self.assertEqual(p["prompt"], "buenas noches")
         self.assertEqual(p["board_id"], "5803df5a-7127-4d28-b97c-5c840d47cdc7")
 
     def test_06_endpoint_normalization_v1_chat(self):
-        """Verifica que el nuevo endpoint https://teamily.ai/v1/chat se preserve sin añadir /responses."""
+        """Verifica que el endpoint conceptual https://teamily.ai/v1/chat se canalice al endpoint operativo del agente de Charly."""
         self.assertEqual(
             normalize_teamily_endpoint("https://teamily.ai/v1/chat"),
-            "https://teamily.ai/v1/chat"
+            "https://teamily.ai/v1/agents/geo-a/responses"
         )
         self.assertEqual(
             normalize_teamily_endpoint("https://teamily.ai/v1/chat/"),
-            "https://teamily.ai/v1/chat"
+            "https://teamily.ai/v1/agents/geo-a/responses"
         )
         self.assertEqual(
             normalize_teamily_endpoint(None),
-            "https://teamily.ai/v1/chat"
+            "https://teamily.ai/v1/agents/geo-a/responses"
         )
         self.assertEqual(
-            normalize_teamily_endpoint(""),
-            "https://teamily.ai/v1/chat"
+            normalize_teamily_endpoint("https://teamily.ai/v1/agents/geo-a/responses"),
+            "https://teamily.ai/v1/agents/geo-a/responses"
         )
 
 if __name__ == "__main__":

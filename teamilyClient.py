@@ -56,7 +56,7 @@ DEFAULT_ENDPOINT = (
     or os.environ.get("TEAMILY_AGENT_ENDPOINT")
     or os.environ.get("TEAMLY_AGENT_ENDPOINT")
     or os.environ.get("TEAMILY_ENDPOINT_URL")
-    or "https://teamily.ai/v1/chat"
+    or "https://teamily.ai/v1/agents/geo-a/responses"
 )
 DEFAULT_DOCS_URL = "https://teamily.ai/v1"
 
@@ -87,17 +87,23 @@ DEFAULT_SERVER_KEY = get_default_server_key()
 def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT) -> str:
     """
     Normaliza cualquier URL ingresada por el usuario hacia la URL canónica de API REST POST.
-    - Si el endpoint es https://teamily.ai/v1/chat (o termina en /v1/chat o /chat), se respeta intacto.
+    - Si el endpoint es https://teamily.ai/v1/chat (o termina en /v1/chat o /chat), se canaliza
+      automáticamente hacia el agente de Charly (https://teamily.ai/v1/agents/geo-a/responses)
+      para evitar el HTTP 404 que retorna Teamily.
     - Si el endpoint ya termina en /responses, se respeta intacto.
     - Si el usuario pegó la URL de navegación web del navegador (ej: https://teamily.ai/agent/<slug_o_uuid>), se normaliza.
     """
-    if not endpoint:
-        return default_endpoint
-    ep = str(endpoint).strip()
+    ep = str(endpoint).strip() if endpoint else str(default_endpoint).strip()
+    if not ep or ep == "None":
+        ep = "https://teamily.ai/v1/agents/geo-a/responses"
 
-    # Si es el endpoint canónico de chat o termina en /chat
+    # Si el usuario o el sistema ingresó https://teamily.ai/v1/chat (o termina en /v1/chat),
+    # Teamily responde HTTP 404 al carecer de esa ruta exacta. Se canaliza automáticamente
+    # al endpoint operativo del agente de Charly (https://teamily.ai/v1/agents/geo-a/responses).
     if ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat"):
-        return ep.rstrip("/")
+        normalized = "https://teamily.ai/v1/agents/geo-a/responses"
+        print(f"[TEAMILEY URL NORMALIZATION] Endpoint '{ep}' canalizado al agente de Charly: '{normalized}'")
+        return normalized
 
     # Si ya termina en /responses
     if ep.rstrip("/").endswith("/responses"):
@@ -171,8 +177,6 @@ class TeamilyGeoARequest:
 
         payload: Dict[str, Any] = {
             "input": self.input,
-            "message": self.input,
-            "prompt": self.input,
             "thread": thread_payload,
             "wait": self.wait
         }
