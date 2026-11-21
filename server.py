@@ -1987,7 +1987,7 @@ async def war_room_pause_toggle(request: Request):
 async def war_room_backup_toggle(request: Request):
     """
     Alterna o establece el modo de contingencia:
-    - Vía Directa (use_make_backup=False): El portal habla directo con Gemini 2.5 Flash y cada nodo.
+    - Vía Directa (use_make_backup=False): El portal habla directo con Gemini 3.8 Flash y cada nodo.
     - Respaldo Make.com (use_make_backup=True): El portal usa Make como paracaídas de contingencia.
     """
     if not war_room_engine:
@@ -2273,9 +2273,11 @@ def _call_gemini_for_leia_engine(
         or os.environ.get("GOOGLE_API_KEY", "").strip()
         or _get_default_gemini_key()
     )
-    primary = requested_model or "gemini-flash-latest"
+    primary = requested_model or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
+    if "2.5" in str(primary):
+        primary = "gemini-3.8-flash"
     candidate_models = [primary]
-    for m in ["gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-3.1-pro-preview"]:
+    for m in ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.1-pro-preview"]:
         if m not in candidate_models:
             candidate_models.append(m)
 
@@ -7245,9 +7247,9 @@ HEALTH_CONNECTIONS_CATALOG = [
     },
     {
         "id": "vertex-gemini-leia",
-        "name": "Vertex AI / Google Gemini 2.5 (Leia Concierge Assistant)",
+        "name": "Vertex AI / Google Gemini 3.8 (Leia Concierge Assistant)",
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash",
         "status_level": "healthy",
         "has_token": True,
         "latency_ms": 28,

@@ -666,6 +666,77 @@ class TestWarRoomEngine(unittest.TestCase):
                     break
         self.assertTrue(found_teamily_msg, "El mensaje de channel_super_agent DEBE estar presente en el contexto de Gemini.")
 
+    @patch("teamilyClient.TeamilyGeoAClient.send_message")
+    def test_18_teamily_channel_independence_calls_teamily_url_never_gemini(self, mock_send_message):
+        """
+        Verifica que al solicitar a Teamily, se invoque estrictamente al cliente de Teamily
+        hacia su URL canónica y NUNCA a Gemini. Independencia estricta de canales.
+        """
+        from teamilyClient import TeamilyGeoAResponse
+        mock_send_message.return_value = TeamilyGeoAResponse(
+            status_code=200,
+            success=True,
+            response_text="Hola, soy Charly desde Teamily GEO-A en vivo.",
+            latency_ms=145.0,
+            error=None
+        )
+        war_room_engine.teamily_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.node_configs["teamily_server_key"] = "ty_sec_test_valid_key"
+
+        res = war_room_engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Charly, reporte de turnos de peluquería en Don Bosco",
+            target_node_id="teamly",
+            channel_id="channel_mrspets",
+            sender_id="mrspets"
+        )
+
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(len(res["responses"]), 1)
+        resp = res["responses"][0]
+        self.assertEqual(resp["sender_id"], "super_agent")
+        self.assertEqual(resp["channel_id"], "channel_super_agent")
+        self.assertEqual(resp["model_used"], "teamily-geo-a")
+        self.assertEqual(resp["message"], "Hola, soy Charly desde Teamily GEO-A en vivo.")
+        self.assertTrue(mock_send_message.called, "Debe llamar directamente a la API de Teamily hacia su URL")
+
+    def test_19_teamily_unverified_never_falls_back_to_gemini(self):
+        """
+        Garantiza la premisa de Canales Independientes: Si Teamily no responde,
+        la respuesta proviene de Teamily (canal NO DISPONIBLE) y NUNCA se desvía a Gemini.
+        """
+        war_room_engine.teamily_paused = False
+        war_room_engine.gemini_paused = False
+        war_room_engine.node_configs["teamily_server_key"] = ""
+        old_env_key = os.environ.pop("TEAMILEY_SERVER_KEY", None)
+        old_env_key2 = os.environ.pop("TEAMILY_SERVER_KEY", None)
+
+        try:
+            res = war_room_engine.process_chat(
+                sender="Mrs. PETS CORP",
+                role="Dirección General",
+                message="Consulta cuando Teamily no tiene clave",
+                target_node_id="teamly",
+                channel_id="channel_mrspets",
+                sender_id="mrspets"
+            )
+            self.assertEqual(res["status"], "success")
+            self.assertEqual(len(res["responses"]), 1)
+            resp = res["responses"][0]
+            self.assertEqual(resp["sender_id"], "super_agent")
+            self.assertEqual(resp["channel_id"], "channel_super_agent")
+            self.assertFalse(resp["verified"])
+            self.assertIn("canal NO DISPONIBLE", resp["message"])
+            self.assertNotIn("Gemini", resp["message"])
+            self.assertNotEqual(resp["node_id"], "gemini")
+        finally:
+            if old_env_key:
+                os.environ["TEAMILEY_SERVER_KEY"] = old_env_key
+            if old_env_key2:
+                os.environ["TEAMILY_SERVER_KEY"] = old_env_key2
+
 
 if __name__ == "__main__":
     unittest.main()

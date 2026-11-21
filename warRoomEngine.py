@@ -431,7 +431,7 @@ class WarRoomEngine:
         self.sheets_paused: bool = False     # Sincronización a Google Sheets activa
         self.alerts_paused: bool = False     # Alarmas automáticas
         self.make_paused: bool = True        # Escenario Make en pausa temporal por orden de Dirección General
-        self.use_make_backup: bool = False   # Modo Paracaídas Make (False = Vía Directa Gemini 2.5 Flash, True = Respaldo Make.com)
+        self.use_make_backup: bool = False   # Modo Paracaídas Make (False = Vía Directa Gemini 3.8 Flash, True = Respaldo Make.com)
 
         # Inicializar nodos del sistema en Cuarto de Guerra (Volturi excluido: es canal bilateral)
         self.nodes = {
@@ -1289,11 +1289,16 @@ class WarRoomEngine:
             or _get_default_gemini_key()
         )
 
-        primary_model = self.node_configs.get("gemini_model") or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
+        env_model = os.environ.get("GEMINI_MODEL", "").strip()
+        if not env_model or "2.5" in env_model:
+            env_model = "gemini-3.8-flash"
+        primary_model = self.node_configs.get("gemini_model") or env_model or "gemini-3.8-flash"
+        if "2.5" in str(primary_model):
+            primary_model = "gemini-3.8-flash"
 
         # Modelo prioritario Gemini 3.8 con fallbacks resilientes
         candidate_models = [primary_model]
-        for fallback in ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]:
+        for fallback in ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-flash-latest"]:
             if fallback not in candidate_models:
                 candidate_models.append(fallback)
 
@@ -1748,7 +1753,8 @@ class WarRoomEngine:
             "timestamp": now_iso,
             "node_id": "teamly",
             "verified": verified,
-            "latency_ms": latency_ms
+            "latency_ms": latency_ms,
+            "model_used": "teamily-geo-a"
         }
         return sa_msg
 
@@ -2095,24 +2101,15 @@ class WarRoomEngine:
                         "channel_id": "channel_super_agent",
                         "target_node_id": "channel_mrspets",
                         "verified": False,
-                        "latency_ms": None
+                        "latency_ms": None,
+                        "model_used": "teamily-geo-a"
                     }
                     self.chat_history.append(paused_eval)
                     responses.append(paused_eval)
                 else:
-                    has_teamily_key = bool(
-                        self.node_configs.get("teamily_server_key")
-                        or os.environ.get("TEAMILEY_SERVER_KEY")
-                        or os.environ.get("TEAMILY_SERVER_KEY")
-                    )
-                    use_direct_gemini = os.environ.get("WAR_ROOM_TEAMILY_BACKEND", "").lower() == "gemini"
-                    if has_teamily_key and not use_direct_gemini:
-                        sa_eval = self.generate_super_agent_evaluation(message)
-                        if not sa_eval.get("verified"):
-                            sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
-                    else:
-                        sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
-
+                    # CANAL INDEPENDIENTE REAL: Disparo directo al URL canónico de Teamily
+                    # Nadie responde ni solapa a Teamily; habla Charly desde su agente en vivo hacia su URL.
+                    sa_eval = self.generate_super_agent_evaluation(message)
                     self.chat_history.append(sa_eval)
                     responses.append(sa_eval)
 
@@ -2170,9 +2167,10 @@ class WarRoomEngine:
 
             # CASO 6: Sala Común / Deliberación General (todos los agentes activos deliberan)
             else:
-                sa_eval = self.generate_direct_node_evaluation("teamly", message, sender=sender, override_api_key=override_api_key)
-                self.chat_history.append(sa_eval)
-                responses.append(sa_eval)
+                if not getattr(self, "teamily_paused", False):
+                    sa_eval = self.generate_super_agent_evaluation(message)
+                    self.chat_history.append(sa_eval)
+                    responses.append(sa_eval)
 
                 if not getattr(self, "gemini_paused", False):
                     ag_eval = self.generate_direct_node_evaluation("antigravity", message, sender=sender, override_api_key=override_api_key)
