@@ -873,9 +873,7 @@
                         approval_mode: activeApprovalMode
                     }
                 };
-                if (isStaff) {
-                    payload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
-                }
+                payload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
 
                 const res = await fetch('/api/v1/avatar/chat', {
                     method: 'POST',

@@ -16,6 +16,7 @@ Variables de entorno (ver .env.example):
     ADMIN_USER / ADMIN_PASSWORD   primer usuario staff (se crea al arrancar)
 """
 import os
+import sys
 import re
 import hmac
 import secrets
@@ -2533,11 +2534,12 @@ async def _execute_teamily_channel(
         if f"@{MARGARETTE_TEAMILY_USER_ID}" not in teamily_input:
             teamily_input = f"[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID}]:\n{teamily_input}"
 
+        target_board = board_id or getattr(teamily_geo_a_client, "board_id", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
         req = TeamilyGeoARequest(
             input=teamily_input,
-            board_id=board_id if not is_customer else None,
+            board_id=target_board,
             session_id=session_id,
-            is_customer=is_customer,
+            is_customer=False,
             timeout=timeout_sec
         )
         res = await asyncio.wait_for(
@@ -7221,7 +7223,7 @@ async def teamily_chat(request: Request):
             timeout_sec=timeout_sec,
             history=body.get("history") or [],
             requested_agent="margaret",
-            board_id=body.get("board_id")
+            board_id=body.get("board_id") or os.environ.get("TEAMILY_BOARD_ID", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
         )
 
         res_text = orch["reply"]
