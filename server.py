@@ -7186,42 +7186,38 @@ async def teamily_orchestrate(request: Request):
         except Exception:
             pass
 
-    # Generar deliberación de los miembros del Comité Volturi vía página (centralita) o Gemini
-    manolo_rec = centralita_router.synthesize_agent_response("manolo", "Manolo", query, {}) if centralita_router else (
-        f"Supervisión activa de Grooming Spa 7 Estaciones en Av. 2 El Milagro. Control de flujo y cierre presencial estricto a las 6:00 p.m. garantizado para: '{query[:80]}'."
-    )
-    pandora_rec = centralita_router.synthesize_agent_response("pandora", "Pandora", query, {}) if centralita_router else (
-        f"Órdenes de reposición e insumos de ozono/champús pH neutro auditadas bajo filtro KillCritic (ROI >= 25% y Lead Time <= 15 días) para: '{query[:80]}'."
-    )
-    charlie_rec = centralita_router.synthesize_agent_response("charlie", "Charly", query, {}) if centralita_router else (
-        f"Auditoría de tesorería conciliada bajo Tasa Oficial BCV ({eff_rate:,.2f} Bs/USD) e IVA 16% SENIAT para: '{query[:80]}'."
-    )
-    valeria_rec = centralita_router.synthesize_agent_response("valeria", "Valeria", query, {}) if centralita_router else (
-        f"Expedientes de talento y postulaciones web (groomers y médicos veterinarios) clasificados y disponibles para: '{query[:80]}'."
-    )
-    oneil_rec = centralita_router.synthesize_agent_response("oneil", "O'Neil", query, {}) if centralita_router else (
-        f"Campañas geocercadas en TikTok/Meta Ads activas para Maracaibo y Modelo de Aprendizaje QC Grooming al 92.3% para: '{query[:80]}'."
-    )
-    mike_rec = centralita_router.synthesize_agent_response("mike", "Mike", query, {}) if centralita_router else (
-        f"Batería de tanques Don Bosco ({total_liters:,.0f} L) y Planta Cummins 65 kVA en estado nominal con ATS operativo para: '{query[:80]}'."
-    )
+    # -----------------------------------------------------------------
+    # DELIBERACIÓN COMITÉ VOLTURI: CANAL EXCLUSIVO TEAMILY
+    # Respuestas automáticas y sintéticas de la página DESACTIVADAS.
+    # Cero generación por Gemini, cero simulación de tasas o finanzas.
+    # -----------------------------------------------------------------
+    live_teamly_reply = ""
+    teamly_dispatched = False
+    if teamily_geo_a_client and TeamilyGeoARequest and query:
+        try:
+            cabal_group = os.environ.get("TEAMILY_CABAL_GROUP_ID") or "524471990"
+            t_req = TeamilyGeoARequest(
+                input=f"Charly, convoca deliberación del Comité Volturi para la directriz: {query}",
+                group_id=cabal_group,
+                wait=True,
+                timeout=30.0
+            )
+            t_resp = teamily_geo_a_client.send_message(t_req)
+            if t_resp.success and t_resp.response_text:
+                live_teamly_reply = t_resp.response_text.strip()
+                teamly_dispatched = True
+        except Exception as _e_t:
+            log.warning("Error despachando deliberación a Teamily: %s", _e_t)
 
-    # Deliberación ejecutiva canalizada a Teamily (sin generación sintética por Gemini)
-    exec_summary = (
-        f"El Comité Volturi de Mrs. Pets evaluó la directriz: '{query}'. "
-        f"Coordinación ejecutiva enlazada vía Teamily con Charly (GEO A & Finanzas), Manolo, Pandora, Valeria y Mike."
-    )
+    no_resp_msg = "⚠️ Sin respuesta de Teamily."
+    manolo_rec = live_teamly_reply if ("manolo" in live_teamly_reply.lower()) else no_resp_msg
+    pandora_rec = live_teamly_reply if ("pandora" in live_teamly_reply.lower()) else no_resp_msg
+    charlie_rec = live_teamly_reply if ("charl" in live_teamly_reply.lower() or "finanza" in live_teamly_reply.lower()) else no_resp_msg
+    valeria_rec = live_teamly_reply if ("valeria" in live_teamly_reply.lower() or "rrhh" in live_teamly_reply.lower()) else no_resp_msg
+    oneil_rec = live_teamly_reply if ("oneil" in live_teamly_reply.lower() or "o'neil" in live_teamly_reply.lower() or "mercadeo" in live_teamly_reply.lower()) else no_resp_msg
+    mike_rec = live_teamly_reply if ("mike" in live_teamly_reply.lower() or "infraestructura" in live_teamly_reply.lower()) else no_resp_msg
 
-    # Despacho en segundo plano a Teamily si está disponible
-    if teamily_geo_a_client and TeamilyGeoARequest:
-        def _bg_notify():
-            try:
-                cabal_group = os.environ.get("TEAMILY_CABAL_GROUP_ID") or "524471990"
-                req = TeamilyGeoARequest(input=f"[RESOLUCIÓN COMITÉ VOLTURI]: {query}", group_id=cabal_group, wait=False)
-                teamily_geo_a_client.send_message(req)
-            except Exception:
-                pass
-        threading.Thread(target=_bg_notify, daemon=True).start()
+    exec_summary = live_teamly_reply if live_teamly_reply else "⚠️ Sin respuesta de Teamily para la directriz solicitada."
 
     res_id = f"VOLTURI-RES-{secrets.token_hex(3).upper()}"
     return {

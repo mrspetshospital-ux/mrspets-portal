@@ -119,6 +119,24 @@ class TestVolturiCanalExclusivoTeamily(unittest.TestCase):
         self.assertNotIn("make.com", send_chat_block.lower())
         self.assertNotIn("hook.us", send_chat_block.lower())
 
+    def test_06_centralita_router_volturi_no_canned_templates(self):
+        """Verifica que centralitaRouter no contenga respuestas sintéticas para los miembros del Comité Volturi."""
+        from centralitaRouter import centralita_router
+        for slug in ["charlie", "charly", "manolo", "valeria", "pandora", "mike", "oneil", "sebastian"]:
+            resp = centralita_router.synthesize_agent_response(slug, slug, "Auditoría", {})
+            self.assertIn("⚠️ Sin respuesta de Teamily", resp, f"El agente {slug} no debe recibir respuesta sintética prefabricada.")
+            self.assertNotIn("Tasa Oficial BCV Única", resp)
+            self.assertNotIn("Todas las transacciones en mostrador POS", resp)
+
+    def test_07_teamily_orchestrate_no_synthesized_canned_responses(self):
+        """Verifica que en server.py teamily_orchestrate no genere respuestas sintéticas."""
+        server_path = os.path.join(os.path.dirname(__file__), "..", "server.py")
+        with open(server_path, "r", encoding="utf-8") as f:
+            src = f.read()
+
+        orchestrate_block = src.split("async def teamily_orchestrate", 1)[1].split("def agent_health_check", 1)[0]
+        self.assertNotIn("centralita_router.synthesize_agent_response", orchestrate_block)
+
 
 if __name__ == "__main__":
     unittest.main()

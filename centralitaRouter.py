@@ -387,93 +387,16 @@ class CentralitaRouter:
                 f"Es un inmenso placer recibirte en nuestra plataforma. Estoy a tu entera disposición para consentir a tu mascota, coordinar citas de **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**, o comunicarte con la Administración. ¿Cómo podemos consentir a tu consentido(a) hoy? ✨🐾"
             )
 
-        # 3. MANOLO
-        if slug == "manolo":
-            return (
-                f"👑 **Manolo (Gerente General de Administración y Operaciones):**\n\n"
-                f"Supervisando las 7 estaciones de Grooming Spa en Av. 2 El Milagro:\n"
-                f"• **Regla de Horario:** Cierre presencial estricto a las **6:00 p.m.** para garantizar la entrega puntual y el descanso del personal.\n"
-                f"• **Protocolo Silent Luxury:** Hidratación de pulpejos y aromaterapia botánica activas.\n\n"
-                f"Instrucción procesada: *\"{inp}\"*. Operaciones de piso bajo control."
-            )
-
-        # 4. CHARLIE
-        if slug == "charlie":
-            if any(w in inp_lower for w in ["reportas", "a quién reportas", "a quien reportas", "tu jefe"]):
-                return (
-                    f"⚖️ **Charly (Asistente Ejecutivo del GEO):**\n\n"
-                    f"Reporto directamente al GEO, Harryt Luzardo. Estoy a cargo de operaciones, tecnología, finanzas, tesorería bajo tasa oficial BCV y auditoría fiscal SENIAT."
-                )
-
-            return (
-                f"⚖️ **Charly (Asistente Ejecutivo del GEO & Auditoría Fiscal):**\n\n"
-                f"Reporte de tesorería y finanzas:\n"
-                f"• **Tasa Oficial BCV Única:** **{bcv_rate:.2f} VES/USD** aplicada en todos los puntos de venta POS.\n"
-                f"• **Libro Fiscal SENIAT:** IVA 16.0% desglosado rigurosamente.\n\n"
-                f"Directriz procesada: *\"{inp}\"*. Finanzas conciliadas."
-            )
-
-        # 5. VALERIA
-        if slug == "valeria":
-            if any(w in inp_lower for w in ["maría", "maria", "briceño", "briceno", "groomer"]):
-                return (
-                    f"💼 **Valeria (RRHH & Talento Mrs. Pets):**\n\n"
-                    f"• **Candidata Evaluada:** **María Briceño** (C.I. V-24.891.204 • Tel: `+58 414-6123456`).\n"
-                    f"• **Cargo:** Estilista Canino Master • **Experiencia:** 4 años en tijera pura, cortes asiáticos y ozonoterapia.\n"
-                    f"• **Calificación:** **9.6/10 (Preseleccionada)**. Conforme con horario de cierre 6:00 p.m.\n"
-                    f"• **Próximo Paso:** Convocatoria a prueba técnica en Estación #2 con Manolo."
-                )
-            return (
-                f"💼 **Valeria (RRHH & Talento Mrs. Pets):**\n\n"
-                f"Recepción de requerimiento confirmada: *\"{inp}\"*.\n"
-                f"Expedientes de postulantes web clasificados y canalizados directamente con la Presidencia."
-            )
-
-        # 6. PANDORA
-        if slug == "pandora":
-            return (
-                f"📦 **Pandora (Cadena de Suministro & Filtro KillCritic):**\n\n"
-                f"• **Filtro KillCritic:** Toda orden auditada bajo umbrales de ROI ≥ 25% y Lead Time ≤ 15 días.\n"
-                f"• **Stock de Champús y Pulpejos:** Cobertura garantizada para 22 días.\n\n"
-                f"Requerimiento registrado: *\"{inp}\"*. Abastecimiento asegurado."
-            )
-
-        # 7. MIKE
-        if slug == "mike":
-            return (
-                f"🛠️ **Mike (Gerente de Operaciones & IoT):**\n\n"
-                f"• 💧 **Tanques Don Bosco:** 18.400 Litros de agua almacenados (~230h de autonomía).\n"
-                f"• ⚡ **Planta Cummins 65 kVA:** 210 Litros de diésel con switch ATS operativo.\n\n"
-                f"Instrucción procesada: *\"{inp}\"*. Infraestructura nominal."
-            )
-
-        # 8. O'NEIL
-        if slug == "oneil":
-            perf_text = ""
-            if qc_learning_engine:
-                st = qc_learning_engine.get_full_state()
-                gm = st.get("global_metrics", {})
-                acc = gm.get("accuracy_rate", 92.3)
-                streak = gm.get("consecutive_approvals", 15)
-                mode = gm.get("autonomy_global_mode", "CONTROLADO")
-                perf_text = f"• **Control de Calidad QC Grooming:** Precisión: {acc}% ({streak} directas consecutivas) • Modo: {mode}.\n"
-
-            return (
-                f"📢 **O'Neil (Director de Marketing & Telemercadeo - @ONEILnewBot):**\n\n"
-                f"• **Pauta Digital:** Campañas geocercadas en TikTok Spark Ads y Meta Ads para Maracaibo activas.\n"
-                f"• **Telemercadeo:** Recordatorios de WhatsApp a tutores con tasa de respuesta superior al 82%.\n"
-                f"{perf_text}"
-                f"Directriz recibida: *\"{inp}\"*. Captación y aprendizaje continuo en marcha."
-            )
-
-        # 9. SEBASTIAN
-        if slug == "sebastian":
-            return (
-                f"📈 **Sebastian (Gerencia de Ventas & Membresías):**\n\n"
-                f"• **Membresías Spa Anuales:** Planes de cuidado preventivo en ritmo positivo.\n"
-                f"• **Seguimiento a Tutores:** Contacto telefónico preventivo para fidelización.\n\n"
-                f"Solicitud atendida: *\"{inp}\"*. Ventas alineadas."
-            )
+        # MIEMBROS DEL COMITÉ VOLTURI Y AGENTES OPERATIVOS TEAMILY:
+        # Por directriz estricta, las respuestas automáticas de la página para el Comité Volturi
+        # están TERMINANTEMENTE DESACTIVADAS. La comunicación es exclusiva a través del canal oficial de Teamily.
+        # Cero respuestas de Gemini, cero plantillas prefabricadas, cero simulación de tasas o transacciones.
+        if slug in [
+            "charlie", "charly", "manolo", "valeria", "vanessa", "pandora", "mike",
+            "oneil", "oneal", "oneal_mercadeo", "sebastian", "rocky", "ai_recruiter",
+            "hospitality", "customer_service", "training_designer", "mauro_che", "super_agent", "nanami"
+        ]:
+            return f"⚠️ Sin respuesta de Teamily para {agent_name or slug}."
 
         # Fallback de agente genérico
         meta = AGENT_REGISTRY.get(slug, {})

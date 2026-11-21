@@ -611,7 +611,40 @@ class TeamilyExecutiveEngine {
     try {
       const stored = localStorage.getItem(this.chatHistoryStorageKey);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        let cleaned = false;
+        // Sanitizar y purgar cualquier mensaje obsoleto con respuestas automáticas sintéticas
+        for (const k in parsed) {
+          if (Array.isArray(parsed[k])) {
+            const initialLen = parsed[k].length;
+            parsed[k] = parsed[k].filter(m => {
+              if (!m || !m.text) return false;
+              const t = String(m.text);
+              if (
+                t.includes('Charlie Finance') ||
+                t.includes('Todas las transacciones en mostrador POS') ||
+                t.includes('918.77') ||
+                t.includes('887.30') ||
+                t.includes('Tasa Oficial del Banco Central') ||
+                t.includes('Tasa Oficial BCV') ||
+                t.includes('Libro Fiscal SENIAT') ||
+                t.includes('Supervisando las 7 estaciones de Grooming') ||
+                t.includes('Filtro KillCritic: Toda orden auditada') ||
+                t.includes('Tanques Don Bosco: 18.400 Litros') ||
+                t.includes('Planta Cummins 65 kVA') ||
+                t.includes('Candidata Evaluada: María Briceño')
+              ) {
+                return false;
+              }
+              return true;
+            });
+            if (parsed[k].length !== initialLen) cleaned = true;
+          }
+        }
+        if (cleaned) {
+          localStorage.setItem(this.chatHistoryStorageKey, JSON.stringify(parsed));
+        }
+        return parsed;
       }
     } catch (e) {
       console.warn('[TeamilyExecutiveEngine] Error leyendo historial de chat:', e);
@@ -1304,6 +1337,24 @@ class TeamilyExecutiveEngine {
     if (!agent) return;
 
     this.activeDirectChatAgent = agent;
+
+    // Purga activa al abrir el modal para eliminar cualquier burbuja sintética residual
+    if (this.directChatHistory && this.directChatHistory[agent.id]) {
+      this.directChatHistory[agent.id] = this.directChatHistory[agent.id].filter(m => {
+        if (!m || !m.text) return false;
+        const t = String(m.text);
+        return !(
+          t.includes('Charlie Finance') ||
+          t.includes('Todas las transacciones en mostrador POS') ||
+          t.includes('918.77') ||
+          t.includes('887.30') ||
+          t.includes('Tasa Oficial del Banco Central') ||
+          t.includes('Tasa Oficial BCV') ||
+          t.includes('Libro Fiscal SENIAT')
+        );
+      });
+    }
+
     if (!this.directChatHistory[agent.id] || this.directChatHistory[agent.id].length === 0) {
       this.directChatHistory[agent.id] = [
         {
@@ -2418,7 +2469,7 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(99,102,241,0.2); color: #c7d2fe; padding: 2px 6px; border-radius: 4px;">7 Estaciones</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${manolo.operationalRecommendation || 'Supervisión activa de Grooming Spa 7 Estaciones. Citas sincronizadas para garantizar entrega puntual a tutores y cierre estricto a las 6:00 p.m.'}
+                ${manolo.operationalRecommendation || '⚠️ Sin respuesta de Teamily para Manolo.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('manolo')" style="background: rgba(99, 102, 241, 0.2); border: 1px solid #6366f1; color: #c7d2fe; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
@@ -2434,7 +2485,7 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(14,165,233,0.2); color: #bae6fd; padding: 2px 6px; border-radius: 4px;">KillCritic</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${pandora.supplyRecommendation || 'Insumos verificados. Stock crítico de champús protegido bajo ROI >= 25% y entrega menor a 15 días.'}
+                ${pandora.supplyRecommendation || '⚠️ Sin respuesta de Teamily para Pandora.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('pandora')" style="background: rgba(14, 165, 233, 0.2); border: 1px solid #0284c7; color: #bae6fd; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
@@ -2450,7 +2501,7 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(16,185,129,0.2); color: #a7f3d0; padding: 2px 6px; border-radius: 4px;">Tasa Oficial BCV</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${charlie.posAudit || 'Transacción conciliada bajo Tasa Oficial BCV e IVA 16% SENIAT sin margen paralelo.'}
+                ${charlie.posAudit || '⚠️ Sin respuesta de Teamily para Charlie.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('charlie')" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #a7f3d0; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
@@ -2466,14 +2517,11 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(244,114,182,0.2); color: #fbcfe8; padding: 2px 6px; border-radius: 4px;">CVs de la Web • Charly Orq.</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${vanessa.talentRecommendation || 'Base de datos de Recursos Humanos auditada por Valeria. Currículums vitae recibidos en el portal web listos para entrevista y evaluación técnica.'}
+                ${vanessa.talentRecommendation || '⚠️ Sin respuesta de Teamily para Valeria.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('vanessa')" style="background: rgba(244, 114, 182, 0.2); border: 1px solid #f472b6; color: #fbcfe8; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
               💬 Conversar con Valeria 1 a 1 →
-            </button>
-          </div>
-              💬 Conversar con Vanessa 1 a 1 →
             </button>
           </div>
 
@@ -2485,7 +2533,7 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(251,146,60,0.2); color: #fed7aa; padding: 2px 6px; border-radius: 4px;">TikTok &amp; Meta Ads</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${oneal.marketingOpsRecommendation || 'Métricas de telemercadeo TikTok y Meta Ads sincronizadas. Reservas activas y mantenimientos pendientes en control.'}
+                ${oneal.marketingOpsRecommendation || '⚠️ Sin respuesta de Teamily para O\'Neal.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('oneal')" style="background: rgba(251, 146, 60, 0.2); border: 1px solid #ea580c; color: #fed7aa; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
@@ -2501,7 +2549,7 @@ class TeamilyExecutiveEngine {
                 <span style="font-size: 0.65rem; background: rgba(56,189,248,0.2); color: #bae6fd; padding: 2px 6px; border-radius: 4px;">Tanques Tuya &amp; Cummins</span>
               </div>
               <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.4;">
-                ${mike.infrastructureRecommendation || 'Batería de tanques de agua Don Bosco (18,400L) y Planta Cummins 65 kVA en estado nominal con ATS listo.'}
+                ${mike.infrastructureRecommendation || '⚠️ Sin respuesta de Teamily para Mike.'}
               </div>
             </div>
             <button type="button" onclick="window.teamilyExecutiveEngine.openDirectChatModal('mike')" style="background: rgba(56, 189, 248, 0.2); border: 1px solid #0284c7; color: #bae6fd; padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; align-self: flex-start;">
