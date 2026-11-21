@@ -329,6 +329,7 @@ class DeliberationCycleManager:
         used = cycle.get("turnos_usados", 0)
         max_t = cycle.get("max_turnos", rounds * 2)
         estado = cycle.get("estado", STATE_EN_CURSO)
+        is_in_progress = (estado == STATE_EN_CURSO)
 
         badge_map = {
             STATE_EN_CURSO: "🔵 EN CURSO",
@@ -341,6 +342,7 @@ class DeliberationCycleManager:
 
         return {
             "active": True,
+            "in_progress": is_in_progress,
             "run_id": cycle.get("run_id"),
             "tema": cycle.get("tema"),
             "rounds": rounds,
@@ -349,7 +351,7 @@ class DeliberationCycleManager:
             "max_turnos": max_t,
             "estado": estado,
             "badge_text": badge_map.get(estado, estado),
-            "progress_text": f"Turno {used} de {max_t}",
+            "progress_text": f"Turno {used} de {max_t}" if is_in_progress else f"Turno {used} de {max_t} ({badge_map.get(estado, estado)})",
             "persistence_badge": "Bitácora: Google Sheets — respaldo activo (Local/DB)",
             "recomendacion": cycle.get("recomendacion", "")
         }

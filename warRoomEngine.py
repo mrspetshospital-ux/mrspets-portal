@@ -2472,6 +2472,16 @@ class WarRoomEngine:
 
         mode_desc = "make_backup" if (getattr(self, "use_make_backup", False) or target_norm == "make") else "direct"
 
+        delib_status = None
+        if deliberation_manager:
+            try:
+                if "cycle_id" in locals() and cycle_id:
+                    delib_status = deliberation_manager.get_cycle_status(cycle_id)
+                else:
+                    delib_status = deliberation_manager.get_cycle_status()
+            except Exception as e:
+                log.warning("[WarRoomEngine] Error obteniendo deliberation status: %s", e)
+
         return {
             "status": "success",
             "mode": mode_desc,
@@ -2485,7 +2495,8 @@ class WarRoomEngine:
             "latency_ms": primary_latency,
             "verified": True,
             "primary_verified": primary_verified,
-            "model_used": primary_model
+            "model_used": primary_model,
+            "deliberation": delib_status
         }
 
     def add_chat_message(

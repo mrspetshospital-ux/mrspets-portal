@@ -189,12 +189,99 @@
     setDeliberationRounds(rounds) {
       if (this.isDeliberationSealed) {
         if (window.app && typeof window.app.showToast === 'function') {
-          window.app.showToast('🔒 Rondas selladas al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.', 'warning');
+          window.app.showToast('🔒 Rondas selladas mientras la deliberación está en curso.', 'warning');
         }
         return;
       }
-      this.deliberationRounds = (rounds === 2 ? 2 : 1);
-      this.render();
+      this.deliberationRounds = (Number(rounds) === 2 ? 2 : 1);
+      this.updateDeliberationBar();
+    }
+
+    render() {
+      this.updateDeliberationBar();
+      this.refreshModalContent(false);
+    }
+
+    updateDeliberationBar() {
+      const btn1 = document.getElementById('wr-delib-round-1');
+      const btn2 = document.getElementById('wr-delib-round-2');
+      const turnCounter = document.getElementById('wr-delib-turn-counter');
+      const stateBadge = document.getElementById('wr-delib-state-badge');
+      const sealedBadge = document.getElementById('wr-delib-sealed-badge');
+
+      const isSealed = Boolean(this.isDeliberationSealed);
+      const rounds = (this.deliberationRounds === 2 ? 2 : 1);
+
+      if (btn1) {
+        btn1.disabled = isSealed;
+        btn1.style.cursor = isSealed ? 'not-allowed' : 'pointer';
+        btn1.style.opacity = isSealed ? '0.7' : '1';
+        btn1.title = isSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO';
+        if (rounds === 1) {
+          btn1.style.background = 'linear-gradient(135deg, #D4AF37, #B8860B)';
+          btn1.style.color = '#0B0F19';
+          btn1.style.boxShadow = '0 2px 8px rgba(212,175,55,0.3)';
+          btn1.innerHTML = '● Activa: 1 ronda';
+        } else {
+          btn1.style.background = 'transparent';
+          btn1.style.color = '#94A3B8';
+          btn1.style.boxShadow = 'none';
+          btn1.innerHTML = '○ 1 ronda';
+        }
+      }
+
+      if (btn2) {
+        btn2.disabled = isSealed;
+        btn2.style.cursor = isSealed ? 'not-allowed' : 'pointer';
+        btn2.style.opacity = isSealed ? '0.7' : '1';
+        btn2.title = isSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO';
+        if (rounds === 2) {
+          btn2.style.background = 'linear-gradient(135deg, #D4AF37, #B8860B)';
+          btn2.style.color = '#0B0F19';
+          btn2.style.boxShadow = '0 2px 8px rgba(212,175,55,0.3)';
+          btn2.innerHTML = '● Activa: 2 rondas';
+        } else {
+          btn2.style.background = 'transparent';
+          btn2.style.color = '#94A3B8';
+          btn2.style.boxShadow = 'none';
+          btn2.innerHTML = '○ 2 rondas';
+        }
+      }
+
+      if (turnCounter) {
+        const text = (this.deliberationStatus && this.deliberationStatus.progress_text) || `Turno 0 de ${rounds * 2}`;
+        turnCounter.innerHTML = `⏱️ ${text}`;
+      }
+
+      if (stateBadge) {
+        const delibSt = (this.deliberationStatus && this.deliberationStatus.estado) || 'LISTO';
+        let badgeStyle = 'background:rgba(148,163,184,0.15); color:#94A3B8; border-color:rgba(148,163,184,0.3);';
+        let badgeText = (this.deliberationStatus && this.deliberationStatus.badge_text) || 'LISTO PARA DELIBERAR';
+
+        if (delibSt === 'EN_CURSO') {
+          badgeStyle = 'background:rgba(56,189,248,0.2); color:#38BDF8; border-color:rgba(56,189,248,0.5);';
+          badgeText = '🔵 EN CURSO';
+        } else if (delibSt === 'SIN_OBJECIÓN') {
+          badgeStyle = 'background:rgba(16,185,129,0.2); color:#34D399; border-color:rgba(16,185,129,0.5);';
+          badgeText = '🟢 SIN OBJECIÓN';
+        } else if (delibSt === 'OBJECIÓN_ABIERTA') {
+          badgeStyle = 'background:rgba(234,179,8,0.2); color:#FACC15; border-color:rgba(234,179,8,0.5);';
+          badgeText = '🟡 OBJECIÓN ABIERTA';
+        } else if (delibSt === 'SIN_RESPUESTA') {
+          badgeStyle = 'background:rgba(239,68,68,0.2); color:#F87171; border-color:rgba(239,68,68,0.5);';
+          badgeText = '🚨 ALERTA: SIN RESPUESTA';
+        } else if (delibSt === 'COMPLETADO') {
+          badgeStyle = 'background:rgba(16,185,129,0.2); color:#34D399; border-color:rgba(16,185,129,0.5);';
+          badgeText = '✅ DELIBERACIÓN CONCLUIDA';
+        }
+
+        stateBadge.style.cssText = `font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:12px; border:1px solid; ${badgeStyle}`;
+        stateBadge.innerHTML = badgeText;
+      }
+
+      if (sealedBadge) {
+        sealedBadge.style.display = isSealed ? 'inline-flex' : 'none';
+      }
     }
 
     /* ----------------------------------------------------------------------
@@ -525,14 +612,17 @@
         }
         if (data.deliberation && typeof data.deliberation === 'object') {
           this.deliberationStatus = data.deliberation;
-          if (data.deliberation.sealed_rounds) {
-            this.deliberationRounds = data.deliberation.sealed_rounds;
-          }
-          if (data.deliberation.active && data.deliberation.estado === 'EN_CURSO') {
+          const isOngoing = Boolean(data.deliberation.active && data.deliberation.estado === 'EN_CURSO');
+          if (isOngoing) {
             this.isDeliberationSealed = true;
+            if (data.deliberation.sealed_rounds) {
+              this.deliberationRounds = (Number(data.deliberation.sealed_rounds) === 2 ? 2 : 1);
+            }
           } else {
+            // Ciclo concluido o fuera de curso: desbloquear sellado y respetar la elección del usuario (default: 1)
             this.isDeliberationSealed = false;
           }
+          this.updateDeliberationBar();
         }
         this.hasActiveIncident = !!data.has_active_incidents;
         this.activeIncident = data.active_incident || null;
@@ -1131,25 +1221,23 @@
                   id="wr-delib-round-1"
                   onclick="window.warRoomEngine.setDeliberationRounds(1)"
                   ${this.isDeliberationSealed ? 'disabled' : ''}
-                  title="${this.isDeliberationSealed ? '🔒 Sellado al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO'}"
-                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 1 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.8;' : ''}">
+                  title="${this.isDeliberationSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 1 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.7;' : ''}">
                   ${this.deliberationRounds === 1 ? '● Activa: 1 ronda' : '○ 1 ronda'}
                 </button>
                 <button type="button" 
                   id="wr-delib-round-2"
                   onclick="window.warRoomEngine.setDeliberationRounds(2)"
                   ${this.isDeliberationSealed ? 'disabled' : ''}
-                  title="${this.isDeliberationSealed ? '🔒 Sellado al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO'}"
-                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 2 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.8;' : ''}">
+                  title="${this.isDeliberationSealed ? '🔒 Sellado mientras la deliberación está en curso.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 2 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.7;' : ''}">
                   ${this.deliberationRounds === 2 ? '● Activa: 2 rondas' : '○ 2 rondas'}
                 </button>
               </div>
 
-              ${this.isDeliberationSealed ? `
-                <span style="font-size:0.68rem; color:#FDE047; font-weight:700; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:3px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;" title="Sellado al abrir el ciclo. No modificable hasta nuevo ciclo.">
-                  🔒 Sellado
-                </span>
-              ` : ''}
+              <span id="wr-delib-sealed-badge" style="display:${this.isDeliberationSealed ? 'inline-flex' : 'none'}; font-size:0.68rem; color:#FDE047; font-weight:700; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:3px 8px; border-radius:12px; align-items:center; gap:4px;" title="Sellado mientras la deliberación está en curso.">
+                🔒 Sellado
+              </span>
 
               <!-- Contador de Turno -->
               <span id="wr-delib-turn-counter" style="font-size:0.72rem; font-weight:800; color:#38BDF8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); padding:3px 10px; border-radius:12px;">
@@ -1380,7 +1468,9 @@
 
       const adminName = this.getAuthorizedAdminName() || 'Mrs. PETS CORP';
       let targetNode = this.selectedTargetNode || 'gemini';
-      if (this.selectedChannel && this.selectedChannel.startsWith('channel_') && this.selectedChannel !== 'channel_mrspets') {
+      if (this.selectedChannel === 'deliberacion') {
+        targetNode = 'deliberacion';
+      } else if (this.selectedChannel && this.selectedChannel.startsWith('channel_') && this.selectedChannel !== 'channel_mrspets') {
         targetNode = this.selectedChannel.replace('channel_', '');
       }
       // Mrs. PETS CORP siempre emite desde su canal legítimo: channel_mrspets (o sala deliberacion)
@@ -1444,7 +1534,7 @@
       try {
         if (activeChannel === 'deliberacion') {
           this.isDeliberationSealed = true;
-          this.render();
+          this.updateDeliberationBar();
         }
 
         const resp = await fetch('/api/v1/war-room/chat', {
@@ -1460,7 +1550,7 @@
             channel_id: activeChannel,
             use_make_backup: this.useMakeBackup,
             target_webhook_url: makeTargetUrl,
-            rounds: this.deliberationRounds
+            rounds: (this.deliberationRounds === 2 ? 2 : 1)
           })
         });
 
@@ -1468,7 +1558,7 @@
 
         if (data && data.deliberation) {
           this.deliberationStatus = data.deliberation;
-          if (['SIN_OBJECIÓN', 'OBJECIÓN_ABIERTA', 'SIN_RESPUESTA', 'CERRADO', 'COMPLETADO'].includes(data.deliberation.estado)) {
+          if (['SIN_OBJECIÓN', 'OBJECIÓN_ABIERTA', 'SIN_RESPUESTA', 'CERRADO', 'COMPLETADO', 'LISTO'].includes(data.deliberation.estado) || data.deliberation.estado !== 'EN_CURSO') {
             this.isDeliberationSealed = false;
           }
         }
@@ -1549,6 +1639,10 @@
         this.renderChatFeedOnly();
       } finally {
         this.isSending = false;
+        if (!this.deliberationStatus || this.deliberationStatus.estado !== 'EN_CURSO') {
+          this.isDeliberationSealed = false;
+        }
+        this.updateDeliberationBar();
       }
     }
 

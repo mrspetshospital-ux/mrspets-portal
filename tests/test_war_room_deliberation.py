@@ -145,6 +145,29 @@ class TestWarRoomDeliberationFase1(unittest.TestCase):
         senders_ag = [r.get("sender_id") for r in res_ag.get("responses", [])]
         self.assertIn("antigravity", senders_ag)
 
+    def test_07_deliberation_default_1_round_and_unsealed_post_cycle(self):
+        """Verifica que sin parámetro rounds el default sea estrictamente 1 ronda y quede desbloqueado al cerrar."""
+        res = self.engine.process_chat(
+            sender="Mrs. PETS CORP",
+            role="Dirección General",
+            message="Planificación de guardias veterinarias fin de semana.",
+            channel_id="deliberacion",
+            sender_id="mrspets"
+        )
+        self.assertEqual(res["status"], "success")
+        self.assertIn("deliberation", res)
+        delib = res["deliberation"]
+        self.assertIsNotNone(delib)
+        self.assertEqual(delib["sealed_rounds"], 1)
+        self.assertEqual(delib["max_turnos"], 2)
+        self.assertFalse(delib["in_progress"], "Al concluir el ciclo, in_progress debe ser False para desellar botones")
+        self.assertIn(delib["estado"], [STATE_SIN_OBJECION, STATE_OBJECION_ABIERTA, STATE_COMPLETADO])
+        
+        # Verificar que no se generaron turnos 3 ni 4
+        turns = [r.get("deliberation_turn") for r in res.get("responses", []) if r.get("deliberation_turn")]
+        self.assertNotIn(3, turns, "No debe generarse Turno 3 cuando rounds es 1")
+        self.assertNotIn(4, turns, "No debe generarse Turno 4 cuando rounds es 1")
+
 
 if __name__ == "__main__":
     unittest.main()
