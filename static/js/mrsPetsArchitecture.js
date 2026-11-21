@@ -1844,9 +1844,9 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         window.app.showToast(`Respuesta de Leia recibida (${cleanModelName}) ✨`, 'success');
       }
     } else {
-      // Manejo seguro y explícito de indisponibilidad sin respuestas simuladas ni confirmaciones falsas
-      const fallbackMsg = "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal.";
-      this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg), 'bot');
+      // Manejo seguro y explícito de indisponibilidad sin suplantar identidad ni prometer reintentos
+      const fallbackMsg = "🐾 **Canal de Atención Mrs. Pets:**\n\nEn este momento no puedo completar tu consulta. Para no hacerte esperar, escríbenos directamente por WhatsApp al [+58 414-6799510](https://wa.me/584146799510) o visítanos en sucursal en **Avenida 2 El Milagro** — te atendemos de inmediato. Tu princesa o príncipe no se queda sin atención. ✨🐾";
+      this.appendLeiaMessage(this.formatMarkdownToHtml(fallbackMsg), 'system');
     }
   }
 

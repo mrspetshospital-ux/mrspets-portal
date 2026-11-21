@@ -962,9 +962,9 @@
                 });
             } else {
                 this.addMessage({
-                    sender: 'leia',
-                    text: '🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal.',
-                    buttons: ['✂️ Cita Grooming Spa', '🩺 Consulta Veterinaria', '🏨 Hotel VIP 5★'],
+                    sender: 'system',
+                    text: '🐾 **Canal de Atención Mrs. Pets:**\n\nEn este momento no puedo completar tu consulta. Para no hacerte esperar, escríbenos directamente por WhatsApp al [+58 414-6799510](https://wa.me/584146799510) o visítanos en sucursal en **Avenida 2 El Milagro** — te atendemos de inmediato. Tu princesa o príncipe no se queda sin atención. ✨🐾',
+                    buttons: ['💬 Contactar por WhatsApp', '📍 Ver Sucursal El Milagro', '✂️ Catálogo de Servicios'],
                     timestamp: new Date()
                 });
             }
