@@ -1775,12 +1775,12 @@ class TeamilyExecutiveEngine {
         const runId = data.run_id || 'en_proceso';
         replyText = `**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: \`${runId}\`). Se encuentra procesando con el equipo.`;
       } else if (res.ok && data?.error) {
-        replyText = `⚠️ **${agent.name} (Canal Teamily):** ${data.error}`;
+        replyText = `⚠️ Sin respuesta de Teamily (${data.error})`;
       } else if (res.ok) {
-        replyText = `⚠️ **${agent.name} (Canal Teamily):** No se recibió respuesta textual desde Teamily.`;
+        replyText = `⚠️ Sin respuesta de Teamily para ${agent.name}.`;
       } else {
         const errDetail = (data && (data.error || data.detail || data.message)) || `HTTP ${res.status}`;
-        replyText = `⚠️ **${agent.name} (Canal Teamily):** Error de comunicación con Teamily (${errDetail}).`;
+        replyText = `⚠️ Sin respuesta de Teamily (${errDetail})`;
       }
 
       this.directChatHistory[agent.id].push({
@@ -1791,7 +1791,7 @@ class TeamilyExecutiveEngine {
       this.saveChatHistory();
     } catch (err) {
       console.error('[Teamily Executive Engine] Error de conexión con canal Teamily:', err);
-      const replyText = `⚠️ **Error de conexión:** No fue posible contactar a ${agent.name} en el canal de Teamily (${err.message || 'Error de red'}).`;
+      const replyText = `⚠️ Sin respuesta de Teamily (${err.message || 'Error de red'})`;
       this.directChatHistory[agent.id].push({
         sender: 'agent',
         text: replyText,

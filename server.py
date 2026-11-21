@@ -7468,8 +7468,27 @@ async def teamily_chat(request: Request):
 
     # -----------------------------------------------------------------
     # MIEMBROS DEL COMITÉ VOLTURI Y AGENTES DEL ECOSISTEMA
-    # (Canal oficial directo con Teamily: SIN Gemini y SIN respuestas automáticas de la página)
+    # (Canal oficial directo con Teamily basado en histórico verificado ddccb5e)
     # -----------------------------------------------------------------
+    AGENT_TEAMLY_USERS_MAP = {
+        "leia": ("@9000408632300095", "Margarette (LEIA • Planta y Atención)"),
+        "margaret": ("@9000408632300095", "Margarette Atención al Cliente"),
+        "margarette": ("@9000408632300095", "Margarette Atención al Cliente"),
+        "valeria": ("@9000487795593348", "Valeria RRHH"),
+        "vanessa": ("@9000487795593348", "Valeria RRHH"),
+        "manolo": ("@9000441148643782", "Manolo Operaciones"),
+        "mike": ("@9000215760376233", "Mike Infraestructura"),
+        "oneal": ("@9000339468227100", "O'Neil Marketing"),
+        "oneil": ("@9000339468227100", "O'Neil Marketing"),
+        "oneal_mercadeo": ("@9000255459464666", "O'Neil Mercadotecnia"),
+        "sebastian": ("@9000074393459175", "Sebastian Ventas"),
+        "pandora": ("@9000274735437072", "Pandora Compras"),
+        "rocky": ("@9000476605193636", "Rocky Logística"),
+        "nanami": ("@nanami", "NANAMI Asistente Ejecutiva CEO"),
+        "charlie": ("geo-a", "Charly GEO A & Finanzas"),
+        "charly": ("geo-a", "Charly GEO A & Finanzas")
+    }
+
     target_slug = agent
     if target_slug in ["oneal", "mercadeo"]:
         target_slug = "oneil"
@@ -7507,15 +7526,20 @@ async def teamily_chat(request: Request):
         timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or 90.0)
         timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 90.0)
 
-        # Enrutamiento de mensaje en Teamily:
-        # Charly (GEO A) recibe el mensaje directo. Otros miembros del comité reciben mención @slug si no viene incluida.
-        if target_slug == "charly":
+        # Enrutamiento histórico verificado (commit ddccb5e):
+        # Charly (GEO A) recibe el mensaje directo.
+        # Otros miembros del comité se canalizan a través de Charly con su @tag numérico oficial en Teamily.
+        if target_slug in ("charly", "charlie"):
             teamily_input = msg
-        else:
-            if msg.startswith("@") or msg.startswith("[@"):
-                teamily_input = msg
+        elif target_slug in AGENT_TEAMLY_USERS_MAP:
+            tag, label = AGENT_TEAMLY_USERS_MAP[target_slug]
+            if tag not in msg and not msg.lower().startswith("charly"):
+                target_label = agent_name_display or label
+                teamily_input = f"Charly, canaliza y entrega este requerimiento a {target_label} ({tag}) en su mesa de trabajo correspondiente: {msg}"
             else:
-                teamily_input = f"[@{target_slug}] {msg}"
+                teamily_input = msg
+        else:
+            teamily_input = f"[@{target_slug}] {msg}"
 
         t_req = TeamilyGeoARequest(
             input=teamily_input,
@@ -7530,23 +7554,24 @@ async def teamily_chat(request: Request):
         teamily_data = t_resp.data if t_resp.data else {}
 
         if t_resp.success:
-            if t_resp.response_text:
+            if t_resp.response_text and len(t_resp.response_text.strip()) > 0:
                 res_text = t_resp.response_text
             elif teamily_data.get("status") == "running":
                 run_id = teamily_data.get("run_id") or teamily_data.get("id") or "activo"
                 res_text = f"**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: `{run_id}`). Se encuentra procesando la respuesta con el equipo."
             else:
-                res_text = "Solicitud canalizada a Teamily exitosamente."
+                status_out = "no_response"
+                res_text = f"⚠️ Sin respuesta de Teamily para {agent_name_display}."
         else:
             status_out = "error"
             model_used = "teamily-error"
-            err_detail = t_resp.error or "Error comunicando con Teamily"
-            res_text = f"⚠️ **Canal Teamily ({agent_name_display}):** {err_detail}"
+            err_detail = t_resp.error or "Timeout de conexión"
+            res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
     else:
         status_out = "error"
         model_used = "teamily-unavailable"
         err_detail = "Cliente Teamily no disponible o mensaje vacío"
-        res_text = f"⚠️ **Canal Teamily ({agent_name_display}):** {err_detail}"
+        res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
 
     elapsed_ms = round((time.time() - t0_agent) * 1000.0, 2)
     return {
