@@ -34,7 +34,7 @@ class TestCentralitaRouter(unittest.TestCase):
         self.assertEqual(nanami_meta["icon"], "🎀")
         self.assertEqual(margaret_meta["icon"], "👩‍💼")
         self.assertEqual(nanami_meta["role"], "ASISTENTE EJECUTIVA DEL CEO")
-        self.assertEqual(leia_meta["role"], "ASISTENTE EJECUTIVA DEL CEO")
+        self.assertEqual(leia_meta["role"], "GERENCIA DE PLANTA Y ATENCIÓN AL CLIENTE")
         self.assertEqual(margaret_meta["role"], "GERENCIA DE PLANTA Y ATENCIÓN AL CLIENTE")
 
         # 3. Síntesis de voz inmutable
