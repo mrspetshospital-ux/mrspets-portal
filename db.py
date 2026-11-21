@@ -22,7 +22,8 @@ IS_POSTGRES = DATABASE_URL.startswith(("postgres://", "postgresql://"))
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-SQLITE_PATH = os.getenv("SQLITE_PATH", "mrspets_local.db")
+_sqlite_env = os.getenv("SQLITE_PATH", "mrspets_local.db")
+SQLITE_PATH = _sqlite_env if os.path.isabs(_sqlite_env) else os.path.join(os.path.dirname(os.path.abspath(__file__)), _sqlite_env)
 
 
 def _to_sqlite(sql: str) -> str:

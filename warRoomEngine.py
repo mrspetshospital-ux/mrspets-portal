@@ -40,6 +40,22 @@ try:
 except Exception:
     db = None
 
+try:
+    from warRoomDeliberation import (
+        deliberation_manager,
+        parse_antigravity_counterproposal,
+        format_final_recommendation,
+        STATE_EN_CURSO,
+        STATE_SIN_OBJECION,
+        STATE_OBJECION_ABIERTA,
+        STATE_SIN_RESPUESTA,
+        STATE_CERRADO,
+        STATE_COMPLETADO,
+        DELIBERATION_SPREADSHEET_ID
+    )
+except Exception as _e_delib:
+    deliberation_manager = None
+
 log = logging.getLogger("mrspets.war_room")
 
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -630,6 +646,17 @@ class WarRoomEngine:
             "sheets_paused": getattr(self, "sheets_paused", False),
             "make_paused": getattr(self, "make_paused", True),
             "use_make_backup": getattr(self, "use_make_backup", False),
+            "deliberation": deliberation_manager.get_cycle_status() if deliberation_manager else {
+                "active": False,
+                "rounds": 1,
+                "sealed_rounds": 1,
+                "current_turn": 0,
+                "max_turnos": 2,
+                "estado": "LISTO",
+                "badge_text": "LISTO PARA DELIBERAR",
+                "progress_text": "Turno 0 de 2",
+                "persistence_badge": "Bitácora: Google Sheets — respaldo activo (Local/DB)"
+            },
             "node_configs": dict(self.node_configs) if is_admin else self.get_masked_node_configs()
         }
 
@@ -1988,7 +2015,8 @@ class WarRoomEngine:
         channel_id: Optional[str] = None,
         sender_id: Optional[str] = None,
         override_api_key: Optional[str] = None,
-        target_webhook_url: Optional[str] = None
+        target_webhook_url: Optional[str] = None,
+        rounds: int = 1
     ) -> Dict[str, Any]:
         """
         Procesa intervenciones en los canales independientes del Cuarto de Guerra:
@@ -2184,18 +2212,154 @@ class WarRoomEngine:
                     self.chat_history.append(paused_eval)
                     responses.append(paused_eval)
 
-            # CASO 6: Sala Común / Deliberación General (todos los agentes activos deliberan)
+            # CASO 6: Sala Común / Deliberación General con Gobernanza Humana (Fase 1)
             else:
+                cycle_id = f"CYC-{secrets.token_hex(4).upper()}"
+                sealed_rounds = 2 if int(rounds or 1) == 2 else 1
+                if deliberation_manager:
+                    cycle = deliberation_manager.get_or_create_cycle(cycle_id, message, rounds=sealed_rounds)
+                    sealed_rounds = cycle.get("sealed_rounds", sealed_rounds)
+                    # Turno 0: GEO abre el tema
+                    deliberation_manager.record_turn(
+                        cycle_id, 0, "Mrs. PETS CORP (Dirección General)", message, estado=STATE_EN_CURSO
+                    )
+
+                # Turno 1: Charly emite propuesta inicial
+                sa_eval = None
                 if not getattr(self, "teamily_paused", False):
                     sa_eval = self.generate_super_agent_evaluation(message)
+                    sa_eval["deliberation_cycle"] = cycle_id
+                    sa_eval["deliberation_turn"] = 1
                     self.chat_history.append(sa_eval)
                     responses.append(sa_eval)
+                    if deliberation_manager:
+                        deliberation_manager.record_turn(
+                            cycle_id, 1, "Charly / Super Agent (Teamily)", sa_eval.get("message", ""), estado=STATE_EN_CURSO
+                        )
 
+                # Turno 2: AntiGravity analiza técnicamente la propuesta de Charly
                 if not getattr(self, "gemini_paused", False):
-                    ag_eval = self.generate_direct_node_evaluation("antigravity", message, sender=sender, override_api_key=override_api_key)
+                    charly_proposal_text = sa_eval.get("message", "") if sa_eval else "(Charly no emitió propuesta técnica)"
+                    t2_prompt = (
+                        f"[DELIBERACIÓN AUDITADA — CICLO: {cycle_id} — RONDA 1/{sealed_rounds}]\n"
+                        f"T0 — DIRECTIVA GEO: {message}\n"
+                        f"T1 — CHARLY / SUPER AGENT (PROPUESTA TÉCNICA): {charly_proposal_text}\n\n"
+                        f"INSTRUCCIÓN T2 (AntiGravity):\n"
+                        f"Como Google AntiGravity (Ingeniería de Software & Resiliencia), evalúa la propuesta técnica de Charly.\n"
+                        f"REGLA ESTRICTA ANTI-CORTESÍA: Si suscribes la propuesta técnica y no existen riesgos o puntos faltantes, responde ÚNICAMENTE:\n"
+                        f"ESTADO: SIN_OBJECIÓN\n\n"
+                        f"Si tienes observaciones, discrepancias técnicas o dependencias críticas, responde OBLIGATORIAMENTE con este formato fijo:\n"
+                        f"QUÉ ACEPTO: <puntos suscritos>\n"
+                        f"QUÉ OBJETO: <puntos con objeción real>\n"
+                        f"QUÉ FALTA: <información o decisión faltante>\n"
+                        f"RIESGO ASUMIDO: <riesgo técnico o de negocio>\n"
+                        f"CÓMO REVERTIR: <pasos para deshacer>\n"
+                        f"ESTADO: OBJECIÓN_ABIERTA"
+                    )
+
+                    try:
+                        ag_eval = self.generate_direct_node_evaluation(
+                            "antigravity", t2_prompt, sender=f"Charly / Super Agent ({sender})", override_api_key=override_api_key
+                        )
+                    except Exception as e:
+                        ag_eval = {
+                            "id": f"MSG-{secrets.token_hex(4)}",
+                            "sender": WAR_ROOM_PARTICIPANTS["antigravity"]["name"],
+                            "sender_id": "antigravity",
+                            "role": WAR_ROOM_PARTICIPANTS["antigravity"]["role"],
+                            "message": f"🚨 ALERTA: SIN_RESPUESTA — Fallo de infraestructura en nodo AntiGravity ({str(e)}).",
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "node_id": "antigravity",
+                            "channel_id": "channel_antigravity",
+                            "verified": False,
+                            "latency_ms": None
+                        }
+
+                    parsed_t2 = parse_antigravity_counterproposal(ag_eval.get("message", "")) if parse_antigravity_counterproposal else {"estado": STATE_SIN_OBJECION}
+                    estado_t2 = parsed_t2.get("estado", STATE_EN_CURSO)
+                    ag_eval["deliberation_cycle"] = cycle_id
+                    ag_eval["deliberation_turn"] = 2
+                    ag_eval["deliberation_state"] = estado_t2
                     self.chat_history.append(ag_eval)
                     responses.append(ag_eval)
 
+                    if deliberation_manager:
+                        deliberation_manager.record_turn(
+                            cycle_id, 2, "Google AntiGravity (Ingeniería)", ag_eval.get("message", ""),
+                            estado=estado_t2,
+                            que_acepto=parsed_t2.get("que_acepto", ""),
+                            que_objeto=parsed_t2.get("que_objeto", "")
+                        )
+
+                    # Si rounds == 2 y hay objeción real activa (no SIN_OBJECIÓN ni CERRADO)
+                    if sealed_rounds == 2 and estado_t2 == STATE_OBJECION_ABIERTA and not getattr(self, "teamily_paused", False):
+                        # Turno 3: Charly responde la contrapropuesta
+                        t3_prompt = (
+                            f"[RÉPLICA T3 — CICLO: {cycle_id} — RONDA 2/2]\n"
+                            f"AntiGravity ha formulado la siguiente contrapropuesta técnica a tu propuesta inicial:\n"
+                            f"{ag_eval.get('message', '')}\n\n"
+                            f"Indica con precisión si aceptas las observaciones, corriges tu postura técnica o mantienes tu posición original."
+                        )
+                        sa_reply = self.generate_super_agent_evaluation(t3_prompt)
+                        sa_reply["deliberation_cycle"] = cycle_id
+                        sa_reply["deliberation_turn"] = 3
+                        self.chat_history.append(sa_reply)
+                        responses.append(sa_reply)
+
+                        if deliberation_manager:
+                            deliberation_manager.record_turn(
+                                cycle_id, 3, "Charly / Super Agent (Teamily)", sa_reply.get("message", ""), estado=STATE_EN_CURSO
+                            )
+
+                        # Turno 4: AntiGravity emite Cierre Técnico y Recomendación Final
+                        t4_prompt = (
+                            f"[CIERRE TÉCNICO T4 — CICLO: {cycle_id} — RONDA 2/2]\n"
+                            f"T0 — DIRECTIVA GEO: {message}\n"
+                            f"T1 — CHARLY (PROPUESTA): {charly_proposal_text}\n"
+                            f"T2 — ANTIGRAVITY (CONTRAPROPUESTA): {ag_eval.get('message', '')}\n"
+                            f"T3 — CHARLY (RÉPLICA): {sa_reply.get('message', '')}\n\n"
+                            f"INSTRUCCIÓN T4:\n"
+                            f"Emite tu dictamen técnico de cierre. Indica qué puntos quedaron firmes, qué quedó abierto y formula la RECOMENDACIÓN FINAL obligatoria para Dirección General:\n"
+                            f"QUÉ RECOMIENDO: <acción concreta>\n"
+                            f"POR QUÉ: <razonamiento técnico>\n"
+                            f"CONFIANZA: alta | media | baja\n"
+                            f"RIESGO: <riesgo asumido>\n"
+                            f"REVERSIBILIDAD: <pasos de reversión>"
+                        )
+                        ag_close = self.generate_direct_node_evaluation(
+                            "antigravity", t4_prompt, sender=f"Charly / Super Agent ({sender})", override_api_key=override_api_key
+                        )
+                        ag_close["deliberation_cycle"] = cycle_id
+                        ag_close["deliberation_turn"] = 4
+                        ag_close["deliberation_state"] = STATE_COMPLETADO
+                        self.chat_history.append(ag_close)
+                        responses.append(ag_close)
+
+                        if deliberation_manager:
+                            deliberation_manager.record_turn(
+                                cycle_id, 4, "Google AntiGravity (Cierre Técnico)", ag_close.get("message", ""), estado=STATE_COMPLETADO
+                            )
+                            deliberation_manager.close_cycle(
+                                cycle_id, recomendacion=ag_close.get("message", ""), estado_final=STATE_COMPLETADO
+                            )
+                    else:
+                        # Cierre en Turno 2 (rounds == 1 o SIN_OBJECIÓN)
+                        final_st = STATE_SIN_OBJECION if estado_t2 == STATE_SIN_OBJECION else STATE_OBJECION_ABIERTA
+                        rec_text = ag_eval.get("message", "")
+                        if estado_t2 == STATE_SIN_OBJECION and format_final_recommendation:
+                            rec_text = format_final_recommendation(
+                                accion="Proceder con la implementación técnica propuesta por Charly",
+                                por_que="AntiGravity valida la propuesta sin objeciones técnicas ni riesgos bloqueantes.",
+                                confianza="alta",
+                                riesgo="Mínimo / Controlado",
+                                reversibilidad="Inmediata"
+                            )
+                        if deliberation_manager:
+                            deliberation_manager.close_cycle(
+                                cycle_id, recomendacion=rec_text, estado_final=final_st
+                            )
+
+                    # Evaluación cognitiva independiente de Gemini AI en su canal channel_gemini
                     gemini_eval = self.generate_direct_node_evaluation("gemini", message, sender=sender, override_api_key=override_api_key)
                     self.chat_history.append(gemini_eval)
                     responses.append(gemini_eval)

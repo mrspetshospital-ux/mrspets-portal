@@ -1824,6 +1824,14 @@ async def war_room_post_chat(request: Request):
             }
         )
 
+    rounds_raw = body.get("rounds") or body.get("sealed_rounds") or 1
+    try:
+        rounds_val = int(rounds_raw)
+        if rounds_val not in (1, 2):
+            rounds_val = 1
+    except Exception:
+        rounds_val = 1
+
     if war_room_engine:
         # Conversación en canales independientes auditados con verificación de emisor
         result = war_room_engine.process_chat(
@@ -1834,7 +1842,8 @@ async def war_room_post_chat(request: Request):
             channel_id=channel_id,
             sender_id=sender_id,
             override_api_key=override_api_key,
-            target_webhook_url=target_webhook_url
+            target_webhook_url=target_webhook_url,
+            rounds=rounds_val
         )
         if result.get("status") == "rejected":
             return JSONResponse(status_code=400, content=result)
@@ -1851,6 +1860,27 @@ async def war_room_post_chat(request: Request):
             "verified": False
         }
     )
+
+
+@app.get("/api/v1/war-room/deliberation-status")
+def war_room_deliberation_status():
+    try:
+        from warRoomDeliberation import deliberation_manager
+        if deliberation_manager:
+            return deliberation_manager.get_cycle_status()
+    except Exception as e:
+        log.warning("Error consultando estado de deliberación: %s", e)
+    return {
+        "active": False,
+        "rounds": 1,
+        "sealed_rounds": 1,
+        "current_turn": 0,
+        "max_turnos": 2,
+        "estado": "LISTO",
+        "badge_text": "LISTO PARA DELIBERAR",
+        "progress_text": "Turno 0 de 2",
+        "persistence_badge": "Bitácora: Google Sheets — respaldo activo (Local/DB)"
+    }
 
 
 @app.post("/api/v1/teamily/webhook")

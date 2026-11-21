@@ -43,6 +43,20 @@
       this.isAdmin = false; // Indicador de perfil de Administrador verificado por el servidor
       this.showSecrets = false; // Alternador visual para ver u ocultar credenciales completas
       this.activeTab = 'chat'; // 'chat' | 'incidents' | 'config' | 'traces' | 'sandbox' | 'playground'
+      // Deliberación Canónica IA ↔ IA (Fase 1)
+      this.deliberationRounds = 1; // 1 o 2 (defecto: 1)
+      this.isDeliberationSealed = false;
+      this.deliberationStatus = {
+        active: false,
+        rounds: 1,
+        sealed_rounds: 1,
+        current_turn: 0,
+        max_turnos: 2,
+        estado: 'LISTO',
+        badge_text: 'LISTO PARA DELIBERAR',
+        progress_text: 'Turno 0 de 2',
+        persistence_badge: 'Bitácora: Google Sheets — respaldo activo'
+      };
       this.selectedIncidentService = 'Make.com Webhook Omnichannel';
       this.savedIssueSource = 'Make.com Webhook Omnichannel';
       this.savedIssueStatus = '500';
@@ -170,6 +184,17 @@
       });
       // Refrescar mensajes correspondientes a este canal
       this.renderChatFeedOnly();
+    }
+
+    setDeliberationRounds(rounds) {
+      if (this.isDeliberationSealed) {
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('🔒 Rondas selladas al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.', 'warning');
+        }
+        return;
+      }
+      this.deliberationRounds = (rounds === 2 ? 2 : 1);
+      this.render();
     }
 
     /* ----------------------------------------------------------------------
@@ -497,6 +522,17 @@
         }
         if (data.use_make_backup !== undefined) {
           this.useMakeBackup = Boolean(data.use_make_backup);
+        }
+        if (data.deliberation && typeof data.deliberation === 'object') {
+          this.deliberationStatus = data.deliberation;
+          if (data.deliberation.sealed_rounds) {
+            this.deliberationRounds = data.deliberation.sealed_rounds;
+          }
+          if (data.deliberation.active && data.deliberation.estado === 'EN_CURSO') {
+            this.isDeliberationSealed = true;
+          } else {
+            this.isDeliberationSealed = false;
+          }
         }
         this.hasActiveIncident = !!data.has_active_incidents;
         this.activeIncident = data.active_incident || null;
@@ -981,6 +1017,29 @@
       };
       const activeLabel = nodeLabels[currentTarget] || currentTarget.toUpperCase();
 
+      const delibSt = (this.deliberationStatus && this.deliberationStatus.estado) || 'LISTO';
+      let delibBadgeStyle = 'background:rgba(100,116,139,0.15); border-color:rgba(100,116,139,0.3); color:#94A3B8;';
+      let delibBadgeText = '⚪ LISTO PARA DELIBERAR';
+      if (delibSt === 'EN_CURSO') {
+        delibBadgeStyle = 'background:rgba(56,189,248,0.2); border-color:#38BDF8; color:#38BDF8;';
+        delibBadgeText = '🔵 EN CURSO';
+      } else if (delibSt === 'SIN_OBJECIÓN' || delibSt === 'SIN_OBJECION') {
+        delibBadgeStyle = 'background:rgba(16,185,129,0.2); border-color:#10B981; color:#34D399;';
+        delibBadgeText = '🟢 SIN OBJECIÓN';
+      } else if (delibSt === 'OBJECIÓN_ABIERTA' || delibSt === 'OBJECION_ABIERTA') {
+        delibBadgeStyle = 'background:rgba(245,158,11,0.2); border-color:#F59E0B; color:#FCD34D;';
+        delibBadgeText = '🟡 OBJECIÓN ABIERTA';
+      } else if (delibSt === 'SIN_RESPUESTA') {
+        delibBadgeStyle = 'background:rgba(239,68,68,0.25); border-color:#EF4444; color:#F87171; box-shadow:0 0 8px rgba(239,68,68,0.3);';
+        delibBadgeText = '🚨 ALERTA: SIN RESPUESTA';
+      } else if (delibSt === 'CERRADO') {
+        delibBadgeStyle = 'background:rgba(148,163,184,0.2); border-color:#94A3B8; color:#CBD5E1;';
+        delibBadgeText = '⚪ CERRADO';
+      } else if (delibSt === 'COMPLETADO') {
+        delibBadgeStyle = 'background:rgba(16,185,129,0.25); border-color:#10B981; color:#10B981;';
+        delibBadgeText = '✅ DELIBERACIÓN CONCLUIDA';
+      }
+
       return `
         <div class="wr-chat-container">
           <!-- CONTROL INTERACTIVO DE PAUSA OPERATIVA -->
@@ -1059,6 +1118,56 @@
                 <span>${ch.icon}</span> ${ch.name}
               </button>
             `).join('')}
+          </div>
+
+          <!-- BARRA DE CONTROL DE DELIBERACIÓN CANÓNICA IA ↔ IA (FASE 1) -->
+          <div style="padding:10px 16px; background:linear-gradient(135deg, rgba(17,24,39,0.98), rgba(11,15,25,0.98)); border-bottom:1px solid rgba(212,175,55,0.25); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-size:0.72rem; font-weight:800; color:#D4AF37; text-transform:uppercase; display:inline-flex; align-items:center; gap:4px;">
+                <span>⚖️</span> Rondas:
+              </span>
+              <div style="display:inline-flex; background:#0B0F19; border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:2px; gap:2px;">
+                <button type="button" 
+                  id="wr-delib-round-1"
+                  onclick="window.warRoomEngine.setDeliberationRounds(1)"
+                  ${this.isDeliberationSealed ? 'disabled' : ''}
+                  title="${this.isDeliberationSealed ? '🔒 Sellado al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.' : '1 ronda (defecto): Charly propone → AntiGravity evalúa → Decisión GEO'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 1 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.8;' : ''}">
+                  ${this.deliberationRounds === 1 ? '● Activa: 1 ronda' : '○ 1 ronda'}
+                </button>
+                <button type="button" 
+                  id="wr-delib-round-2"
+                  onclick="window.warRoomEngine.setDeliberationRounds(2)"
+                  ${this.isDeliberationSealed ? 'disabled' : ''}
+                  title="${this.isDeliberationSealed ? '🔒 Sellado al abrir el ciclo. Para cambiarlo, abre un ciclo nuevo.' : '2 rondas: Charly → AntiGravity → Charly → AntiGravity → Decisión GEO'}"
+                  style="border-radius:18px; padding:4px 12px; font-size:0.72rem; font-weight:800; cursor:${this.isDeliberationSealed ? 'not-allowed' : 'pointer'}; border:none; transition:all 0.15s ease; ${this.deliberationRounds === 2 ? 'background:linear-gradient(135deg, #D4AF37, #B8860B); color:#0B0F19; box-shadow:0 2px 8px rgba(212,175,55,0.3);' : 'background:transparent; color:#94A3B8;'} ${this.isDeliberationSealed ? 'opacity:0.8;' : ''}">
+                  ${this.deliberationRounds === 2 ? '● Activa: 2 rondas' : '○ 2 rondas'}
+                </button>
+              </div>
+
+              ${this.isDeliberationSealed ? `
+                <span style="font-size:0.68rem; color:#FDE047; font-weight:700; background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.3); padding:3px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;" title="Sellado al abrir el ciclo. No modificable hasta nuevo ciclo.">
+                  🔒 Sellado
+                </span>
+              ` : ''}
+
+              <!-- Contador de Turno -->
+              <span id="wr-delib-turn-counter" style="font-size:0.72rem; font-weight:800; color:#38BDF8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); padding:3px 10px; border-radius:12px;">
+                ⏱️ ${(this.deliberationStatus && this.deliberationStatus.progress_text) || `Turno 0 de ${this.deliberationRounds * 2}`}
+              </span>
+
+              <!-- Badge de Estado del Ciclo -->
+              <span id="wr-delib-state-badge" style="font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:12px; border:1px solid; ${delibBadgeStyle}">
+                ${delibBadgeText}
+              </span>
+            </div>
+
+            <!-- Aviso de Persistencia Google Sheets -->
+            <div style="font-size:0.68rem; color:#94A3B8; display:inline-flex; align-items:center; gap:6px;">
+              <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#10B981; box-shadow:0 0 6px #10B981;"></span>
+              <span style="color:#CBD5E1; font-weight:600;">📊 Bitácora: Google Sheets — respaldo activo</span>
+              <a href="https://docs.google.com/spreadsheets/d/1u9e2V5KSlgi7QhaCTgkmb30phz4vaoW67E3S_RPhDmA/edit" target="_blank" rel="noopener" style="color:#38BDF8; text-decoration:underline; font-weight:700;" title="Abrir Bitácora Oficial en Google Sheets">Ver hoja</a>
+            </div>
           </div>
 
           <!-- 2. BARRA DE SELECCIÓN DE NODO DESTINATARIO (CONVERSACIÓN DIRECTA) -->
@@ -1210,6 +1319,13 @@
           ? `<span style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">⚠️ No respondió</span>`
           : `<span style="background:rgba(16,185,129,0.2); color:#34D399; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">✓ Verificado</span>`;
 
+        const delibTurnBadge = (msg.deliberation_turn !== undefined && msg.deliberation_turn !== null)
+          ? `<span style="background:rgba(56,189,248,0.2); color:#38BDF8; border:1px solid rgba(56,189,248,0.4); padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">Turno ${msg.deliberation_turn}</span>`
+          : '';
+        const delibStateBadge = msg.deliberation_state
+          ? `<span style="background:rgba(212,175,55,0.18); color:#FDE047; padding:1px 6px; border-radius:6px; font-size:0.65rem; font-weight:800;">${this.escapeHtml(msg.deliberation_state)}</span>`
+          : '';
+
         return `
           <div class="wr-msg-bubble" style="background:${bg}; border:${border}; margin-bottom:10px; border-radius:10px; padding:10px 14px;">
             <div class="wr-msg-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -1217,6 +1333,8 @@
                 <span>${icon}</span> ${this.escapeHtml(msg.sender || 'Mesa')} &bull; <span style="font-weight:600; color:#94A3B8; font-size:0.75rem;">${this.escapeHtml(msg.role || '')}</span>
               </span>
               <div style="display:flex; align-items:center; gap:6px;">
+                ${delibTurnBadge}
+                ${delibStateBadge}
                 ${verifiedBadge}
                 ${channelBadge}
                 ${latencyBadge}
@@ -1324,6 +1442,11 @@
       }
 
       try {
+        if (activeChannel === 'deliberacion') {
+          this.isDeliberationSealed = true;
+          this.render();
+        }
+
         const resp = await fetch('/api/v1/war-room/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1336,11 +1459,19 @@
             target_node_id: targetNode,
             channel_id: activeChannel,
             use_make_backup: this.useMakeBackup,
-            target_webhook_url: makeTargetUrl
+            target_webhook_url: makeTargetUrl,
+            rounds: this.deliberationRounds
           })
         });
 
         const data = await resp.json();
+
+        if (data && data.deliberation) {
+          this.deliberationStatus = data.deliberation;
+          if (['SIN_OBJECIÓN', 'OBJECIÓN_ABIERTA', 'SIN_RESPUESTA', 'CERRADO', 'COMPLETADO'].includes(data.deliberation.estado)) {
+            this.isDeliberationSealed = false;
+          }
+        }
 
         // Control riguroso de errores o rechazos: mostrar de inmediato en la sala de conversación
         if (!resp.ok || data.status === 'rejected' || data.status === 'error') {

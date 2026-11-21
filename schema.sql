@@ -390,6 +390,41 @@ CREATE TABLE IF NOT EXISTS reportes_problema (
 );
 CREATE INDEX IF NOT EXISTS ix_reportes_fecha ON reportes_problema (created_at DESC);
 
+-- =========================================================================
+-- SALA DE CONVERSACIÓN / CUARTO DE GUERRA: DELIBERACIÓN & BITÁCORA CANÓNICA
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS war_room_cycles (
+    run_id VARCHAR(64) PRIMARY KEY,
+    fecha VARCHAR(32),
+    tema TEXT,
+    rounds INTEGER DEFAULT 1,
+    estado VARCHAR(32) DEFAULT 'EN_CURSO',
+    turnos_usados INTEGER DEFAULT 0,
+    recomendacion TEXT,
+    decision_final TEXT,
+    divergencia VARCHAR(16),
+    motivo TEXT,
+    ejecutado_en VARCHAR(64),
+    commit_hash VARCHAR(64),
+    fecha_cierre VARCHAR(32),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS war_room_turns (
+    id BIGSERIAL PRIMARY KEY,
+    run_id VARCHAR(64) NOT NULL,
+    turno INTEGER NOT NULL,
+    actor VARCHAR(64) NOT NULL,
+    timestamp VARCHAR(32),
+    estado VARCHAR(32),
+    contenido TEXT,
+    que_acepto TEXT,
+    que_objeto TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_run_turno UNIQUE (run_id, turno)
+);
+CREATE INDEX IF NOT EXISTS ix_wr_turns_run ON war_room_turns (run_id, turno);
+
 -- ---------------------------------------------------------------------
 -- 10. TRIGGERS: updated_at + inmutabilidad de facturas emitidas
 -- ---------------------------------------------------------------------

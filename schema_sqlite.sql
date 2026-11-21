@@ -304,6 +304,40 @@ CREATE TABLE IF NOT EXISTS reportes_problema (
     created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- =========================================================================
+-- SALA DE CONVERSACIÓN / CUARTO DE GUERRA: DELIBERACIÓN & BITÁCORA CANÓNICA
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS war_room_cycles (
+    run_id TEXT PRIMARY KEY,
+    fecha TEXT,
+    tema TEXT,
+    rounds INTEGER DEFAULT 1,
+    estado TEXT DEFAULT 'EN_CURSO',
+    turnos_usados INTEGER DEFAULT 0,
+    recomendacion TEXT,
+    decision_final TEXT,
+    divergencia TEXT,
+    motivo TEXT,
+    ejecutado_en TEXT,
+    commit_hash TEXT,
+    fecha_cierre TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS war_room_turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    turno INTEGER NOT NULL,
+    actor TEXT NOT NULL,
+    timestamp TEXT,
+    estado TEXT,
+    contenido TEXT,
+    que_acepto TEXT,
+    que_objeto TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(run_id, turno)
+);
+
 -- Datos mínimos
 INSERT OR IGNORE INTO series_factura (codigo, descripcion, prefijo, ultimo_numero) VALUES
     ('GEN','Factura general','F-GEN',0),
