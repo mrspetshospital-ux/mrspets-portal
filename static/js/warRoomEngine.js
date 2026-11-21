@@ -2934,7 +2934,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span style="font-size:0.68rem; color:#94A3B8;">${cfg.teamily_server_key ? '● Configurada' : '⚠️ Sin credencial'}</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-teamly-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_server_key || '')}" placeholder="Pegar TEAMILEY_SERVER_KEY (ty_sec_...)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-teamly-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_server_key || '')}" placeholder="Pegar TEAMILY_SERVER_KEY (tmly_sk_live_...)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
               </div>
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Canal REST directo con agente Charly (GEO-A) en Teamily.</div>
             </div>

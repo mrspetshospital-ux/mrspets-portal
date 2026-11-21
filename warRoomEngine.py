@@ -1630,7 +1630,7 @@ class WarRoomEngine:
             if not geo_client or not geo_client.server_key:
                 verified = False
                 latency_ms = None
-                reply_text = "canal NO DISPONIBLE: Credencial de autenticación no configurada (TEAMILEY_SERVER_KEY requerida)."
+                reply_text = "canal NO DISPONIBLE: Credencial de autenticación no configurada (TEAMILY_SERVER_KEY requerida)."
             else:
                 # A5: El prompt NO debe ordenar una identidad falsa ("Eres Google AntiGravity").
                 # Solicita formalmente la evaluación técnica y operativa de la incidencia.
@@ -1726,7 +1726,7 @@ class WarRoomEngine:
         if not geo_client or not geo_client.server_key:
             verified = False
             latency_ms = None
-            reply_text = "canal NO DISPONIBLE: Credencial de autenticación de Teamily no configurada (TEAMILEY_SERVER_KEY requerida)."
+            reply_text = "canal NO DISPONIBLE: Credencial de autenticación de Teamily no configurada (TEAMILY_SERVER_KEY requerida)."
         else:
             prompt_input = problem_description.strip()
             req = teamilyClient.TeamilyGeoARequest(

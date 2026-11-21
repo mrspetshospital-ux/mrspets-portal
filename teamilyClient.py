@@ -43,7 +43,7 @@ def load_project_env() -> Dict[str, str]:
                         os.environ[key] = val
                     loaded[key] = os.environ[key]
         except Exception as e:
-            print(f"[TEAMILEY ENV] Advertencia al leer .env: {e}")
+            print(f"[TEAMILY ENV] Advertencia al leer .env: {e}")
     return loaded
 
 # Cargar variables al importar
@@ -52,10 +52,11 @@ load_project_env()
 # Parámetros Canónicos Exactos Teamily GEO A
 # A1: Endpoint configurable por entorno, con geo-a como valor por defecto canónico documentado
 DEFAULT_ENDPOINT = (
-    os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
+    os.environ.get("TEAMILY_ENDPOINT_URL")
     or os.environ.get("TEAMILY_AGENT_ENDPOINT")
     or os.environ.get("TEAMLY_AGENT_ENDPOINT")
-    or os.environ.get("TEAMILY_ENDPOINT_URL")
+    or os.environ.get("TEAMILY_GEO_A_ENDPOINT")
+    or os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
     or "https://teamily.ai/v1/agents/geo-a/responses"
 )
 DEFAULT_DOCS_URL = "https://teamily.ai/v1"
@@ -72,11 +73,11 @@ DEFAULT_BOARD_ID = (
 # C1: Credencial del servidor cargada desde variable de entorno o fallback certificado
 def get_default_server_key() -> str:
     k = (
-        os.environ.get("TEAMILEY_SERVER_KEY")
-        or os.environ.get("TEAMILY_SERVER_KEY")
+        os.environ.get("TEAMILY_SERVER_KEY")
+        or os.environ.get("TEAMILEY_SERVER_KEY")
         or os.environ.get("TEAMLY_SERVER_KEY")
-        or os.environ.get("TEAMILEY_API_KEY")
         or os.environ.get("TEAMILY_API_KEY")
+        or os.environ.get("TEAMILEY_API_KEY")
         or os.environ.get("TEAMLY_API_KEY")
         or os.environ.get("CHARLY_API_KEY")
         or ""
@@ -109,7 +110,7 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
     # al endpoint operativo del agente de Charly (https://teamily.ai/v1/agents/geo-a/responses).
     if ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat"):
         normalized = "https://teamily.ai/v1/agents/geo-a/responses"
-        print(f"[TEAMILEY URL NORMALIZATION] Endpoint '{ep}' canalizado al agente de Charly: '{normalized}'")
+        print(f"[TEAMILY URL NORMALIZATION] Endpoint '{ep}' canalizado al agente de Charly: '{normalized}'")
         return normalized
 
     # Si ya termina en /responses
@@ -128,7 +129,7 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
         normalized = f"{ep.rstrip('/')}/responses"
     else:
         normalized = f"https://teamily.ai/v1/agents/{ep}/responses"
-    print(f"[TEAMILEY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
+    print(f"[TEAMILY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
     return normalized
 
 # Registro en memoria de hilos por sesión de cliente para aislamiento estricto y prevención de fuga de datos
@@ -265,14 +266,14 @@ class TeamilyGeoAClient:
         try:
             record = {
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "event_type": f"TEAMILEY_{event_type}",
+                "event_type": f"TEAMILY_{event_type}",
                 "user": "TeamilyGeoAClient/Backend",
                 "details": details
             }
             with open(AUDIT_LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
         except Exception as e:
-            print(f"[TEAMILEY AUDIT] Error escribiendo log: {e}")
+            print(f"[TEAMILY AUDIT] Error escribiendo log: {e}")
 
     def send_message(self, request: TeamilyGeoARequest, endpoint_override: Optional[str] = None, server_key_override: Optional[str] = None) -> TeamilyGeoAResponse:
         """
@@ -291,7 +292,7 @@ class TeamilyGeoAClient:
 
         # C1: Si no hay credencial configurada en entorno, fallar de inmediato con error claro y tipado
         if not target_server_key:
-            err_msg = "Credencial no configurada: TEAMILEY_SERVER_KEY requerida"
+            err_msg = "Credencial no configurada: TEAMILY_SERVER_KEY requerida"
             res_obj = TeamilyGeoAResponse(
                 status_code=401,
                 success=False,
@@ -381,7 +382,7 @@ class TeamilyGeoAClient:
                                     if p_data.get("status") in ["completed", "failed", "error"]:
                                         break
                         except Exception as poll_err:
-                            print(f"[TEAMILEY POLLING] Error sondeando {poll_url}: {poll_err}")
+                            print(f"[TEAMILY POLLING] Error sondeando {poll_url}: {poll_err}")
                             break
 
                 # Guardar thread_id para continuidad de la sesión del cliente (aislamiento estricto)
@@ -578,7 +579,7 @@ class TeamilyGeoAClient:
 teamily_geo_a_client = TeamilyGeoAClient()
 
 if __name__ == "__main__":
-    print(f"=== TEST CONEXIÓN DIRECTA TEAMILEY GEO A (LEIA) ===")
+    print(f"=== TEST CONEXIÓN DIRECTA TEAMILY GEO A (LEIA) ===")
     print(f"Endpoint: {teamily_geo_a_client.endpoint}")
     print(f"Board ID: {teamily_geo_a_client.board_id}")
     print(f"Server Key: {teamily_geo_a_client.get_masked_key()}")
