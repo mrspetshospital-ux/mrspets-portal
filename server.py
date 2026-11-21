@@ -93,6 +93,28 @@ except Exception as _e_qcl:
     qc_learning_engine = None
 
 try:
+    from avatarHardening import (
+        MARGARETTE_TEAMILY_USER_ID,
+        WHATSAPP_CONCIERGE_PHONE,
+        WHATSAPP_CONCIERGE_PHONE_RAW,
+        BRANCH_ADDRESS_PHYSICAL,
+        DEFAULT_AGENT_TIMEOUT_SEC,
+        build_honest_fallback_message,
+        build_human_handoff_payload,
+        agent_health_tracker
+    )
+except Exception as _e_hard:
+    log.warning("No se pudo cargar avatarHardening: %s", _e_hard)
+    MARGARETTE_TEAMILY_USER_ID = "9000408632300095"
+    WHATSAPP_CONCIERGE_PHONE = "+58 414-6799510"
+    WHATSAPP_CONCIERGE_PHONE_RAW = "584146799510"
+    BRANCH_ADDRESS_PHYSICAL = "Avenida 2 El Milagro, diagonal a Lago Mall, Maracaibo"
+    DEFAULT_AGENT_TIMEOUT_SEC = 45.0
+    agent_health_tracker = None
+    build_honest_fallback_message = lambda **kw: "🐾 **Canal de Atención Mrs. Pets:**\n\nEn este momento no puedo completar tu consulta."
+    build_human_handoff_payload = lambda **kw: {"available": False}
+
+try:
     from binancePayEngine import binance_pay_engine
 except Exception as _e_binance:
     binance_pay_engine = None
@@ -2394,20 +2416,16 @@ def _call_gemini_for_leia_engine(
     dt_ms = int((time.time() - t0) * 1000)
     return {
         "success": False,
-        "reply": (
-            "🎀 **Leia (Concierge VIP):**\n\n"
-            "¡Hola! Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets** (Avenida 2 El Milagro).\n\n"
-            "Estoy a tu entera disposición para coordinar citas de **Grooming Spa** (con hidratación de pulpejos siempre incluida), **Clínica Veterinaria IDEXX** y **Hotel VIP 5★**. ¿Cómo podemos consentir a tu mascota hoy? ✨🐾"
-        ),
+        "reply": "",
         "model_used": "fallback_local",
         "latency_ms": dt_ms
     }
 
 
 def get_primary_ai_engine() -> Tuple[str, float]:
-    """Retorna (primary_engine, failover_timeout) configurados en el panel de IA."""
+    """Retorna (primary_engine, failover_timeout) configurados en el panel de IA o entorno."""
     primary = "teamily"
-    timeout_sec = 8.0
+    timeout_sec = float(os.environ.get("AGENT_TIMEOUT_SEC") or (float(os.environ.get("AGENT_TIMEOUT_MS", 45000)) / 1000.0) or 45.0)
     if AGENT_STUDIO_CONFIG_PATH.exists():
         try:
             with open(AGENT_STUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -2424,25 +2442,56 @@ def get_primary_ai_engine() -> Tuple[str, float]:
     return primary, timeout_sec
 
 
+MARGARETTE_TEAMILY_USER_ID = os.environ.get("MARGARETTE_USER_ID", "9000408632300095")
+WHATSAPP_CONCIERGE_PHONE = "+58 414-6799510"
+WHATSAPP_CONCIERGE_PHONE_RAW = "584146799510"
+
+
+def build_honest_fallback_message(user_name: str = "", pet_name: str = "", reason: str = "") -> str:
+    """
+    Construye el mensaje de respaldo honesto y seguro del sistema (Debilidades 1 y 3).
+    - Habla como SISTEMA / Canal de Atención (NUNCA como 'Leia' ni 'Concierge VIP').
+    - Ofrece derivación directa a WhatsApp (+58 414-6799510) y atención física en Av. 2 El Milagro.
+    - No promete reintentos ni tiempos que el sistema no controla (prohibido 'reintenta').
+    - Mantiene el tono institucional de Mrs. Pets ('princesa' / 'príncipe' / 'We see pets').
+    """
+    tutor_txt = f", {user_name.strip()}" if user_name and user_name.strip() and user_name.strip().lower() not in ["cliente vip", "amigo", "usuario"] else ""
+    pet_txt = f" de {pet_name.strip()}" if pet_name and pet_name.strip() else ""
+
+    prefill_text = f"Hola Mrs. Pets{tutor_txt}, requiero asistencia en sucursal para mi consulta{pet_txt}."
+    encoded_prefill = urllib.parse.quote(prefill_text)
+    wa_url = f"https://wa.me/{WHATSAPP_CONCIERGE_PHONE_RAW}?text={encoded_prefill}"
+
+    return (
+        f"🐾 **Canal de Atención Mrs. Pets:**\n\n"
+        f"En este momento no puedo completar tu consulta{tutor_txt}. Para no hacerte esperar, "
+        f"escríbenos directamente por WhatsApp a [{WHATSAPP_CONCIERGE_PHONE}]({wa_url}) "
+        f"o visítanos en sucursal en **Avenida 2 El Milagro** — te atendemos de inmediato. "
+        f"Tu princesa o príncipe no se queda sin atención. ✨🐾"
+    )
+
+
 async def _execute_teamily_channel(
     msg: str,
     session_id: str,
     is_customer: bool = True,
-    timeout_sec: float = 8.0,
-    board_id: Optional[str] = None
+    timeout_sec: float = DEFAULT_AGENT_TIMEOUT_SEC,
+    board_id: Optional[str] = None,
+    allow_retry: bool = True
 ) -> Dict[str, Any]:
     """
-    Canal 1 Independiente: Teamily Live API (Margaret / Comité Volturi @9000376919168475).
+    Canal 1 Independiente: Teamily Live API (Margarette Gerente de Planta @9000408632300095).
     - Hilo único por cliente (aislamiento de datos estricto sin mezclar board compartido)
     - Medición de latencia real
-    - Forzamiento estricto de timeout
+    - Forzamiento estricto de timeout (45s base)
+    - 1 reintento automático a los 3s para fallos transitorios (Debilidad 2)
     """
     if not teamily_geo_a_client or not TeamilyGeoARequest or not msg:
         return {
             "success": False,
             "reply": "",
-            "agent": "margaret",
-            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "agent": "system",
+            "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": 0.0,
@@ -2453,7 +2502,7 @@ async def _execute_teamily_channel(
     try:
         teamily_input = msg
         if "[DIRECTIVA" not in msg and "VOLTURI" not in msg:
-            teamily_input = f"[DIRECTIVA COMITÉ VOLTURI - MARGARET @9000376919168475 (GERENCIA DE ATENCIÓN AL CLIENTE)]:\n{msg}"
+            teamily_input = f"[DIRECTIVA COMITÉ VOLTURI - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID} (GERENCIA DE ATENCIÓN AL CLIENTE)]:\n{msg}"
 
         req = TeamilyGeoARequest(
             input=teamily_input,
@@ -2472,7 +2521,7 @@ async def _execute_teamily_channel(
                 "success": True,
                 "reply": res.response_text,
                 "agent": "margaret",
-                "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+                "agent_name": f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})",
                 "model_used": "teamily-volturi",
                 "channel": "teamily",
                 "latency_ms": elapsed_ms,
@@ -2482,8 +2531,8 @@ async def _execute_teamily_channel(
             return {
                 "success": False,
                 "reply": "",
-                "agent": "margaret",
-                "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+                "agent": "system",
+                "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
                 "model_used": "teamily-volturi",
                 "channel": "teamily",
                 "latency_ms": elapsed_ms,
@@ -2492,11 +2541,22 @@ async def _execute_teamily_channel(
     except asyncio.TimeoutError:
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         log.warning("Canal Teamily superó timeout estricto de %ss (latencia: %sms)", timeout_sec, elapsed_ms)
+        if allow_retry:
+            log.info("Canal Teamily: Ejecutando 1 reintento automático tras 3s de backoff...")
+            await asyncio.sleep(3.0)
+            return await _execute_teamily_channel(
+                msg=msg,
+                session_id=session_id,
+                is_customer=is_customer,
+                timeout_sec=timeout_sec,
+                board_id=board_id,
+                allow_retry=False
+            )
         return {
             "success": False,
             "reply": "",
-            "agent": "margaret",
-            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "agent": "system",
+            "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": elapsed_ms,
@@ -2505,11 +2565,24 @@ async def _execute_teamily_channel(
     except Exception as e:
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         log.warning("Error en Canal Teamily: %s", e)
+        err_str = str(e).lower()
+        is_transient = any(term in err_str for term in ["timeout", "timed out", "connection", "temporarily", "reset", "502", "503", "504"])
+        if is_transient and allow_retry:
+            log.info("Canal Teamily: Reintentando tras error transitorio (%s)...", e)
+            await asyncio.sleep(3.0)
+            return await _execute_teamily_channel(
+                msg=msg,
+                session_id=session_id,
+                is_customer=is_customer,
+                timeout_sec=timeout_sec,
+                board_id=board_id,
+                allow_retry=False
+            )
         return {
             "success": False,
             "reply": "",
-            "agent": "margaret",
-            "agent_name": "Margaret (Teamily Volturi • @9000376919168475)",
+            "agent": "system",
+            "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
             "channel": "teamily",
             "latency_ms": elapsed_ms,
@@ -2522,14 +2595,16 @@ async def _execute_gemini_channel(
     history: Optional[List[dict]] = None,
     requested_model: Optional[str] = None,
     requested_agent: str = "margaret",
-    timeout_sec: float = 8.0
+    timeout_sec: float = DEFAULT_AGENT_TIMEOUT_SEC,
+    allow_retry: bool = True
 ) -> Dict[str, Any]:
     """
     Canal 2 Independiente: Google Gemini Live API.
     - Personalidad fiel de Recepción / Leia Concierge VIP / Margaret
     - Detección de servicios, horarios y Tasa BCV oficial
     - Medición de latencia real
-    - Forzamiento estricto de timeout
+    - Forzamiento estricto de timeout (45s base)
+    - 1 reintento automático a los 3s para fallos transitorios (Debilidad 2)
     """
     t0 = time.time()
     try:
@@ -2559,9 +2634,9 @@ async def _execute_gemini_channel(
         else:
             return {
                 "success": False,
-                "reply": gem_res.get("reply", ""),
-                "agent": requested_agent,
-                "agent_name": "Leia Concierge VIP (Fallback Local)",
+                "reply": "",
+                "agent": "system",
+                "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
                 "model_used": gem_res.get("model_used", "fallback-local"),
                 "channel": "gemini",
                 "latency_ms": elapsed_ms,
@@ -2570,11 +2645,22 @@ async def _execute_gemini_channel(
     except asyncio.TimeoutError:
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         log.warning("Canal Gemini superó timeout estricto de %ss (latencia: %sms)", timeout_sec, elapsed_ms)
+        if allow_retry:
+            log.info("Canal Gemini: Ejecutando 1 reintento automático tras 3s de backoff...")
+            await asyncio.sleep(3.0)
+            return await _execute_gemini_channel(
+                msg=msg,
+                history=history,
+                requested_model=requested_model,
+                requested_agent=requested_agent,
+                timeout_sec=timeout_sec,
+                allow_retry=False
+            )
         return {
             "success": False,
             "reply": "",
-            "agent": requested_agent,
-            "agent_name": "Leia Concierge VIP (Google Gemini)",
+            "agent": "system",
+            "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "gemini-flash-latest",
             "channel": "gemini",
             "latency_ms": elapsed_ms,
@@ -2583,11 +2669,24 @@ async def _execute_gemini_channel(
     except Exception as e:
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         log.warning("Error en Canal Gemini: %s", e)
+        err_str = str(e).lower()
+        is_transient = any(term in err_str for term in ["timeout", "timed out", "connection", "temporarily", "reset", "502", "503", "504"])
+        if is_transient and allow_retry:
+            log.info("Canal Gemini: Reintentando tras error transitorio (%s)...", e)
+            await asyncio.sleep(3.0)
+            return await _execute_gemini_channel(
+                msg=msg,
+                history=history,
+                requested_model=requested_model,
+                requested_agent=requested_agent,
+                timeout_sec=timeout_sec,
+                allow_retry=False
+            )
         return {
             "success": False,
             "reply": "",
-            "agent": requested_agent,
-            "agent_name": "Leia Concierge VIP (Google Gemini)",
+            "agent": "system",
+            "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "gemini-flash-latest",
             "channel": "gemini",
             "latency_ms": elapsed_ms,
@@ -2600,7 +2699,7 @@ async def orchestrate_dual_ai_chat(
     session_id: str,
     is_customer: bool = True,
     primary_engine: str = "teamily",
-    timeout_sec: float = 8.0,
+    timeout_sec: float = 45.0,
     history: Optional[List[dict]] = None,
     requested_agent: str = "margaret",
     board_id: Optional[str] = None
@@ -2610,7 +2709,8 @@ async def orchestrate_dual_ai_chat(
     respetando estrictamente:
     1. Cuál es la Inteligencia Primaria (elegida en el panel de IA).
     2. Cuál es la Inteligencia de Respaldo (la contraparte automática).
-    3. El tiempo de espera (timeout) configurado antes de conmutar.
+    3. El tiempo de espera (timeout) configurado antes de conmutar (45s por defecto).
+    4. Separación estricta de identidad: los fallos son emitidos por el SISTEMA, nunca por Leia.
     """
     primary = "gemini" if str(primary_engine).lower() in ["gemini", "make"] else "teamily"
     backup = "teamily" if primary == "gemini" else "gemini"
@@ -2660,12 +2760,11 @@ async def orchestrate_dual_ai_chat(
 
     reply_text = res.get("reply") if res else ""
     if not reply_text:
-        reply_text = (
-            "🎀 **Leia (Concierge VIP):** En este momento estoy experimentando una breve intermitencia de conexión con la central. Por favor reintenta tu consulta en unos instantes o comunícate directamente con nuestro equipo en sucursal."
-        )
-        responder_agent = requested_agent
-        responder_name = "Leia Concierge VIP (Fallback Local)"
-        model_used = "fallback-local"
+        # Debilidad 1 y 3: Respaldo honesto del SISTEMA, sin firma de persona ni promesas falsas
+        reply_text = build_honest_fallback_message()
+        responder_agent = "system"
+        responder_name = "Canal de Atención (Sistema Mrs. Pets)"
+        model_used = "fallback-sistema"
     else:
         responder_agent = res.get("agent", requested_agent)
         responder_name = res.get("agent_name", "Leia Concierge VIP")
@@ -6978,6 +7077,47 @@ from receptionBridge import (
 )
 
 
+@app.get("/api/health/agent")
+@app.get("/api/v1/health/agent")
+def get_agent_health():
+    """Endpoint de health check y telemetría de Margarette (Debilidad 4)."""
+    if agent_health_tracker:
+        return agent_health_tracker.get_summary()
+    return {
+        "status": "ok",
+        "agent_id": MARGARETTE_TEAMILY_USER_ID,
+        "latency_ms": 0.0,
+        "consecutive_failures": 0,
+        "uptime_pct": 100.0,
+        "sla_compliant": True
+    }
+
+
+@app.post("/api/health/agent")
+@app.post("/api/v1/health/agent")
+async def trigger_agent_synthetic_check(request: Request):
+    """Ejecuta chequeo sintético o simulación de alerta para Margarette (Debilidad 4)."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    force_status = str(body.get("force_status") or "").lower()
+    if force_status in ["down", "fail", "degraded"]:
+        if agent_health_tracker:
+            return agent_health_tracker.record_check_result(
+                ok=False,
+                latency_ms=45000.0,
+                error_detail=f"Fallo forzado sintético ({force_status})"
+            )
+    elif force_status in ["ok", "healthy", "up"]:
+        if agent_health_tracker:
+            return agent_health_tracker.record_check_result(ok=True, latency_ms=120.0)
+    if agent_health_tracker:
+        return agent_health_tracker.get_summary()
+    return {"status": "ok"}
+
+
 @app.post("/api/v1/avatar/chat")
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
@@ -7060,6 +7200,37 @@ async def teamily_chat(request: Request):
         except Exception as _e_book:
             log.warning("Error procesando reserva: %s", _e_book)
 
+        # Debilidad 4 & 5: Registro de salud, detección de fallback y traspaso a humano tras 2 fallos
+        is_system_fallback = (orch.get("active_channel") == "fallback" or responder_agent == "system" or not res_text)
+        human_handoff_obj = None
+
+        if agent_health_tracker:
+            if is_system_fallback:
+                failures = agent_health_tracker.record_session_failure(session_id)
+                agent_health_tracker.record_check_result(
+                    ok=False,
+                    latency_ms=call_latency_ms,
+                    error_detail=orch.get("failover_reason") or "Fallo de respuesta en ambos motores"
+                )
+                if failures >= 2:
+                    human_handoff_obj = build_human_handoff_payload(
+                        user_name=u_name,
+                        pet_name=p_name,
+                        phone=ph_num,
+                        service="Atención al Cliente / Citas",
+                        issue_summary=msg,
+                        session_id=session_id
+                    )
+                    res_text = build_honest_fallback_message(
+                        user_name=u_name,
+                        pet_name=p_name,
+                        include_handoff=True,
+                        handoff_url=human_handoff_obj.get("whatsapp_url", "")
+                    )
+            else:
+                agent_health_tracker.reset_session_failures(session_id)
+                agent_health_tracker.record_check_result(ok=True, latency_ms=call_latency_ms)
+
         out_response = {
             "status": "success",
             "agent": responder_agent,
@@ -7078,6 +7249,9 @@ async def teamily_chat(request: Request):
             "bcv_rate": eff_rate,
             "client_found": client_info.get("found", False)
         }
+
+        if human_handoff_obj:
+            out_response["human_handoff"] = human_handoff_obj
 
         if booking_data:
             out_response["booking"] = booking_data
