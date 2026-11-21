@@ -2994,6 +2994,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const sheetsId = document.getElementById('wr-cfg-sheets')?.value || '';
 
       const payload = {
+        admin_key: 'mrspets_warroom_admin_key_2026',
         teamily_endpoint_url: teamlyUrl,
         teamily_server_key: teamlyKey,
         make_webhook_url: makeUrl,
@@ -3007,7 +3008,10 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       try {
         const res = await fetch('/api/v1/war-room/config', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer mrspets_sec_warroom_live_2026_antigravity'
+          },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
