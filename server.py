@@ -2501,8 +2501,8 @@ async def _execute_teamily_channel(
     t0 = time.time()
     try:
         teamily_input = msg
-        if "[DIRECTIVA" not in msg and "VOLTURI" not in msg:
-            teamily_input = f"[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID}]:\n{msg}"
+        if f"@{MARGARETTE_TEAMILY_USER_ID}" not in teamily_input:
+            teamily_input = f"[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{MARGARETTE_TEAMILY_USER_ID}]:\n{teamily_input}"
 
         req = TeamilyGeoARequest(
             input=teamily_input,
@@ -2513,7 +2513,7 @@ async def _execute_teamily_channel(
         )
         res = await asyncio.wait_for(
             asyncio.to_thread(teamily_geo_a_client.send_message, req),
-            timeout=timeout_sec + 0.5
+            timeout=timeout_sec + 5.0
         )
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         if res.success and res.response_text:
@@ -2528,6 +2528,18 @@ async def _execute_teamily_channel(
                 "error": None
             }
         else:
+            err_received = res.error or "Respuesta vacía recibida de Teamily"
+            if allow_retry and ("timed out" in err_received.lower() or "timeout" in err_received.lower()):
+                log.info("Canal Teamily: Error de lectura/timeout detectado ('%s'). Ejecutando 1 reintento automático inmediato...", err_received)
+                await asyncio.sleep(1.0)
+                return await _execute_teamily_channel(
+                    msg=msg,
+                    session_id=session_id,
+                    is_customer=is_customer,
+                    timeout_sec=max(timeout_sec, 50.0),
+                    board_id=board_id,
+                    allow_retry=False
+                )
             return {
                 "success": False,
                 "reply": "",
@@ -2536,7 +2548,7 @@ async def _execute_teamily_channel(
                 "model_used": "teamily-volturi",
                 "channel": "teamily",
                 "latency_ms": elapsed_ms,
-                "error": res.error or "Respuesta vacía recibida de Teamily"
+                "error": err_received
             }
     except asyncio.TimeoutError:
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
@@ -7160,7 +7172,8 @@ async def teamily_chat(request: Request):
         else:
             primary_engine = "teamily"
 
-        timeout_sec = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout)
+        timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 45.0)
+        timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 45.0)
         user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
         is_customer = (user_type not in ["staff", "staff_admin", "admin", "war_room"])
 

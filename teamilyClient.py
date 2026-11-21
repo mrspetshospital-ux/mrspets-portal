@@ -17,6 +17,7 @@ import datetime
 import urllib.request
 import urllib.error
 import ssl
+import socket
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, Optional
 
@@ -499,11 +500,33 @@ class TeamilyGeoAClient:
             })
             return res_obj
 
+        except (TimeoutError, socket.timeout) as to_err:
+            elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+            err_msg = f"Timeout de lectura en Teamily ({elapsed_ms}ms > {req_timeout}s): The read operation timed out"
+            res_obj = TeamilyGeoAResponse(
+                status_code=408,
+                success=False,
+                response_text="",
+                data={"error": err_msg},
+                raw_body="",
+                latency_ms=elapsed_ms,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=request.board_id or self.board_id
+            )
+            self._log_audit("GEO_A_TIMEOUT", {"error": err_msg, "latency_ms": elapsed_ms})
+            return res_obj
+
         except urllib.error.URLError as ue:
             elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
-            err_msg = f"Fallo de conexión de red: {ue.reason}"
+            if isinstance(ue.reason, (socket.timeout, TimeoutError)) or "timed out" in str(ue.reason).lower():
+                err_msg = f"Timeout de conexión en Teamily ({elapsed_ms}ms > {req_timeout}s): The read operation timed out"
+                sc = 408
+            else:
+                err_msg = f"Fallo de conexión de red: {ue.reason}"
+                sc = 0
             res_obj = TeamilyGeoAResponse(
-                status_code=0,
+                status_code=sc,
                 success=False,
                 response_text="",
                 data={"error": str(ue.reason)},

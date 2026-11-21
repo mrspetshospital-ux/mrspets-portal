@@ -1630,7 +1630,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     let storedGov = {};
     try { storedGov = savedGov ? JSON.parse(savedGov) : {}; } catch(e){}
     const primaryEngine = (window.agentStudio && window.agentStudio.primaryEngine) || storedGov.primaryEngine || 'teamily';
-    const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 45;
+    const rawTimeout = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || storedGov.failoverTimeout || 45;
+    const timeoutSec = Math.max(Number(rawTimeout) || 45, 45);
     const activeApprovalMode = (window.adminEngine && window.adminEngine.aiApprovalMode) || localStorage.getItem('mrs_pets_ai_approval_mode') || 'manual';
 
     const chatSessionId = (typeof this.getChatSessionId === 'function') ? this.getChatSessionId() : ((session && session.sessionId) || ('sess_' + Math.random().toString(36).substring(2, 9)));
@@ -1672,7 +1673,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       // =========================================================================
       try {
         const abortCtrl = new AbortController();
-        const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
+        const fetchTimer = setTimeout(() => abortCtrl.abort(), (timeoutSec + 15) * 1000);
         const res = await fetch('/api/v1/avatar/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

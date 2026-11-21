@@ -117,22 +117,23 @@ def lookup_client_in_mrs_pets_db(
 
 
 def format_margaret_system_directive(client_info: Dict[str, Any]) -> str:
-    """Genera la directiva de apoyo para Margaret manteniendo su autonomía conversacional."""
+    """Genera la directiva de apoyo para Margarette manteniendo su autonomía conversacional."""
+    margaret_id = os.environ.get("MARGARETTE_USER_ID", "9000408632300095")
     if client_info.get("found") and client_info.get("tutor"):
         tutor = client_info["tutor"]
         mascotas = client_info.get("mascotas", [])
         pets_summary = ", ".join([f"{m['nombre']} ({m.get('raza') or m.get('especie') or 'Mascota'})" for m in mascotas]) if mascotas else "Sin mascotas registradas"
         return (
-            f"\n[DIRECTIVA DE RECEPCIÓN MRS. PETS - CLIENTE REGISTRADO EN BD]:\n"
+            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
             f"• Tutor: {tutor.get('nombre')} | Teléfono: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
             f"• Mascota(s) en expediente: {pets_summary}\n"
-            f"• INSTRUCCIÓN PARA MARGARET: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y pregúntale directamente qué servicio desea agendar (✂️ Grooming Spa 7 Estaciones, 🩺 Consulta Médica Veterinaria o 🏨 Suites Hotel VIP 5★) y para qué fecha y hora.\n"
+            f"• INSTRUCCIÓN PARA MARGARETTE: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y pregúntale directamente qué servicio desea agendar (✂️ Grooming Spa 7 Estaciones, 🩺 Consulta Médica Veterinaria o 🏨 Suites Hotel VIP 5★) y para qué fecha y hora.\n"
         )
     else:
         return (
-            f"\n[DIRECTIVA DE RECEPCIÓN MRS. PETS - CLIENTE NUEVO]:\n"
+            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE NUEVO)]:\n"
             f"• Estado: Cliente nuevo (no registrado en la base de datos).\n"
-            f"• INSTRUCCIÓN PARA MARGARET: Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:\n"
+            f"• INSTRUCCIÓN PARA MARGARETTE: Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:\n"
             f"  1. Nombre completo del tutor y teléfono de contacto.\n"
             f"  2. Sector o dirección en Maracaibo.\n"
             f"  3. Nombre del consentido(a), especie, raza y sexo.\n"
