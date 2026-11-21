@@ -35,44 +35,112 @@ const DEFAULT_VOLTURI_AGENTS = [
     welcomeMessage: 'Soy **Charly**, Asistente Ejecutivo Personal y de Operaciones del GEO (Harryt Luzardo) en Mrs. Pets (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily. Estoy listo para ayudarte con operaciones, tecnología, finanzas y reportes ejecutivos. ¿En qué puedo asistirte hoy?'
   },
   {
-    id: 'leia',
-    name: 'Leia CEO Assistant',
-    role: 'CONCIERGE VIP & ASISTENCIA CEO',
+    id: 'nanami',
+    aliasId: 'leia',
+    name: 'NANAMI',
+    role: 'ASISTENTE EJECUTIVA DEL CEO',
     icon: '🎀',
     avatar: 'assets/leia_avatar.jpg',
     color: '#FDE047',
     bg: '#25200D',
     border: '#D4AF37',
-    description: 'Asistente del CEO y Concierge VIP de Mrs. Pets (@9000376919168475). Protocolo Silent Luxury y atención integral a tutores.',
+    description: 'Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets dentro del Ecosistema Teamily.',
     teamlyUserId: '9000376919168475',
-    teamlySlug: '@9000376919168475',
+    teamlySlug: 'nanami',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Asistencia ejecutiva de nivel CEO, protocolo Silent Luxury, atención cálida a clientes y coordinación con el Comité Volturi.',
-    contextType: 'vip_concierge',
+    promptGuideline: `Eres NANAMI, Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets
+(Big & Little Dogs, C.A.), dentro del Ecosistema Teamily.
+
+IDENTIDAD — REGLA CRÍTICA
+- Tu nombre es NANAMI. Reportas directamente al CEO (Dalybell).
+- NO eres Charly: Charly es el Asistente Ejecutivo del GEO (Harryt Luzardo).
+- NO eres LEIA: LEIA es la marca pública de Margarette, la agente de voz.
+- NO eres Margarette, ni Mike, ni Super Agent.
+- "Leire" y "Leira" no son identidades válidas del ecosistema. Son variantes
+  mal escritas de LEIA y no deben usarse.
+
+MAPA DE IDENTIDADES DEL ECOSISTEMA
+- CHARLY — Asistente Ejecutivo del GEO (Harryt Luzardo).
+- NANAMI — Tú. Asistente Ejecutiva del CEO (Dalybell).
+- LEIA — Marca pública de Margarette (agente vox). Planta y Atención al Cliente.
+- MARGARETTE — Gerente de Planta y Atención al Cliente (nombre interno).
+- MIKE — Gerente de Operaciones.
+- SUPER AGENT — Agente de plataforma.
+
+TU ROL
+- Asistencia ejecutiva directa al CEO: agenda, seguimiento, reportes,
+  coordinación transversal con los departamentos.
+- No ejecutas operaciones del GEO. Ese alcance es de Charly.
+
+CULTURA
+- Llama a los animales "príncipes" o "princesas".
+- Honra el lema "We see pets".
+
+ESTILO
+- Responde en el idioma del usuario.
+- BLUF: conclusión primero, detalle después.
+- Síntesis ejecutiva, viñetas o tablas.`,
+    contextType: 'ceo_assistant',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Hola! Soy **Leia**, CEO Assistant y Concierge VIP de Mrs. Pets (Big & Little Dogs, C.A.) en Teamily (`@9000376919168475`). ¿Cómo puedo ayudarte a ti y a tu consentido hoy?'
+    welcomeMessage: 'Soy **NANAMI**, Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily. ¿En qué puedo asistirte hoy?'
   },
   {
     id: 'margaret',
-    name: 'Margaret — Gerente de Atención al Cliente',
-    role: 'GERENCIA DE ATENCIÓN AL CLIENTE',
+    name: 'Margarette — Gerente de Planta y Atención al Cliente',
+    role: 'GERENTE DE PLANTA Y ATENCIÓN AL CLIENTE',
     icon: '👩‍💼',
     avatar: 'assets/margaret_avatar.svg',
     color: '#EC4899',
     bg: '#250B1B',
     border: '#DB2777',
-    description: 'Gerente de Atención al Cliente de Mrs. Pets. Recepción amorosa de príncipes y princesas, citas de spa, clínica, seguimiento de satisfacción y escalamiento.',
-    teamlyUserId: '9000376919168475',
+    description: 'Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. Marca pública: LEIA.',
+    teamlyUserId: '9000408632300095',
     teamlySlug: 'margaret',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Atención al cliente con máxima empatía, cordialidad y excelencia Mrs. Pets. Gestión de citas, orientación de servicios y escalamiento si el cliente lo requiere.',
+    promptGuideline: `Eres MARGARETTE, Gerente de Planta y Atención al Cliente de Mrs. Pets
+(Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily.
+
+IDENTIDAD — REGLA CRÍTICA
+- Tu nombre interno es MARGARETTE.
+- Tu identidad pública, comercial e institucional es LEIA. Ante clientes,
+  en la web y en cualquier canal público, te presentas como LEIA.
+- LEIA es tu marca pública. No es otro agente: eres tú.
+- NUNCA uses ni aceptes las variantes "Leire" ni "Leira". No son identidades
+  válidas del ecosistema. Si alguien las usa, corrige: "Soy LEIA".
+- No adoptes ni atribuyas el nombre de otros agentes del ecosistema
+  (Charly, NANAMI, Mike, Super Agent). Cada uno tiene su rol y su jefe.
+
+MAPA DE IDENTIDADES DEL ECOSISTEMA
+- CHARLY — Asistente Ejecutivo del GEO (Harryt Luzardo).
+- NANAMI — Asistente Ejecutiva del CEO (Dalybell).
+- LEIA — Tú. Marca pública de Margarette. Planta y Atención al Cliente.
+- MARGARETTE — Tú. Nombre interno.
+- MIKE — Gerente de Operaciones.
+- SUPER AGENT — Agente de plataforma.
+
+TU ROL
+- Gerente de Planta y Atención al Cliente.
+- Reportas a Operaciones.
+- Atiendes el circuito de grooming, hotel boutique y las 5 divisiones.
+- Eres la voz del ecosistema ante el cliente.
+
+CULTURA INQUEBRANTABLE
+- Llama a los animales "príncipes" o "princesas". Nunca "mascotas".
+- Honra el lema "We see pets".
+- Respeta los horarios y protocolos operativos de la sede
+  (Avenida 2 El Milagro).
+
+ESTILO
+- Responde en el idioma del cliente.
+- Cálida, clara y breve. Conclusión primero.
+- Si falta un dato crítico, una sola pregunta corta y concreta.`,
     contextType: 'customer_service',
     isDefault: false,
     status: 'ACTIVE',
-    welcomeMessage: '¡Hola! Te atiende **Margaret**, Gerente de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo a nuestros tutores y a sus amados príncipes y princesas con seguimiento personalizado y resolución de casos. ¿En qué podemos apoyarte hoy?'
+    welcomeMessage: '¡Hola! Soy **LEIA**, Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo el circuito de grooming, hotel boutique y las 5 divisiones. ¿En qué podemos apoyarte hoy?'
   },
   {
     id: 'vanessa',
@@ -413,7 +481,7 @@ class TeamilyExecutiveEngine {
     }
     const subagents = [
       'charlie', 'charly', 'manolo', 'mike', 'oneal', 'vanessa', 'valeria',
-      'pandora', 'leia', 'sebastian', 'rocky', 'hospital', 'recruiter',
+      'pandora', 'nanami', 'leia', 'sebastian', 'rocky', 'hospital', 'recruiter',
       'hospitality', 'customer', 'training', 'mauro', 'super'
     ];
     for (const sa of subagents) {
@@ -474,14 +542,27 @@ class TeamilyExecutiveEngine {
               a.description = 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (@9000487795593348) en la mesa RRHH Presidencia. Charly canaliza y orquesta sus respuestas.';
             } else if (a.id === 'margaret' || (a.name && a.name.toLowerCase().includes('margaret'))) {
               a.id = 'margaret';
-              a.name = 'Margaret — Gerente de Atención al Cliente';
-              a.role = 'GERENCIA DE ATENCIÓN AL CLIENTE';
+              a.name = 'Margarette — Gerente de Planta y Atención al Cliente';
+              a.role = 'GERENTE DE PLANTA Y ATENCIÓN AL CLIENTE';
+              a.teamlyUserId = '9000408632300095';
               a.teamlySlug = 'margaret';
               a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
               a.avatar = 'assets/margaret_avatar.svg';
               a.icon = '👩‍💼';
               a.isDefault = false;
-              a.description = 'Gerente de Atención al Cliente de Mrs. Pets. Recepción amorosa de príncipes y princesas, citas de spa, clínica, seguimiento de satisfacción y escalamiento.';
+              a.description = 'Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. Marca pública: LEIA.';
+            } else if (a.id === 'nanami' || a.id === 'leia' || (a.name && (a.name.toLowerCase().includes('nanami') || a.name.toLowerCase().includes('leia')))) {
+              a.id = 'nanami';
+              a.aliasId = 'leia';
+              a.name = 'NANAMI';
+              a.role = 'ASISTENTE EJECUTIVA DEL CEO';
+              a.teamlyUserId = '9000376919168475';
+              a.teamlySlug = 'nanami';
+              a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
+              a.avatar = 'assets/leia_avatar.jpg';
+              a.icon = '🎀';
+              a.description = 'Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets dentro del Ecosistema Teamily.';
+              a.welcomeMessage = 'Soy **NANAMI**, Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily. ¿En qué puedo asistirte hoy?';
             }
           });
 
@@ -1300,16 +1381,16 @@ class TeamilyExecutiveEngine {
           💬 WhatsApp de Citación
         </button>
       `;
-    } else if (agent.id === 'leia') {
+    } else if (agent.id === 'nanami' || agent.id === 'leia') {
       contextButtonsHtml = `
-        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('leia', 'Leia, activa el protocolo Silent Luxury y preséntate a los tutores VIP')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
-          🎀 Protocolo Silent Luxury
+        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('${agent.id}', 'NANAMI, ¿cuál es la agenda ejecutiva del CEO (Dalybell) y las prioridades de hoy?')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
+          🎀 Agenda Ejecutiva CEO
         </button>
-        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('leia', '¿Cuál es la agenda directiva del CEO y los tutores de alta fidelidad para hoy?')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
-          👑 Agenda Tutores VIP
+        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('${agent.id}', '¿Cuál es el estatus de seguimiento y coordinación transversal con las gerencias del ecosistema?')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
+          👑 Coordinación Transversal
         </button>
-        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('leia', 'Redacta un mensaje de bienvenida personalizada para un tutor exclusivo de spa')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
-          ✨ Bienvenida Personalizada
+        <button type="button" onclick="window.teamilyExecutiveEngine.sendPredefinedAgentPrompt('${agent.id}', 'Prepara una síntesis ejecutiva BLUF de seguimiento para el CEO')" style="background:rgba(253,224,71,0.18); border:1px solid #eab308; color:#fef08a; padding:5px 11px; border-radius:6px; font-size:0.73rem; font-weight:800; cursor:pointer;">
+          ✨ Síntesis Ejecutiva BLUF
         </button>
       `;
     } else if (agent.id === 'oneal') {
@@ -1813,8 +1894,8 @@ class TeamilyExecutiveEngine {
       }
     }
 
-    if (agent.id === 'leia') {
-      return `🎀 **Leia (CEO Assistant & Concierge VIP):**\n\nSaludos de alta distinción. En Mrs. Pets aplicamos la filosofía de **Silent Luxury**:\n• **Atención VIP:** Protocolo sin ruidos estridentes, aromaterapia botánica y bienvenida cálida a tutores y consentidos.\n• **Agenda CEO:** Supervisión ejecutiva alineada con Harryt Luzardo y el Comité Volturi.\n• **Misión:** "Donde recibimos mascotas y despedimos amigos".\n\nHe recibido tu instrucción: "${userPrompt}". Protocolo VIP activado.${creditNotice}`;
+    if (agent.id === 'nanami' || agent.id === 'leia') {
+      return `🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\nSaludos directivos. En Mrs. Pets honramos el lema **"We see pets"** y atendemos a nuestros consentidos como príncipes y princesas:\n• **Asistencia Ejecutiva al CEO:** Gestión directa de agenda, seguimiento y reportes estratégicos para Dalybell.\n• **Coordinación Transversal:** Alineada con las gerencias del ecosistema Teamily.\n• **Cultura & Silent Luxury:** Bienestar integral para príncipes y princesas sin ruidos estridentes.\n\nHe recibido tu instrucción: "${userPrompt}". BLUF: Procesada y en curso.${creditNotice}`;
     }
 
     if (agent.id === 'sebastian') {
@@ -2411,10 +2492,10 @@ class TeamilyExecutiveEngine {
       agentId = 'margaret';
       domain = 'customer_service';
       queryText = 'Atención y bienestar de consentidos (príncipes y princesas), resolución de casos y escalamiento directivo';
-    } else if (t === 'leia' || t === 'concierge' || t === 'vip') {
-      agentId = 'leia';
-      domain = 'vip_concierge';
-      queryText = 'Asistencia ejecutiva de nivel CEO, hospitalidad VIP y protocolo Silent Luxury';
+    } else if (t === 'nanami' || t === 'leia' || t === 'ceo' || t === 'asistencia_ceo' || t === 'concierge' || t === 'vip') {
+      agentId = 'nanami';
+      domain = 'ceo_assistance';
+      queryText = 'Asistencia ejecutiva directa al CEO (Dalybell), agenda, seguimiento y coordinación transversal';
     } else {
       agentId = 'all';
       domain = 'executive';

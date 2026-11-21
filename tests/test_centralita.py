@@ -19,7 +19,8 @@ from centralitaRouter import centralita_router, AGENT_REGISTRY
 
 class TestCentralitaRouter(unittest.TestCase):
     def test_01_identity_isolation_leia_and_margaret(self):
-        """Verifica que Leia y Margaret tienen identidades 100% aisladas sin suplantación."""
+        """Verifica que Nanami y Margarette tienen identidades 100% aisladas sin suplantación."""
+        nanami_meta = AGENT_REGISTRY["nanami"]
         leia_meta = AGENT_REGISTRY["leia"]
         margaret_meta = AGENT_REGISTRY["margaret"]
 
@@ -28,23 +29,34 @@ class TestCentralitaRouter(unittest.TestCase):
         self.assertEqual(margaret_meta["avatar"], "assets/margaret_avatar.svg")
         self.assertNotEqual(leia_meta["avatar"], margaret_meta["avatar"])
 
-        # 2. Iconos y roles diferentes
+        # 2. Iconos y roles oficiales de la Gerencia
         self.assertEqual(leia_meta["icon"], "🎀")
+        self.assertEqual(nanami_meta["icon"], "🎀")
         self.assertEqual(margaret_meta["icon"], "👩‍💼")
-        self.assertEqual(leia_meta["role"], "CONCIERGE VIP & ASISTENCIA CEO")
-        self.assertEqual(margaret_meta["role"], "GERENCIA DE ATENCIÓN AL CLIENTE")
+        self.assertEqual(nanami_meta["role"], "ASISTENTE EJECUTIVA DEL CEO")
+        self.assertEqual(leia_meta["role"], "ASISTENTE EJECUTIVA DEL CEO")
+        self.assertEqual(margaret_meta["role"], "GERENCIA DE PLANTA Y ATENCIÓN AL CLIENTE")
 
         # 3. Síntesis de voz inmutable
-        leia_resp = centralita_router.synthesize_agent_response("leia", leia_meta["name"], "Hola Leia", {})
+        nanami_resp = centralita_router.synthesize_agent_response("nanami", nanami_meta["name"], "Hola Nanami", {})
         margaret_resp = centralita_router.synthesize_agent_response("margaret", margaret_meta["name"], "Hola Margaret", {})
 
-        self.assertIn("Leia", leia_resp)
-        self.assertNotIn("Margaret", leia_resp)
-        self.assertNotIn("fachada", leia_resp.lower())
+        self.assertIn("NANAMI", nanami_resp)
+        self.assertNotIn("Margaret", nanami_resp)
+        self.assertNotIn("fachada", nanami_resp.lower())
 
         self.assertIn("Margaret", margaret_resp)
-        self.assertNotIn("Leia", margaret_resp)
         self.assertNotIn("fachada", margaret_resp.lower())
+
+        # 4. Verificación de líneas de reporte y presentación pública
+        nanami_boss = centralita_router.synthesize_agent_response("nanami", nanami_meta["name"], "¿A quién reportas?", {})
+        self.assertIn("CEO", nanami_boss)
+        self.assertIn("Dalybell", nanami_boss)
+
+        margaret_who = centralita_router.synthesize_agent_response("margaret", margaret_meta["name"], "¿Quién eres?", {})
+        self.assertIn("Soy LEIA", margaret_who)
+        self.assertNotIn("Leire", margaret_who)
+        self.assertNotIn("Leira", margaret_who)
 
     def test_02_routing_pure_by_semantic_intent(self):
         """Verifica que la Centralita enruta correctamente según la intención o slug."""

@@ -3,7 +3,7 @@
 Mrs. Pets Maracaibo - Google Sheets Interaction & Audit Trail Engine
 Big & Little Dogs, C.A. • RIF J-40120233-0 • Av. 2 El Milagro diagonal Lago Mall
 
-Módulo de registro automático e inmutable para las interacciones del widget de Leia / Leire (Margaret)
+Módulo de registro automático e inmutable para las interacciones del widget de LEIA (Margarette)
 en Google Sheets y Make.com.
 
 Especificaciones:

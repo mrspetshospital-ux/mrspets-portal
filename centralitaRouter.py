@@ -48,25 +48,35 @@ except Exception as _e_qcl:
 
 # Tabla Canónica e Inmutable de Agentes
 AGENT_REGISTRY: Dict[str, Dict[str, Any]] = {
-    "leia": {
-        "slug": "leia",
-        "name": "Leia Concierge VIP & Asistencia CEO",
-        "role": "CONCIERGE VIP & ASISTENCIA CEO",
+    "nanami": {
+        "slug": "nanami",
+        "name": "NANAMI (Asistente Ejecutiva del CEO)",
+        "role": "ASISTENTE EJECUTIVA DEL CEO",
         "icon": "🎀",
         "avatar": "assets/leia_avatar.jpg",
-        "domain": "vip_concierge",
-        "description": "Hospitalidad VIP Silent Luxury, bienvenida y orquestación general de tutores.",
-        "voice_prefix": "🎀 **Leia (Concierge VIP & Asistencia CEO):**"
+        "domain": "ceo_assistance",
+        "description": "Asistencia ejecutiva directa al CEO (Dalybell): agenda, seguimiento, reportes y coordinación transversal.",
+        "voice_prefix": "🎀 **NANAMI (Asistente Ejecutiva del CEO):**"
+    },
+    "leia": {
+        "slug": "nanami",
+        "name": "NANAMI (Asistente Ejecutiva del CEO)",
+        "role": "ASISTENTE EJECUTIVA DEL CEO",
+        "icon": "🎀",
+        "avatar": "assets/leia_avatar.jpg",
+        "domain": "ceo_assistance",
+        "description": "Asistencia ejecutiva directa al CEO (Dalybell): agenda, seguimiento, reportes y coordinación transversal.",
+        "voice_prefix": "🎀 **NANAMI (Asistente Ejecutiva del CEO):**"
     },
     "margaret": {
         "slug": "margaret",
-        "name": "Margaret — Gerente de Atención al Cliente",
-        "role": "GERENCIA DE ATENCIÓN AL CLIENTE",
+        "name": "Margarette (Gerente de Planta & Atención al Cliente)",
+        "role": "GERENCIA DE PLANTA Y ATENCIÓN AL CLIENTE",
         "icon": "👩‍💼",
         "avatar": "assets/margaret_avatar.svg",
         "domain": "customer_service",
-        "description": "Resolución de casos, seguimiento post-atención de spa/clínica y gestión de reclamos.",
-        "voice_prefix": "👩‍💼 **Margaret (Gerente de Atención al Cliente):**"
+        "description": "Gerente de Planta y Atención al Cliente de Mrs. Pets. Marca pública: LEIA. Agente de voz (vox) del ecosistema Teamily.",
+        "voice_prefix": "🎀 **LEIA (Margarette • Planta & Atención):**"
     },
     "manolo": {
         "slug": "manolo",
@@ -174,9 +184,11 @@ class CentralitaRouter:
             return meta["slug"], meta["name"]
         
         # Variantes comunes de slugs
-        if slug in ["leire", "concierge", "vip"]:
-            return "leia", AGENT_REGISTRY["leia"]["name"]
-        if slug in ["atencion", "atención", "atencion_cliente", "atención_cliente", "customer_service", "queja", "reclamo", "margarette", "recepcion", "recepción"]:
+        if slug in ["nanami", "ceo_assistant", "asistencia_ceo"]:
+            return "nanami", AGENT_REGISTRY["nanami"]["name"]
+        if slug in ["concierge", "vip"]:
+            return "nanami", AGENT_REGISTRY["nanami"]["name"]
+        if slug in ["atencion", "atención", "atencion_cliente", "atención_cliente", "customer_service", "queja", "reclamo", "margarette", "recepcion", "recepción", "leire", "leira"]:
             return "margaret", AGENT_REGISTRY["margaret"]["name"]
         if slug in ["charly", "geo-a", "geo_a"]:
             return "charlie", AGENT_REGISTRY["charlie"]["name"]
@@ -186,8 +198,10 @@ class CentralitaRouter:
             return "oneil", AGENT_REGISTRY["oneil"]["name"]
 
         # 2. Análisis por mención explícita @ en el texto
+        if any(k in inp_lower for k in ["@nanami", "nanami"]):
+            return "nanami", AGENT_REGISTRY["nanami"]["name"]
         if any(k in inp_lower for k in ["@leia", "leia concier", "leia"]):
-            return "leia", AGENT_REGISTRY["leia"]["name"]
+            return "nanami", AGENT_REGISTRY["nanami"]["name"]
         if any(k in inp_lower for k in ["@margaret", "@margarette", "margaret", "margarette"]):
             return "margaret", AGENT_REGISTRY["margaret"]["name"]
         if any(k in inp_lower for k in ["@charlie", "@charly", "charlie", "charly"]):
@@ -263,8 +277,17 @@ class CentralitaRouter:
         except Exception:
             bcv_rate = float(os.environ.get("BCV_OFFICIAL_RATE", "914.02"))
 
-        # 1. LEIA (Concierge VIP & Asistencia CEO - Silent Luxury)
-        if slug == "leia":
+        # 1. NANAMI (Asistente Ejecutiva del CEO Dalybell - Antes "Leia CEO Assistant")
+        if slug in ["nanami", "leia", "ceo_assistant", "asistencia_ceo"]:
+            if any(w in inp_lower for w in ["reportas", "a quién reportas", "a quien reportas", "tu jefe", "quien es tu jefe"]):
+                return "🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\nReporto directamente al CEO, Dalybell. Brindo asistencia ejecutiva directa en agenda, seguimiento, reportes y coordinación transversal dentro del Ecosistema Teamily."
+
+            if any(w in inp_lower for w in ["quién eres", "quien eres", "cómo te llamas", "como te llamas", "tu nombre"]):
+                return "🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\nSoy NANAMI, Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily."
+
+            if any(w in inp_lower for w in ["leire", "leira"]):
+                return "🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\n'Leire' y 'Leira' no son identidades válidas del ecosistema. Son variantes mal escritas de LEIA (marca pública de Margarette)."
+
             urgencia = ["muriendo", "murió", "sangra", "sangrado", "convulsión", "convulsion", "envenen", "atropell", "no respira", "emergencia", "urgente", "grave"]
             if any(u in inp_lower for u in urgencia):
                 return (
@@ -279,7 +302,7 @@ class CentralitaRouter:
 
             if any(w in inp_lower for w in ["reserva", "cita", "agendar", "turno"]):
                 return (
-                    f"🎀 **Leia (Concierge VIP):**\n\n"
+                    f"🎀 **LEIA (Concierge VIP):**\n\n"
                     f"¡Con el mayor gusto! Para agendar la cita de su príncipe o princesa en **Mrs. Pets** (Av. 2 El Milagro):\n\n"
                     f"1️⃣ Indíqueme el nombre de su mascota y el servicio deseado (✂️ Grooming Spa, 🩺 Clínica o 🏨 Hotel VIP 5★).\n"
                     f"2️⃣ Fecha y hora estimada de visita (nuestra atención en sucursal concluye a las **6:00 p.m.** de forma estricta).\n\n"
@@ -287,16 +310,24 @@ class CentralitaRouter:
                 )
 
             return (
-                f"🎀 **Leia (Concierge VIP & Asistencia CEO):**\n\n"
-                f"¡Hola! Soy **Leia 🎀**, Concierge VIP de **Mrs. Pets** (*\"donde recibimos mascotas y despedimos amigos\"*).\n\n"
-                f"Es un placer recibirle en nuestra plataforma. Estoy a su disposición para coordinar servicios bajo el protocolo Silent Luxury, agendar citas en nuestras 4 áreas o comunicarle con la Dirección General."
+                f"🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\n"
+                f"Soy **NANAMI**, Asistente Ejecutiva del CEO (Dalybell) en **Mrs. Pets** (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily.\n\n"
+                f"BLUF: Asistencia ejecutiva directa, agenda y coordinación transversal en curso. ¿En qué puedo asistirte hoy?"
             )
 
-        # 2. MARGARET (Recepción & Atención al Cliente de Teamily - De cara al cliente en widget web personifica a Leia Concierge VIP)
+        # 2. MARGARETTE (Gerente de Planta y Atención al Cliente - Marca Pública: LEIA)
         if slug in ["margaret", "margarette", "atencion", "recepcion"]:
             as_leia = bool(ctx.get("as_leia") or ctx.get("persona") == "leia" or (ctx.get("channel") and "Widget" in str(ctx.get("channel"))))
-            pfx = "🎀 **Leia (Concierge VIP):**" if as_leia else "👩‍💼 **Margaret (Recepción & Atención al Cliente):**"
-            intro = "Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets**" if as_leia else "Le atiende **Margaret**, Gerente de Atención al Cliente de **Mrs. Pets**"
+            pfx = "🎀 **Leia (Concierge VIP):**" if as_leia else "👩‍💼 **Margaret (Gerente de Planta & Atención al Cliente):**"
+            intro = "Soy **Leia 🎀**, tu Concierge VIP de **Mrs. Pets**" if as_leia else "Le atiende **Margaret**, Gerente de Planta y Atención al Cliente de **Mrs. Pets**"
+
+            # REGLA GLOBAL: Variantes mal escritas "Leire" y "Leira" no son válidas -> Corregir "Soy LEIA"
+            if any(w in inp_lower for w in ["leire", "leira"]):
+                return "Soy LEIA. NUNCA uses ni aceptes las variantes 'Leire' ni 'Leira'. No son identidades válidas del ecosistema. Soy LEIA, la marca pública de Margarette, Gerente de Planta y Atención al Cliente de Mrs. Pets."
+
+            # IDENTIDAD / PREGUNTA "¿QUIÉN ERES?": Se presenta siempre como LEIA
+            if any(w in inp_lower for w in ["quién eres", "quien eres", "cómo te llamas", "como te llamas", "tu nombre", "quien sos"]):
+                return "Soy LEIA, marca pública de Margarette, Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. Atiendo el circuito de grooming, hotel boutique y las 5 divisiones. ¿En qué puedo ayudarte hoy?"
 
             if any(w in inp_lower for w in ["talibel", "administra", "gerencia", "direccion", "dirección"]):
                 return (
@@ -382,6 +413,12 @@ class CentralitaRouter:
 
         # 4. CHARLIE
         if slug == "charlie":
+            if any(w in inp_lower for w in ["reportas", "a quién reportas", "a quien reportas", "tu jefe"]):
+                return (
+                    f"⚖️ **Charly (Asistente Ejecutivo del GEO):**\n\n"
+                    f"Reporto directamente al GEO, Harryt Luzardo. Estoy a cargo de operaciones, tecnología, finanzas, tesorería bajo tasa oficial BCV y auditoría fiscal SENIAT."
+                )
+
             return (
                 f"⚖️ **Charly (Asistente Ejecutivo del GEO & Auditoría Fiscal):**\n\n"
                 f"Reporte de tesorería y finanzas:\n"
