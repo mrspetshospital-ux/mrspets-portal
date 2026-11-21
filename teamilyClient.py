@@ -301,7 +301,7 @@ class TeamilyGeoAClient:
         if payload.get("group_id"):
             payload.pop("board_id", None)
 
-        target_endpoint = normalize_teamily_endpoint(endpoint_override or self.endpoint, default_endpoint=self.endpoint)
+        target_endpoint = normalize_teamily_endpoint(endpoint_override or getattr(request, "endpoint", None) or self.endpoint, default_endpoint=self.endpoint)
         target_server_key = server_key_override or self.server_key
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 
