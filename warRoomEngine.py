@@ -394,7 +394,7 @@ class WarRoomEngine:
             "teamily_endpoint_url": (
                 os.environ.get("TEAMILEY_GEO_A_ENDPOINT")
                 or os.environ.get("TEAMILY_AGENT_ENDPOINT")
-                or "https://teamily.ai/v1/agents/geo-a/responses"
+                or "https://teamily.ai/v1/chat"
             ),
             "teamily_board_id": (
                 os.environ.get("TEAMILY_BOARD_ID")

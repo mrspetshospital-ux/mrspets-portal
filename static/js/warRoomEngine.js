@@ -2924,7 +2924,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">—</span>
               </div>
               <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" placeholder="Endpoint URL de Teamily" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/chat')}" placeholder="https://teamily.ai/v1/chat" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('teamly', document.getElementById('wr-cfg-teamly').value)" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
@@ -2947,7 +2947,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <span id="wr-ping-antigravity-res" style="font-size:0.7rem; color:#94A3B8; font-weight:700;">—</span>
               </div>
               <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+                <input type="text" id="wr-cfg-antigravity" class="wr-cfg-input" value="${this.escapeHtml(cfg.antigravity_endpoint_url || 'https://generativelanguage.googleapis.com/v1beta')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#F1F5F9; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('antigravity', document.getElementById('wr-cfg-antigravity').value)" style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#34D399; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>

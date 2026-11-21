@@ -375,7 +375,7 @@
                 window.app.showToast('🤖 Probando conexión directa con Teamily GEO A (Leia)...', 'info');
             }
             try {
-                const res = await fetch('/api/v1/teamily/geo-a/responses', {
+                const res = await fetch('/api/v1/teamily/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -556,7 +556,7 @@
                     borderColor: '#818CF8',
                     desc: 'Canal principal para la orquestación semántica, gestión de subagentes Volturi y atención automatizada de Leia.',
                     specs: [
-                        `Ruta: <code style="color:#A5B4FC; font-size:0.74rem;">https://teamily.ai/v1/agents/geo-a/responses</code>`,
+                        `Ruta: <code style="color:#A5B4FC; font-size:0.74rem;">https://teamily.ai/v1/chat</code>`,
                         `Board ID: <strong>5803df5a-7127-4d28-b97c-5c840d47cdc7</strong>`,
                         `Server Key: <code style="color:#34D399; font-size:0.74rem;">tmly_sk_••••••••Vac8</code>`,
                         `⚡ Estado: <strong style="color:#34D399;">Activo & Sincronizado</strong>`
@@ -565,7 +565,7 @@
                         <button type="button" class="btn btn-sm btn-luxury-primary" onclick="window.ClinicalIntegrations.testTeamilyGeoAConnection()" style="font-size:0.75rem; padding:7px 14px; flex:1; justify-content:center; background:linear-gradient(135deg, #6366F1, #4F46E5); color:#FFFFFF; font-weight:900; border:none; border-radius:8px; cursor:pointer; box-shadow:0 3px 10px rgba(99,102,241,0.3);">
                             ⚡ Probar GEO A (Leia)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.ClinicalIntegrations.copyEndpoint('https://teamily.ai/v1/agents/geo-a/responses')" style="font-size:0.75rem; padding:7px 12px; background:#2C2C2E; color:#CBD5E1; border:1px solid rgba(255,255,255,0.15); border-radius:8px; cursor:pointer;" title="Copiar Endpoint Teamily">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.ClinicalIntegrations.copyEndpoint('https://teamily.ai/v1/chat')" style="font-size:0.75rem; padding:7px 12px; background:#2C2C2E; color:#CBD5E1; border:1px solid rgba(255,255,255,0.15); border-radius:8px; cursor:pointer;" title="Copiar Endpoint Teamily">
                             📋 Copiar URL
                         </button>
                     `

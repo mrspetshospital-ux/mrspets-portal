@@ -26,7 +26,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     border: '#059669',
     description: 'Asistente Ejecutivo del GEO, Tesorería, Tasa BCV Oficial, facturación fiscal SENIAT 16% y orquestador central con Teamily.',
     teamlySlug: 'geo-a',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Inteligencia ejecutiva, asistencia al GEO Harryt Luzardo, auditoría fiscal bajo estricta tasa BCV y orquestación con la red de Teamily.',
     contextType: 'finance',
@@ -46,7 +46,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Asistente del CEO y Concierge VIP de Mrs. Pets (@9000376919168475). Protocolo Silent Luxury y atención integral a tutores.',
     teamlyUserId: '9000376919168475',
     teamlySlug: '@9000376919168475',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Asistencia ejecutiva de nivel CEO, protocolo Silent Luxury, atención cálida a clientes y coordinación con el Comité Volturi.',
     contextType: 'vip_concierge',
@@ -66,7 +66,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Gerente de Atención al Cliente de Mrs. Pets. Recepción amorosa de príncipes y princesas, citas de spa, clínica, seguimiento de satisfacción y escalamiento.',
     teamlyUserId: '9000376919168475',
     teamlySlug: 'margaret',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Atención al cliente con máxima empatía, cordialidad y excelencia Mrs. Pets. Gestión de citas, orientación de servicios y escalamiento si el cliente lo requiere.',
     contextType: 'customer_service',
@@ -87,7 +87,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (@9000487795593348) en la mesa RRHH Presidencia. Charly canaliza y orquesta sus respuestas.',
     teamlyUserId: '9000487795593348',
     teamlySlug: '@9000487795593348',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Gestionar postulaciones de empleo de la web, evaluar experiencia de estilistas caninos y médicos veterinarios, y coordinar en Teamily con Charly y la mesa de RRHH Presidencia (@9000487795593348).',
     contextType: 'hr',
@@ -107,7 +107,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Gerencia de operaciones, supervisión de infraestructura MisiPet, tanques de agua Tuya y planta eléctrica Cummins 65 kVA (@9000215760376233).',
     teamlyUserId: '9000215760376233',
     teamlySlug: '@9000215760376233',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Auditar en tiempo real la telemetría de tanques Don Bosco, nivel de combustible diésel y operatividad de sucursal (@9000215760376233).',
     contextType: 'iot',
@@ -127,7 +127,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Gerencia General de Administración, finanzas corporativas, supervisión de piso y cierre estricto a las 6:00 PM (@9000441148643782).',
     teamlyUserId: '9000441148643782',
     teamlySlug: '@9000441148643782',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Administración y finanzas generales, disciplina horaria presencial hasta las 6:00 PM y flujo de las 7 estaciones de Grooming (@9000441148643782).',
     contextType: 'operations',
@@ -152,7 +152,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     telegramGroupTitle: 'FOTOS GROOMING HISTORICO',
     teamlyUserId: '9000339468227100',
     teamlySlug: '@9000339468227100',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad activo. Pauta digital, fotos Grooming QC, aplicación de reglas de encuadre y texto de Dalybell, y notificaciones Telegram @ONEILnewBot (@9000339468227100).',
     qcLearning: {
@@ -179,7 +179,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Gerencia General de Mercadotecnia, campañas locales en Maracaibo, telemercadeo y coordinación de promociones (@9000255459464666).',
     teamlyUserId: '9000255459464666',
     teamlySlug: '@9000255459464666',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Coordinación de telemercadeo, promociones en sucursal y conversiones de reservas (@9000255459464666).',
     contextType: 'marketing_ops',
@@ -199,7 +199,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Gerencia de Ventas, cierre de planes anuales de salud, suscripciones de spa y seguimiento comercial a tutores (@9000074393459175).',
     teamlyUserId: '9000074393459175',
     teamlySlug: '@9000074393459175',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Maximizar tasa de conversión, seguimiento a carritos y ventas de planes de salud y estética (@9000074393459175).',
     contextType: 'sales',
@@ -219,7 +219,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Compras nacionales, reposición de insumos de spa y clínica, y filtro KillCritic (ROI ≥ 25%, Lead Time ≤ 15 días) (@9000274735437072).',
     teamlyUserId: '9000274735437072',
     teamlySlug: '@9000274735437072',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Auditoría estricta de compras nacionales bajo el filtro KillCritic y autonomía de inventario (@9000274735437072).',
     contextType: 'supply',
@@ -239,7 +239,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Estrategia de cadena de suministro, optimización de rutas de importación, tiempos de entrega y logística crítica (@9000476605193636).',
     teamlyUserId: '9000476605193636',
     teamlySlug: '@9000476605193636',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Optimización de cadena de suministros, lead time de insumos médicos y equipos de grooming (@9000476605193636).',
     contextType: 'supply_chain',
@@ -259,7 +259,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Generación de leads médicos, ofertas para hospital veterinario, planes preventivos y consultas especializadas (@9000064875534374).',
     teamlyUserId: '9000064875534374',
     teamlySlug: '@9000064875534374',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Generación de demanda para la clínica veterinaria, planes de vacunación, ecografía y cirugías (@9000064875534374).',
     contextType: 'hospital_leadgen',
@@ -279,7 +279,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Screening automatizado de hojas de vida, pruebas técnicas psicométricas y filtrado masivo de candidatos (@9000327859444575).',
     teamlyUserId: '9000327859444575',
     teamlySlug: '@9000327859444575',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Filtrado automatizado de CVs, scoring de experiencia y derivación a Valeria (@9000327859444575).',
     contextType: 'recruiting',
@@ -299,7 +299,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Control de suites bioclimáticas, guardería diurna, monitoreo 24/7 y confort para huéspedes caninos y felinos (@9000327988419325).',
     teamlyUserId: '9000327988419325',
     teamlySlug: '@9000327988419325',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Gestión de suites, confort animal, reportes fotográficos a tutores y estándares de hotel 5 estrellas (@9000327988419325).',
     contextType: 'hospitality',
@@ -319,7 +319,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Atención a quejas, encuestas de satisfacción post-servicio, seguimiento de pacientes y fidelización (@9000328004148064).',
     teamlyUserId: '9000328004148064',
     teamlySlug: '@9000328004148064',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Resolución empática de incidencias, seguimiento post-consulta y encuestas CSAT (@9000328004148064).',
     contextType: 'customer_support',
@@ -339,7 +339,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Diseño de programas de inducción, manuales de procedimiento, entrenamiento en Silent Luxury y estándares ISO (@9000327689572952).',
     teamlyUserId: '9000327689572952',
     teamlySlug: '@9000327689572952',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Diseño instruccional para el personal de Mrs. Pets, protocolos de manejo canino y estandarización de servicios (@9000327689572952).',
     contextType: 'training',
@@ -359,7 +359,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Creatividad publicitaria, redacción de copys persuasivos, dirección de arte y storytelling de marca (@9000315094081452).',
     teamlyUserId: '9000315094081452',
     teamlySlug: '@9000315094081452',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Redacción publicitaria, copys para Instagram/TikTok y posicionamiento de marca de Mrs. Pets (@9000315094081452).',
     contextType: 'creative',
@@ -379,7 +379,7 @@ const DEFAULT_VOLTURI_AGENTS = [
     description: 'Auditor multidisciplinario, supervisión transversal de todos los agentes, síntesis de métricas y resoluciones globales (@9000272886796423).',
     teamlyUserId: '9000272886796423',
     teamlySlug: '@9000272886796423',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: 'Supervisión de alto nivel, auditoría de coherencia entre áreas y resolución de casos complejos (@9000272886796423).',
     contextType: 'super_agent',
@@ -406,8 +406,11 @@ class TeamilyExecutiveEngine {
   }
 
   normalizeTeamilyEndpoint(endpoint) {
-    if (!endpoint) return 'https://teamily.ai/v1/agents/geo-a/responses';
+    if (!endpoint) return 'https://teamily.ai/v1/chat';
     const ep = String(endpoint).trim();
+    if (ep.endsWith('/chat') || ep.endsWith('/v1/chat')) {
+      return ep.replace(/\/+$/, '');
+    }
     const subagents = [
       'charlie', 'charly', 'manolo', 'mike', 'oneal', 'vanessa', 'valeria',
       'pandora', 'leia', 'sebastian', 'rocky', 'hospital', 'recruiter',
@@ -415,11 +418,11 @@ class TeamilyExecutiveEngine {
     ];
     for (const sa of subagents) {
       if (ep.toLowerCase().includes(sa)) {
-        return 'https://teamily.ai/v1/agents/geo-a/responses';
+        return 'https://teamily.ai/v1/chat';
       }
     }
     if (ep.includes('5803df5a-7127-4d28-b97c-5c840d47cdc7') || !ep.startsWith('http')) {
-      return 'https://teamily.ai/v1/agents/geo-a/responses';
+      return 'https://teamily.ai/v1/chat';
     }
     return ep.endsWith('/responses') ? ep : `${ep.replace(/\/+$/, '')}/responses`;
   }
@@ -467,14 +470,14 @@ class TeamilyExecutiveEngine {
               a.name = 'Valeria - RRHH Mrs. Pets';
               a.teamlyUserId = '9000487795593348';
               a.teamlySlug = '@9000487795593348';
-              a.teamlyEndpoint = 'https://teamily.ai/v1/agents/geo-a/responses';
+              a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
               a.description = 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (@9000487795593348) en la mesa RRHH Presidencia. Charly canaliza y orquesta sus respuestas.';
             } else if (a.id === 'margaret' || (a.name && a.name.toLowerCase().includes('margaret'))) {
               a.id = 'margaret';
               a.name = 'Margaret — Gerente de Atención al Cliente';
               a.role = 'GERENCIA DE ATENCIÓN AL CLIENTE';
               a.teamlySlug = 'margaret';
-              a.teamlyEndpoint = 'https://teamily.ai/v1/agents/geo-a/responses';
+              a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
               a.avatar = 'assets/margaret_avatar.svg';
               a.icon = '👩‍💼';
               a.isDefault = false;
@@ -1926,7 +1929,7 @@ class TeamilyExecutiveEngine {
       description: '',
       teamlySlug: '',
       teamlyUserId: '',
-      teamlyEndpoint: 'https://teamily.ai/v1/agents/geo-a/responses',
+      teamlyEndpoint: 'https://teamily.ai/v1/chat',
       teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
       promptGuideline: ''
     };
@@ -1994,7 +1997,7 @@ class TeamilyExecutiveEngine {
 
           <div>
             <label style="font-size: 0.74rem; font-weight: 800; color: #c084fc; display: block; margin-bottom: 4px;">Ruta / Endpoint URL de Teamly</label>
-            <input type="text" id="cfgAgentEndpoint" value="${currentAgent.teamlyEndpoint || 'https://teamily.ai/v1/agents/geo-a/responses'}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #94a3b8; padding: 8px 12px; font-size: 0.8rem; font-family: monospace;">
+            <input type="text" id="cfgAgentEndpoint" value="${currentAgent.teamlyEndpoint || 'https://teamily.ai/v1/chat'}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #94a3b8; padding: 8px 12px; font-size: 0.8rem; font-family: monospace;">
           </div>
 
           <div>

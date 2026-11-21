@@ -6,7 +6,7 @@ Big & Little Dogs, C.A. • RIF J-40120233-0 • Av. 2 El Milagro diagonal Lago 
 Módulo tipado de orquestación backend para el agente GEO A (Leia) de Teamily:
 - Canal principal de orquestación semántica, subagentes Volturi y atención automatizada.
 - Lectura segura de credenciales y Server Key desde variables de entorno (.env).
-- Protocolo HTTP POST / JSON REST API hacia https://teamily.ai/v1/agents/geo-a/responses.
+- Protocolo HTTP POST / JSON REST API hacia https://teamily.ai/v1/chat.
 """
 
 import os
@@ -56,7 +56,7 @@ DEFAULT_ENDPOINT = (
     or os.environ.get("TEAMILY_AGENT_ENDPOINT")
     or os.environ.get("TEAMLY_AGENT_ENDPOINT")
     or os.environ.get("TEAMILY_ENDPOINT_URL")
-    or "https://teamily.ai/v1/agents/geo-a/responses"
+    or "https://teamily.ai/v1/chat"
 )
 DEFAULT_DOCS_URL = "https://teamily.ai/v1"
 
@@ -86,32 +86,37 @@ DEFAULT_SERVER_KEY = get_default_server_key()
 
 def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT) -> str:
     """
-    Normaliza cualquier URL ingresada por el usuario hacia la URL canónica de API REST POST terminada en /responses.
-    
-    A3: Se eliminan redirects duros silenciosos. Si se ingresa una URL de Charly u otro agente, se respeta
-    la intención y cualquier ajuste de formato (añadir /responses) queda explícito en logs.
+    Normaliza cualquier URL ingresada por el usuario hacia la URL canónica de API REST POST.
+    - Si el endpoint es https://teamily.ai/v1/chat (o termina en /v1/chat o /chat), se respeta intacto.
+    - Si el endpoint ya termina en /responses, se respeta intacto.
+    - Si el usuario pegó la URL de navegación web del navegador (ej: https://teamily.ai/agent/<slug_o_uuid>), se normaliza.
     """
     if not endpoint:
         return default_endpoint
     ep = str(endpoint).strip()
 
+    # Si es el endpoint canónico de chat o termina en /chat
+    if ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat"):
+        return ep.rstrip("/")
+
+    # Si ya termina en /responses
+    if ep.rstrip("/").endswith("/responses"):
+        return ep.rstrip("/")
+
     # Si el usuario pegó la URL de navegación web del navegador (ej: https://teamily.ai/agent/<slug_o_uuid>)
     import re
     uuid_match = re.search(r'([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})', ep)
-    if not ep.endswith("/responses"):
-        if uuid_match:
-            normalized = f"https://teamily.ai/v1/agents/{uuid_match.group(1)}/responses"
-        elif "/agent/" in ep or "/agents/" in ep:
-            slug = ep.rstrip("/").split("/")[-1]
-            normalized = f"https://teamily.ai/v1/agents/{slug}/responses"
-        elif ep.startswith("http"):
-            normalized = f"{ep.rstrip('/')}/responses"
-        else:
-            normalized = f"https://teamily.ai/v1/agents/{ep}/responses"
-        print(f"[TEAMILEY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
-        return normalized
-
-    return ep
+    if uuid_match:
+        normalized = f"https://teamily.ai/v1/agents/{uuid_match.group(1)}/responses"
+    elif "/agent/" in ep or "/agents/" in ep:
+        slug = ep.rstrip("/").split("/")[-1]
+        normalized = f"https://teamily.ai/v1/agents/{slug}/responses"
+    elif ep.startswith("http"):
+        normalized = f"{ep.rstrip('/')}/responses"
+    else:
+        normalized = f"https://teamily.ai/v1/agents/{ep}/responses"
+    print(f"[TEAMILEY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
+    return normalized
 
 # Registro en memoria de hilos por sesión de cliente para aislamiento estricto y prevención de fuga de datos
 _client_threads: Dict[str, str] = {}
@@ -134,8 +139,8 @@ class TeamilyGeoARequest:
     Estructura de petición tipada para el agente Teamily GEO A.
     
     DOCUMENTACIÓN DE ARQUITECTURA (A4):
-    El agente que responde en Teamily está determinado única y exclusivamente por la URL del
-    endpoint (ej. https://teamily.ai/v1/agents/geo-a/responses) y por la configuración interna del
+    El agente que responde en Teamily está determinado por la URL del
+    endpoint (ej. https://teamily.ai/v1/chat) y por la configuración interna del
     board de destino.
     Pruebas empíricas verificadas en vivo confirman que campos hipotéticos en el payload JSON tales
     como 'agent_id', 'agent', 'node_id', 'persona' o 'sender_id' con valor 'antigravity' son ignorados
@@ -166,6 +171,8 @@ class TeamilyGeoARequest:
 
         payload: Dict[str, Any] = {
             "input": self.input,
+            "message": self.input,
+            "prompt": self.input,
             "thread": thread_payload,
             "wait": self.wait
         }
@@ -373,7 +380,7 @@ class TeamilyGeoAClient:
                 if request.session_id and resp_thread and isinstance(resp_thread, str):
                     _client_threads[request.session_id] = resp_thread
 
-                # Extraer texto de respuesta según estructura típica de Teamily (soporta {output: {text: ...}})
+                # Extraer texto de respuesta según estructura típica de Teamily / chat
                 response_text = ""
                 if isinstance(data, dict):
                     output_val = data.get("output")
@@ -388,8 +395,18 @@ class TeamilyGeoAClient:
                         response_text = d_out.get("text") if isinstance(d_out, dict) else str(d_out)
                     elif data.get("response"):
                         response_text = data["response"]
+                    elif data.get("reply"):
+                        response_text = data["reply"]
+                    elif data.get("content"):
+                        response_text = data["content"]
                     elif data.get("message"):
-                        response_text = data["message"]
+                        msg_val = data["message"]
+                        if isinstance(msg_val, dict) and msg_val.get("content"):
+                            response_text = msg_val["content"]
+                        elif isinstance(msg_val, dict) and msg_val.get("text"):
+                            response_text = msg_val["text"]
+                        else:
+                            response_text = str(msg_val)
                     elif data.get("text"):
                         response_text = data["text"]
                     elif data.get("status") == "running" or status_code == 202:

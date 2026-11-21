@@ -17,7 +17,7 @@ import json
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, "/Users/dalybellramirezmontilla/.gemini/antigravity/scratch/mrspets-portal-repo")
 
-from teamilyClient import TeamilyGeoAClient, TeamilyGeoARequest, teamily_geo_a_client
+from teamilyClient import TeamilyGeoAClient, TeamilyGeoARequest, teamily_geo_a_client, normalize_teamily_endpoint
 from misipetEngine import misipet_engine
 
 class TestTeamilyAndSubagents(unittest.TestCase):
@@ -26,14 +26,14 @@ class TestTeamilyAndSubagents(unittest.TestCase):
         """Verifica que get_status() retorne los campos requeridos y que la clave esté enmascarada."""
         client = TeamilyGeoAClient(
             board_id="test-board-123",
-            endpoint="https://teamily.ai/v1/agents/geo-a/responses",
+            endpoint="https://teamily.ai/v1/chat",
             server_key="ty_sec_prod_live_998877"
         )
         status = client.get_status()
         self.assertEqual(status["status"], "ready")
         self.assertEqual(status["agent"], "geo-a")
         self.assertEqual(status["board_id"], "test-board-123")
-        self.assertEqual(status["endpoint"], "https://teamily.ai/v1/agents/geo-a/responses")
+        self.assertEqual(status["endpoint"], "https://teamily.ai/v1/chat")
         self.assertTrue(status["server_key_configured"])
         
         # Enmascaramiento estricto
@@ -85,7 +85,28 @@ class TestTeamilyAndSubagents(unittest.TestCase):
         )
         p = req.to_payload()
         self.assertEqual(p["input"], "buenas noches")
+        self.assertEqual(p["message"], "buenas noches")
+        self.assertEqual(p["prompt"], "buenas noches")
         self.assertEqual(p["board_id"], "5803df5a-7127-4d28-b97c-5c840d47cdc7")
+
+    def test_06_endpoint_normalization_v1_chat(self):
+        """Verifica que el nuevo endpoint https://teamily.ai/v1/chat se preserve sin añadir /responses."""
+        self.assertEqual(
+            normalize_teamily_endpoint("https://teamily.ai/v1/chat"),
+            "https://teamily.ai/v1/chat"
+        )
+        self.assertEqual(
+            normalize_teamily_endpoint("https://teamily.ai/v1/chat/"),
+            "https://teamily.ai/v1/chat"
+        )
+        self.assertEqual(
+            normalize_teamily_endpoint(None),
+            "https://teamily.ai/v1/chat"
+        )
+        self.assertEqual(
+            normalize_teamily_endpoint(""),
+            "https://teamily.ai/v1/chat"
+        )
 
 if __name__ == "__main__":
     unittest.main()

@@ -5622,7 +5622,7 @@ async def get_agent_studio_config():
     default_config = {
         "queriesToday": 150,
         "makeFailoverAlerts": 1,
-        "teamilyWebhookUrl": "https://teamily.ai/v1/agents/geo-a/responses",
+        "teamilyWebhookUrl": "https://teamily.ai/v1/chat",
         "makeWebhookUrl": "https://hook.us2.make.com/fp4s0npi280ymzqi5cl6mfkf4cy3x2lg",
         "brainDriveUrl": "https://drive.google.com/drive/folders/1MrsPets-Leia-Brain-Core-Knowledge",
         "agentName": "Leia 🎀 (Asistente Ejecutiva & Concierge VIP)",
@@ -5694,7 +5694,7 @@ async def agent_studio_dispatch_test(request: Request):
         return {
             "status": 200 if res_team["success"] else 500,
             "latencyMs": res_team["latency_ms"],
-            "url": "https://teamily.ai/v1/agents/geo-a/responses",
+            "url": "https://teamily.ai/v1/chat",
             "finalChannel": "teamily",
             "agent": res_team["agent"],
             "agent_name": res_team["agent_name"],
@@ -6951,6 +6951,7 @@ from receptionBridge import (
 @app.post("/api/v1/avatar/chat")
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
+@app.post("/api/v1/teamily/geo-a/responses")
 async def teamily_chat(request: Request):
     try:
         body = await request.json()
