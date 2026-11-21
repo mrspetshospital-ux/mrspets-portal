@@ -2923,11 +2923,18 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
                 <label style="font-size:0.76rem; font-weight:800; color:#FB923C;">🤝 Teamily (Charly / GEO-A Endpoint):</label>
                 <span id="wr-ping-teamly-res" style="font-size:0.7rem; color:#94A3B8;">—</span>
               </div>
-              <div style="display:flex; gap:8px;">
-                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
+              <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="text" id="wr-cfg-teamly" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_endpoint_url || 'https://teamily.ai/v1/agents/geo-a/responses')}" placeholder="Endpoint URL de Teamily" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
                 <button type="button" onclick="window.warRoomEngine.pingNode('teamly', document.getElementById('wr-cfg-teamly').value)" style="background:rgba(251,146,60,0.15); border:1px solid #FB923C; color:#FDBA74; font-size:0.74rem; font-weight:700; border-radius:8px; padding:6px 12px; cursor:pointer;">
                   ⚡ Ping
                 </button>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label style="font-size:0.72rem; font-weight:700; color:#FB923C;">🔑 Teamily Server Key / Token Bearer:</label>
+                <span style="font-size:0.68rem; color:#94A3B8;">${cfg.teamily_server_key ? '● Configurada' : '⚠️ Sin credencial'}</span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <input type="${this.showSecrets ? 'text' : 'password'}" id="wr-cfg-teamly-key" class="wr-cfg-input" value="${this.escapeHtml(cfg.teamily_server_key || '')}" placeholder="Pegar TEAMILEY_SERVER_KEY (ty_sec_...)" style="flex:1; background:#1F2937; border:1px solid #374151; color:#FED7AA; border-radius:8px; padding:8px 12px; font-size:0.76rem; font-family:monospace; outline:none;">
               </div>
               <div style="font-size:0.7rem; color:#94A3B8; margin-top:4px;">Canal REST directo con agente Charly (GEO-A) en Teamily.</div>
             </div>
@@ -2977,6 +2984,8 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
     }
 
     async saveNodeConfigs() {
+      const teamlyUrl = document.getElementById('wr-cfg-teamly')?.value || '';
+      const teamlyKey = document.getElementById('wr-cfg-teamly-key')?.value || '';
       const makeUrl = document.getElementById('wr-cfg-make')?.value || '';
       const makeFallback = document.getElementById('wr-cfg-make-fallback')?.value || '';
       const makeKey = document.getElementById('wr-cfg-make-key')?.value || '';
@@ -2985,6 +2994,8 @@ IMPORTANTE: Devuelve ÚNICAMENTE el bloque JSON puro para poder copiar y pegar d
       const sheetsId = document.getElementById('wr-cfg-sheets')?.value || '';
 
       const payload = {
+        teamily_endpoint_url: teamlyUrl,
+        teamily_server_key: teamlyKey,
         make_webhook_url: makeUrl,
         make_fallback_url: makeFallback,
         make_api_key: makeKey,
