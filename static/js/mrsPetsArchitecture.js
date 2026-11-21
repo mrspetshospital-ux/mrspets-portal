@@ -1206,9 +1206,7 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Ultra Rápido • Make.com Backend)', badge: 'Predeterminado', isDefault: true },
       { id: 'gemini-3.8-pro', name: 'Gemini 3.8 Pro (Razonamiento Complejo & Auditoría)', badge: 'Avanzado' },
       { id: 'gemini-4-flash', name: 'Gemini 4 Flash (Next-Gen Ultra Baja Latencia)', badge: 'Next-Gen' },
-      { id: 'gemini-4-pro', name: 'Gemini 4 Pro (Next-Gen Multimodal & Deep Thinking)', badge: 'Next-Gen' },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Legacy)', badge: 'Legacy' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Legacy)', badge: 'Legacy' }
+      { id: 'gemini-4-pro', name: 'Gemini 4 Pro (Next-Gen Multimodal & Deep Thinking)', badge: 'Next-Gen' }
     ];
   }
 

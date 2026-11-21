@@ -53,9 +53,9 @@ class HealthDashboard {
       },
       {
         id: "vertex-gemini-leia",
-        name: "Vertex AI / Google Gemini 2.5 (Leia Concierge Assistant)",
+        name: "Vertex AI / Google Gemini 3.8 (Leia Concierge Assistant)",
         method: "POST",
-        url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash",
+        url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash",
         status_level: "healthy",
         has_token: true,
         latency_ms: 28,

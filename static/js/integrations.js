@@ -614,13 +614,13 @@ class Integrations {
       prjEl.value = 'prj_management_tasks';
       descEl.value = 'Enlace directo con el equipo Teamly para orquestación de tareas ejecutivas, RRHH, deliberación y operaciones.';
     } else if (preset === 'vertex') {
-      nameEl.value = 'Google Cloud Vertex AI Enterprise (Gemini 1.5 Pro)';
+      nameEl.value = 'Google Cloud Vertex AI Enterprise (Gemini 3.8 Pro)';
       catEl.value = 'Vertex AI SDK';
       methodEl.value = 'POST';
       urlEl.value = '/api/v1/teamily/orchestrate';
       tokenEl.value = 'vertex_gcp_sec_key_••••••••';
       wsEl.value = 'mrspets-vertex-ai-mbo';
-      prjEl.value = 'gemini-1.5-pro';
+      prjEl.value = 'gemini-3.8-pro';
       descEl.value = 'Orquestador de modelos de lenguaje multimodal y toma de decisiones del Comité Volturi.';
     } else if (preset === 'make') {
       nameEl.value = 'Webhook de Automatización Make.com';
@@ -1068,13 +1068,13 @@ class Integrations {
         window.app.showToast('⚡ Estructura Teamly cargada en la consola', 'info');
       }
     } else if (preset === 'vertex') {
-      nameEl.value = 'Google Cloud Vertex AI Enterprise (Gemini 1.5 Pro)';
+      nameEl.value = 'Google Cloud Vertex AI Enterprise (Gemini 3.8 Pro)';
       catEl.value = 'Vertex AI SDK';
       methodEl.value = 'POST';
       urlEl.value = '/api/v1/teamily/orchestrate';
       if (extEl) extEl.value = 'https://us-central1-aiplatform.googleapis.com/...';
       if (wsEl) wsEl.value = 'mrspets-vertex-ai-mbo';
-      if (prjEl) prjEl.value = 'gemini-1.5-pro';
+      if (prjEl) prjEl.value = 'gemini-3.8-pro';
       if (tokenEl) tokenEl.value = 'vertex_gcp_sec_key_••••••••';
       if (descEl) descEl.value = 'Orquestador de modelos de lenguaje multimodal y toma de decisiones del Comité Volturi.';
       if (window.app && typeof window.app.showToast === 'function') {

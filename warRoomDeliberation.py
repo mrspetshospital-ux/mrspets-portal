@@ -38,8 +38,8 @@ SHEET_TAB_CICLOS = "Ciclos"
 SHEET_TAB_TURNOS = "Turnos"
 SHEET_TAB_REGLAS = "Reglas"
 
-# Versión fija de modelo
-FIXED_GEMINI_MODEL = "gemini-1.5-flash"
+# Versión fija de modelo activo (Gemini 3.8 Flash)
+FIXED_GEMINI_MODEL = "gemini-3.8-flash"
 
 # Estados Oficiales
 STATE_EN_CURSO = "EN_CURSO"

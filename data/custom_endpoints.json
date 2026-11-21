@@ -34,10 +34,10 @@
   },
   {
     "id": "EP-VERTEX-AI",
-    "name": "Google Cloud Vertex AI Enterprise (Gemini 1.5 Pro)",
+    "name": "Google Cloud Vertex AI Enterprise (Gemini 3.8 Pro)",
     "category": "Vertex AI SDK",
     "method": "POST",
-    "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/mrspets-vertex-ai-mbo/locations/us-central1/publishers/google/models/gemini-1.5-pro:predict",
+    "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/mrspets-vertex-ai-mbo/locations/us-central1/publishers/google/models/gemini-3.8-pro:predict",
     "status": "Activo & Conectado",
     "statusColor": "#10B981",
     "description": "Orquestador de modelos de lenguaje multimodal y toma de decisiones del Comité Volturi.",
