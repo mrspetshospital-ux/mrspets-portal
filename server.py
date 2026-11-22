@@ -7329,11 +7329,15 @@ async def teamily_chat(request: Request):
     )
     body_agent = body.get("agent_id") or body.get("agent_slug") or body.get("agent") or body.get("slug")
     qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
-    agent = (body_agent or qp_agent or "margaret").lower()
+    recipient_user_id_raw = str(body.get("recipient_user_id") or "").strip()
+    channel_type_raw = str(body.get("channel_type") or "").strip()
+    is_direct_1a1 = bool(recipient_user_id_raw or channel_type_raw == "direct_1a1")
+
+    agent = (body_agent or qp_agent or ("volturi_direct" if is_direct_1a1 else "margaret")).lower()
     session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
 
-    # Margaret / Margarette: Recepción & Atención al Cliente
-    if agent in ["margaret", "margarette", "atencion", "atención", "recepcion", "recepción", "cliente"]:
+    # Margaret / Margarette: Recepción & Atención al Cliente (exclusivo para clientes / avatar web, nunca para 1 a 1 del Volturi)
+    if not is_direct_1a1 and agent in ["margaret", "margarette", "atencion", "atención", "recepcion", "recepción", "cliente"]:
         res_text = ""
         bcv_cfg = get_bcv_config_data()
         eff_rate = bcv_cfg.get("effective_rate", 914.02)
