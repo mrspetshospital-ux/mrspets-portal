@@ -7468,9 +7468,9 @@ async def teamily_chat(request: Request):
     # (Canal oficial directo con Teamily basado en histórico verificado ddccb5e)
     # -----------------------------------------------------------------
     AGENT_TEAMLY_USERS_MAP = {
-        "leia": ("@9000408632300095", "Margarette (LEIA • Planta y Atención)"),
-        "margaret": ("@9000408632300095", "Margarette Atención al Cliente"),
-        "margarette": ("@9000408632300095", "Margarette Atención al Cliente"),
+        "leia": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
+        "margaret": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
+        "margarette": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
         "valeria": ("@9000487795593348", "Valeria RRHH"),
         "vanessa": ("@9000487795593348", "Valeria RRHH"),
         "manolo": ("@9000441148643782", "Manolo Operaciones"),

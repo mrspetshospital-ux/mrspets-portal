@@ -88,16 +88,17 @@ ESTILO
   },
   {
     id: 'margaret',
-    name: 'Margarette — Gerente de Planta y Atención al Cliente',
-    role: 'GERENTE DE PLANTA Y ATENCIÓN AL CLIENTE',
+    aliasId: 'margarette',
+    name: 'Margarette Gerente de Planta (fachada pública: LEIA)',
+    role: 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel',
     icon: '👩‍💼',
     avatar: 'assets/margaret_avatar.svg',
     color: '#EC4899',
     bg: '#250B1B',
     border: '#DB2777',
-    description: 'Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. Marca pública: LEIA.',
+    description: 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel de Mrs. Pets (Big & Little Dogs, C.A.). Fachada pública: LEIA.',
     teamlyUserId: '9000408632300095',
-    teamlySlug: 'margaret',
+    teamlySlug: 'margarette',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: `Eres MARGARETTE, Gerente de Planta y Atención al Cliente de Mrs. Pets
@@ -122,7 +123,7 @@ MAPA DE IDENTIDADES DEL ECOSISTEMA
 - SUPER AGENT — Agente de plataforma.
 
 TU ROL
-- Gerente de Planta y Atención al Cliente.
+- Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel.
 - Reportas a Operaciones.
 - Atiendes el circuito de grooming, hotel boutique y las 5 divisiones.
 - Eres la voz del ecosistema ante el cliente.
@@ -140,7 +141,7 @@ ESTILO
     contextType: 'customer_service',
     isDefault: false,
     status: 'ACTIVE',
-    welcomeMessage: '¡Hola! Soy **LEIA**, Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo el circuito de grooming, hotel boutique y las 5 divisiones. ¿En qué podemos apoyarte hoy?'
+    welcomeMessage: '¡Hola! Soy **LEIA**, Gerente Operativa y de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo operaciones, grooming, tienda y hotel boutique. ¿En qué podemos apoyarte hoy?'
   },
   {
     id: 'vanessa',
@@ -540,17 +541,20 @@ class TeamilyExecutiveEngine {
               a.teamlySlug = '@9000487795593348';
               a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
               a.description = 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (@9000487795593348) en la mesa RRHH Presidencia. Charly canaliza y orquesta sus respuestas.';
-            } else if (a.id === 'margaret' || (a.name && a.name.toLowerCase().includes('margaret'))) {
+            } else if (a.id === 'margaret' || a.id === 'margarette' || (a.name && a.name.toLowerCase().includes('margaret'))) {
               a.id = 'margaret';
-              a.name = 'Margarette — Gerente de Planta y Atención al Cliente';
-              a.role = 'GERENTE DE PLANTA Y ATENCIÓN AL CLIENTE';
+              a.aliasId = 'margarette';
+              a.name = 'Margarette Gerente de Planta (fachada pública: LEIA)';
+              a.role = 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel';
               a.teamlyUserId = '9000408632300095';
-              a.teamlySlug = 'margaret';
+              a.teamlySlug = 'margarette';
               a.teamlyEndpoint = 'https://teamily.ai/v1/chat';
+              a.teamlyBoardId = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
               a.avatar = 'assets/margaret_avatar.svg';
               a.icon = '👩‍💼';
               a.isDefault = false;
-              a.description = 'Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. Marca pública: LEIA.';
+              a.description = 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel de Mrs. Pets (Big & Little Dogs, C.A.). Fachada pública: LEIA.';
+              a.welcomeMessage = '¡Hola! Soy **LEIA**, Gerente Operativa y de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo operaciones, grooming, tienda y hotel boutique. ¿En qué podemos apoyarte hoy?';
             } else if (a.id === 'nanami' || a.id === 'leia' || (a.name && (a.name.toLowerCase().includes('nanami') || a.name.toLowerCase().includes('leia')))) {
               a.id = 'nanami';
               a.aliasId = 'leia';
