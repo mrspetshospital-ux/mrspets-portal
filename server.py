@@ -7640,7 +7640,15 @@ async def teamily_chat(request: Request):
                 status_out = "error"
                 model_used = "teamily-error"
                 err_detail = t_resp.error or f"HTTP {t_resp.status_code}"
-                res_text = f"⚠️ Error {t_resp.status_code}: {err_detail}."
+                if t_resp.status_code == 404 and recipient_user_id and str(recipient_user_id).strip() != "9000408632300095":
+                    res_text = (
+                        f"⚠️ **Sin canal 1 a 1 autónomo en Teamily para {agent_name_display} (ID: `{recipient_user_id}`):**\n\n"
+                        f"El servidor remoto de Teamily devolvió `HTTP 404: Not Found`. "
+                        f"En Teamily, este miembro no dispone de un agente individual `/responses`. "
+                        f"Para interactuar con él, la comunicación debe canalizarse a través de la mesa oficial del **Canal Bilateral de Gerencias (`1791555297`)**."
+                    )
+                else:
+                    res_text = f"⚠️ Error {t_resp.status_code}: {err_detail}."
         else:
             status_out = "error"
             model_used = "teamily-unavailable"

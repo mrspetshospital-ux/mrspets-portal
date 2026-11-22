@@ -654,7 +654,7 @@ class TeamilyGeoAClient:
         if target_endpoint.endswith("/responses"):
             payload = {
                 "input": request.message,
-                "wait": False
+                "wait": True
             }
         else:
             payload = request.to_payload()
