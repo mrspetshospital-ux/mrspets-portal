@@ -103,12 +103,10 @@ def get_default_server_key() -> str:
 
 DEFAULT_SERVER_KEY = get_default_server_key()
 
-def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT) -> str:
+def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT, allow_chat: bool = False) -> str:
     """
     Normaliza cualquier URL ingresada por el usuario hacia la URL canónica de API REST POST.
-    - Si el endpoint es https://teamily.ai/v1/chat (o termina en /v1/chat o /chat), se canaliza
-      automáticamente hacia el agente de Charly (https://teamily.ai/v1/agents/geo-a/responses)
-      para evitar el HTTP 404 que retorna Teamily.
+    - Si allow_chat es True, respeta el endpoint https://teamily.ai/v1/chat sin desviar a Charly.
     - Si el endpoint ya termina en /responses, se respeta intacto.
     - Si el usuario pegó la URL de navegación web del navegador (ej: https://teamily.ai/agent/<slug_o_uuid>), se normaliza.
     """
@@ -116,10 +114,12 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
     if not ep or ep == "None":
         ep = "https://teamily.ai/v1/agents/geo-a/responses"
 
-    # Si el usuario o el sistema ingresó https://teamily.ai/v1/chat (o termina en /v1/chat),
-    # Teamily responde HTTP 404 al carecer de esa ruta exacta. Se canaliza automáticamente
-    # al endpoint operativo del agente de Charly (https://teamily.ai/v1/agents/geo-a/responses).
-    if ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat"):
+    # Si allow_chat es True o termina en /v1/chat y se permite chat directo
+    if allow_chat and (ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat")):
+        return ep.rstrip("/")
+
+    # Si no se permite chat directo y el endpoint es /v1/chat, redirigir a geo-a como fallback histórico
+    if not allow_chat and (ep.rstrip("/").endswith("/v1/chat") or ep.rstrip("/").endswith("/chat")):
         normalized = "https://teamily.ai/v1/agents/geo-a/responses"
         print(f"[TEAMILY URL NORMALIZATION] Endpoint '{ep}' canalizado al agente de Charly: '{normalized}'")
         return normalized
@@ -145,6 +145,30 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
 
 # Registro en memoria de hilos por sesión de cliente para aislamiento estricto y prevención de fuga de datos
 _client_threads: Dict[str, str] = {}
+
+@dataclass
+class TeamilyDirectMessageRequest:
+    """
+    Estructura tipada para mensaje 1 a 1 directo desde Mrs PETS CORP hacia los 8 agentes de Teamily.
+    Emisor oficial del portal: Mrs PETS CORP (userID: 1283666967744922).
+    """
+    recipient_user_id: str
+    message: str
+    sender_user_id: str = "1283666967744922"
+    channel_type: str = "direct_1a1"
+    endpoint: Optional[str] = None
+    timeout: Optional[float] = None
+    session_id: Optional[str] = None
+
+    def to_payload(self) -> Dict[str, Any]:
+        return {
+            "sender_user_id": str(self.sender_user_id),
+            "recipient_user_id": str(self.recipient_user_id),
+            "message": str(self.message),
+            "input": str(self.message),
+            "channel_type": str(self.channel_type),
+            "wait": True
+        }
 
 @dataclass
 class TeamilyThreadConfig:
@@ -569,6 +593,275 @@ class TeamilyGeoAClient:
                 board_id=request.board_id or self.board_id
             )
             self._log_audit("GEO_A_EXCEPTION", {"error": err_msg, "latency_ms": elapsed_ms})
+            return res_obj
+
+    def send_direct_message(
+        self,
+        request: TeamilyDirectMessageRequest,
+        endpoint_override: Optional[str] = None,
+        server_key_override: Optional[str] = None
+    ) -> TeamilyGeoAResponse:
+        """
+        Envía un mensaje 1 a 1 directo desde Mrs PETS CORP (userID: 1283666967744922)
+        hacia el recipient_user_id del agente seleccionado de Teamily.
+        Sin puentes, sin intermediación de Charly ni de ningún otro agente.
+        Aplica los headers de autorización Bearer <server_key> y entrega la respuesta real del servidor.
+        """
+        target_endpoint = str(
+            endpoint_override
+            or getattr(request, "endpoint", None)
+            or os.environ.get("TEAMILY_DIRECT_ENDPOINT")
+            or "https://teamily.ai/v1/chat"
+        ).strip()
+        target_server_key = server_key_override or self.server_key
+        req_timeout = request.timeout if request.timeout is not None else self.timeout
+
+        if not target_server_key:
+            err_msg = "Credencial no configurada: TEAMILY_SERVER_KEY requerida"
+            res_obj = TeamilyGeoAResponse(
+                status_code=401,
+                success=False,
+                response_text="",
+                data={"error": err_msg},
+                raw_body="",
+                latency_ms=0.0,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=""
+            )
+            self._log_audit("DIRECT_1A1_AUTH_ERROR", {
+                "recipient_user_id": request.recipient_user_id,
+                "status_code": 401,
+                "error": err_msg,
+                "endpoint": target_endpoint,
+                "latency_ms": 0.0
+            })
+            return res_obj
+
+        payload = request.to_payload()
+        body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers = {
+            "Authorization": f"Bearer {target_server_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "MrsPets-Teamily-Direct-Client/2.4 (Maracaibo, Venezuela)"
+        }
+
+        req = urllib.request.Request(
+            url=target_endpoint,
+            data=body_bytes,
+            headers=headers,
+            method="POST"
+        )
+
+        ssl_ctx = ssl.create_default_context()
+        try:
+            if os.path.exists("/private/etc/ssl/cert.pem"):
+                ssl_ctx.load_verify_locations(cafile="/private/etc/ssl/cert.pem")
+        except Exception:
+            pass
+
+        start_time = time.time()
+        try:
+            try:
+                resp_ctx = urllib.request.urlopen(req, timeout=req_timeout, context=ssl_ctx)
+            except (ssl.SSLCertVerificationError, urllib.error.URLError) as ssl_err:
+                if "CERTIFICATE_VERIFY_FAILED" in str(ssl_err):
+                    unverified_ctx = ssl._create_unverified_context()
+                    resp_ctx = urllib.request.urlopen(req, timeout=req_timeout, context=unverified_ctx)
+                else:
+                    raise ssl_err
+
+            with resp_ctx as resp:
+                elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+                raw_body = resp.read().decode("utf-8")
+                status_code = resp.status
+
+                try:
+                    data = json.loads(raw_body)
+                except Exception:
+                    data = {"raw": raw_body}
+
+                poll_url = data.get("poll_url") if isinstance(data, dict) else None
+                if (status_code == 202 or (isinstance(data, dict) and data.get("status") == "running")) and poll_url:
+                    poll_headers = {
+                        "Authorization": f"Bearer {target_server_key}",
+                        "Accept": "application/json",
+                        "User-Agent": "MrsPets-Teamily-Direct-Client/2.4 (Maracaibo, Venezuela)"
+                    }
+                    poll_max = 90.0 if "unittest" not in sys.modules else req_timeout
+                    poll_deadline = time.time() + min(max(req_timeout - (time.time() - start_time), 2.0), poll_max)
+                    while time.time() < poll_deadline:
+                        time.sleep(2.0)
+                        try:
+                            poll_req = urllib.request.Request(url=poll_url, headers=poll_headers, method="GET")
+                            with urllib.request.urlopen(poll_req, timeout=min(req_timeout, 15), context=ssl_ctx) as p_resp:
+                                p_raw = p_resp.read().decode("utf-8")
+                                p_data = json.loads(p_raw)
+                                if isinstance(p_data, dict):
+                                    data = p_data
+                                    raw_body = p_raw
+                                    status_code = 200
+                                    if p_data.get("status") in ["completed", "failed", "error"]:
+                                        break
+                        except Exception as poll_err:
+                            print(f"[TEAMILY DIRECT POLLING] Error sondeando {poll_url}: {poll_err}")
+                            break
+
+                response_text = ""
+                if isinstance(data, dict):
+                    output_val = data.get("output")
+                    if isinstance(output_val, dict) and output_val.get("text"):
+                        response_text = output_val["text"]
+                    elif isinstance(output_val, str) and output_val.strip():
+                        response_text = output_val
+                    elif isinstance(data.get("data"), dict) and data["data"].get("response"):
+                        response_text = data["data"]["response"]
+                    elif isinstance(data.get("data"), dict) and data["data"].get("output"):
+                        d_out = data["data"]["output"]
+                        response_text = d_out.get("text") if isinstance(d_out, dict) else str(d_out)
+                    elif data.get("response"):
+                        response_text = data["response"]
+                    elif data.get("reply"):
+                        response_text = data["reply"]
+                    elif data.get("content"):
+                        response_text = data["content"]
+                    elif data.get("message"):
+                        msg_val = data["message"]
+                        if isinstance(msg_val, dict) and msg_val.get("content"):
+                            response_text = msg_val["content"]
+                        elif isinstance(msg_val, dict) and msg_val.get("text"):
+                            response_text = msg_val["text"]
+                        else:
+                            response_text = str(msg_val)
+                    elif data.get("text"):
+                        response_text = data["text"]
+                    elif data.get("status") == "running" or status_code == 202:
+                        run_id = data.get("run_id", "en_proceso")
+                        response_text = f"**Solicitud en proceso en Teamily ✅**\n\nInstrucción registrada para el agente (Run: `{run_id}`)."
+                    else:
+                        response_text = json.dumps(data, ensure_ascii=False)
+                else:
+                    response_text = str(data)
+
+                res_obj = TeamilyGeoAResponse(
+                    status_code=status_code,
+                    success=True,
+                    response_text=str(response_text),
+                    data=data if isinstance(data, dict) else {"result": data},
+                    raw_body=raw_body,
+                    latency_ms=elapsed_ms,
+                    error=None,
+                    endpoint=target_endpoint,
+                    board_id=""
+                )
+                self._log_audit("DIRECT_1A1_SUCCESS", {
+                    "recipient_user_id": request.recipient_user_id,
+                    "sender_user_id": request.sender_user_id,
+                    "status_code": status_code,
+                    "endpoint": target_endpoint,
+                    "latency_ms": elapsed_ms
+                })
+                return res_obj
+
+        except urllib.error.HTTPError as he:
+            elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+            try:
+                err_body = he.read().decode("utf-8")
+                err_data = json.loads(err_body)
+            except Exception:
+                err_body = str(he)
+                err_data = {"error": err_body}
+
+            detail_msg = ""
+            if isinstance(err_data, dict):
+                detail_obj = err_data.get("detail")
+                if isinstance(detail_obj, dict):
+                    detail_msg = detail_obj.get("message") or str(detail_obj)
+                elif isinstance(detail_obj, list) and len(detail_obj) > 0:
+                    first = detail_obj[0]
+                    detail_msg = first.get("msg") if isinstance(first, dict) else str(first)
+                elif isinstance(detail_obj, str):
+                    detail_msg = detail_obj
+                elif err_data.get("message"):
+                    detail_msg = err_data.get("message")
+                elif err_data.get("error"):
+                    detail_msg = str(err_data.get("error"))
+
+            err_msg = f"HTTP {he.code}: {detail_msg or he.reason}"
+            res_obj = TeamilyGeoAResponse(
+                status_code=he.code,
+                success=False,
+                response_text="",
+                data=err_data if isinstance(err_data, dict) else {"error": err_body},
+                raw_body=err_body,
+                latency_ms=elapsed_ms,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=""
+            )
+            self._log_audit("DIRECT_1A1_HTTP_ERROR", {
+                "recipient_user_id": request.recipient_user_id,
+                "status_code": he.code,
+                "error": err_msg,
+                "latency_ms": elapsed_ms
+            })
+            return res_obj
+
+        except (TimeoutError, socket.timeout) as to_err:
+            elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+            err_msg = f"Timeout de lectura en Teamily ({elapsed_ms}ms > {req_timeout}s): The read operation timed out"
+            res_obj = TeamilyGeoAResponse(
+                status_code=408,
+                success=False,
+                response_text="",
+                data={"error": err_msg},
+                raw_body="",
+                latency_ms=elapsed_ms,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=""
+            )
+            self._log_audit("DIRECT_1A1_TIMEOUT", {"error": err_msg, "latency_ms": elapsed_ms})
+            return res_obj
+
+        except urllib.error.URLError as ue:
+            elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+            if isinstance(ue.reason, (socket.timeout, TimeoutError)) or "timed out" in str(ue.reason).lower():
+                err_msg = f"Timeout de conexión en Teamily ({elapsed_ms}ms > {req_timeout}s): The read operation timed out"
+                sc = 408
+            else:
+                err_msg = f"Fallo de conexión de red: {ue.reason}"
+                sc = 503
+            res_obj = TeamilyGeoAResponse(
+                status_code=sc,
+                success=False,
+                response_text="",
+                data={"error": str(ue.reason)},
+                raw_body="",
+                latency_ms=elapsed_ms,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=""
+            )
+            self._log_audit("DIRECT_1A1_NETWORK_ERROR", {"error": err_msg, "latency_ms": elapsed_ms})
+            return res_obj
+
+        except Exception as ex:
+            elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+            err_msg = f"Error inesperado al contactar Teamily: {str(ex)}"
+            res_obj = TeamilyGeoAResponse(
+                status_code=500,
+                success=False,
+                response_text="",
+                data={"error": str(ex)},
+                raw_body="",
+                latency_ms=elapsed_ms,
+                error=err_msg,
+                endpoint=target_endpoint,
+                board_id=""
+            )
+            self._log_audit("DIRECT_1A1_EXCEPTION", {"error": err_msg, "latency_ms": elapsed_ms})
             return res_obj
 
     def ask_leia(self, prompt: str, thread_mode: str = "new", wait: bool = True) -> TeamilyGeoAResponse:

@@ -144,8 +144,8 @@ ESTILO
     welcomeMessage: '¡Hola! Soy **LEIA**, Gerente Operativa y de Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.). Atiendo operaciones, grooming, tienda y hotel boutique. ¿En qué podemos apoyarte hoy?'
   },
   {
-    id: 'vanessa',
-    aliasId: 'valeria',
+    id: 'valeria',
+    aliasId: 'vanessa',
     name: 'Valeria - RRHH Mrs. Pets',
     role: 'RECURSOS HUMANOS & TALENTO',
     icon: '💼',
@@ -153,16 +153,16 @@ ESTILO
     color: '#F472B6',
     bg: '#2A1224',
     border: '#DB2777',
-    description: 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (@9000487795593348) en la mesa RRHH Presidencia. Charly canaliza y orquesta sus respuestas.',
+    description: 'Selección de personal, evaluación de postulantes y gestión de RRHH en Teamily (9000487795593348). Canal directo 1 a 1 desde Mrs PETS CORP.',
     teamlyUserId: '9000487795593348',
-    teamlySlug: '@9000487795593348',
+    teamlySlug: 'valeria',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Gestionar postulaciones de empleo de la web, evaluar experiencia de estilistas caninos y médicos veterinarios, y coordinar en Teamily con Charly y la mesa de RRHH Presidencia (@9000487795593348).',
+    promptGuideline: 'Gestionar postulaciones de empleo de la web, evaluar experiencia de estilistas caninos y médicos veterinarios (9000487795593348).',
     contextType: 'hr',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Hola! Soy **Valeria**, especialista de Recursos Humanos y Talento en Mrs. Pets (`@9000487795593348`). Charly canaliza y orquesta nuestras comunicaciones en la mesa de RRHH Presidencia de Teamily. Tengo acceso a las postulaciones y currículums que llegan a la página web. ¿Qué perfil deseas revisar hoy?'
+    welcomeMessage: '¡Hola! Soy **Valeria**, especialista de Recursos Humanos y Talento en Mrs. Pets (`9000487795593348`). Conectada directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Tengo acceso a las postulaciones y currículums que llegan a la página web. ¿Qué perfil deseas revisar hoy?'
   },
   {
     id: 'mike',
@@ -173,16 +173,16 @@ ESTILO
     color: '#38BDF8',
     bg: '#082435',
     border: '#0284C7',
-    description: 'Gerencia de operaciones, supervisión de infraestructura MisiPet, tanques de agua Tuya y planta eléctrica Cummins 65 kVA (@9000215760376233).',
+    description: 'Gerencia de operaciones, supervisión de infraestructura MisiPet, tanques de agua Tuya y planta eléctrica Cummins 65 kVA (9000215760376233). Canal directo 1 a 1 desde Mrs PETS CORP.',
     teamlyUserId: '9000215760376233',
-    teamlySlug: '@9000215760376233',
+    teamlySlug: 'mike',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Auditar en tiempo real la telemetría de tanques Don Bosco, nivel de combustible diésel y operatividad de sucursal (@9000215760376233).',
+    promptGuideline: 'Auditar en tiempo real la telemetría de tanques Don Bosco, nivel de combustible diésel y operatividad de sucursal (9000215760376233).',
     contextType: 'iot',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Qué tal! Soy **Mike**, Gerente de Operaciones en Mrs. Pets (`@9000215760376233`). Superviso la infraestructura MisiPet, la batería de 4 tanques de agua Tuya y la planta Cummins 65 kVA. ¿Qué área operativa deseas inspeccionar?'
+    welcomeMessage: '¡Qué tal! Soy **Mike**, Gerente de Operaciones en Mrs. Pets (`9000215760376233`). Conectado directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Superviso la infraestructura MisiPet, la batería de 4 tanques de agua Tuya y la planta Cummins 65 kVA. ¿Qué área operativa deseas inspeccionar?'
   },
   {
     id: 'manolo',
@@ -193,16 +193,16 @@ ESTILO
     color: '#818CF8',
     bg: '#1E1B4B',
     border: '#4338CA',
-    description: 'Gerencia General de Administración, finanzas corporativas, supervisión de piso y cierre estricto a las 6:00 PM (@9000441148643782).',
+    description: 'Gerencia General de Administración, finanzas corporativas, supervisión de piso y cierre estricto a las 6:00 PM (9000441148643782). Canal directo 1 a 1 desde Mrs PETS CORP.',
     teamlyUserId: '9000441148643782',
-    teamlySlug: '@9000441148643782',
+    teamlySlug: 'manolo',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Administración y finanzas generales, disciplina horaria presencial hasta las 6:00 PM y flujo de las 7 estaciones de Grooming (@9000441148643782).',
+    promptGuideline: 'Administración y finanzas generales, disciplina horaria presencial hasta las 6:00 PM y flujo de las 7 estaciones de Grooming (9000441148643782).',
     contextType: 'operations',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: 'Buenas tardes. Soy **Manolo**, Gerente General de Administración y Finanzas en Mrs. Pets (`@9000441148643782`). Superviso la rentabilidad, administración y el cierre estricto de sucursal a las 6:00 p.m. ¿Qué tema directivo revisamos?'
+    welcomeMessage: 'Buenas tardes. Soy **Manolo**, Gerente General de Administración y Finanzas en Mrs. Pets (`9000441148643782`). Conectado directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Superviso la rentabilidad, administración y el cierre estricto de sucursal a las 6:00 p.m. ¿Qué tema directivo revisamos?'
   },
   {
     id: 'oneil',
@@ -214,16 +214,16 @@ ESTILO
     color: '#FB923C',
     bg: '#2D1808',
     border: '#EA580C',
-    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot (@9000339468227100). Opera con el Modelo de Aprendizaje y Autonomía Gradual (92.3% Precisión acumulada • 15 aprobaciones directas consecutivas).',
+    description: 'Dirección de Marketing, pauta publicitaria en TikTok/Meta, branding digital, fotos Grooming QC y canal oficial en Telegram @ONEILnewBot (9000339468227100). Canal directo 1 a 1 desde Mrs PETS CORP.',
     telegramBot: '@ONEILnewBot',
     telegramBotUrl: 'https://t.me/ONEILnewBot',
     telegramChatId: '-1004440607589',
     telegramGroupTitle: 'FOTOS GROOMING HISTORICO',
     teamlyUserId: '9000339468227100',
-    teamlySlug: '@9000339468227100',
+    teamlySlug: 'oneil',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad activo. Pauta digital, fotos Grooming QC, aplicación de reglas de encuadre y texto de Dalybell, y notificaciones Telegram @ONEILnewBot (@9000339468227100).',
+    promptGuideline: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad activo. Pauta digital, fotos Grooming QC, aplicación de reglas de encuadre y texto de Dalybell, y notificaciones Telegram @ONEILnewBot (9000339468227100).',
     qcLearning: {
       model: 'Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad',
       accuracyRate: 92.3,
@@ -234,7 +234,7 @@ ESTILO
     contextType: 'marketing_ops',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Director de Marketing de Mrs. Pets (`@9000339468227100`) y responsable de `@ONEILnewBot`. Mi motor opera con el **Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad** (92.3% precisión validada • 15 aprobaciones consecutivas • Modo Autónomo Controlado). ¿Deseas evaluar pauta, revisar las 4 fotos QC o verificar el estado de autonomía?'
+    welcomeMessage: '¡Saludos! Soy **O\'Neil**, Director de Marketing de Mrs. Pets (`9000339468227100`). Conectado directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Mi motor opera con el **Modelo de Aprendizaje y Autonomía Gradual de Control de Calidad**. ¿Deseas evaluar pauta, revisar fotos QC o verificar directrices?'
   },
   {
     id: 'oneal_mercadeo',
@@ -245,16 +245,16 @@ ESTILO
     color: '#F97316',
     bg: '#2A1408',
     border: '#C2410C',
-    description: 'Gerencia General de Mercadotecnia, campañas locales en Maracaibo, telemercadeo y coordinación de promociones (@9000255459464666).',
-    teamlyUserId: '9000255459464666',
-    teamlySlug: '@9000255459464666',
+    description: 'Gerencia General de Mercadotecnia, campañas locales en Maracaibo, telemercadeo y coordinación de promociones (9000339468227100).',
+    teamlyUserId: '9000339468227100',
+    teamlySlug: 'oneil',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Coordinación de telemercadeo, promociones en sucursal y conversiones de reservas (@9000255459464666).',
+    promptGuideline: 'Coordinación de telemercadeo, promociones en sucursal y conversiones de reservas (9000339468227100).',
     contextType: 'marketing_ops',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: 'Hola, soy **O\'Neil**, Gerente General de Mercadotecnia y Publicidad (`@9000255459464666`). ¿Cómo están las conversiones de reservas y promociones de la semana?'
+    welcomeMessage: 'Hola, soy **O\'Neil**, Gerente General de Mercadotecnia y Publicidad (`9000339468227100`). Conectado directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). ¿Cómo están las conversiones de reservas y promociones de la semana?'
   },
   {
     id: 'sebastian',
@@ -265,16 +265,16 @@ ESTILO
     color: '#10B981',
     bg: '#0B2319',
     border: '#059669',
-    description: 'Gerencia de Ventas, cierre de planes anuales de salud, suscripciones de spa y seguimiento comercial a tutores (@9000074393459175).',
+    description: 'Gerencia de Ventas, cierre de planes anuales de salud, suscripciones de spa y seguimiento comercial a tutores (9000074393459175). Canal directo 1 a 1 desde Mrs PETS CORP.',
     teamlyUserId: '9000074393459175',
-    teamlySlug: '@9000074393459175',
+    teamlySlug: 'sebastian',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Maximizar tasa de conversión, seguimiento a carritos y ventas de planes de salud y estética (@9000074393459175).',
+    promptGuideline: 'Maximizar tasa de conversión, seguimiento a carritos y ventas de planes de salud y estética (9000074393459175).',
     contextType: 'sales',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: '¡Buenas! Soy **Sebastian**, líder de Ventas en Mrs. Pets (`@9000074393459175`). Me encargo de cerrar membresías, paquetes de estética y seguimiento de carritos. ¿Qué meta comercial revisamos hoy?'
+    welcomeMessage: '¡Buenas! Soy **Sebastian**, líder de Ventas en Mrs. Pets (`9000074393459175`). Conectado directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Me encargo de cerrar membresías, paquetes de estética y seguimiento de carritos. ¿Qué meta comercial revisamos hoy?'
   },
   {
     id: 'pandora',
@@ -285,16 +285,16 @@ ESTILO
     color: '#06B6D4',
     bg: '#08252C',
     border: '#0891B2',
-    description: 'Compras nacionales, reposición de insumos de spa y clínica, y filtro KillCritic (ROI ≥ 25%, Lead Time ≤ 15 días) (@9000274735437072).',
+    description: 'Compras nacionales, reposición de insumos de spa y clínica, y filtro KillCritic (ROI ≥ 25%, Lead Time ≤ 15 días) (9000274735437072). Canal directo 1 a 1 desde Mrs PETS CORP.',
     teamlyUserId: '9000274735437072',
-    teamlySlug: '@9000274735437072',
+    teamlySlug: 'pandora',
     teamlyEndpoint: 'https://teamily.ai/v1/chat',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
-    promptGuideline: 'Auditoría estricta de compras nacionales bajo el filtro KillCritic y autonomía de inventario (@9000274735437072).',
+    promptGuideline: 'Auditoría estricta de compras nacionales bajo el filtro KillCritic y autonomía de inventario (9000274735437072).',
     contextType: 'supply',
     isDefault: true,
     status: 'ACTIVE',
-    welcomeMessage: 'Hola. Soy **Pandora**, encargada de Compras Nacionales en Mrs. Pets (`@9000274735437072`). Evalúo órdenes de reposición bajo el filtro KillCritic. ¿Deseas auditar alguna compra pendiente?'
+    welcomeMessage: 'Hola. Soy **Pandora**, encargada de Compras Nacionales en Mrs. Pets (`9000274735437072`). Conectada directamente 1 a 1 desde Mrs PETS CORP (`1283666967744922`). Evalúo órdenes de reposición bajo el filtro KillCritic. ¿Deseas auditar alguna compra pendiente?'
   },
   {
     id: 'rocky',
@@ -828,16 +828,20 @@ class TeamilyExecutiveEngine {
     const agent = this.getAgentById(agentId);
     if (!agent) return;
     if (confirm(`¿Deseas reiniciar el historial de conversación con ${agent.name}?`)) {
-      this.directChatHistory[agent.id] = [
+      const targetKey = agent.teamlyUserId || agent.id;
+      this.directChatHistory[targetKey] = [
         {
           sender: 'agent',
-          text: agent.welcomeMessage || `Hola, soy **${agent.name}** (${agent.role}). He reiniciado nuestra sesión. ¿En qué puedo apoyarte?`,
+          text: agent.welcomeMessage || `Hola, soy **${agent.name}** (${agent.role}). He reiniciado nuestra sesión 1 a 1. ¿En qué puedo apoyarte?`,
           timestamp: new Date().toLocaleTimeString()
         }
       ];
+      if (agent.id && agent.id !== targetKey) {
+        delete this.directChatHistory[agent.id];
+      }
       this.saveChatHistory();
       const modal = document.getElementById('volturiDirectChatModal');
-      if (modal && this.activeDirectChatAgent && this.activeDirectChatAgent.id === agent.id) {
+      if (modal && this.activeDirectChatAgent && (this.activeDirectChatAgent.id === agent.id || this.activeDirectChatAgent.teamlyUserId === agent.teamlyUserId)) {
         this.renderDirectChatContent(modal, agent);
       }
       if (typeof window.showToast === 'function') {
@@ -1335,40 +1339,61 @@ class TeamilyExecutiveEngine {
     }).join('');
   }
 
+  // Recupera o inicializa el historial 1 a 1 aislado por agente (por UserID o id de subagente)
+  getAgentChatHistory(agent) {
+    if (!agent) return [];
+    if (!this.directChatHistory) this.directChatHistory = {};
+    const keyUserId = agent.teamlyUserId;
+    const keyId = agent.id;
+
+    let history = null;
+    if (keyUserId && Array.isArray(this.directChatHistory[keyUserId]) && this.directChatHistory[keyUserId].length > 0) {
+      history = this.directChatHistory[keyUserId];
+    } else if (keyId && Array.isArray(this.directChatHistory[keyId]) && this.directChatHistory[keyId].length > 0) {
+      history = this.directChatHistory[keyId];
+      if (keyUserId) {
+        this.directChatHistory[keyUserId] = history;
+        delete this.directChatHistory[keyId];
+      }
+    }
+
+    const targetKey = keyUserId || keyId;
+    if (!history || history.length === 0) {
+      this.directChatHistory[targetKey] = [
+        {
+          sender: 'agent',
+          text: agent.welcomeMessage || `Hola, soy **${agent.name}** (${agent.role} en Mrs. Pets). Estoy conectado directamente 1 a 1 a través de Teamly.ai. ¿En qué caso o directriz operativa requieres mi apoyo hoy?`,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ];
+      this.saveChatHistory();
+      return this.directChatHistory[targetKey];
+    }
+
+    // Purga activa para eliminar cualquier residuo sintético obsoleto
+    this.directChatHistory[targetKey] = history.filter(m => {
+      if (!m || !m.text) return false;
+      const t = String(m.text);
+      return !(
+        t.includes('Charlie Finance') ||
+        t.includes('Todas las transacciones en mostrador POS') ||
+        t.includes('918.77') ||
+        t.includes('887.30') ||
+        t.includes('Tasa Oficial del Banco Central') ||
+        t.includes('Tasa Oficial BCV') ||
+        t.includes('Libro Fiscal SENIAT')
+      );
+    });
+    return this.directChatHistory[targetKey];
+  }
+
   // --- MODAL DE CHAT DIRECTO 1 A 1 CON PANEL LATERAL Y CONTEXTO VINCULADO ---
   openDirectChatModal(agentId) {
     const agent = this.getAgentById(agentId) || this.agents[0];
     if (!agent) return;
 
     this.activeDirectChatAgent = agent;
-
-    // Purga activa al abrir el modal para eliminar cualquier burbuja sintética residual
-    if (this.directChatHistory && this.directChatHistory[agent.id]) {
-      this.directChatHistory[agent.id] = this.directChatHistory[agent.id].filter(m => {
-        if (!m || !m.text) return false;
-        const t = String(m.text);
-        return !(
-          t.includes('Charlie Finance') ||
-          t.includes('Todas las transacciones en mostrador POS') ||
-          t.includes('918.77') ||
-          t.includes('887.30') ||
-          t.includes('Tasa Oficial del Banco Central') ||
-          t.includes('Tasa Oficial BCV') ||
-          t.includes('Libro Fiscal SENIAT')
-        );
-      });
-    }
-
-    if (!this.directChatHistory[agent.id] || this.directChatHistory[agent.id].length === 0) {
-      this.directChatHistory[agent.id] = [
-        {
-          sender: 'agent',
-          text: agent.welcomeMessage || `Hola, soy **${agent.name}** (${agent.role} en Mrs. Pets). Estoy conectado directamente a través de Teamly.ai. ¿En qué caso o directriz operativa requieres mi apoyo hoy?`,
-          timestamp: new Date().toLocaleTimeString()
-        }
-      ];
-      this.saveChatHistory();
-    }
+    const history = this.getAgentChatHistory(agent);
 
     let modal = document.getElementById('volturiDirectChatModal');
     if (!modal) {
@@ -1413,7 +1438,7 @@ class TeamilyExecutiveEngine {
   }
 
   renderDirectChatContent(modal, agent) {
-    const history = this.directChatHistory[agent.id] || [];
+    const history = this.getAgentChatHistory(agent);
 
     // Acciones rápidas contextuales según el agente
     let contextButtonsHtml = '';
@@ -1650,31 +1675,47 @@ class TeamilyExecutiveEngine {
         <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0e1524;">
           
           <!-- Header del Hilo Activo -->
-          <div style="background: linear-gradient(135deg, ${agent.bg || '#1f1435'}, #0e1524); padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: linear-gradient(135deg, ${agent.bg || '#1f1435'}, #0e1524); padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 12px;">
               ${this.renderAgentAvatar(agent, 46, 'border-width: 2.5px;')}
               <div>
-                <div style="font-weight: 900; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 8px;">
-                  ${agent.name}
+                <div style="font-weight: 900; font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span>${agent.name}</span>
                   <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 800; letter-spacing: 0.04em;">
-                    ● TEAMLY AI ACTIVO
+                    ● CANAL 1 A 1 DIRECTO ACTIVO
                   </span>
                 </div>
-                <div style="font-size: 0.74rem; color: ${agent.color || '#c084fc'}; font-weight: 700;">
-                  ${agent.role} • Slug: <code>${agent.teamlySlug || 'geo-a'}</code>
+                <div style="font-size: 0.73rem; color: ${agent.color || '#c084fc'}; font-weight: 700; margin-top: 2px;">
+                  ${agent.role} • UserID: <code style="background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 4px; color: #fde047;">${agent.teamlyUserId || agent.id}</code>
+                </div>
+                <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 2px;">
+                  📡 Emisor: <strong style="color: #6ee7b7;">Mrs PETS CORP</strong> (<code>1283666967744922</code>) ➔ Destinatario: <strong style="color: #fde047;">${agent.name}</strong> (<code>${agent.teamlyUserId || agent.id}</code>)
                 </div>
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button type="button" onclick="window.teamilyExecutiveEngine.clearAgentHistory('${agent.id}')" title="Reiniciar conversación con este agente" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 8px; padding: 5px 9px; font-size: 0.72rem; cursor: pointer; font-weight: 700;">
-                🧹 Limpiar
-              </button>
-              <button type="button" onclick="window.teamilyExecutiveEngine.openAgentConfigModal('${agent.id}')" title="Configurar conexión Teamly, Slug y Endpoints" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 8px; padding: 5px 9px; font-size: 0.8rem; cursor: pointer;">
-                ⚙️
-              </button>
-              <button type="button" onclick="window.teamilyExecutiveEngine.closeDirectChatModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #e2e8f0; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">
-                ✕
-              </button>
+
+            <!-- Selector Visible de Agente con Nombre y Rol -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-start;">
+                <label for="volturiChatAgentSelectorDropdown" style="font-size: 0.68rem; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.04em;">
+                  👥 Selector de Agente 1 a 1:
+                </label>
+                <select id="volturiChatAgentSelectorDropdown" onchange="window.teamilyExecutiveEngine.switchActiveAgent(this.value)" style="background: #1e293b; color: #fff; border: 1.5px solid ${agent.border || '#a855f7'}; border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; outline: none; max-width: 320px;">
+                  ${this.agents.map(a => `<option value="${a.id}" ${a.id === agent.id ? 'selected' : ''}>${a.name} — ${a.role}</option>`).join('')}
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" onclick="window.teamilyExecutiveEngine.clearAgentHistory('${agent.id}')" title="Reiniciar conversación con este agente" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 8px; padding: 6px 9px; font-size: 0.72rem; cursor: pointer; font-weight: 700;">
+                  🧹 Limpiar
+                </button>
+                <button type="button" onclick="window.teamilyExecutiveEngine.openAgentConfigModal('${agent.id}')" title="Configurar conexión Teamly, Slug y Endpoints" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 8px; padding: 6px 9px; font-size: 0.8rem; cursor: pointer;">
+                  ⚙️
+                </button>
+                <button type="button" onclick="window.teamilyExecutiveEngine.closeDirectChatModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #e2e8f0; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">
+                  ✕
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1708,14 +1749,14 @@ class TeamilyExecutiveEngine {
             `).join('')}
           </div>
 
-          <!-- Indicador de Escribiendo -->
-          <div id="directChatTyping" style="display: none; padding: 6px 18px; font-size: 0.75rem; color: #a5b4fc; background: #0a0f1d;">
-            <em>${agent.name} está procesando en Teamly.ai...</em>
+          <!-- Indicador de Escribiendo / Estado de Envío -->
+          <div id="directChatTyping" style="display: none; padding: 7px 18px; font-size: 0.76rem; color: #a5b4fc; background: #0a0f1d; border-top: 1px solid rgba(255,255,255,0.05);">
+            <em>Enviando a ${agent.name} (ID: <code>${agent.teamlyUserId || agent.id}</code>) desde Mrs PETS CORP (1283666967744922)...</em>
           </div>
 
           <!-- Input de Mensaje Directo -->
           <div style="padding: 14px 18px; background: #111827; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; align-items: center;">
-            <input type="text" id="directChatInput" placeholder="Escribe tu mensaje a ${agent.name} (ej: consultar reservas, mantenimientos o directrices)..." style="flex: 1; background: #0f172a !important; border: 1.5px solid #a855f7 !important; border-radius: 10px; color: #ffffff !important; padding: 12px 16px; font-size: 0.9rem; font-weight: 500; outline: none; caret-color: #c084fc; user-select: text !important; pointer-events: auto !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);" onkeydown="if(event.key==='Enter') window.teamilyExecutiveEngine.sendDirectChatMessage()">
+            <input type="text" id="directChatInput" placeholder="Escribe tu mensaje a ${agent.name} (enviando directo a ${agent.teamlyUserId || agent.id})..." style="flex: 1; background: #0f172a !important; border: 1.5px solid #a855f7 !important; border-radius: 10px; color: #ffffff !important; padding: 12px 16px; font-size: 0.9rem; font-weight: 500; outline: none; caret-color: #c084fc; user-select: text !important; pointer-events: auto !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);" onkeydown="if(event.key==='Enter') window.teamilyExecutiveEngine.sendDirectChatMessage()">
             <button type="button" onclick="window.teamilyExecutiveEngine.sendDirectChatMessage()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; color: #fff; font-weight: 800; border-radius: 10px; padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 10px rgba(124, 58, 237, 0.4); font-size: 0.88rem;">
               <span>Enviar ⚡</span>
             </button>
@@ -1752,8 +1793,8 @@ class TeamilyExecutiveEngine {
     const agent = this.activeDirectChatAgent;
     input.value = '';
 
-    if (!this.directChatHistory[agent.id]) this.directChatHistory[agent.id] = [];
-    this.directChatHistory[agent.id].push({
+    const history = this.getAgentChatHistory(agent);
+    history.push({
       sender: 'user',
       text,
       timestamp: new Date().toLocaleTimeString()
@@ -1763,27 +1804,19 @@ class TeamilyExecutiveEngine {
     const modal = document.getElementById('volturiDirectChatModal');
     if (modal) this.renderDirectChatContent(modal, agent);
 
-    if (typing) typing.style.display = 'block';
+    if (typing) {
+      const recipientIdText = agent.teamlyUserId || agent.id;
+      typing.innerHTML = `<em>Enviando mensaje a <strong>${agent.name}</strong> (ID: <code>${recipientIdText}</code>) desde <strong>Mrs PETS CORP</strong> (<code>1283666967744922</code>)...</em>`;
+      typing.style.display = 'block';
+    }
 
     // Recopilar contexto operativo dinámico para este agente
     const liveContext = this.getLiveContextData(agent.id);
 
     try {
-      let formattedInput = text;
-      // Si el agente tiene mención explícita @ en su slug (ej: @b909da17-2c84-4dfe-a993-c3271ebca750 para Valeria):
-      // enviarla al input para que Charly en Teamily sepa exactamente a quién dirigirla en RRHH Presidencia.
-      if (agent.teamlySlug && agent.teamlySlug.startsWith('@')) {
-        if (!formattedInput.includes(agent.teamlySlug)) {
-          formattedInput = `${agent.teamlySlug} ${formattedInput}`;
-        }
-      }
-
-      const slugToSend = (agent.id === 'charlie' || agent.teamlySlug === 'charlie' || agent.teamlySlug?.startsWith('@'))
-        ? 'geo-a'
-        : (agent.teamlySlug || 'geo-a');
-
-      const endpointToSend = this.normalizeTeamilyEndpoint(agent.teamlyEndpoint);
+      const endpointToSend = this.normalizeTeamilyEndpoint(agent.teamlyEndpoint, 'https://teamily.ai/v1/chat');
       const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+      const recipientUserId = agent.teamlyUserId || '';
 
       const res = await fetch(this.agentChatEndpoint, {
         method: 'POST',
@@ -1793,13 +1826,16 @@ class TeamilyExecutiveEngine {
         },
         body: JSON.stringify({
           message_id: messageId,
-          agente_origen: 'user',
-          input: formattedInput,
-          agent_slug: agent.id || slugToSend,
+          sender_user_id: '1283666967744922',
+          recipient_user_id: recipientUserId,
+          message: text,
+          input: text,
+          channel_type: 'direct_1a1',
+          agent_slug: agent.id,
           agent_id: agent.id,
+          agent_name: agent.name,
           endpoint_override: endpointToSend,
           board_id: agent.teamlyBoardId,
-          agent_name: agent.name,
           context: liveContext
         })
       });
@@ -1807,13 +1843,15 @@ class TeamilyExecutiveEngine {
       const data = await res.json();
       let replyText = '';
 
-      // Resolver texto de respuesta de forma resiliente
+      // Resolver texto de respuesta de forma transparente sin simulaciones
       let rawText = '';
       if (data && typeof data === 'object') {
         if (data.response_text && typeof data.response_text === 'string' && data.response_text.trim()) {
           rawText = data.response_text.trim();
         } else if (data.response_text && typeof data.response_text === 'object' && data.response_text.text) {
           rawText = String(data.response_text.text).trim();
+        } else if (data.reply && typeof data.reply === 'string' && data.reply.trim()) {
+          rawText = data.reply.trim();
         } else if (data.output && data.output.text) {
           rawText = String(data.output.text).trim();
         } else if (data.data && data.data.output && data.data.output.text) {
@@ -1823,22 +1861,22 @@ class TeamilyExecutiveEngine {
         }
       }
 
-      if (res.ok && rawText && rawText.length > 0) {
-        // Respuesta legítima directa del canal Teamily (Charly / Comité Volturi)
+      if (res.ok && data?.status === 'success' && rawText && rawText.length > 0) {
         replyText = rawText;
       } else if (res.ok && data?.status === 'running') {
         const runId = data.run_id || 'en_proceso';
-        replyText = `**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: \`${runId}\`). Se encuentra procesando con el equipo.`;
-      } else if (res.ok && data?.error) {
-        replyText = `⚠️ Sin respuesta de Teamily (${data.error})`;
-      } else if (res.ok) {
-        replyText = `⚠️ Sin respuesta de Teamily para ${agent.name}.`;
+        replyText = `**Solicitud en proceso en Teamily (Run: \`${runId}\`)**`;
+      } else if (data?.status === 'error' || !res.ok) {
+        const statusCode = (data && data.code) || res.status;
+        const errDetail = (data && (data.error || data.detail || data.message)) || `HTTP ${statusCode}`;
+        replyText = `⚠️ Error ${statusCode}: ${errDetail}`;
+      } else if (rawText && rawText.length > 0) {
+        replyText = rawText;
       } else {
-        const errDetail = (data && (data.error || data.detail || data.message)) || `HTTP ${res.status}`;
-        replyText = `⚠️ Sin respuesta de Teamily (${errDetail})`;
+        replyText = `⚠️ Sin respuesta de Teamily para ${agent.name}.`;
       }
 
-      this.directChatHistory[agent.id].push({
+      history.push({
         sender: 'agent',
         text: replyText,
         timestamp: new Date().toLocaleTimeString()
@@ -1846,8 +1884,8 @@ class TeamilyExecutiveEngine {
       this.saveChatHistory();
     } catch (err) {
       console.error('[Teamily Executive Engine] Error de conexión con canal Teamily:', err);
-      const replyText = `⚠️ Sin respuesta de Teamily (${err.message || 'Error de red'})`;
-      this.directChatHistory[agent.id].push({
+      const replyText = `⚠️ Error de conexión con Teamily: ${err.message || 'Error de red'}`;
+      history.push({
         sender: 'agent',
         text: replyText,
         timestamp: new Date().toLocaleTimeString()

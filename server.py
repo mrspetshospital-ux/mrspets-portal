@@ -57,10 +57,11 @@ except Exception as _e_misi:
     misipet_engine = None
 
 try:
-    from teamilyClient import teamily_geo_a_client, TeamilyGeoARequest
+    from teamilyClient import teamily_geo_a_client, TeamilyGeoARequest, TeamilyDirectMessageRequest
 except Exception as _e_team:
     teamily_geo_a_client = None
     TeamilyGeoARequest = None
+    TeamilyDirectMessageRequest = None
 
 try:
     from elevenlabsEngine import elevenlabs_engine
@@ -7465,34 +7466,78 @@ async def teamily_chat(request: Request):
 
     # -----------------------------------------------------------------
     # MIEMBROS DEL COMITÉ VOLTURI Y AGENTES DEL ECOSISTEMA
-    # (Canal oficial directo con Teamily basado en histórico verificado ddccb5e)
+    # (Mensajería directa 1 a 1 desde Mrs PETS CORP userID: 1283666967744922)
     # -----------------------------------------------------------------
-    AGENT_TEAMLY_USERS_MAP = {
-        "leia": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
-        "margaret": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
-        "margarette": ("@9000408632300095", "Margarette Gerente de Planta (fachada pública: LEIA)"),
-        "valeria": ("@9000487795593348", "Valeria RRHH"),
-        "vanessa": ("@9000487795593348", "Valeria RRHH"),
-        "manolo": ("@9000441148643782", "Manolo Operaciones"),
-        "mike": ("@9000215760376233", "Mike Infraestructura"),
-        "oneal": ("@9000339468227100", "O'Neil Marketing"),
-        "oneil": ("@9000339468227100", "O'Neil Marketing"),
-        "oneal_mercadeo": ("@9000255459464666", "O'Neil Mercadotecnia"),
-        "sebastian": ("@9000074393459175", "Sebastian Ventas"),
-        "pandora": ("@9000274735437072", "Pandora Compras"),
-        "rocky": ("@9000476605193636", "Rocky Logística"),
-        "nanami": ("@nanami", "NANAMI Asistente Ejecutiva CEO"),
-        "charlie": ("geo-a", "Charly GEO A & Finanzas"),
-        "charly": ("geo-a", "Charly GEO A & Finanzas")
+    VOLTURI_OFFICIAL_AGENTS_MAP = {
+        "9000408632300095": {
+            "slug": "margarette",
+            "name": "Margarette Gerente de Planta (fachada pública: LEIA)",
+            "role": "Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel"
+        },
+        "9000215760376233": {
+            "slug": "mike",
+            "name": "Mike Gerente de Operaciones",
+            "role": "GERENCIA DE OPERACIONES & IOT"
+        },
+        "9000487795593348": {
+            "slug": "valeria",
+            "name": "Valeria - RRHH Mrs. Pets",
+            "role": "RECURSOS HUMANOS & TALENTO"
+        },
+        "9000376919168475": {
+            "slug": "nanami",
+            "name": "NANAMI",
+            "role": "ASISTENTE EJECUTIVA DEL CEO"
+        },
+        "9000441148643782": {
+            "slug": "manolo",
+            "name": "Manolo — Gerente General de Administración y Finanzas",
+            "role": "GERENCIA GENERAL & FINANZAS"
+        },
+        "9000274735437072": {
+            "slug": "pandora",
+            "name": "Pandora Compras Nacionales",
+            "role": "COMPRAS & ABASTECIMIENTO NACIONAL"
+        },
+        "9000339468227100": {
+            "slug": "oneil",
+            "name": "O'Neil — Marketing, Telemercadeo & Telegram Bot (@ONEILnewBot)",
+            "role": "DIRECTOR DE MARKETING & TELEGRAM BOT"
+        },
+        "9000074393459175": {
+            "slug": "sebastian",
+            "name": "Sebastian Ventas",
+            "role": "VENTAS & CONVERSIÓN COMERCIAL"
+        }
     }
+
+    SLUG_TO_VOLTURI_USER_ID = {
+        "margarette": "9000408632300095",
+        "margaret": "9000408632300095",
+        "leia": "9000408632300095",
+        "mike": "9000215760376233",
+        "valeria": "9000487795593348",
+        "vanessa": "9000487795593348",
+        "nanami": "9000376919168475",
+        "manolo": "9000441148643782",
+        "pandora": "9000274735437072",
+        "oneil": "9000339468227100",
+        "oneal": "9000339468227100",
+        "oneal_mercadeo": "9000339468227100",
+        "sebastian": "9000074393459175"
+    }
+
+    sender_user_id = str(body.get("sender_user_id") or "1283666967744922").strip()
+    recipient_user_id = str(body.get("recipient_user_id") or "").strip()
+    channel_type = str(body.get("channel_type") or "direct_1a1").strip()
 
     target_slug = agent
     if target_slug in ["oneal", "mercadeo"]:
         target_slug = "oneil"
     elif target_slug in ["operaciones", "iot"]:
         target_slug = "mike"
-    elif target_slug in ["directora", "clinica"]:
-        target_slug = "leia"
+    elif target_slug in ["directora", "clinica", "leia", "margaret"]:
+        target_slug = "margarette"
     elif target_slug in ["administracion", "finanzas"]:
         target_slug = "manolo"
     elif target_slug in ["vanessa", "rrhh", "talento"]:
@@ -7506,76 +7551,104 @@ async def teamily_chat(request: Request):
     elif target_slug in ["asistencia_ceo", "ceo_assistant"]:
         target_slug = "nanami"
 
-    agent_name_display = (globals().get("AGENT_REGISTRY") or {}).get(target_slug, {}).get("name", target_slug.capitalize())
+    # Resolver recipient_user_id si no fue provisto explícitamente
+    if not recipient_user_id and target_slug in SLUG_TO_VOLTURI_USER_ID:
+        recipient_user_id = SLUG_TO_VOLTURI_USER_ID[target_slug]
+
+    # Validación estricta de destinatario si se pasó un recipient_user_id explícito
+    if recipient_user_id and recipient_user_id not in VOLTURI_OFFICIAL_AGENTS_MAP and target_slug not in ("charly", "charlie"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "agent": target_slug,
+                "error": f"Destinatario inválido: {recipient_user_id}. No es un agente registrado del Comité Volturi.",
+                "code": 400,
+                "sender_user_id": sender_user_id,
+                "recipient_user_id": recipient_user_id,
+                "reply": f"⚠️ Error HTTP 400: Destinatario inválido ({recipient_user_id})."
+            }
+        )
+
+    if recipient_user_id in VOLTURI_OFFICIAL_AGENTS_MAP:
+        agent_info = VOLTURI_OFFICIAL_AGENTS_MAP[recipient_user_id]
+        agent_name_display = agent_info["name"]
+        target_slug = agent_info["slug"]
+    else:
+        agent_name_display = (globals().get("AGENT_REGISTRY") or {}).get(target_slug, {}).get("name", target_slug.capitalize())
+
     bcv_cfg = get_bcv_config_data()
     eff_rate = bcv_cfg.get("effective_rate", 914.02)
     t0_agent = time.time()
     res_text = ""
     model_used = "teamily-geo-a"
+    if recipient_user_id:
+        model_used = "teamily-direct-1a1"
     status_out = "success"
     err_detail = None
     teamily_data = {}
+    http_code_out = 200
 
-    # El Comité Volturi se canaliza EXCLUSIVAMENTE a través del canal oficial de Teamily (Charly / GEO A).
-    # Sin generación por Gemini, sin respuestas automáticas de la página y sin plantillas sintéticas.
+    # Despacho exclusivo a Teamily (Sin generación por Gemini, sin respuestas automáticas y sin Charly como proxy)
     try:
-        if teamily_geo_a_client and TeamilyGeoARequest and msg:
-            cabal_group = os.environ.get("TEAMILY_CABAL_GROUP_ID") or "524471990"
-            timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or 90.0)
-            timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 90.0)
+        timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or 90.0)
+        timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 90.0)
+        endpoint_ovr = body.get("endpoint_override")
 
-            # Enrutamiento histórico verificado (commit ddccb5e):
-            # Charly (GEO A) recibe el mensaje directo.
-            # Otros miembros del comité se canalizan a través de Charly con su @tag numérico oficial en Teamily.
-            if target_slug in ("charly", "charlie"):
-                teamily_input = msg
-            elif target_slug in AGENT_TEAMLY_USERS_MAP:
-                tag, label = AGENT_TEAMLY_USERS_MAP[target_slug]
-                if tag not in msg and not msg.lower().startswith("charly"):
-                    target_label = agent_name_display or label
-                    teamily_input = f"Charly, canaliza y entrega este requerimiento a {target_label} ({tag}) en su mesa de trabajo correspondiente: {msg}"
-                else:
-                    teamily_input = msg
+        if teamily_geo_a_client and msg:
+            if recipient_user_id and hasattr(teamily_geo_a_client, "send_direct_message") and TeamilyDirectMessageRequest:
+                # -------------------------------------------------------------
+                # ENVÍO DIRECTO 1 A 1: Mrs PETS CORP (1283666967744922) -> recipient_user_id
+                # -------------------------------------------------------------
+                d_req = TeamilyDirectMessageRequest(
+                    sender_user_id=sender_user_id,
+                    recipient_user_id=recipient_user_id,
+                    message=msg,
+                    channel_type=channel_type,
+                    timeout=timeout_sec,
+                    endpoint=endpoint_ovr
+                )
+                t_resp = teamily_geo_a_client.send_direct_message(d_req, endpoint_override=endpoint_ovr)
             else:
-                teamily_input = f"[@{target_slug}] {msg}"
+                # Despacho para Charly / GEO A
+                t_req = TeamilyGeoARequest(
+                    input=msg,
+                    wait=True,
+                    timeout=timeout_sec
+                )
+                if endpoint_ovr:
+                    t_req.endpoint = endpoint_ovr
+                t_resp = teamily_geo_a_client.send_message(t_req, endpoint_override=endpoint_ovr)
 
-            t_req = TeamilyGeoARequest(
-                input=teamily_input,
-                group_id=cabal_group,
-                wait=True,
-                timeout=timeout_sec
-            )
-            endpoint_ovr = body.get("endpoint_override")
-            if endpoint_ovr:
-                t_req.endpoint = endpoint_ovr
-
-            t_resp = teamily_geo_a_client.send_message(t_req, endpoint_override=endpoint_ovr)
             teamily_data = t_resp.data if t_resp.data else {}
+            http_code_out = t_resp.status_code
 
             if t_resp.success:
                 if t_resp.response_text and len(t_resp.response_text.strip()) > 0:
                     res_text = t_resp.response_text
                 elif teamily_data.get("status") == "running":
                     run_id = teamily_data.get("run_id") or teamily_data.get("id") or "activo"
-                    res_text = f"**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: `{run_id}`). Se encuentra procesando la respuesta con el equipo."
+                    res_text = f"**Solicitud en proceso en Teamily (Run: `{run_id}`)**"
                 else:
                     status_out = "no_response"
                     res_text = f"⚠️ Sin respuesta de Teamily para {agent_name_display}."
             else:
                 status_out = "error"
                 model_used = "teamily-error"
-                err_detail = t_resp.error or "Timeout de conexión"
-                res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
+                err_detail = t_resp.error or f"HTTP {t_resp.status_code}"
+                res_text = f"⚠️ Error {t_resp.status_code}: {err_detail}."
         else:
             status_out = "error"
             model_used = "teamily-unavailable"
             err_detail = "Cliente Teamily no disponible o mensaje vacío"
+            http_code_out = 503
             res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
     except Exception as _e_volturi:
         log.exception("Error en despacho Volturi a Teamily: %s", _e_volturi)
         status_out = "error"
         model_used = "teamily-exception"
         err_detail = str(_e_volturi)
+        http_code_out = 500
         res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
 
     elapsed_ms = round((time.time() - t0_agent) * 1000.0, 2)
@@ -7583,6 +7656,9 @@ async def teamily_chat(request: Request):
         "status": status_out,
         "agent": target_slug,
         "agent_name": agent_name_display,
+        "sender_user_id": sender_user_id,
+        "recipient_user_id": recipient_user_id,
+        "channel_type": channel_type,
         "model_used": model_used,
         "latency_ms": elapsed_ms,
         "session_id": session_id,
@@ -7591,7 +7667,8 @@ async def teamily_chat(request: Request):
         "output": {"text": res_text},
         "bcv_rate": eff_rate,
         "teamily_data": teamily_data,
-        "error": err_detail
+        "error": err_detail,
+        "code": http_code_out
     }
 
 
