@@ -548,7 +548,7 @@ class WarRoomEngine:
         """
         masked = {}
         for k, v in self.node_configs.items():
-            if any(sec in k for sec in ["api_key", "webhook", "token", "fallback", "secret"]):
+            if any(sec in k for sec in ["key", "api_key", "server_key", "webhook", "token", "fallback", "secret"]):
                 masked[k] = mask_secret(v)
             else:
                 masked[k] = v
