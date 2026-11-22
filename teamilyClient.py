@@ -81,6 +81,12 @@ DEFAULT_CABAL_GROUP_ID = (
 # Timeout base canónico: 90s según directriz Volturi
 DEFAULT_TIMEOUT = int(os.environ.get("TEAMILY_TIMEOUT_SEC", 90))
 
+# Clave dedicada para el agente LEIA / Margarette en Teamily (leia-ceo-assistant)
+DEFAULT_LEIA_SERVER_KEY = (
+    os.environ.get("TEAMILY_LEIA_SERVER_KEY")
+    or "tmly_sk_live_EMeHUTBTfJO2z1DoEwBM1pmeFVi62PHPHsy9Lf21vug"
+)
+
 # C1: Credencial del servidor cargada desde variable de entorno o fallback certificado
 def get_default_server_key() -> str:
     k = (
@@ -614,6 +620,12 @@ class TeamilyGeoAClient:
             or "https://teamily.ai/v1/chat"
         ).strip()
         target_server_key = server_key_override or self.server_key
+
+        # Enrutamiento dedicado hacia agente LEIA / Margarette en Teamily
+        if request.recipient_user_id == "9000408632300095" and not endpoint_override:
+            target_endpoint = "https://teamily.ai/v1/agents/leia-ceo-assistant/responses"
+            target_server_key = server_key_override or DEFAULT_LEIA_SERVER_KEY or target_server_key
+
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 
         if not target_server_key:
@@ -638,7 +650,13 @@ class TeamilyGeoAClient:
             })
             return res_obj
 
-        payload = request.to_payload()
+        if target_endpoint.endswith("/responses"):
+            payload = {
+                "input": request.message,
+                "wait": False
+            }
+        else:
+            payload = request.to_payload()
         body_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = {
             "Authorization": f"Bearer {target_server_key}",
