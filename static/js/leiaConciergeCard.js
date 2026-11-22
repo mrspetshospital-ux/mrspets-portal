@@ -272,7 +272,8 @@
               const reply = typeof data.response_text === 'object' && data.response_text.text
                 ? data.response_text.text
                 : (data.response_text || (data.output && data.output.text) || data.reply);
-              if (reply && String(reply).trim().length > 0 && !String(reply).includes('serverMsgID')) {
+              const isPureRawMsgReceipt = String(reply).trim().startsWith('{"serverMsgID"') || String(reply).trim().startsWith('{"msgID"');
+              if (reply && String(reply).trim().length > 0 && !isPureRawMsgReceipt) {
                 const isGemini = Boolean(
                   data.failover_triggered || 
                   data.active_channel === 'gemini' || 

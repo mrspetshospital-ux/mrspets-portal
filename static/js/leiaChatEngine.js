@@ -895,7 +895,8 @@
                         ? data.response_text.text
                         : (data.response_text || data.reply || (data.output && data.output.text));
 
-                    if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
+                    const isPureRawMsgReceipt = String(rawReply).trim().startsWith('{"serverMsgID"') || String(rawReply).trim().startsWith('{"msgID"');
+                    if (rawReply && !isPureRawMsgReceipt && String(rawReply).trim().length > 0) {
                         replyObtained = rawReply;
                         const isGem = Boolean(
                             data.failover_triggered || 
@@ -956,7 +957,8 @@
                         const rawReply = (typeof gemData.response_text === 'object' && gemData.response_text.text)
                             ? gemData.response_text.text
                             : (gemData.response_text || gemData.reply || (gemData.output && gemData.output.text));
-                        if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
+                        const isPureRawMsgReceipt = String(rawReply).trim().startsWith('{"serverMsgID"') || String(rawReply).trim().startsWith('{"msgID"');
+                    if (rawReply && !isPureRawMsgReceipt && String(rawReply).trim().length > 0) {
                             replyObtained = rawReply;
                             engineUsed = 'gemini';
                             modelUsed = 'gemini-3.8-flash';

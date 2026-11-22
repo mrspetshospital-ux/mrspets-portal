@@ -99,7 +99,7 @@ ESTILO
     description: 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel de Mrs. Pets (Big & Little Dogs, C.A.). Fachada pública: LEIA.',
     teamlyUserId: '9000408632300095',
     teamlySlug: 'margarette',
-    teamlyEndpoint: 'https://teamily.ai/v1/chat',
+    teamlyEndpoint: 'https://teamily.ai/v1/agents/leia-ceo-assistant/responses',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: `Eres MARGARETTE, Gerente de Planta y Atención al Cliente de Mrs. Pets
 (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily.
@@ -1804,19 +1804,23 @@ class TeamilyExecutiveEngine {
     const modal = document.getElementById('volturiDirectChatModal');
     if (modal) this.renderDirectChatContent(modal, agent);
 
-    if (typing) {
+    const activeTyping = document.getElementById('directChatTyping');
+    if (activeTyping) {
       const recipientIdText = agent.teamlyUserId || agent.id;
-      typing.innerHTML = `<em>Enviando mensaje a <strong>${agent.name}</strong> (ID: <code>${recipientIdText}</code>) desde <strong>Mrs PETS CORP</strong> (<code>1283666967744922</code>)...</em>`;
-      typing.style.display = 'block';
+      activeTyping.innerHTML = `<em>Enviando mensaje a <strong>${agent.name}</strong> (ID: <code>${recipientIdText}</code>) desde <strong>Mrs PETS CORP</strong> (<code>1283666967744922</code>)...</em>`;
+      activeTyping.style.display = 'block';
     }
 
     // Recopilar contexto operativo dinámico para este agente
     const liveContext = this.getLiveContextData(agent.id);
 
     try {
-      const endpointToSend = this.normalizeTeamilyEndpoint(agent.teamlyEndpoint, 'https://teamily.ai/v1/chat');
-      const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
       const recipientUserId = agent.teamlyUserId || '';
+      const isMargarette = (agent.id === 'margaret' || agent.id === 'margarette' || recipientUserId === '9000408632300095');
+      const endpointToSend = isMargarette
+        ? 'https://teamily.ai/v1/agents/leia-ceo-assistant/responses'
+        : this.normalizeTeamilyEndpoint(agent.teamlyEndpoint, 'https://teamily.ai/v1/chat');
+      const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 
       const res = await fetch(this.agentChatEndpoint, {
         method: 'POST',
@@ -1892,7 +1896,8 @@ class TeamilyExecutiveEngine {
       });
       this.saveChatHistory();
     } finally {
-      if (typing) typing.style.display = 'none';
+      const activeTyping = document.getElementById('directChatTyping');
+      if (activeTyping) activeTyping.style.display = 'none';
       if (modal) this.renderDirectChatContent(modal, agent);
     }
   }

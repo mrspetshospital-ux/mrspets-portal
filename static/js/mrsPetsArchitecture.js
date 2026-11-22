@@ -1700,7 +1700,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
             const rawReply = typeof data.response_text === 'object' && data.response_text.text
               ? data.response_text.text
               : (data.response_text || (data.output && data.output.text) || data.reply);
-            if (rawReply && !String(rawReply).includes('serverMsgID') && String(rawReply).trim().length > 0) {
+            const isPureRawMsgReceipt = String(rawReply).trim().startsWith('{"serverMsgID"') || String(rawReply).trim().startsWith('{"msgID"');
+            if (rawReply && !isPureRawMsgReceipt && String(rawReply).trim().length > 0) {
               serverReplyText = rawReply;
               const isGem = Boolean(
                 data.failover_triggered || 

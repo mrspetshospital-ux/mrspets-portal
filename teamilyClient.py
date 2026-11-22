@@ -622,8 +622,9 @@ class TeamilyGeoAClient:
         target_server_key = server_key_override or self.server_key
 
         # Enrutamiento dedicado hacia agente LEIA / Margarette en Teamily
-        if request.recipient_user_id == "9000408632300095" and not endpoint_override:
-            target_endpoint = "https://teamily.ai/v1/agents/leia-ceo-assistant/responses"
+        if str(request.recipient_user_id).strip() == "9000408632300095":
+            if not endpoint_override or "/chat" in str(endpoint_override) or "leia-ceo-assistant" in str(endpoint_override):
+                target_endpoint = "https://teamily.ai/v1/agents/leia-ceo-assistant/responses"
             target_server_key = server_key_override or DEFAULT_LEIA_SERVER_KEY or target_server_key
 
         req_timeout = request.timeout if request.timeout is not None else self.timeout
