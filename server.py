@@ -1563,7 +1563,7 @@ async def portal_gate(request: Request, call_next):
     # La API, health checks, archivos estáticos, multimedia y el portal Concierge VIP son accesibles libremente
     if (
         path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/"))
-        or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
+        or path in ("/", "/root.html", "/index.html", "/historico", "/historico.html", "/historico-consultas", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
         or path.endswith((".mp4", ".mp3", ".webm", ".jpg", ".jpeg", ".png", ".svg", ".ico", ".webp", ".woff", ".woff2"))
     ):
         response = await call_next(request)
