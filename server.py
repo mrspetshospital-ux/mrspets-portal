@@ -1567,7 +1567,7 @@ async def portal_gate(request: Request, call_next):
         or path.endswith((".mp4", ".mp3", ".webm", ".jpg", ".jpeg", ".png", ".svg", ".ico", ".webp", ".woff", ".woff2"))
     ):
         response = await call_next(request)
-    elif not _check_basic(request):
+    elif not _check_basic(request) and not current_user(request):
         return PlainTextResponse(
             "Acceso restringido — Mrs Pets staging",
             status_code=401,
