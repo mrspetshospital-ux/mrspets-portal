@@ -1534,16 +1534,9 @@ def importar(request: Request, payload: dict = Body(...),
 def _check_basic(request: Request) -> bool:
     """Barrera de acceso al portal (HTTP Basic).
 
-    Compara contra PORTAL_USER / PORTAL_PASSWORD de las variables de entorno.
-    - PORTAL_PASSWORD vacío  -> el portal queda abierto (se avisa al arrancar).
-    - PORTAL_USER vacío      -> se usa ADMIN_USER, para no dejar el portal
-                                inaccesible a nadie.
-    La comparación es en tiempo constante para no filtrar información por el
-    tiempo de respuesta.
+    Compara contra PORTAL_USER / PORTAL_PASSWORD de las variables de entorno,
+    o contra credenciales válidas de staff en la base de datos (staff_users).
     """
-    if not PORTAL_PASSWORD:
-        return True
-    usuario_esperado = PORTAL_USER or ADMIN_USER
     import base64
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Basic "):
@@ -1552,9 +1545,23 @@ def _check_basic(request: Request) -> bool:
         user, _, pwd = base64.b64decode(auth[6:]).decode("utf-8").partition(":")
     except Exception:
         return False
-    usuario_ok = hmac.compare_digest(user.strip(), usuario_esperado)
-    clave_ok = hmac.compare_digest(pwd, PORTAL_PASSWORD)
-    return usuario_ok and clave_ok
+
+    # 1. Verificación contra PORTAL_USER / PORTAL_PASSWORD
+    if PORTAL_PASSWORD:
+        usuario_esperado = PORTAL_USER or ADMIN_USER
+        if hmac.compare_digest(user.strip(), usuario_esperado) and hmac.compare_digest(pwd, PORTAL_PASSWORD):
+            return True
+
+    # 2. Verificación contra personal activo en BD (staff_users con PBKDF2)
+    try:
+        row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s) AND activo=TRUE",
+                   (user.strip(),), one=True)
+        if row and sec.verify_password(pwd, row["password_hash"]):
+            return True
+    except Exception:
+        pass
+
+    return False
 
 
 @app.middleware("http")
@@ -7714,7 +7721,7 @@ async def get_historico_consultas(request: Request):
         from historicoSheetsService import historico_service
         data = historico_service.fetch_from_google_sheets()
         return JSONResponse(
-            status_code=200 if data.get("success") else (data.get("http_code") or 403),
+            status_code=200,
             content=data,
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
