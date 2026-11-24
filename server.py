@@ -7689,6 +7689,40 @@ async def sheets_interaction(request: Request):
     return {"status": "success", "spreadsheet_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"}
 
 
+# =====================================================================
+# PORTAL DEL HISTÓRICO DE CONSULTAS DE CLIENTES (SOLO LECTURA)
+# Google Sheets: 1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE • Pestaña: Histórico
+# =====================================================================
+@app.get("/api/v1/historico/consultas")
+async def get_historico_consultas():
+    """
+    Endpoint de SOLO LECTURA que consulta el histórico de consultas de clientes
+    directamente desde Google Sheets (Spreadsheet: 1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE, Pestaña: Histórico).
+    """
+    try:
+        from historicoSheetsService import historico_service
+        data = historico_service.fetch_from_google_sheets()
+        return JSONResponse(
+            status_code=200 if data.get("success") else (data.get("http_code") or 403),
+            content=data,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    except Exception as e:
+        log.error("Error en /api/v1/historico/consultas: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": "INTERNAL_SERVER_ERROR",
+                "message": str(e)
+            }
+        )
+
+
 @app.get("/robots.txt", include_in_schema=False)
 def robots():
     return PlainTextResponse("User-agent: *\nDisallow: /\n")
@@ -8093,6 +8127,23 @@ def root_page():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return HTMLResponse("<h1>Mrs. Pets VIP Portal</h1><p>Archivo root.html no encontrado.</p>")
+
+
+@app.get("/historico")
+@app.get("/historico.html")
+@app.get("/historico-consultas")
+def historico_page():
+    historico_path = os.path.join(STATIC_DIR, "historico.html")
+    if os.path.exists(historico_path):
+        return FileResponse(
+            historico_path,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    return HTMLResponse("<h1>Mrs. Pets</h1><p>Archivo historico.html no encontrado.</p>", status_code=404)
 
 
 

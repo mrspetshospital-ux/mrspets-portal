@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de Consultas de Clientes | Mrs. Pets Maracaibo</title>
+  <meta name="description" content="Portal oficial de solo lectura para el histórico de consultas de clientes de Mrs. Pets Maracaibo. Lectura directa de Google Sheets.">
+  
+  <!-- Tipografía Oficial Mrs. Pets -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0B0F19;
+      --bg-surface: #111827;
+      --bg-card: #182234;
+      --bg-card-hover: #1E2D45;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #D4AF37;
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      
+      --gold-primary: #D4AF37;
+      --gold-light: #FDF4DC;
+      --gold-glow: rgba(212, 175, 55, 0.25);
+      
+      --cyan-tech: #06B6D4;
+      --cyan-glow: rgba(6, 182, 212, 0.2);
+      
+      --status-ok-bg: rgba(16, 185, 129, 0.15);
+      --status-ok-border: rgba(16, 185, 129, 0.35);
+      --status-ok-text: #34D399;
+      
+      --status-pend-bg: rgba(245, 158, 11, 0.15);
+      --status-pend-border: rgba(245, 158, 11, 0.35);
+      --status-pend-text: #FBBF24;
+      
+      --status-alert-bg: rgba(239, 68, 68, 0.18);
+      --status-alert-border: rgba(239, 68, 68, 0.45);
+      --status-alert-text: #F87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.04) 0%, transparent 45%);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+      flex: 1;
+    }
+
+    /* Header */
+    header {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1E293B, #0F172A);
+      border: 1px solid var(--gold-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    .brand-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .badge-ro {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      color: var(--cyan-tech);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      border-color: var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #D4AF37, #B48825);
+      color: #0F172A;
+      box-shadow: 0 4px 12px var(--gold-glow);
+    }
+
+    .btn-gold:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    /* Hero / Banner */
+    .hero-banner {
+      margin-top: 1rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, rgba(24, 34, 52, 0.8), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 1.35rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+    }
+
+    .hero-info h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero-info p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      max-width: 650px;
+    }
+
+    .source-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      color: var(--gold-primary);
+      background: rgba(212, 175, 55, 0.08);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Metric Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .metric-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .metric-data .val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #FFFFFF;
+    }
+
+    .metric-data .lbl {
+      font-size: 0.74rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    /* Filter Controls Bar */
+    .controls-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 260px;
+      position: relative;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem 0.6rem 2.4rem;
+      color: var(--text-main);
+      font-size: 0.84rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 2px var(--gold-glow);
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    .select-input {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.6rem 2.2rem 0.6rem 0.85rem;
+      color: var(--text-main);
+      font-size: 0.84rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .select-input:focus {
+      border-color: var(--gold-primary);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-dim);
+    }
+
+    /* Table Container */
+    .table-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.84rem;
+    }
+
+    thead th {
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.025);
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    td {
+      padding: 1rem;
+      vertical-align: top;
+    }
+
+    /* Cell Styles */
+    .cell-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .cell-requester {
+      font-weight: 600;
+      color: #FFFFFF;
+      white-space: nowrap;
+    }
+
+    .cell-agent {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 600;
+      color: var(--cyan-tech);
+      background: rgba(6, 182, 212, 0.08);
+      padding: 0.25rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .cell-query {
+      color: #E2E8F0;
+      line-height: 1.45;
+      min-width: 220px;
+      max-width: 380px;
+      word-break: break-word;
+    }
+
+    .cell-reply {
+      color: #CBD5E1;
+      line-height: 1.45;
+      min-width: 240px;
+      max-width: 420px;
+      word-break: break-word;
+    }
+
+    /* Status Badges */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      text-transform: lowercase;
+      white-space: nowrap;
+    }
+
+    .badge-status.respondido {
+      background: var(--status-ok-bg);
+      border: 1px solid var(--status-ok-border);
+      color: var(--status-ok-text);
+    }
+
+    .badge-status.pendiente {
+      background: var(--status-pend-bg);
+      border: 1px solid var(--status-pend-border);
+      color: var(--status-pend-text);
+    }
+
+    .badge-status.desconocido {
+      background: rgba(148, 163, 184, 0.15);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: #94A3B8;
+    }
+
+    /* Highlight NO DISPONIBLE */
+    .highlight-no-disponible {
+      display: inline-block;
+      background: var(--status-alert-bg);
+      border: 1px solid var(--status-alert-border);
+      color: var(--status-alert-text);
+      font-weight: 700;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* Empty and Error states */
+    .state-banner {
+      padding: 3rem 1.5rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+    }
+
+    .state-banner-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .state-banner.empty .state-banner-icon {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94A3B8;
+    }
+
+    .state-banner.error .state-banner-icon {
+      background: var(--status-alert-bg);
+      color: var(--status-alert-text);
+      border: 1px solid var(--status-alert-border);
+    }
+
+    .state-banner h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .state-banner p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      max-width: 550px;
+      line-height: 1.5;
+    }
+
+    .guide-box {
+      margin-top: 1rem;
+      text-align: left;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      max-width: 620px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .guide-box ol {
+      margin-left: 1.25rem;
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .guide-box strong {
+      color: var(--gold-primary);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* Animation spin */
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .select-input {
+        width: 100%;
+      }
+      .select-wrap {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="header-inner">
+      <a href="/" class="brand-wrap" title="Ir al Portal Mrs. Pets">
+        <div class="brand-logo-icon">🐾</div>
+        <div class="brand-text">
+          <h1>Mrs. Pets Maracaibo <span style="font-size:0.75rem; color:var(--gold-primary); font-weight:600;">CONSULTAS</span></h1>
+          <p>Big & Little Dogs, C.A. • Av. 2 El Milagro</p>
+        </div>
+      </a>
+      
+      <div class="header-actions">
+        <span class="badge-ro"><i data-lucide="shield-check" style="width:13px; height:13px;"></i> Solo Lectura</span>
+        <button id="btnRefresh" class="btn btn-secondary" onclick="cargarHistorico()">
+          <i data-lucide="refresh-cw" id="iconRefresh" style="width:14px; height:14px;"></i> Refrescar
+        </button>
+        <a href="/" class="btn btn-secondary">
+          <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Volver
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Hero / Title Banner -->
+    <div class="hero-banner">
+      <div class="hero-info">
+        <h2><i data-lucide="database" style="color:var(--cyan-tech); width:24px; height:24px;"></i> Histórico de Consultas de Clientes</h2>
+        <p>Visor oficial de solo lectura que consulta en tiempo real la pestaña <strong>Histórico</strong> del Google Sheet oficial. Flujo asíncrono multipersonalizado para trazabilidad de resoluciones.</p>
+        <div class="source-tag">
+          <i data-lucide="file-spreadsheet" style="width:13px; height:13px;"></i>
+          Libro ID: <strong>1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE</strong> &bull; Pestaña: <strong>Histórico</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon" style="background:rgba(6, 182, 212, 0.12); color:var(--cyan-tech);">
+          <i data-lucide="message-square" style="width:22px; height:22px;"></i>
+        </div>
+        <div class="metric-data">
+          <div class="val" id="metricTotal">0</div>
+          <div class="lbl">Total Consultas</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background:var(--status-pend-bg); color:var(--status-pend-text);">
+          <i data-lucide="clock" style="width:22px; height:22px;"></i>
+        </div>
+        <div class="metric-data">
+          <div class="val" id="metricPendientes">0</div>
+          <div class="lbl">Pendientes</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background:var(--status-ok-bg); color:var(--status-ok-text);">
+          <i data-lucide="check-circle-2" style="width:22px; height:22px;"></i>
+        </div>
+        <div class="metric-data">
+          <div class="val" id="metricRespondidas">0</div>
+          <div class="lbl">Respondidas</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background:var(--status-alert-bg); color:var(--status-alert-text);">
+          <i data-lucide="alert-triangle" style="width:22px; height:22px;"></i>
+        </div>
+        <div class="metric-data">
+          <div class="val" id="metricNoDisponible">0</div>
+          <div class="lbl">No Disponibles</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls Bar: Search & Filters -->
+    <div class="controls-bar">
+      <div class="search-box">
+        <i data-lucide="search" style="width:16px; height:16px;"></i>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar en consultas, respuestas o solicitantes..." oninput="filtrarTabla()">
+      </div>
+
+      <div class="filter-group">
+        <!-- Filtro Agente -->
+        <div class="select-wrap">
+          <select id="filterAgente" class="select-input" onchange="filtrarTabla()">
+            <option value="">Todos los Agentes</option>
+            <option value="Mike">Mike</option>
+            <option value="Margarette">Margarette</option>
+            <option value="Manolo">Manolo</option>
+            <option value="O'Neil">O'Neil</option>
+            <option value="Valeria">Valeria</option>
+            <option value="Pandora">Pandora</option>
+            <option value="Sebastián">Sebastián</option>
+            <option value="Nanami">Nanami</option>
+            <option value="Super Agent">Super Agent</option>
+          </select>
+          <i data-lucide="chevron-down" class="select-arrow" style="width:14px; height:14px;"></i>
+        </div>
+
+        <!-- Filtro Estado -->
+        <div class="select-wrap">
+          <select id="filterEstado" class="select-input" onchange="filtrarTabla()">
+            <option value="">Todos los Estados</option>
+            <option value="respondido">Respondido</option>
+            <option value="pendiente">Pendiente</option>
+          </select>
+          <i data-lucide="chevron-down" class="select-arrow" style="width:14px; height:14px;"></i>
+        </div>
+
+        <button class="btn btn-secondary" onclick="limpiarFiltros()" title="Restablecer filtros">
+          <i data-lucide="x" style="width:14px; height:14px;"></i> Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table id="consultasTable">
+          <thead>
+            <tr>
+              <th>1. Fecha</th>
+              <th>2. Solicitante</th>
+              <th>3. Agente</th>
+              <th>4. Consulta</th>
+              <th>5. Respuesta</th>
+              <th>6. Estado</th>
+              <th>7. Fecha Respuesta</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Cargando inicialmente -->
+            <tr>
+              <td colspan="7">
+                <div class="state-banner">
+                  <div class="state-banner-icon spin"><i data-lucide="loader-2"></i></div>
+                  <h3>Conectando con Google Sheets...</h3>
+                  <p>Leyendo pestaña <em>Histórico</em> del libro oficial.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>Mrs. Pets Maracaibo &bull; Silent Luxury & AI Omnichannel Platform &bull; Big & Little Dogs, C.A. RIF J-40120233-0</p>
+    <p style="margin-top:0.35rem; font-size:0.7rem; color:var(--text-dim);">
+      Aislamiento de seguridad activo: solo lectura estricta. Prohibido acceso al libro de bitácora del Comité.
+    </p>
+  </footer>
+
+  <script>
+    // Variables de estado
+    let rawConsultas = [];
+    let currentFiltered = [];
+
+    // Función principal para cargar datos de la API
+    async function cargarHistorico() {
+      const btnRefresh = document.getElementById('btnRefresh');
+      const iconRefresh = document.getElementById('iconRefresh');
+      const tbody = document.getElementById('tableBody');
+
+      if (iconRefresh) iconRefresh.classList.add('spin');
+      if (btnRefresh) btnRefresh.disabled = true;
+
+      try {
+        const resp = await fetch('/api/v1/historico/consultas?t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        const data = await resp.json();
+
+        if (data.success && Array.isArray(data.consultas)) {
+          rawConsultas = data.consultas;
+          actualizarMetricas(data.stats);
+          actualizarOpcionesAgentes(rawConsultas);
+          filtrarTabla();
+        } else {
+          // Error controlado (ej. libro privado HTTP 403)
+          renderizarError(data);
+        }
+      } catch (err) {
+        console.error('Error cargando histórico:', err);
+        renderizarFalloRed(err);
+      } finally {
+        if (iconRefresh) iconRefresh.classList.remove('spin');
+        if (btnRefresh) btnRefresh.disabled = false;
+        lucide.createIcons();
+      }
+    }
+
+    // Actualiza los contadores en las tarjetas
+    function actualizarMetricas(stats) {
+      if (!stats) return;
+      document.getElementById('metricTotal').textContent = stats.total || 0;
+      document.getElementById('metricPendientes').textContent = stats.pendientes || 0;
+      document.getElementById('metricRespondidas').textContent = stats.respondidos || 0;
+      document.getElementById('metricNoDisponible').textContent = stats.no_disponible_count || 0;
+    }
+
+    // Agrega dinámicamente cualquier otro agente que venga en el Sheet
+    function actualizarOpcionesAgentes(consultas) {
+      const select = document.getElementById('filterAgente');
+      const currentVal = select.value;
+      const existentes = new Set(Array.from(select.options).map(o => o.value));
+      
+      consultas.forEach(c => {
+        const ag = (c.agente || '').trim();
+        if (ag && ag !== '—' && !existentes.has(ag)) {
+          const opt = document.createElement('option');
+          opt.value = ag;
+          opt.textContent = ag;
+          select.appendChild(opt);
+          existentes.add(ag);
+        }
+      });
+      select.value = currentVal;
+    }
+
+    // Filtra las consultas en memoria según búsqueda, agente y estado
+    function filtrarTabla() {
+      const query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const agenteSel = (document.getElementById('filterAgente').value || '').toLowerCase().trim();
+      const estadoSel = (document.getElementById('filterEstado').value || '').toLowerCase().trim();
+
+      currentFiltered = rawConsultas.filter(item => {
+        // Filtro por Agente
+        if (agenteSel && (item.agente || '').toLowerCase() !== agenteSel) {
+          return false;
+        }
+
+        // Filtro por Estado
+        if (estadoSel && (item.estado || '').toLowerCase() !== estadoSel) {
+          return false;
+        }
+
+        // Búsqueda libre en consulta, respuesta y solicitante
+        if (query) {
+          const matchQuery = (item.consulta || '').toLowerCase().includes(query);
+          const matchReply = (item.respuesta || '').toLowerCase().includes(query);
+          const matchReq = (item.solicitante || '').toLowerCase().includes(query);
+          if (!matchQuery && !matchReply && !matchReq) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      renderizarFilas(currentFiltered);
+    }
+
+    // Renderiza las filas en el tbody
+    function renderizarFilas(filas) {
+      const tbody = document.getElementById('tableBody');
+
+      if (!filas || filas.length === 0) {
+        if (rawConsultas.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="state-banner empty">
+                  <div class="state-banner-icon"><i data-lucide="inbox"></i></div>
+                  <h3>Aún no hay consultas registradas</h3>
+                  <p>La pestaña <em>Histórico</em> de Google Sheets se encuentra vacía o sin registros de consultas.</p>
+                </div>
+              </td>
+            </tr>
+          `;
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="state-banner empty">
+                  <div class="state-banner-icon"><i data-lucide="filter-x"></i></div>
+                  <h3>Sin coincidencias</h3>
+                  <p>No se encontraron consultas con los filtros o término de búsqueda seleccionado.</p>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+        lucide.createIcons();
+        return;
+      }
+
+      let html = '';
+      filas.forEach(row => {
+        // Formatear respuesta con resaltado visible de NO DISPONIBLE
+        let respFormatted = escapeHtml(row.respuesta || '—');
+        if (row.is_no_disponible || (row.respuesta && row.respuesta.includes('NO DISPONIBLE'))) {
+          respFormatted = respFormatted.replace(/NO DISPONIBLE/g, '<span class="highlight-no-disponible">⚠️ NO DISPONIBLE</span>');
+        }
+
+        // Estado y Badge
+        let badgeClass = 'desconocido';
+        let badgeIcon = 'help-circle';
+        const st = (row.estado || '').toLowerCase();
+        if (st === 'respondido') {
+          badgeClass = 'respondido';
+          badgeIcon = 'check';
+        } else if (st === 'pendiente') {
+          badgeClass = 'pendiente';
+          badgeIcon = 'clock';
+        }
+
+        html += `
+          <tr>
+            <td class="cell-date">${escapeHtml(row.fecha || '—')}</td>
+            <td class="cell-requester">${escapeHtml(row.solicitante || '—')}</td>
+            <td>
+              <span class="cell-agent">
+                <i data-lucide="bot" style="width:13px; height:13px;"></i>
+                ${escapeHtml(row.agente || '—')}
+              </span>
+            </td>
+            <td class="cell-query">${escapeHtml(row.consulta || '—')}</td>
+            <td class="cell-reply">${respFormatted}</td>
+            <td>
+              <span class="badge-status ${badgeClass}">
+                <i data-lucide="${badgeIcon}" style="width:12px; height:12px;"></i>
+                ${escapeHtml(row.estado || 'desconocido')}
+              </span>
+            </td>
+            <td class="cell-date">${escapeHtml(row.fecha_respuesta || '—')}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // Renderiza pantalla de error amigable cuando el libro es privado (HTTP 403)
+    function renderizarError(errData) {
+      const tbody = document.getElementById('tableBody');
+      const isForbidden = (errData.http_code === 403) || (errData.error === 'ACCESO_DENEGADO_GOOGLE_SHEETS');
+      
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="state-banner error">
+              <div class="state-banner-icon"><i data-lucide="lock"></i></div>
+              <h3>Acceso a Google Sheets Restringido (HTTP 403)</h3>
+              <p>El libro de Google Sheets <code>1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE</code> es privado (pertenece a <em>mrspetshospital@gmail.com</em>) y requiere permisos de lectura.</p>
+              
+              <div class="guide-box">
+                <strong>¿Cómo habilitar la lectura de inmediato?</strong>
+                <ol>
+                  <li>Abrir el Google Sheet en el navegador: <br><a href="https://docs.google.com/spreadsheets/d/1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE/edit" target="_blank" style="color:var(--cyan-tech); text-decoration:underline;">Ver libro en Google Sheets</a></li>
+                  <li>Hacer clic en el botón superior derecho <strong>Compartir</strong> (Share).</li>
+                  <li>En <em>Acceso general</em>, cambiar de <strong>Restringido</strong> a <strong>Cualquiera con el enlace</strong>.</li>
+                  <li>Asegurarse de que el rol sea <strong>Lector</strong> (solo lectura).</li>
+                  <li>Hacer clic en <strong>Listo</strong> y presionar el botón de abajo para comprobar.</li>
+                </ol>
+              </div>
+
+              <div style="margin-top:1.25rem;">
+                <button class="btn btn-gold" onclick="cargarHistorico()">
+                  <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Comprobar Acceso Nuevamente
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+      lucide.createIcons();
+    }
+
+    function renderizarFalloRed(err) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="state-banner error">
+              <div class="state-banner-icon"><i data-lucide="wifi-off"></i></div>
+              <h3>Error de Conexión</h3>
+              <p>No se pudo conectar con el servidor local para consultar el histórico: ${escapeHtml(err.message || String(err))}</p>
+              <button class="btn btn-secondary" onclick="cargarHistorico()" style="margin-top:1rem;">
+                <i data-lucide="refresh-cw"></i> Reintentar
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      lucide.createIcons();
+    }
+
+    function limpiarFiltros() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterAgente').value = '';
+      document.getElementById('filterEstado').value = '';
+      filtrarTabla();
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Inicializar al cargar
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      cargarHistorico();
+    });
+  </script>
+</body>
+</html>
