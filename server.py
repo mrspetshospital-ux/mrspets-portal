@@ -1563,7 +1563,7 @@ async def portal_gate(request: Request, call_next):
     # La API, health checks, archivos estáticos, multimedia y el portal Concierge VIP son accesibles libremente
     if (
         path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/"))
-        or path in ("/", "/root.html", "/index.html", "/historico", "/historico.html", "/historico-consultas", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
+        or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
         or path.endswith((".mp4", ".mp3", ".webm", ".jpg", ".jpeg", ".png", ".svg", ".ico", ".webp", ".woff", ".woff2"))
     ):
         response = await call_next(request)
@@ -7694,11 +7694,22 @@ async def sheets_interaction(request: Request):
 # Google Sheets: 1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE • Pestaña: Histórico
 # =====================================================================
 @app.get("/api/v1/historico/consultas")
-async def get_historico_consultas():
+async def get_historico_consultas(request: Request):
     """
     Endpoint de SOLO LECTURA que consulta el histórico de consultas de clientes
     directamente desde Google Sheets (Spreadsheet: 1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE, Pestaña: Histórico).
+    Requiere autenticación obligatoria: Basic Auth (PORTAL_USER / PORTAL_PASSWORD)
+    o cookie de sesión activa de Staff (mrspets_session verificada en BD).
     """
+    u = current_user(request)
+    basic_ok = _check_basic(request)
+    if not basic_ok and not u:
+        return PlainTextResponse(
+            "Acceso restringido — Histórico de Consultas Mrs Pets",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Mrs Pets - usuario y clave del portal"'},
+        )
+
     try:
         from historicoSheetsService import historico_service
         data = historico_service.fetch_from_google_sheets()
@@ -8132,7 +8143,13 @@ def root_page():
 @app.get("/historico")
 @app.get("/historico.html")
 @app.get("/historico-consultas")
-def historico_page():
+def historico_page(request: Request):
+    if not _check_basic(request) and not current_user(request):
+        return PlainTextResponse(
+            "Acceso restringido — Histórico de Consultas Mrs Pets",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Mrs Pets - usuario y clave del portal"'},
+        )
     historico_path = os.path.join(STATIC_DIR, "historico.html")
     if os.path.exists(historico_path):
         return FileResponse(

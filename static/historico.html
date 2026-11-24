@@ -768,12 +768,13 @@
               <th>5. Respuesta</th>
               <th>6. Estado</th>
               <th>7. Fecha Respuesta</th>
+              <th>8. Hilo</th>
             </tr>
           </thead>
           <tbody id="tableBody">
             <!-- Cargando inicialmente -->
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <div class="state-banner">
                   <div class="state-banner-icon spin"><i data-lucide="loader-2"></i></div>
                   <h3>Conectando con Google Sheets...</h3>
@@ -880,12 +881,13 @@
           return false;
         }
 
-        // Búsqueda libre en consulta, respuesta y solicitante
+        // Búsqueda libre en consulta, respuesta, solicitante e hilo
         if (query) {
           const matchQuery = (item.consulta || '').toLowerCase().includes(query);
           const matchReply = (item.respuesta || '').toLowerCase().includes(query);
           const matchReq = (item.solicitante || '').toLowerCase().includes(query);
-          if (!matchQuery && !matchReply && !matchReq) {
+          const matchHilo = (item.hilo || '').toLowerCase().includes(query);
+          if (!matchQuery && !matchReply && !matchReq && !matchHilo) {
             return false;
           }
         }
@@ -904,7 +906,7 @@
         if (rawConsultas.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <div class="state-banner empty">
                   <div class="state-banner-icon"><i data-lucide="inbox"></i></div>
                   <h3>Aún no hay consultas registradas</h3>
@@ -916,7 +918,7 @@
         } else {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <div class="state-banner empty">
                   <div class="state-banner-icon"><i data-lucide="filter-x"></i></div>
                   <h3>Sin coincidencias</h3>
@@ -969,6 +971,11 @@
               </span>
             </td>
             <td class="cell-date">${escapeHtml(row.fecha_respuesta || '—')}</td>
+            <td>
+              <span class="cell-hilo" style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:#A78BFA; background:rgba(167,139,250,0.1); padding:0.2rem 0.5rem; border-radius:4px; border:1px solid rgba(167,139,250,0.25); white-space:nowrap;">
+                ${escapeHtml(row.hilo || '—')}
+              </span>
+            </td>
           </tr>
         `;
       });
@@ -977,14 +984,40 @@
       lucide.createIcons();
     }
 
-    // Renderiza pantalla de error amigable cuando el libro es privado (HTTP 403)
+    // Renderiza pantalla de error amigable cuando el libro es privado (HTTP 403) o pestaña no existe (404)
     function renderizarError(errData) {
       const tbody = document.getElementById('tableBody');
-      const isForbidden = (errData.http_code === 403) || (errData.error === 'ACCESO_DENEGADO_GOOGLE_SHEETS');
       
+      if (errData.error === 'PESTAÑA_NO_ENCONTRADA') {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8">
+              <div class="state-banner error">
+                <div class="state-banner-icon"><i data-lucide="file-x"></i></div>
+                <h3>Pestaña 'Histórico' No Encontrada (HTTP 404)</h3>
+                <p>La pestaña <strong>Histórico</strong> (con tilde obligatoria) no existe en el libro <code>1xk2qKLeXxodPZqid2xilGXv9zAJdyM1SfQ8mY6lB4LE</code>.</p>
+                
+                <div class="guide-box">
+                  <strong>Medida de Seguridad y Aislamiento Activa:</strong>
+                  <p style="margin-top:0.4rem;">El portal no procesará ninguna otra pestaña (como <em>Reglas</em> o <em>Ciclos</em>) para evitar exponer información del Comité o datos no relacionados. Renombre la pestaña en Google Sheets exactamente a <strong>Histórico</strong>.</p>
+                </div>
+
+                <div style="margin-top:1.25rem;">
+                  <button class="btn btn-gold" onclick="cargarHistorico()">
+                    <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Reintentar
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
       tbody.innerHTML = `
         <tr>
-          <td colspan="7">
+          <td colspan="8">
             <div class="state-banner error">
               <div class="state-banner-icon"><i data-lucide="lock"></i></div>
               <h3>Acceso a Google Sheets Restringido (HTTP 403)</h3>

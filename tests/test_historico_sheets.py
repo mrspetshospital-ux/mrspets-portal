@@ -29,8 +29,8 @@ class TestHistoricoConsultasService(unittest.TestCase):
         with self.assertRaises(ValueError):
             HistoricoConsultasService(spreadsheet_id="otra_hoja_no_autorizada_12345")
 
-    def test_strict_tab_name_accent_required(self):
-        """Verifica que la pestaña 'Historico' sin tilde sea rechazada con error explícito."""
+    def test_strict_tab_name_accent_required_zero_fallbacks(self):
+        """Verifica que la pestaña 'Historico' sin tilde sea rechazada con error explícito y cero fallbacks."""
         with self.assertRaises(ValueError):
             HistoricoConsultasService(tab_name="Historico")
 
@@ -38,18 +38,28 @@ class TestHistoricoConsultasService(unittest.TestCase):
             self.service.validate_spreadsheet_target(TARGET_SPREADSHEET_ID, "Historico")
 
         with self.assertRaises(ValueError):
-            self.service.validate_spreadsheet_target(TARGET_SPREADSHEET_ID, "Consultas")
+            self.service.validate_spreadsheet_target(TARGET_SPREADSHEET_ID, "Historico_2")
 
-    def test_parse_rows_with_valid_matrix(self):
-        """Verifica el parseo de una matriz de 7 columnas según especificaciones."""
-        raw_matrix = [
-            ["fecha", "solicitante", "agente", "consulta", "respuesta", "estado", "fecha_respuesta"],
-            ["2026-11-24 10:15", "María Pérez", "Mike", "Horarios de baño", "De 8:00 a 18:00", "respondido", "2026-11-24 10:20"],
-            ["2026-11-24 11:30", "Carlos Ruiz", "Valeria", "Cita para ecografía", "NO DISPONIBLE", "respondido", "2026-11-24 11:35"],
-            ["2026-11-24 12:00", "Presidencia", "Super Agent", "Estado de ventas", "", "pendiente", ""]
+        with self.assertRaises(ValueError):
+            self.service.validate_spreadsheet_target(TARGET_SPREADSHEET_ID, "Reglas")
+
+        with self.assertRaises(ValueError):
+            self.service.validate_spreadsheet_target(TARGET_SPREADSHEET_ID, "Ciclos")
+
+    def test_dynamic_header_mapping_with_hilo_column(self):
+        """
+        Verifica que el mapeo dinámico por encabezado funcione correctamente
+        incluso si las columnas vienen en diferente orden y se incluye la columna 'hilo'.
+        """
+        raw_matrix_custom_order = [
+            # Encabezados desordenados: hilo al inicio, respuesta antes de consulta
+            ["hilo", "fecha", "solicitante", "agente", "respuesta", "consulta", "estado", "fecha_respuesta"],
+            ["#HILO-901", "2026-11-24 10:15", "María Pérez", "Mike", "De 8:00 a 18:00", "Horarios de baño", "respondido", "2026-11-24 10:20"],
+            ["#HILO-902", "2026-11-24 11:30", "Carlos Ruiz", "Valeria", "NO DISPONIBLE", "Cita para ecografía", "respondido", "2026-11-24 11:35"],
+            ["#HILO-903", "2026-11-24 12:00", "Presidencia", "Super Agent", "", "Estado de ventas", "pendiente", ""]
         ]
 
-        result = self.parse_rows_data = self.service.parse_rows(raw_matrix)
+        result = self.service.parse_rows(raw_matrix_custom_order)
         self.assertTrue(result["success"])
         self.assertEqual(result["stats"]["total"], 3)
         self.assertEqual(result["stats"]["respondidos"], 2)
@@ -57,19 +67,27 @@ class TestHistoricoConsultasService(unittest.TestCase):
         self.assertEqual(result["stats"]["no_disponible_count"], 1)
 
         consultas = result["consultas"]
-        # Debe estar ordenado por fecha descendente (12:00, 11:30, 10:15)
+        # Fila 1 (más reciente: 12:00)
         self.assertEqual(consultas[0]["fecha"], "2026-11-24 12:00")
+        self.assertEqual(consultas[0]["hilo"], "#HILO-903")
         self.assertEqual(consultas[0]["agente"], "Super Agent")
+        self.assertEqual(consultas[0]["consulta"], "Estado de ventas")
         self.assertEqual(consultas[0]["estado"], "pendiente")
-        self.assertEqual(consultas[0]["fecha_respuesta"], "—")
 
+        # Fila 2 (11:30)
         self.assertEqual(consultas[1]["fecha"], "2026-11-24 11:30")
+        self.assertEqual(consultas[1]["hilo"], "#HILO-902")
         self.assertEqual(consultas[1]["agente"], "Valeria")
+        self.assertEqual(consultas[1]["consulta"], "Cita para ecografía")
+        self.assertEqual(consultas[1]["respuesta"], "NO DISPONIBLE")
         self.assertTrue(consultas[1]["is_no_disponible"])
 
+        # Fila 3 (10:15)
         self.assertEqual(consultas[2]["fecha"], "2026-11-24 10:15")
+        self.assertEqual(consultas[2]["hilo"], "#HILO-901")
         self.assertEqual(consultas[2]["agente"], "Mike")
-        self.assertFalse(consultas[2]["is_no_disponible"])
+        self.assertEqual(consultas[2]["consulta"], "Horarios de baño")
+        self.assertEqual(consultas[2]["respuesta"], "De 8:00 a 18:00")
 
     def test_date_formatting_and_empty_values(self):
         """Verifica que fechas vacías o malformadas se representen como '—' sin romper."""
