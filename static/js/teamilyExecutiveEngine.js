@@ -1822,6 +1822,12 @@ class TeamilyExecutiveEngine {
         : this.normalizeTeamilyEndpoint(agent.teamlyEndpoint, 'https://teamily.ai/v1/chat');
       const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 
+      // Hilo de la conversación: se reutiliza el del historial de este agente
+      // para que todas las filas de una misma conversación compartan hilo.
+      const hiloKey = 'mrspets_hilo_' + (agent.id || 'agente');
+      let hilo = '';
+      try { hilo = localStorage.getItem(hiloKey) || ''; } catch (e) { hilo = ''; }
+
       const res = await fetch(this.agentChatEndpoint, {
         method: 'POST',
         headers: { 
@@ -1840,11 +1846,17 @@ class TeamilyExecutiveEngine {
           agent_name: agent.name,
           endpoint_override: endpointToSend,
           board_id: agent.teamlyBoardId,
+          hilo: hilo || undefined,
           context: liveContext
         })
       });
 
       const data = await res.json();
+
+      // Persistir el hilo devuelto por el servidor para los próximos mensajes
+      if (data && data.hilo) {
+        try { localStorage.setItem(hiloKey, data.hilo); } catch (e) {}
+      }
       let replyText = '';
 
       // Resolver texto de respuesta de forma transparente sin simulaciones
@@ -1879,6 +1891,19 @@ class TeamilyExecutiveEngine {
       } else {
         replyText = `⚠️ Sin respuesta de Teamily para ${agent.name}.`;
       }
+
+      // Trazabilidad: hilo de la conversación y resultado del registro en el histórico
+      const hiloTxt = (data && data.hilo) ? data.hilo : (hilo || '—');
+      const reg = data && data.historico;
+      let regTxt;
+      if (reg && reg.success) {
+        regTxt = `✅ Registrado en el histórico — fila ${reg.fila ?? '?'}`;
+      } else if (reg) {
+        regTxt = `⚠️ No se pudo registrar en el histórico: ${reg.error_detail || reg.error || 'error desconocido'}`;
+      } else {
+        regTxt = '⚠️ Sin confirmación de registro en el histórico';
+      }
+      replyText += `\n\n---\n\`Hilo: ${hiloTxt}\`\n${regTxt}`;
 
       history.push({
         sender: 'agent',

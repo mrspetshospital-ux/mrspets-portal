@@ -1576,7 +1576,7 @@ async def portal_gate(request: Request, call_next):
         response = await call_next(request)
     elif not _check_basic(request) and not current_user(request):
         return PlainTextResponse(
-            "Acceso restringido — Mrs Pets staging",
+            "Acceso restringido — Mrs Pets",
             status_code=401,
             headers={"WWW-Authenticate": 'Basic realm="Mrs Pets - usuario y clave del portal"'},
         )
@@ -7340,6 +7340,26 @@ async def teamily_chat(request: Request):
     channel_type_raw = str(body.get("channel_type") or "").strip()
     is_direct_1a1 = bool(recipient_user_id_raw or channel_type_raw == "direct_1a1")
 
+    # -----------------------------------------------------------------
+    # IDENTIFICADOR DE HILO: se acepta del cliente o se genera uno nuevo.
+    # Se inyecta en el texto que recibe el agente para que él lo reutilice
+    # al escribir su fila en el histórico.
+    # -----------------------------------------------------------------
+    hilo_in = str(body.get("hilo") or body.get("thread_id") or "").strip()
+    hilo_generated = False
+    if not hilo_in:
+        try:
+            from historicoSheetsService import historico_service as _hs
+            hilo_in = _hs.generate_hilo()
+            hilo_generated = True
+        except Exception as _e_hilo:
+            log.warning("No se pudo generar hilo: %s", _e_hilo)
+            hilo_in = "HILO-" + datetime.now().strftime("%Y%m%d") + "-001"
+            hilo_generated = True
+
+    # Texto que efectivamente recibe el agente, con el hilo antepuesto.
+    msg_with_hilo = f"[HILO: {hilo_in}]\n{msg}" if msg else msg
+
     agent = (body_agent or qp_agent or ("volturi_direct" if is_direct_1a1 else "margaret")).lower()
     session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
 
@@ -7522,6 +7542,9 @@ async def teamily_chat(request: Request):
         }
     }
 
+    # Mesa oficial del Canal Bilateral de Gerencias — canal de entrega garantizado
+    GERENCIAS_GROUP_ID = os.environ.get("GERENCIAS_GROUP_ID", "1791555297")
+
     SLUG_TO_VOLTURI_USER_ID = {
         "margarette": "9000408632300095",
         "margaret": "9000408632300095",
@@ -7610,16 +7633,41 @@ async def teamily_chat(request: Request):
             if recipient_user_id and hasattr(teamily_geo_a_client, "send_direct_message") and TeamilyDirectMessageRequest:
                 # -------------------------------------------------------------
                 # ENVÍO DIRECTO 1 A 1: Mrs PETS CORP (1283666967744922) -> recipient_user_id
+                # El texto lleva el hilo antepuesto para que el agente lo reutilice.
                 # -------------------------------------------------------------
                 d_req = TeamilyDirectMessageRequest(
                     sender_user_id=sender_user_id,
                     recipient_user_id=recipient_user_id,
-                    message=msg,
+                    message=msg_with_hilo,
                     channel_type=channel_type,
                     timeout=timeout_sec,
                     endpoint=endpoint_ovr
                 )
                 t_resp = teamily_geo_a_client.send_direct_message(d_req, endpoint_override=endpoint_ovr)
+
+                # -------------------------------------------------------------
+                # FALLBACK DE ENTREGA: si el canal 1 a 1 no existe (404 / 1303
+                # NotPeersFriend), se publica en la mesa oficial de gerencias
+                # con @mención al agente. Es el canal que sí funciona.
+                # -------------------------------------------------------------
+                if not t_resp.success and t_resp.status_code in (404, 403, 400):
+                    try:
+                        grp_req = TeamilyGeoARequest(
+                            input=f"[@{recipient_user_id}] {msg_with_hilo}",
+                            wait=True,
+                            timeout=timeout_sec,
+                            group_id=GERENCIAS_GROUP_ID,
+                            is_customer=False
+                        )
+                        g_resp = teamily_geo_a_client.send_message(grp_req)
+                        if g_resp.success:
+                            t_resp = g_resp
+                            teamily_data = dict(g_resp.data or {})
+                            teamily_data["delivery_channel"] = "group_fallback"
+                            teamily_data["group_id"] = GERENCIAS_GROUP_ID
+                            log.info("Entrega por fallback a mesa %s para %s", GERENCIAS_GROUP_ID, recipient_user_id)
+                    except Exception as _e_fb:
+                        log.warning("Fallback a mesa falló: %s", _e_fb)
             else:
                 # Despacho para Charly / GEO A
                 t_req = TeamilyGeoARequest(
@@ -7671,6 +7719,28 @@ async def teamily_chat(request: Request):
         res_text = f"⚠️ Sin respuesta de Teamily ({err_detail})."
 
     elapsed_ms = round((time.time() - t0_agent) * 1000.0, 2)
+
+    # ---------------------------------------------------------------
+    # REGISTRO EN EL HISTÓRICO: una fila nueva por cada mensaje enviado.
+    # Estado 'pendiente' si no hubo respuesta; 'respondido' si la hubo.
+    # Nunca lanza: el envío ya ocurrió y no debe romperse por el registro.
+    # ---------------------------------------------------------------
+    registro = {"success": False, "error": "NO_INTENTADO"}
+    try:
+        from historicoSheetsService import historico_service as _hs
+        tiene_respuesta = bool(res_text and str(res_text).strip()) and http_code_out == 200 and status_out not in ("error",)
+        registro = _hs.append_consulta(
+            solicitante=str(body.get("solicitante") or body.get("userName") or "Portal Mrs Pets").strip(),
+            agente=agent_name_display or target_slug,
+            consulta=str(msg or "").strip(),
+            respuesta=str(res_text or "").strip() if tiene_respuesta else "",
+            estado="respondido" if tiene_respuesta else "pendiente",
+            hilo=hilo_in
+        )
+    except Exception as _e_reg:
+        log.error("No se pudo registrar la consulta en el histórico: %s", _e_reg)
+        registro = {"success": False, "error": "EXCEPTION", "error_detail": str(_e_reg)}
+
     return {
         "status": status_out,
         "agent": target_slug,
@@ -7687,13 +7757,59 @@ async def teamily_chat(request: Request):
         "bcv_rate": eff_rate,
         "teamily_data": teamily_data,
         "error": err_detail,
-        "code": http_code_out
+        "code": http_code_out,
+        "hilo": hilo_in,
+        "hilo_generado": hilo_generated,
+        "historico": registro
     }
 
 
 @app.post("/api/v1/google-sheets/record-interaction")
 async def sheets_interaction(request: Request):
-    return {"status": "success", "spreadsheet_id": "1yfnYyG23Z8JipApuW_-wiH_j6B3oNdPIUN_06bWwqI4"}
+    """
+    Registra UNA fila nueva en la pestaña 'Histórico' del libro de consultas de clientes.
+    Implementación real: append vía Google Sheets API v4 con Service Account.
+    No modifica ni borra filas existentes.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    solicitante = str(body.get("solicitante") or body.get("cliente") or "").strip()
+    agente = str(body.get("agente") or body.get("agent") or "").strip()
+    consulta = str(body.get("consulta") or body.get("message") or "").strip()
+    respuesta = str(body.get("respuesta") or "").strip()
+    estado = str(body.get("estado") or ("respondido" if respuesta else "pendiente")).strip().lower()
+    hilo = str(body.get("hilo") or "").strip() or None
+
+    if not consulta:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": "CONSULTA_REQUERIDA", "message": "El campo 'consulta' es obligatorio."}
+        )
+
+    try:
+        from historicoSheetsService import historico_service
+        result = historico_service.append_consulta(
+            solicitante=solicitante,
+            agente=agente,
+            consulta=consulta,
+            respuesta=respuesta,
+            estado=estado,
+            hilo=hilo
+        )
+    except Exception as e:
+        log.error("Error en /api/v1/google-sheets/record-interaction: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": "INTERNAL_SERVER_ERROR", "message": str(e)}
+        )
+
+    if not result.get("success"):
+        return JSONResponse(status_code=502, content=result)
+
+    return JSONResponse(status_code=200, content=result)
 
 
 # =====================================================================
@@ -7720,6 +7836,23 @@ async def get_historico_consultas(request: Request):
     try:
         from historicoSheetsService import historico_service
         data = historico_service.fetch_from_google_sheets()
+
+        # Si Sheets falló (auth, permisos, red), NO devolver 200 con success:false.
+        if not data.get("success"):
+            err = data.get("error") or "SHEETS_ERROR"
+            upstream_code = data.get("http_code") or 0
+            # 401/403 del libro privado -> 502 (fallo del upstream, no del cliente)
+            status = 502 if upstream_code in (401, 403, 0) else 503
+            return JSONResponse(
+                status_code=status,
+                content=data,
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
+
         return JSONResponse(
             status_code=200,
             content=data,

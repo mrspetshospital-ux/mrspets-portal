@@ -3,7 +3,7 @@
 Mrs. Pets Maracaibo - Portal del Histórico de Consultas de Clientes
 Big & Little Dogs, C.A. • RIF J-40120233-0 • Av. 2 El Milagro diagonal Lago Mall
 
-Módulo de SOLO LECTURA para consultar el histórico de consultas de clientes
+Módulo de LECTURA y APPEND para el histórico de consultas de clientes
 directamente desde Google Sheets.
 
 ESPECIFICACIONES ESTRICTAS:
@@ -11,7 +11,8 @@ ESPECIFICACIONES ESTRICTAS:
 - Pestaña literal obligatoria (con tilde): "Histórico" (Historico sin tilde NO es válido; cero fallbacks a otras pestañas).
 - Libro del Comité Volturi (1u9e2V5KSlgi7QhaCTgkmb30phz4vaoW67E3S_RPhDmA) queda estrictamente FUERA DE ALCANCE.
 - Mapeo dinámico por nombre de encabezado (fila 1), incluyendo soporte nativo para la columna 'hilo'.
-- Cero operaciones de escritura, edición o borrado.
+- Única operación de escritura autorizada: APPEND de una fila nueva al final de la pestaña.
+  Prohibido editar, sobrescribir o borrar filas existentes.
 - Cero datos simulados o mocks inventados.
 """
 
@@ -22,6 +23,7 @@ import io
 import json
 import ssl
 import logging
+import datetime
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -464,6 +466,214 @@ class HistoricoConsultasService:
             return {"success": False, "error_detail": f"Error parseando credenciales: {e}"}
 
         return {"success": False, "error_detail": "No se pudo autenticar Service Account."}
+
+
+    # =================================================================
+    # ESCRITURA: APPEND de una fila nueva (única operación autorizada)
+    # =================================================================
+    def _get_service_account_token(self, scope: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Obtiene un access_token OAuth2 firmando un JWT con la Service Account.
+        Retorna (access_token, error_detail).
+        """
+        sa_creds_json = os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
+        sa_file = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE")
+        if not sa_creds_json and sa_file and os.path.exists(sa_file):
+            try:
+                with open(sa_file, "r", encoding="utf-8") as f:
+                    sa_creds_json = f.read()
+            except Exception as e:
+                return None, f"No se pudo leer archivo de credenciales: {e}"
+
+        if not sa_creds_json:
+            return None, "GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON no configurada."
+
+        try:
+            creds = json.loads(sa_creds_json)
+        except Exception as e:
+            return None, f"JSON de credenciales inválido: {e}"
+
+        client_email = creds.get("client_email")
+        private_key = creds.get("private_key")
+        token_uri = creds.get("token_uri", "https://oauth2.googleapis.com/token")
+        if not client_email or not private_key:
+            return None, "Credenciales de Service Account incompletas (client_email/private_key)."
+
+        try:
+            import jwt
+        except ImportError:
+            return None, "Librería PyJWT no instalada. Agregar PyJWT[crypto] a requirements.txt."
+
+        try:
+            import time
+            now = int(time.time())
+            payload = {
+                "iss": client_email,
+                "sub": client_email,
+                "aud": token_uri,
+                "iat": now,
+                "exp": now + 3600,
+                "scope": scope
+            }
+            signed_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+            token_data = urllib.parse.urlencode({
+                "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "assertion": signed_jwt
+            }).encode("utf-8")
+            req = urllib.request.Request(token_uri, data=token_data, method="POST")
+            with urllib.request.urlopen(req, context=ssl._create_unverified_context(), timeout=15) as t_resp:
+                t_json = json.loads(t_resp.read().decode("utf-8"))
+            token = t_json.get("access_token")
+            if not token:
+                return None, f"Google no devolvió access_token: {t_json}"
+            return token, None
+        except Exception as e:
+            return None, f"Error firmando/obteniendo token: {e}"
+
+    def generate_hilo(self, when: Optional[datetime.datetime] = None) -> str:
+        """
+        Genera un identificador de hilo nuevo con formato HILO-YYYYMMDD-NNN.
+        El consecutivo se calcula leyendo los hilos ya existentes en la pestaña
+        para el mismo día, de modo que no se repita.
+        """
+        if when is None:
+            when = datetime.datetime.now()
+        day = when.strftime("%Y%m%d")
+        prefix = f"HILO-{day}-"
+
+        max_seq = 0
+        lectura_ok = False
+        try:
+            existing = self.fetch_from_google_sheets()
+            if existing.get("success"):
+                lectura_ok = True
+                for c in (existing.get("consultas") or []):
+                    h = str(c.get("hilo") or "").strip()
+                    if h.startswith(prefix):
+                        tail = h[len(prefix):]
+                        if tail.isdigit():
+                            max_seq = max(max_seq, int(tail))
+        except Exception as e:
+            log.warning("No se pudo calcular consecutivo de hilo: %s", e)
+
+        if lectura_ok:
+            return f"{prefix}{max_seq + 1:03d}"
+
+        # Sin lectura fiable del Sheet no se puede garantizar el consecutivo.
+        # Se usa un sufijo basado en la hora para no colisionar con hilos existentes.
+        log.warning("Consecutivo de hilo no verificable (sin lectura del Sheet); se usa sufijo horario.")
+        return f"{prefix}{when.strftime('%H%M%S')}"
+
+    def append_consulta(
+        self,
+        solicitante: str,
+        agente: str,
+        consulta: str,
+        respuesta: str = "",
+        estado: str = "pendiente",
+        fecha: Optional[str] = None,
+        fecha_respuesta: Optional[str] = None,
+        hilo: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Agrega UNA fila nueva al final de la pestaña 'Histórico' mediante
+        values:append. No modifica ni borra filas existentes.
+
+        Retorna dict con success, fila (número exacto), hilo, y detalle.
+        """
+        self.validate_spreadsheet_target(self.spreadsheet_id, self.tab_name)
+
+        now = datetime.datetime.now()
+        fecha_val = fecha or now.strftime("%Y-%m-%d %H:%M")
+        hilo_val = (hilo or "").strip() or self.generate_hilo(now)
+
+        estado_norm = str(estado or "").strip().lower()
+        if estado_norm not in ("pendiente", "respondido"):
+            estado_norm = "pendiente"
+
+        if estado_norm == "respondido":
+            fecha_resp_val = fecha_respuesta or now.strftime("%Y-%m-%d %H:%M")
+        else:
+            fecha_resp_val = fecha_respuesta or ""
+
+        # Orden estricto de las 8 columnas del esquema
+        row = [
+            fecha_val,
+            str(solicitante or "").strip(),
+            str(agente or "").strip(),
+            str(consulta or "").strip(),
+            str(respuesta or "").strip(),
+            estado_norm,
+            fecha_resp_val,
+            hilo_val
+        ]
+
+        token, err = self._get_service_account_token("https://www.googleapis.com/auth/spreadsheets")
+        if not token:
+            return {
+                "success": False,
+                "error": "AUTH_ERROR",
+                "error_detail": err,
+                "hilo": hilo_val
+            }
+
+        encoded_range = urllib.parse.quote(f"{self.tab_name}!A1")
+        api_url = (
+            f"https://sheets.googleapis.com/v4/spreadsheets/{self.spreadsheet_id}"
+            f"/values/{encoded_range}:append"
+            f"?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS"
+        )
+        body = json.dumps({"values": [row]}, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(
+            api_url,
+            data=body,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json; charset=utf-8"
+            }
+        )
+
+        try:
+            with urllib.request.urlopen(req, context=ssl._create_unverified_context(), timeout=20) as resp:
+                res_json = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as he:
+            detail = ""
+            try:
+                detail = he.read().decode("utf-8", errors="replace")[:500]
+            except Exception:
+                pass
+            return {
+                "success": False,
+                "error": "SHEETS_APPEND_HTTP_ERROR",
+                "http_code": he.code,
+                "error_detail": f"HTTP {he.code}: {he.reason} {detail}",
+                "hilo": hilo_val
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": "SHEETS_APPEND_EXCEPTION",
+                "error_detail": str(e),
+                "hilo": hilo_val
+            }
+
+        # Número de fila exacto donde quedó (updatedRange: 'Histórico'!A12:H12)
+        fila_exacta = None
+        updated_range = (res_json.get("updates") or {}).get("updatedRange") or ""
+        m = re.search(r"![A-Z]+(\d+)", updated_range)
+        if m:
+            fila_exacta = int(m.group(1))
+
+        return {
+            "success": True,
+            "fila": fila_exacta,
+            "updated_range": updated_range,
+            "hilo": hilo_val,
+            "row": row,
+            "spreadsheet_id": self.spreadsheet_id,
+            "tab_name": self.tab_name
+        }
 
 
 # Instancia singleton para uso general
