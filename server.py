@@ -7316,6 +7316,239 @@ async def trigger_agent_synthetic_check(request: Request):
     return {"status": "ok"}
 
 
+# =====================================================================
+# REGISTRO DE RUNS DE TEAMILY — SONDEO DIFERIDO (NO SÍNCRONO)
+#
+# Teamily responde HTTP 202 con run_id + poll_url, y el run real tarda
+# ~163 s (habla con el agente, espera y redacta). Cloudflare corta la
+# petición HTTP a los 100 s, así que esperar dentro de la request es
+# inviable: el navegador recibe 524 sin cuerpo.
+#
+# Solución: el SERVIDOR dispara la llamada, guarda run_id + poll_url
+# asociados a un token opaco y un hilo de fondo sondea el poll_url hasta
+# que el run cierra. El NAVEGADOR sondea al PORTAL (no a Teamily) por el
+# token, y al cerrar el run recibe el texto y lo pinta en la burbuja.
+# =====================================================================
+_TEAMILY_RUNS: Dict[str, Dict[str, Any]] = {}
+_TEAMILY_RUNS_LOCK = threading.Lock()
+_TEAMILY_RUN_TTL_SEC = 30 * 60          # el registro se purga a los 30 min
+_TEAMILY_RUN_MAX_SEC = 300.0            # techo duro de espera de un run
+_TEAMILY_RUN_INTERVAL_SEC = 3.0         # cadencia de sondeo al poll_url
+
+
+def _teamily_runs_prune() -> None:
+    """Elimina runs vencidos para que el diccionario no crezca sin límite."""
+    now = time.time()
+    with _TEAMILY_RUNS_LOCK:
+        vencidos = [
+            k for k, v in _TEAMILY_RUNS.items()
+            if (now - float(v.get("created_at") or 0)) > _TEAMILY_RUN_TTL_SEC
+        ]
+        for k in vencidos:
+            _TEAMILY_RUNS.pop(k, None)
+
+
+def _teamily_run_set(token: str, **campos) -> None:
+    """Actualiza campos de un run de forma atómica."""
+    with _TEAMILY_RUNS_LOCK:
+        if token in _TEAMILY_RUNS:
+            _TEAMILY_RUNS[token].update(campos)
+
+
+def _teamily_run_get(token: str) -> Optional[Dict[str, Any]]:
+    with _TEAMILY_RUNS_LOCK:
+        run = _TEAMILY_RUNS.get(token)
+        return dict(run) if run else None
+
+
+def _teamily_run_create(
+    agent_slug: str,
+    agent_name: str,
+    hilo: str,
+    poll_url: str,
+    run_id: str,
+    server_key: str,
+    endpoint: str,
+) -> str:
+    """Registra un run pendiente y devuelve el token opaco que verá el navegador."""
+    _teamily_runs_prune()
+    token = "run_" + uuid.uuid4().hex
+    with _TEAMILY_RUNS_LOCK:
+        _TEAMILY_RUNS[token] = {
+            "token": token,
+            "status": "running",
+            "agent": agent_slug,
+            "agent_name": agent_name,
+            "hilo": hilo,
+            "run_id": run_id,
+            "poll_url": poll_url,
+            "server_key": server_key,
+            "endpoint": endpoint,
+            "text": "",
+            "error": None,
+            "polls": 0,
+            "created_at": time.time(),
+            "closed_at": None,
+            "http_status": 0,
+        }
+    return token
+
+
+def _teamily_run_poll_loop(token: str) -> None:
+    """
+    Hilo de fondo: sondea el poll_url de Teamily hasta que el run cierra.
+    Escribe el texto en el registro para que el navegador lo recoja al
+    sondear al portal. Nunca lanza: un fallo se registra como estado error.
+    """
+    run = _teamily_run_get(token)
+    if not run:
+        return
+    poll_url = run.get("poll_url")
+    server_key = run.get("server_key")
+    deadline = float(run.get("created_at") or time.time()) + _TEAMILY_RUN_MAX_SEC
+    polls = 0
+
+    while time.time() < deadline:
+        time.sleep(_TEAMILY_RUN_INTERVAL_SEC)
+        polls += 1
+        try:
+            if teamily_geo_a_client and hasattr(teamily_geo_a_client, "poll_run"):
+                http_status, data = teamily_geo_a_client.poll_run(
+                    poll_url, server_key=server_key, timeout=20.0
+                )
+            else:
+                _teamily_run_set(token, status="error", error="Cliente Teamily no disponible",
+                                 polls=polls, closed_at=time.time())
+                return
+
+            estado = str((data or {}).get("status") or "").lower()
+            texto = ""
+            try:
+                from teamilyClient import extract_teamily_text
+                texto = extract_teamily_text(data)
+            except Exception:
+                texto = ""
+
+            _teamily_run_set(token, polls=polls, http_status=http_status,
+                             last_status=estado or None)
+
+            if texto.strip() and estado in ("completed", "succeeded", "success", ""):
+                _teamily_run_set(token, status="completed", text=texto.strip(),
+                                 closed_at=time.time(), error=None)
+                log.info("Run Teamily %s cerrado (%d sondeos, %d car.)",
+                         token, polls, len(texto))
+                return
+
+            if estado in ("failed", "error", "cancelled", "canceled", "timeout"):
+                msg = ""
+                if isinstance(data, dict):
+                    msg = str(data.get("error") or data.get("detail")
+                              or data.get("message") or "").strip()
+                _teamily_run_set(token, status="failed", text=texto.strip(),
+                                 error=msg or f"El run terminó en estado '{estado}'",
+                                 closed_at=time.time())
+                log.warning("Run Teamily %s falló: %s", token, estado)
+                return
+
+            if estado in ("completed", "succeeded", "success"):
+                # Cerró sin texto reconocible: no inventamos nada.
+                _teamily_run_set(
+                    token, status="empty", text="",
+                    error="El run cerró sin texto de respuesta reconocible.",
+                    closed_at=time.time(),
+                )
+                return
+        except Exception as _e_poll:
+            log.warning("Error sondeando run %s: %s", token, _e_poll)
+
+    _teamily_run_set(
+        token, status="timeout",
+        error=f"El run no cerró en {int(_TEAMILY_RUN_MAX_SEC)} s.",
+        closed_at=time.time(),
+    )
+
+
+@app.get("/api/v1/teamily/run/{run_token}")
+async def teamily_run_status(run_token: str):
+    """
+    Estado de un run de Teamily lanzado desde el portal.
+
+    El navegador llama a ESTE endpoint (no a Teamily) cada pocos segundos.
+    - status 'running'   -> el run sigue vivo; el frontend vuelve a preguntar.
+    - status 'completed' -> trae el texto del agente en 'reply'/'response_text'.
+    - status 'failed'/'empty'/'timeout' -> trae 'error' con el motivo real.
+
+    Nunca expone poll_url ni la server key: solo el texto y el estado.
+    """
+    token = str(run_token or "").strip()
+    run = _teamily_run_get(token)
+    if not run:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "not_found",
+                "error": "Run no encontrado o vencido. Vuelve a enviar el mensaje.",
+                "code": 404,
+            },
+        )
+
+    estado = run.get("status") or "running"
+    texto = run.get("text") or ""
+
+    if estado == "running":
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "running",
+                "run_token": token,
+                "agent": run.get("agent"),
+                "agent_name": run.get("agent_name"),
+                "hilo": run.get("hilo"),
+                "polls": run.get("polls", 0),
+                "elapsed_s": round(time.time() - float(run.get("created_at") or time.time()), 1),
+            },
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
+
+    base = {
+        "run_token": token,
+        "agent": run.get("agent"),
+        "agent_name": run.get("agent_name"),
+        "hilo": run.get("hilo"),
+        "polls": run.get("polls", 0),
+        "elapsed_s": round(float(run.get("closed_at") or time.time())
+                           - float(run.get("created_at") or time.time()), 1),
+    }
+
+    if estado == "completed":
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "reply": texto,
+                "response_text": texto,
+                "output": {"text": texto},
+                **base,
+            },
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
+
+    # empty / failed / timeout: error honesto, sin texto inventado
+    http_out = 200 if estado == "empty" else 504
+    return JSONResponse(
+        status_code=http_out,
+        content={
+            "status": "error",
+            "error": run.get("error") or f"El run terminó en estado '{estado}'.",
+            "reply": texto or "",
+            "response_text": texto or "",
+            "run_state": estado,
+            **base,
+        },
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
 @app.post("/api/v1/avatar/chat")
 @app.post("/api/v1/teamily/agent-chat")
 @app.post("/api/v1/teamily/chat")
@@ -7624,6 +7857,10 @@ async def teamily_chat(request: Request):
     http_code_out = 200
 
     # Despacho exclusivo a Teamily (Sin generación por Gemini, sin respuestas automáticas y sin Charly como proxy)
+    # defer_poll=True: el cliente NO se queda esperando el run. Devuelve el 202
+    # con run_id + poll_url de inmediato y el sondeo ocurre en segundo plano.
+    run_token_out = None
+    run_poll_url = None
     try:
         timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or 90.0)
         timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 90.0)
@@ -7643,7 +7880,9 @@ async def teamily_chat(request: Request):
                     timeout=timeout_sec,
                     endpoint=endpoint_ovr
                 )
-                t_resp = teamily_geo_a_client.send_direct_message(d_req, endpoint_override=endpoint_ovr)
+                t_resp = teamily_geo_a_client.send_direct_message(
+                    d_req, endpoint_override=endpoint_ovr, defer_poll=True
+                )
 
                 # -------------------------------------------------------------
                 # FALLBACK DE ENTREGA: si el canal 1 a 1 no existe (404 / 1303
@@ -7659,7 +7898,7 @@ async def teamily_chat(request: Request):
                             group_id=GERENCIAS_GROUP_ID,
                             is_customer=False
                         )
-                        g_resp = teamily_geo_a_client.send_message(grp_req)
+                        g_resp = teamily_geo_a_client.send_message(grp_req, defer_poll=True)
                         if g_resp.success:
                             t_resp = g_resp
                             teamily_data = dict(g_resp.data or {})
@@ -7677,17 +7916,59 @@ async def teamily_chat(request: Request):
                 )
                 if endpoint_ovr:
                     t_req.endpoint = endpoint_ovr
-                t_resp = teamily_geo_a_client.send_message(t_req, endpoint_override=endpoint_ovr)
+                t_resp = teamily_geo_a_client.send_message(
+                    t_req, endpoint_override=endpoint_ovr, defer_poll=True
+                )
 
             teamily_data = t_resp.data if t_resp.data else {}
             http_code_out = t_resp.status_code
 
             if t_resp.success:
-                if t_resp.response_text and len(t_resp.response_text.strip()) > 0:
+                # -------------------------------------------------------------
+                # RUN DIFERIDO: Teamily respondió 202 (o status 'running') con
+                # run_id + poll_url. En vez de devolver el acuse como si fuera
+                # la respuesta del agente (lo que dejaba la burbuja vacía),
+                # registramos el run y arrancamos el sondeo en segundo plano.
+                # El frontend recibirá 'status: running' + run_token y pedirá
+                # el texto a /api/v1/teamily/run/{token} hasta que cierre.
+                # -------------------------------------------------------------
+                _poll_url = (teamily_data or {}).get("poll_url")
+                if _poll_url:
+                    _run_id = str(
+                        (teamily_data or {}).get("run_id")
+                        or (teamily_data or {}).get("id")
+                        or ""
+                    )
+                    try:
+                        from teamilyClient import teamily_geo_a_client as _tc
+                        _key = getattr(_tc, "server_key", "") if _tc else ""
+                    except Exception:
+                        _key = ""
+                    run_token_out = _teamily_run_create(
+                        agent_slug=target_slug,
+                        agent_name=agent_name_display,
+                        hilo=hilo_in,
+                        poll_url=str(_poll_url),
+                        run_id=_run_id,
+                        server_key=_key,
+                        endpoint=str(endpoint_ovr or model_used),
+                    )
+                    run_poll_url = str(_poll_url)
+                    # El texto del agente llega después: no se inventa nada.
+                    status_out = "running"
+                    res_text = ""
+                    threading.Thread(
+                        target=_teamily_run_poll_loop,
+                        args=(run_token_out,),
+                        name=f"teamily-run-{run_token_out[-8:]}",
+                        daemon=True,
+                    ).start()
+                    log.info(
+                        "Run diferido creado %s (run_id=%s, agente=%s, hilo=%s)",
+                        run_token_out, _run_id, target_slug, hilo_in,
+                    )
+                elif t_resp.response_text and len(t_resp.response_text.strip()) > 0:
                     res_text = t_resp.response_text
-                elif teamily_data.get("status") == "running":
-                    run_id = teamily_data.get("run_id") or teamily_data.get("id") or "activo"
-                    res_text = f"**Solicitud en proceso en Teamily (Run: `{run_id}`)**"
                 else:
                     status_out = "no_response"
                     res_text = f"⚠️ Sin respuesta de Teamily para {agent_name_display}."
@@ -7728,7 +8009,13 @@ async def teamily_chat(request: Request):
     registro = {"success": False, "error": "NO_INTENTADO"}
     try:
         from historicoSheetsService import historico_service as _hs
-        tiene_respuesta = bool(res_text and str(res_text).strip()) and http_code_out == 200 and status_out not in ("error",)
+        # Un run abierto NO es una respuesta: la fila queda 'pendiente' y el
+        # texto se completa cuando el run cierre (ver _teamily_run_poll_loop).
+        tiene_respuesta = (
+            bool(res_text and str(res_text).strip())
+            and http_code_out == 200
+            and status_out not in ("error", "running")
+        )
         registro = _hs.append_consulta(
             solicitante=str(body.get("solicitante") or body.get("userName") or "Portal Mrs Pets").strip(),
             agente=agent_name_display or target_slug,
@@ -7760,7 +8047,13 @@ async def teamily_chat(request: Request):
         "code": http_code_out,
         "hilo": hilo_in,
         "hilo_generado": hilo_generated,
-        "historico": registro
+        "historico": registro,
+        # Run diferido: el frontend sondea /api/v1/teamily/run/{run_token}
+        "run_token": run_token_out,
+        "run_poll_url": run_poll_url,
+        "run_status_url": (
+            f"/api/v1/teamily/run/{run_token_out}" if run_token_out else None
+        ),
     }
 
 

@@ -1370,11 +1370,19 @@ class TeamilyExecutiveEngine {
       return this.directChatHistory[targetKey];
     }
 
-    // Purga activa para eliminar cualquier residuo sintético obsoleto
-    this.directChatHistory[targetKey] = history.filter(m => {
-      if (!m || !m.text) return false;
+    // Purga activa para eliminar cualquier residuo sintético obsoleto.
+    //
+    // ⚠️ BUG HISTÓRICO CORREGIDO: antes esto hacía
+    //     this.directChatHistory[targetKey] = history.filter(...)
+    // filter() devuelve un array NUEVO, así que cualquier referencia que el
+    // llamador ya tuviera (p. ej. la de sendDirectChatMessage) quedaba
+    // huérfana: la respuesta del agente se hacía push() en el array muerto y
+    // nunca se pintaba. Ahora se purga EN SITIO con splice(), conservando la
+    // identidad del array.
+    const _esResiduoSintetico = (m) => {
+      if (!m || !m.text) return true;
       const t = String(m.text);
-      return !(
+      return (
         t.includes('Charlie Finance') ||
         t.includes('Todas las transacciones en mostrador POS') ||
         t.includes('918.77') ||
@@ -1383,7 +1391,10 @@ class TeamilyExecutiveEngine {
         t.includes('Tasa Oficial BCV') ||
         t.includes('Libro Fiscal SENIAT')
       );
-    });
+    };
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (_esResiduoSintetico(history[i])) history.splice(i, 1);
+    }
     return this.directChatHistory[targetKey];
   }
 
@@ -1783,6 +1794,50 @@ class TeamilyExecutiveEngine {
     }
   }
 
+  // -------------------------------------------------------------------
+  // SONDEO DEL RUN DIFERIDO AL PORTAL (no a Teamily)
+  //
+  // El backend lanzó el run de Teamily y devolvió un run_token. Aquí se
+  // pregunta al PORTAL cada pocos segundos hasta que el run cierre, y se
+  // devuelve un objeto con la misma forma que la respuesta síncrona
+  // (status/reply/response_text/output) para que el resto del flujo no
+  // cambie. Nunca lanza: un fallo se devuelve como status 'error'.
+  // -------------------------------------------------------------------
+  async pollTeamilyRun(runToken, agent) {
+    const typing = document.getElementById('directChatTyping');
+    const maxMs = 6 * 60 * 1000;   // techo de 6 min (el run tarda ~163 s)
+    const intervalMs = 4000;
+    const started = Date.now();
+    let last = null;
+
+    while (Date.now() - started < maxMs) {
+      await new Promise(r => setTimeout(r, intervalMs));
+      const elapsed = Math.round((Date.now() - started) / 1000);
+      if (typing) {
+        typing.style.display = 'block';
+        typing.innerHTML = `<em>⏳ ${agent.name} está procesando la consulta… (${elapsed}s). El portal recogerá su respuesta automáticamente.</em>`;
+      }
+      try {
+        const r = await fetch(`/api/v1/teamily/run/${encodeURIComponent(runToken)}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        const j = await r.json();
+        last = j;
+        if (j && j.status === 'running') continue;
+        // Cerró (success / error / empty / timeout): devolver tal cual.
+        return j;
+      } catch (e) {
+        // Error de red puntual: seguir intentando hasta el techo.
+        last = { status: 'error', error: `Error de red al recoger la respuesta: ${e.message || e}` };
+      }
+    }
+    return last || {
+      status: 'error',
+      error: `El agente no respondió en ${Math.round(maxMs / 1000)} s. La consulta quedó registrada como pendiente.`
+    };
+  }
+
   async sendDirectChatMessage() {
     const input = document.getElementById('directChatInput');
     const typing = document.getElementById('directChatTyping');
@@ -1828,7 +1883,7 @@ class TeamilyExecutiveEngine {
       let hilo = '';
       try { hilo = localStorage.getItem(hiloKey) || ''; } catch (e) { hilo = ''; }
 
-      const res = await fetch(this.agentChatEndpoint, {
+      let res = await fetch(this.agentChatEndpoint, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -1851,12 +1906,28 @@ class TeamilyExecutiveEngine {
         })
       });
 
-      const data = await res.json();
+      let data = await res.json();
 
       // Persistir el hilo devuelto por el servidor para los próximos mensajes
       if (data && data.hilo) {
         try { localStorage.setItem(hiloKey, data.hilo); } catch (e) {}
       }
+
+      // -----------------------------------------------------------------
+      // RUN DIFERIDO: el backend devolvió 'running' + run_token porque el
+      // run de Teamily tarda ~163 s (más que el corte de 100 s de Cloudflare).
+      // El navegador sondea AL PORTAL (no a Teamily) hasta que el run cierre,
+      // y entonces pinta el texto real del agente en la burbuja.
+      // -----------------------------------------------------------------
+      if (data && data.status === 'running' && data.run_token) {
+        data = await this.pollTeamilyRun(data.run_token, agent);
+        // El sondeo devuelve su propio estado: si el run falló, no debe
+        // mostrarse como éxito ni con un código HTTP engañoso.
+        if (data && data.status === 'error') {
+          res = { ok: false, status: 504 };
+        }
+      }
+
       let replyText = '';
 
       // Resolver texto de respuesta de forma transparente sin simulaciones

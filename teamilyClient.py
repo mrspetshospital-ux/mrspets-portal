@@ -19,7 +19,7 @@ import urllib.error
 import ssl
 import socket
 from dataclasses import dataclass, field, asdict
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(DIRECTORY, "logs")
@@ -148,6 +148,68 @@ def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = 
         normalized = f"https://teamily.ai/v1/agents/{ep}/responses"
     print(f"[TEAMILY URL NORMALIZATION] Endpoint normalizado explícitamente: '{ep}' -> '{normalized}'")
     return normalized
+
+def extract_teamily_text(data: Any) -> str:
+    """
+    Extrae el texto de respuesta de cualquier estructura devuelta por Teamily.
+    Único punto de verdad para no repetir la cascada de claves en cada capa.
+    Devuelve "" si no hay texto reconocible.
+    """
+    if not isinstance(data, dict):
+        return ""
+    output_val = data.get("output")
+    if isinstance(output_val, dict) and output_val.get("text"):
+        return str(output_val["text"])
+    if isinstance(output_val, str) and output_val.strip():
+        return output_val
+    inner = data.get("data")
+    if isinstance(inner, dict) and inner.get("output"):
+        d_out = inner["output"]
+        if isinstance(d_out, dict) and d_out.get("text"):
+            return str(d_out["text"])
+        if isinstance(d_out, str) and d_out.strip():
+            return d_out
+    if isinstance(inner, dict) and inner.get("response"):
+        return str(inner["response"])
+    for key in ("response", "reply", "content", "text", "answer", "message"):
+        val = data.get(key)
+        if isinstance(val, str) and val.strip():
+            return val
+        if isinstance(val, dict):
+            for sub in ("content", "text", "message"):
+                if isinstance(val.get(sub), str) and val[sub].strip():
+                    return val[sub]
+    # A veces el texto viene en la lista de mensajes del run
+    msgs = data.get("messages")
+    if isinstance(msgs, list):
+        for m in reversed(msgs):
+            if not isinstance(m, dict):
+                continue
+            if str(m.get("role") or "").lower() in ("user", "human"):
+                continue
+            for sub in ("content", "text"):
+                if isinstance(m.get(sub), str) and m[sub].strip():
+                    return m[sub]
+    return ""
+
+
+def extract_teamily_msg_id(data: Any) -> str:
+    """Extrae el acuse de entrega (serverMsgID) si Teamily lo devuelve."""
+    if not isinstance(data, dict):
+        return ""
+    for key in ("serverMsgID", "server_msg_id", "serverMsgId", "msg_id", "message_id", "id"):
+        val = data.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    for container in ("data", "result", "message"):
+        inner = data.get(container)
+        if isinstance(inner, dict):
+            for key in ("serverMsgID", "server_msg_id", "msg_id", "message_id", "id"):
+                val = inner.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+    return ""
+
 
 # Registro en memoria de hilos por sesión de cliente para aislamiento estricto y prevención de fuga de datos
 _client_threads: Dict[str, str] = {}
@@ -318,7 +380,7 @@ class TeamilyGeoAClient:
         except Exception as e:
             print(f"[TEAMILY AUDIT] Error escribiendo log: {e}")
 
-    def send_message(self, request: TeamilyGeoARequest, endpoint_override: Optional[str] = None, server_key_override: Optional[str] = None) -> TeamilyGeoAResponse:
+    def send_message(self, request: TeamilyGeoARequest, endpoint_override: Optional[str] = None, server_key_override: Optional[str] = None, defer_poll: bool = False) -> TeamilyGeoAResponse:
         """
         Envía una petición POST tipada al agente GEO A o a cualquier subagente de Teamily.
         Aplica los headers obligatorios:
@@ -406,7 +468,9 @@ class TeamilyGeoAClient:
                 # Si Teamily respondió HTTP 202 o status == 'running' con un poll_url,
                 # esperar activamente hasta que el LLM termine de generar la respuesta
                 poll_url = data.get("poll_url") if isinstance(data, dict) else None
-                if (status_code == 202 or (isinstance(data, dict) and data.get("status") == "running")) and poll_url:
+                # defer_poll=True: el llamador (server.py) se encarga de sondear en
+                # segundo plano para no reventar el límite de 100 s de Cloudflare.
+                if (status_code == 202 or (isinstance(data, dict) and data.get("status") == "running")) and poll_url and not defer_poll:
                     poll_headers = {
                         "Authorization": f"Bearer {target_server_key}",
                         "Accept": "application/json",
@@ -605,7 +669,8 @@ class TeamilyGeoAClient:
         self,
         request: TeamilyDirectMessageRequest,
         endpoint_override: Optional[str] = None,
-        server_key_override: Optional[str] = None
+        server_key_override: Optional[str] = None,
+        defer_poll: bool = False
     ) -> TeamilyGeoAResponse:
         """
         Envía un mensaje 1 a 1 directo desde Mrs PETS CORP (userID: 1283666967744922)
@@ -702,7 +767,8 @@ class TeamilyGeoAClient:
                     data = {"raw": raw_body}
 
                 poll_url = data.get("poll_url") if isinstance(data, dict) else None
-                if (status_code == 202 or (isinstance(data, dict) and data.get("status") == "running")) and poll_url:
+                # defer_poll=True: server.py sondea en segundo plano (límite 100 s Cloudflare).
+                if (status_code == 202 or (isinstance(data, dict) and data.get("status") == "running")) and poll_url and not defer_poll:
                     poll_headers = {
                         "Authorization": f"Bearer {target_server_key}",
                         "Accept": "application/json",
@@ -882,6 +948,56 @@ class TeamilyGeoAClient:
             )
             self._log_audit("DIRECT_1A1_EXCEPTION", {"error": err_msg, "latency_ms": elapsed_ms})
             return res_obj
+
+    def poll_run(
+        self,
+        poll_url: str,
+        server_key: Optional[str] = None,
+        timeout: float = 20.0
+    ) -> Tuple[int, Dict[str, Any]]:
+        """
+        Consulta UNA vez el poll_url de un run de Teamily y devuelve (http_status, json).
+        No duerme ni itera: el bucle lo controla quien llama (server.py), que
+        registra el estado en el servidor y deja que el navegador sondee al portal.
+        """
+        key = server_key or self.server_key
+        if not key or not poll_url:
+            return 0, {"error": "poll_url o server_key ausente"}
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Accept": "application/json",
+            "User-Agent": "MrsPets-Teamily-Run-Poller/2.4 (Maracaibo, Venezuela)"
+        }
+        ssl_ctx = ssl.create_default_context()
+        try:
+            if os.path.exists("/private/etc/ssl/cert.pem"):
+                ssl_ctx.load_verify_locations(cafile="/private/etc/ssl/cert.pem")
+        except Exception:
+            pass
+        try:
+            req = urllib.request.Request(url=poll_url, headers=headers, method="GET")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout, context=ssl_ctx) as resp:
+                    status = resp.status
+                    raw = resp.read().decode("utf-8")
+            except ssl.SSLCertVerificationError:
+                with urllib.request.urlopen(req, timeout=timeout, context=ssl._create_unverified_context()) as resp:
+                    status = resp.status
+                    raw = resp.read().decode("utf-8")
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {"raw": raw}
+            return status, data if isinstance(data, dict) else {"result": data}
+        except urllib.error.HTTPError as he:
+            try:
+                body = he.read().decode("utf-8")
+                parsed = json.loads(body)
+            except Exception:
+                parsed = {"error": str(he)}
+            return he.code, parsed if isinstance(parsed, dict) else {"error": str(he)}
+        except Exception as ex:
+            return 0, {"error": str(ex)}
 
     def ask_leia(self, prompt: str, thread_mode: str = "new", wait: bool = True) -> TeamilyGeoAResponse:
         """Método de conveniencia para invocar al agente GEO A (Leia) de Teamily."""
