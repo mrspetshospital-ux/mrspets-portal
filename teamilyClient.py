@@ -87,9 +87,8 @@ MARGARETTE_AGENT_ENDPOINT = (
     or "https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses"
 )
 MARGARETTE_SERVER_KEY = (
-    os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY")
-    or "tmly_sk_live_ZxJfZ8FwNl1jctbXibrFZXIPlQMccwW3wUhw-jOASlo"
-)
+    os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY") or ""
+).strip()
 
 # Clave dedicada para el agente LEIA / Margarette en Teamily (leia-ceo-assistant)
 DEFAULT_LEIA_SERVER_KEY = (
@@ -409,7 +408,8 @@ class TeamilyGeoAClient:
 
         # C1: Si no hay credencial configurada en entorno, fallar de inmediato con error claro y tipado
         if not target_server_key:
-            err_msg = "Credencial no configurada: TEAMILY_SERVER_KEY requerida"
+            err_var = "TEAMILY_MARGARETTE_SERVER_KEY" if "margarette" in str(target_endpoint).lower() else "TEAMILY_SERVER_KEY"
+            err_msg = f"Credencial no configurada: {err_var} requerida"
             res_obj = TeamilyGeoAResponse(
                 status_code=401,
                 success=False,

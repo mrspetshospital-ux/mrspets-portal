@@ -1,8 +1,19 @@
 __pycache__/
 *.pyc
 .env
+.env.*
+.env*.local
 mrspets_local.db
 mrspets_local.db-wal
 mrspets_local.db-shm
 logs/
 *.jsonl
+
+# Credenciales, cuentas de servicio y secretos
+*credential*
+*secret*
+*key*.json
+*service_account*.json
+credentials.json
+service_account.json
+client_secret*.json
