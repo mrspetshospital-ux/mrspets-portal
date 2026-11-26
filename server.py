@@ -7591,11 +7591,16 @@ async def teamily_chat(request: Request):
     # Texto que efectivamente recibe el agente, con el hilo antepuesto.
     msg_with_hilo = f"[HILO: {hilo_in}]\n{msg}" if msg else msg
 
-    agent = (body_agent or qp_agent or ("volturi_direct" if is_direct_1a1 else "margaret")).lower()
+    agent = str(body_agent or qp_agent or ("volturi_direct" if is_direct_1a1 else "margaret")).lower().strip()
     session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
 
+    MARGARET_IDENTIFIERS = {
+        "margaret", "margarette", "9000408632300095", "leia", "leire",
+        "atencion", "atención", "recepcion", "recepción", "cliente", "planta"
+    }
+
     # Margaret / Margarette: Recepción & Atención al Cliente (exclusivo para clientes / avatar web, nunca para 1 a 1 del Volturi)
-    if not is_direct_1a1 and agent in ["margaret", "margarette", "atencion", "atención", "recepcion", "recepción", "cliente"]:
+    if not is_direct_1a1 and agent in MARGARET_IDENTIFIERS:
         res_text = ""
         bcv_cfg = get_bcv_config_data()
         eff_rate = bcv_cfg.get("effective_rate", 914.02)
@@ -7637,6 +7642,8 @@ async def teamily_chat(request: Request):
         )
 
         res_text = orch["reply"]
+        if res_text:
+            res_text = re.sub(r'\bLeire\b', 'LEIA', res_text)
         responder_agent = orch["agent"]
         responder_name = orch["agent_name"]
         model_used = orch["model_used"]
@@ -7834,6 +7841,23 @@ async def teamily_chat(request: Request):
     # Resolver recipient_user_id si no fue provisto explícitamente
     if not recipient_user_id and target_slug in SLUG_TO_VOLTURI_USER_ID:
         recipient_user_id = SLUG_TO_VOLTURI_USER_ID[target_slug]
+    elif not recipient_user_id and target_slug in VOLTURI_OFFICIAL_AGENTS_MAP:
+        recipient_user_id = target_slug
+
+    # Eliminación de fallback silencioso: si el agente no es Charly ni un miembro oficial, devolver 404
+    if target_slug not in ("charly", "charlie", "geo-a", "geo_a") and recipient_user_id not in VOLTURI_OFFICIAL_AGENTS_MAP:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "agent": target_slug,
+                "error": f"Agente '{body_agent or qp_agent or agent}' no encontrado o no registrado en el ecosistema.",
+                "code": 404,
+                "sender_user_id": sender_user_id,
+                "recipient_user_id": recipient_user_id or "desconocido",
+                "reply": f"⚠️ Error HTTP 404: El agente '{body_agent or qp_agent or agent}' no existe en el catálogo de Mrs. Pets."
+            }
+        )
 
     # Validación estricta de destinatario si se pasó un recipient_user_id explícito
     if recipient_user_id and recipient_user_id not in VOLTURI_OFFICIAL_AGENTS_MAP and target_slug not in ("charly", "charlie"):
