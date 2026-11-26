@@ -2588,23 +2588,21 @@ async def _execute_teamily_channel(
 
     t0 = time.time()
     try:
+        from teamilyClient import MARGARETTE_AGENT_ENDPOINT, MARGARETTE_SERVER_KEY
         teamily_input = msg
-        target_margarette_id = MARGARETTE_TEAMILY_USER_ID or "9000408632300095"
-        if f"@{target_margarette_id}" not in teamily_input:
-            teamily_input = f"[@{target_margarette_id}] {teamily_input}"
-        elif not teamily_input.strip().startswith(f"[@{target_margarette_id}]"):
-            teamily_input = f"[@{target_margarette_id}] {teamily_input}"
-
-        cabal_group = os.environ.get("TEAMILY_CABAL_GROUP_ID") or os.environ.get("TEAMILY_GROUP_ID") or "524471990"
         req = TeamilyGeoARequest(
             input=teamily_input,
-            group_id=cabal_group,
             session_id=session_id,
-            is_customer=False,
+            is_customer=is_customer,
             timeout=timeout_sec
         )
         res = await asyncio.wait_for(
-            asyncio.to_thread(teamily_geo_a_client.send_message, req),
+            asyncio.to_thread(
+                teamily_geo_a_client.send_message,
+                req,
+                endpoint_override=MARGARETTE_AGENT_ENDPOINT,
+                server_key_override=MARGARETTE_SERVER_KEY
+            ),
             timeout=timeout_sec + 5.0
         )
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
@@ -7725,6 +7723,21 @@ async def teamily_chat(request: Request):
                 channel_id="deliberacion",
                 sender_id="system"
             )
+
+        # Registro en el histórico de Google Sheets (no bloqueante)
+        try:
+            from historicoSheetsService import historico_service as _hs
+            _reg = _hs.append_consulta(
+                solicitante=str(u_name or body.get("solicitante") or "Cliente Avatar Web").strip(),
+                agente="Margarette Gerente de Planta",
+                consulta=str(msg or "").strip(),
+                respuesta=str(out_response.get("reply") or "").strip(),
+                estado="respondido" if out_response.get("reply") else "pendiente",
+                hilo=hilo_in
+            )
+            out_response["historico"] = _reg
+        except Exception as _e_reg:
+            log.warning("No se pudo registrar en Google Sheets desde Avatar: %s", _e_reg)
 
         return out_response
 

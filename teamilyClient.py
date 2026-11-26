@@ -81,10 +81,20 @@ DEFAULT_CABAL_GROUP_ID = (
 # Timeout base canónico: 90s según directriz Volturi
 DEFAULT_TIMEOUT = int(os.environ.get("TEAMILY_TIMEOUT_SEC", 90))
 
+# Margarette Gerente de Planta (Atención al Cliente / Recepción VIP / Avatar)
+MARGARETTE_AGENT_ENDPOINT = (
+    os.environ.get("TEAMILY_MARGARETTE_ENDPOINT")
+    or "https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses"
+)
+MARGARETTE_SERVER_KEY = (
+    os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY")
+    or "tmly_sk_live_ZxJfZ8FwNl1jctbXibrFZXIPlQMccwW3wUhw-jOASlo"
+)
+
 # Clave dedicada para el agente LEIA / Margarette en Teamily (leia-ceo-assistant)
 DEFAULT_LEIA_SERVER_KEY = (
     os.environ.get("TEAMILY_LEIA_SERVER_KEY")
-    or "tmly_sk_live_EMeHUTBTfJO2z1DoEwBM1pmeFVi62PHPHsy9Lf21vug"
+    or MARGARETTE_SERVER_KEY
 )
 
 # C1: Credencial del servidor cargada desde variable de entorno o fallback certificado
@@ -1043,6 +1053,10 @@ class TeamilyGeoAClient:
 
 # Instancia canónica singleton
 teamily_geo_a_client = TeamilyGeoAClient()
+teamily_margarette_client = TeamilyGeoAClient(
+    endpoint=MARGARETTE_AGENT_ENDPOINT,
+    server_key=MARGARETTE_SERVER_KEY
+)
 
 if __name__ == "__main__":
     print(f"=== TEST CONEXIÓN DIRECTA TEAMILY GEO A (LEIA) ===")
