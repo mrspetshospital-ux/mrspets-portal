@@ -7744,11 +7744,12 @@ async def teamily_chat(request: Request):
                 sender_id="system"
             )
 
-        # Registro en el histórico de Google Sheets (no bloqueante)
+        # Registro en el histórico de Google Sheets (no bloqueante para la respuesta al cliente)
         try:
             from historicoSheetsService import historico_service as _hs
+            solicitante_in = str(u_name or body.get("solicitante") or "").strip()
             _reg = _hs.append_consulta(
-                solicitante=str(u_name or body.get("solicitante") or "Cliente Avatar Web").strip(),
+                solicitante=solicitante_in or "NO DISPONIBLE",
                 agente="Margarette Gerente de Planta",
                 consulta=str(msg or "").strip(),
                 respuesta=str(out_response.get("reply") or "").strip(),
@@ -7756,8 +7757,10 @@ async def teamily_chat(request: Request):
                 hilo=hilo_in
             )
             out_response["historico"] = _reg
+            if not _reg.get("success"):
+                log.warning("Fallo en registro en Histórico Sheet: %s (%s)", _reg.get("error"), _reg.get("error_detail"))
         except Exception as _e_reg:
-            log.warning("No se pudo registrar en Google Sheets desde Avatar: %s", _e_reg)
+            log.warning("Excepción registrando en Google Sheets desde Avatar: %s", _e_reg)
 
         return out_response
 

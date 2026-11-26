@@ -583,9 +583,25 @@ class HistoricoConsultasService:
         """
         self.validate_spreadsheet_target(self.spreadsheet_id, self.tab_name)
 
-        now = datetime.datetime.now()
+        # Zona horaria oficial Caracas (UTC-4)
+        vet_tz = datetime.timezone(datetime.timedelta(hours=-4))
+        now = datetime.datetime.now(vet_tz)
         fecha_val = fecha or now.strftime("%Y-%m-%d %H:%M")
         hilo_val = (hilo or "").strip() or self.generate_hilo(now)
+
+        solicitante_clean = str(solicitante or "").strip()
+        if not solicitante_clean or solicitante_clean.lower() in ("cliente vip", "invitado", "cliente", "visitante", "portal mrs pets", "cliente avatar web"):
+            solicitante_val = "NO DISPONIBLE"
+        else:
+            solicitante_val = solicitante_clean
+
+        agente_clean = str(agente or "").strip()
+        if not agente_clean:
+            agente_val = "Margarette Gerente de Planta"
+        elif "margaret" in agente_clean.lower():
+            agente_val = "Margarette Gerente de Planta"
+        else:
+            agente_val = agente_clean
 
         estado_norm = str(estado or "").strip().lower()
         if estado_norm not in ("pendiente", "respondido"):
@@ -596,11 +612,11 @@ class HistoricoConsultasService:
         else:
             fecha_resp_val = fecha_respuesta or ""
 
-        # Orden estricto de las 8 columnas del esquema
+        # Orden estricto de las 8 columnas del esquema (A->H)
         row = [
             fecha_val,
-            str(solicitante or "").strip(),
-            str(agente or "").strip(),
+            solicitante_val,
+            agente_val,
             str(consulta or "").strip(),
             str(respuesta or "").strip(),
             estado_norm,
@@ -610,6 +626,7 @@ class HistoricoConsultasService:
 
         token, err = self._get_service_account_token("https://www.googleapis.com/auth/spreadsheets")
         if not token:
+            log.warning("Fallo al autenticar para escribir en Histórico Sheet: %s", err)
             return {
                 "success": False,
                 "error": "AUTH_ERROR",
