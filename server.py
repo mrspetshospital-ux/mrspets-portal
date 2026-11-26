@@ -7865,8 +7865,6 @@ async def teamily_chat(request: Request):
                 "agent": target_slug,
                 "error": f"Agente '{body_agent or qp_agent or agent}' no encontrado o no registrado en el ecosistema.",
                 "code": 404,
-                "sender_user_id": sender_user_id,
-                "recipient_user_id": recipient_user_id or "desconocido",
                 "reply": f"⚠️ Error HTTP 404: El agente '{body_agent or qp_agent or agent}' no existe en el catálogo de Mrs. Pets."
             }
         )
@@ -8583,13 +8581,34 @@ def healthz(request: Request):
 </html>"""
         return HTMLResponse(content=html, status_code=200)
 
+    commit_sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or "7c72565"
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or "dep-dc4b1mc9v7es73ed460g"
     return {
         "ok": True,
         "status": "healthy",
         "service": "mrspets-portal",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "database": "postgres" if db.IS_POSTGRES else "sqlite",
-        "version": "2.4.0"
+        "version": "2.4.0",
+        "commit": commit_sha,
+        "deploy_id": deploy_id
+    }
+
+
+@app.get("/api/v1/version")
+@app.get("/api/v1/build")
+@app.get("/api/v1/info")
+def get_service_version_info():
+    """Expone información verificable de versión, commit y despliegue para auditoría técnica."""
+    commit_sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or "7c72565"
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or "dep-dc4b1mc9v7es73ed460g"
+    return {
+        "service": "mrspets-portal",
+        "version": "2.4.0",
+        "commit": commit_sha,
+        "deploy_id": deploy_id,
+        "database": "postgres" if db.IS_POSTGRES else "sqlite",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
