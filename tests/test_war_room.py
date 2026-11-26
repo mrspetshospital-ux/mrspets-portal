@@ -560,6 +560,7 @@ class TestWarRoomEngine(unittest.TestCase):
         war_room_engine.teamily_paused = False
         war_room_engine.alerts_paused = False
         war_room_engine.node_configs["gemini_model"] = "gemini-3.8-flash"
+        war_room_engine.node_configs["gemini_api_key"] = "test-mock-gemini-key"
 
         # Mockear respuesta de Gemini 3.8 Flash para la Vía Directa de AntiGravity
         mock_resp = MagicMock()

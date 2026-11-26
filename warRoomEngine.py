@@ -64,30 +64,16 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 WAR_ROOM_AUDIT_FILE = os.path.join(LOGS_DIR, "war_room_audit.jsonl")
 
 def _get_default_gemini_key() -> str:
-    k = os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
-    if not k:
-        try:
-            import base64
-            k = base64.b64decode("QVEuQWI4Uk42SVZZR096ejZBUXFWbnNxTlJkdmFVM3g0SVFVcmZoaWl6RlN2S3o2dlYyZGc=").decode("utf-8")
-        except Exception:
-            k = ""
-    return k
+    return os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
 
 def _get_default_teamily_key() -> str:
-    k = (
+    return (
         os.environ.get("TEAMILEY_SERVER_KEY", "").strip()
         or os.environ.get("TEAMILY_SERVER_KEY", "").strip()
         or os.environ.get("TEAMLY_SERVER_KEY", "").strip()
         or os.environ.get("TEAMILEY_API_KEY", "").strip()
         or os.environ.get("TEAMILY_API_KEY", "").strip()
     )
-    if not k:
-        try:
-            import base64
-            k = base64.b64decode("dG1seV9za19saXZlXy0ySVh5THVaTVpEOVVPRkRkcm00dVVGQld0cm93MGs0NFB2Q1R4OFZhYzg=").decode("utf-8")
-        except Exception:
-            k = ""
-    return k
 
 # =====================================================================
 # MAPA DE CANALES INDEPENDIENTES Y PARTICIPANTES DEL CUARTO DE GUERRA

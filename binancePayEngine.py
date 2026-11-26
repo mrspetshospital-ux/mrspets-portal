@@ -88,6 +88,7 @@ class BinancePayEngine:
             "BINANCE_PAY_BASE_URL",
             "https://bpay.binanceapi.com"
         ).rstrip("/")
+        self.return_url_default = os.environ.get("BINANCE_PAY_RETURN_URL", "").strip()
 
     def get_public_config(self) -> Dict[str, Any]:
         """Retorna la configuración pública segura para el frontend."""
@@ -230,7 +231,7 @@ class BinancePayEngine:
 
         # URLs de redirección predeterminadas
         base_portal = "https://mrspets-portal.onrender.com"
-        r_url = return_url or f"{base_portal}/#/checkout-success?order={merchant_trade_no}"
+        r_url = return_url or self.return_url_default or f"{base_portal}/#/checkout-success?order={merchant_trade_no}"
         c_url = cancel_url or f"{base_portal}/#/checkout-cancel?order={merchant_trade_no}"
 
         # Payload oficial OpenAPI v2 de Binance Pay

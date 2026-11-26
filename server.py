@@ -157,12 +157,35 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------
+def validate_startup_critical_env():
+    """Audita en el arranque las variables de entorno críticas mostrando únicamente su nombre y estado (nunca valores ni secretos)."""
+    CRITICAL_ENV_SPECS = [
+        ("DATABASE_URL", "Conexión a PostgreSQL en Render/Neon (Obligatoria para persistencia transaccional)"),
+        ("SECRET_KEY", "Firma y cifrado seguro de sesiones de usuario (Crítica)"),
+        ("TEAMILY_MARGARETTE_SERVER_KEY", "Autenticación del canal Avatar hacia Margarette en Teamily"),
+        ("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON", "Credencial Service Account para persistencia en pestaña Histórico"),
+        ("MAKE_API_KEY", "Autenticación para webhooks de automatización con Make.com"),
+        ("ELEVENLABS_API_KEY", "Generación de voz neuronal (TTS) para el avatar LEIA"),
+        ("BINANCE_PAY_API_KEY", "Certificate-SN / API Key emitida por Binance Pay Merchant Portal"),
+        ("BINANCE_PAY_SECRET_KEY", "Secret Key de comercio para firma criptográfica HMAC-SHA512"),
+    ]
+    log.info("========== [AUDITORÍA DE ARRANQUE — VARIABLES CRÍTICAS] ==========")
+    for var_name, desc in CRITICAL_ENV_SPECS:
+        val = os.environ.get(var_name, "").strip()
+        if val:
+            log.info("  ✓ %-35s : [CONFIGURADA]", var_name)
+        else:
+            log.warning("  ✗ %-35s : [NO CONFIGURADA EN RENDER] — %s", var_name, desc)
+    log.info("==================================================================")
+
+
 # Arranque
 # ---------------------------------------------------------------------
 @app.on_event("startup")
 def _startup():
     log.info("Arrancando Mrs Pets staging | motor=%s",
              "postgres" if db.IS_POSTGRES else "sqlite")
+    validate_startup_critical_env()
     try:
         db.init_schema()
     except Exception as e:
@@ -2301,14 +2324,7 @@ def _async_notify_make_webhook(webhook_url: str, payload: dict):
 
 
 def _get_default_gemini_key() -> str:
-    k = os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
-    if not k:
-        try:
-            import base64
-            k = base64.b64decode("QVEuQWI4Uk42SVZZR096ejZBUXFWbnNxTlJkdmFVM3g0SVFVcmZoaWl6RlN2S3o2dlYyZGc=").decode("utf-8")
-        except Exception:
-            k = ""
-    return k
+    return os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
 
 
 MARGARET_RECEPTIONIST_SYSTEM_PROMPT = """Eres MARGARETTE, Gerente de Planta y Atención al Cliente de Mrs. Pets

@@ -82,5 +82,10 @@ class TestHistoricoServiceIntegration(unittest.TestCase):
             self.assertIn("Histórico", content)
             self.assertIn("NO DISPONIBLE", content)
 
+    def test_startup_critical_env_validator(self):
+        """Verifica que la función de validación de variables críticas se ejecute sin excepciones."""
+        from server import validate_startup_critical_env
+        validate_startup_critical_env()
+
 if __name__ == "__main__":
     unittest.main()
