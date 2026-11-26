@@ -186,8 +186,7 @@ class CentralitaRouter:
         # Variantes comunes de slugs
         if slug in ["nanami", "ceo_assistant", "asistencia_ceo"]:
             return "nanami", AGENT_REGISTRY["nanami"]["name"]
-        if slug in ["leia", "concierge", "vip", "leire", "leira"]:
-            # Regla Global: NO existe Leire ni Leira. Es LEIA (marca pública de Margarette)
+        if slug in ["leia", "concierge", "vip"]:
             return "leia", AGENT_REGISTRY["leia"]["name"]
         if slug in ["atencion", "atención", "atencion_cliente", "atención_cliente", "customer_service", "queja", "reclamo", "margarette", "recepcion", "recepción"]:
             return "margaret", AGENT_REGISTRY["margaret"]["name"]
@@ -201,7 +200,7 @@ class CentralitaRouter:
         # 2. Análisis por mención explícita @ en el texto
         if any(k in inp_lower for k in ["@nanami", "nanami"]):
             return "nanami", AGENT_REGISTRY["nanami"]["name"]
-        if any(k in inp_lower for k in ["@leia", "leia concier", "leia", "leire", "leira"]):
+        if any(k in inp_lower for k in ["@leia", "leia concier", "leia"]):
             return "leia", AGENT_REGISTRY["leia"]["name"]
         if any(k in inp_lower for k in ["@margaret", "@margarette", "margaret", "margarette"]):
             return "margaret", AGENT_REGISTRY["margaret"]["name"]
@@ -286,9 +285,6 @@ class CentralitaRouter:
             if any(w in inp_lower for w in ["quién eres", "quien eres", "cómo te llamas", "como te llamas", "tu nombre"]):
                 return "🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\nSoy NANAMI, Asistente Ejecutiva del CEO (Dalybell) en Mrs. Pets (Big & Little Dogs, C.A.), dentro del Ecosistema Teamily."
 
-            if any(w in inp_lower for w in ["leire", "leira"]):
-                return "🎀 **NANAMI (Asistente Ejecutiva del CEO):**\n\n'Leire' y 'Leira' no existen. Son variantes mal escritas de LEIA (marca pública de Margarette). Yo soy NANAMI, Asistente Ejecutiva del CEO."
-
             urgencia = ["muriendo", "murió", "sangra", "sangrado", "convulsión", "convulsion", "envenen", "atropell", "no respira", "emergencia", "urgente", "grave"]
             if any(u in inp_lower for u in urgencia):
                 return (
@@ -302,14 +298,10 @@ class CentralitaRouter:
             )
 
         # 2. MARGARETTE (Gerente de Planta y Atención al Cliente - Marca Pública: LEIA)
-        if slug in ["margaret", "margarette", "leia", "leire", "leira", "atencion", "recepcion"]:
-            as_leia = bool(slug in ["leia", "leire", "leira"] or ctx.get("as_leia") or ctx.get("persona") == "leia" or (ctx.get("channel") and "Widget" in str(ctx.get("channel"))))
+        if slug in ["margaret", "margarette", "leia", "atencion", "recepcion"]:
+            as_leia = bool(slug in ["leia"] or ctx.get("as_leia") or ctx.get("persona") == "leia" or (ctx.get("channel") and "Widget" in str(ctx.get("channel"))))
             pfx = "🎀 **LEIA / Leia (Concierge VIP & Atención):**" if as_leia else "👩‍💼 **Margaret (Gerente de Planta & Atención al Cliente):**"
             intro = "Soy **LEIA (Leia) 🎀**, tu Concierge VIP de **Mrs. Pets**" if as_leia else "Le atiende **Margaret**, Gerente de Planta y Atención al Cliente de **Mrs. Pets**"
-
-            # REGLA GLOBAL: NO existe Leire ni Leira. Es LEIA (marca pública de Margarette)
-            if any(w in inp_lower for w in ["leire", "leira"]) or slug in ["leire", "leira"]:
-                return "Soy LEIA. Leire no existe, es una variante mal escrita de mi nombre. Soy LEIA, la marca pública de Margarette, Gerente de Planta y Atención al Cliente de Mrs. Pets (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily. ¿En qué puedo ayudarte hoy?"
 
             # IDENTIDAD / PREGUNTA "¿QUIÉN ERES?": Se presenta siempre como LEIA
             if any(w in inp_lower for w in ["quién eres", "quien eres", "cómo te llamas", "como te llamas", "tu nombre", "quien sos"]):

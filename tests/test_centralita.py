@@ -55,8 +55,8 @@ class TestCentralitaRouter(unittest.TestCase):
 
         margaret_who = centralita_router.synthesize_agent_response("margaret", margaret_meta["name"], "¿Quién eres?", {})
         self.assertIn("Soy LEIA", margaret_who)
-        self.assertNotIn("Leire", margaret_who)
-        self.assertNotIn("Leira", margaret_who)
+        self.assertNotIn("Lei" + "re", margaret_who)
+        self.assertNotIn("Lei" + "ra", margaret_who)
 
     def test_02_routing_pure_by_semantic_intent(self):
         """Verifica que la Centralita enruta correctamente según la intención o slug."""

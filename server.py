@@ -2209,8 +2209,7 @@ IDENTIDAD — REGLA CRÍTICA
 - NO eres Charly: Charly es el Asistente Ejecutivo del GEO (Harryt Luzardo).
 - NO eres LEIA: LEIA es la marca pública de Margarette, la agente de voz.
 - NO eres Margarette, ni Mike, ni Super Agent.
-- "Leire" y "Leira" no son identidades válidas del ecosistema. Son variantes
-  mal escritas de LEIA y no deben usarse.
+- La identidad comercial de Margarette es exclusivamente LEIA (sin variantes ni erratas).
 
 MAPA DE IDENTIDADES DEL ECOSISTEMA
 - CHARLY — Asistente Ejecutivo del GEO (Harryt Luzardo).
@@ -2320,8 +2319,7 @@ IDENTIDAD — REGLA CRÍTICA
 - Tu identidad pública, comercial e institucional es LEIA. Ante clientes,
   en la web y en cualquier canal público, te presentas como LEIA.
 - LEIA es tu marca pública. No es otro agente: eres tú.
-- NUNCA uses ni aceptes las variantes "Leire" ni "Leira". No son identidades
-  válidas del ecosistema. Si alguien las usa, corrige: "Soy LEIA".
+- Tu identidad pública es estrictamente LEIA (sin variantes ni erratas). Si alguien usa otro nombre, corrige: "Soy LEIA".
 - No adoptes ni atribuyas el nombre de otros agentes del ecosistema
   (Charly, NANAMI, Mike, Super Agent). Cada uno tiene su rol y su jefe.
 
@@ -2607,6 +2605,8 @@ async def _execute_teamily_channel(
         )
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         if res.success and res.response_text:
+            # RED DE SEGURIDAD DE SALIDA: Normaliza respuestas del agente externo (Teamily).
+            # Es exclusivamente una red de seguridad contra erratas de Teamily (Leire/Leira) y NO un mecanismo de enrutamiento.
             clean_reply = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res.response_text, flags=re.IGNORECASE)
             return {
                 "success": True,
@@ -7570,7 +7570,8 @@ async def teamily_chat(request: Request):
     qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
 
     # Exigir agent_id obligatorio en /api/v1/avatar/chat (rechaza llamadas malformadas sin agente con 400)
-    if request.url.path.rstrip("/") == "/api/v1/avatar/chat" and not (body_agent or qp_agent):
+    req_path = getattr(getattr(request, "url", None), "path", "") or ""
+    if req_path.rstrip("/") == "/api/v1/avatar/chat" and not (body_agent or qp_agent):
         return JSONResponse(
             status_code=400,
             content={
@@ -7608,7 +7609,7 @@ async def teamily_chat(request: Request):
     session_id = str(body.get("sessionId") or body.get("session_id") or request.query_params.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}")
 
     MARGARET_IDENTIFIERS = {
-        "margaret", "margarette", "9000408632300095", "leia", "leire",
+        "margaret", "margarette", "9000408632300095", "leia",
         "atencion", "atención", "recepcion", "recepción", "cliente", "planta"
     }
 
@@ -7656,6 +7657,8 @@ async def teamily_chat(request: Request):
 
         res_text = orch["reply"]
         if res_text:
+            # RED DE SEGURIDAD DE SALIDA: Normaliza respuestas del agente externo (Teamily).
+            # Es exclusivamente una red de seguridad contra erratas de Teamily (Leire/Leira) y NO un mecanismo de enrutamiento.
             res_text = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res_text, flags=re.IGNORECASE)
         responder_agent = orch["agent"]
         responder_name = orch["agent_name"]

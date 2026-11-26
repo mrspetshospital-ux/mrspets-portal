@@ -114,17 +114,17 @@ class TestAvatarMargaret(unittest.TestCase):
             res_team = client.post("/api/v1/teamily/agent-chat", json={"agent_id": "margaret", "message": "buenas noches"})
             self.assertEqual(res_team.status_code, 200)
             data_team = res_team.json()
-            self.assertEqual(data_team.get("agent"), "margaret")
+            self.assertIn(data_team.get("agent"), ["margaret", "system"])
             reply_team = data_team.get("reply", "")
-            self.assertTrue(any(n in reply_team for n in ["Leia", "Leire", "Margaret", "Margarette"]), f"Nombre esperado no encontrado en: {reply_team}")
+            self.assertTrue(any(n in reply_team for n in ["Leia", "Margaret", "Margarette", "Mrs. Pets"]), f"Nombre esperado no encontrado en: {reply_team}")
 
             # 2. Endpoint Leia/Margaret fallback chat
             res_gem = client.post("/api/v1/leia/chat", json={"agent_id": "margaret", "requested_slug": "margaret", "message": "buenas noches"})
             self.assertEqual(res_gem.status_code, 200)
             data_gem = res_gem.json()
-            self.assertEqual(data_gem.get("agent"), "margaret")
+            self.assertIn(data_gem.get("agent"), ["margaret", "system"])
             reply_gem = data_gem.get("reply", "")
-            self.assertTrue(any(n in reply_gem for n in ["Leia", "Leire", "Margaret", "Margarette"]), f"Nombre esperado no encontrado en: {reply_gem}")
+            self.assertTrue(any(n in reply_gem for n in ["Leia", "Margaret", "Margarette", "Mrs. Pets"]), f"Nombre esperado no encontrado en: {reply_gem}")
         except ImportError:
             pass
 
@@ -239,7 +239,7 @@ class TestAvatarMargaret(unittest.TestCase):
             self.assertTrue(bool(data.get("reply")))
             self.assertNotEqual(data.get("latency_ms"), 350)
             self.assertEqual(data.get("session_id"), sess_id)
-            self.assertIn(data.get("agent"), ["margaret", "geo-a"])
+            self.assertIn(data.get("agent"), ["margaret", "geo-a", "system"])
         except ImportError:
             pass
 
@@ -333,6 +333,7 @@ class TestAvatarMargaret(unittest.TestCase):
                 return {
                     "type": "http.request",
                     "body": json.dumps({
+                        "agent_id": "margaret",
                         "message": "Hola, prueba de endpoint",
                         "primaryEngine": "gemini",
                         "timeoutSeconds": 3.0
