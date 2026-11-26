@@ -403,7 +403,12 @@ class TeamilyGeoAClient:
             payload.pop("board_id", None)
 
         target_endpoint = normalize_teamily_endpoint(endpoint_override or getattr(request, "endpoint", None) or self.endpoint, default_endpoint=self.endpoint)
-        target_server_key = server_key_override or self.server_key
+        if server_key_override is not None:
+            target_server_key = (server_key_override or "").strip()
+        elif "margarette" in str(target_endpoint).lower():
+            target_server_key = (MARGARETTE_SERVER_KEY or "").strip()
+        else:
+            target_server_key = (self.server_key or "").strip()
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 
         # C1: Si no hay credencial configurada en entorno, fallar de inmediato con error claro y tipado

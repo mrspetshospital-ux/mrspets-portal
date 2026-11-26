@@ -2724,11 +2724,12 @@ async def _execute_gemini_channel(
         )
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         if gem_res.get("success") and gem_res.get("reply"):
+            agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else (globals().get("AGENT_REGISTRY") or {}).get(requested_agent, {}).get("name", requested_agent)
             return {
                 "success": True,
                 "reply": gem_res["reply"],
                 "agent": requested_agent,
-                "agent_name": "Leia Concierge VIP (Google Gemini)",
+                "agent_name": agent_disp,
                 "model_used": gem_res.get("model_used", "gemini-flash-latest"),
                 "channel": "gemini",
                 "latency_ms": elapsed_ms,
@@ -2889,7 +2890,8 @@ async def orchestrate_dual_ai_chat(
         if gem_fallback.get("success") and gem_fallback.get("reply"):
             reply_text = gem_fallback["reply"]
             responder_agent = gem_fallback.get("agent", requested_agent)
-            responder_name = gem_fallback.get("agent_name", "Leia Concierge VIP (Google Gemini)")
+            agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else gem_fallback.get("agent_name", requested_agent)
+            responder_name = agent_disp
             model_used = gem_fallback.get("model_used", "gemini-flash-latest")
             if res:
                 res["channel"] = "gemini"
@@ -2911,7 +2913,8 @@ async def orchestrate_dual_ai_chat(
         model_used = "fallback-sistema"
     else:
         responder_agent = res.get("agent", requested_agent)
-        responder_name = res.get("agent_name", "Leia Concierge VIP")
+        agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if responder_agent in ("margaret", "margarette", "leia") else res.get("agent_name", "Leia Concierge VIP")
+        responder_name = agent_disp
         model_used = res.get("model_used", "dual-engine")
 
     return {
@@ -7632,8 +7635,8 @@ async def teamily_chat(request: Request):
         else:
             primary_engine = "teamily"
 
-        timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 90.0)
-        timeout_sec = timeout_in if "unittest" in sys.modules else max(timeout_in, 90.0)
+        timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 20.0)
+        timeout_sec = timeout_in if "unittest" in sys.modules else max(3.0, min(timeout_in, 45.0))
         user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
         is_customer = (user_type not in ["staff", "staff_admin", "admin", "war_room"])
 
@@ -7885,8 +7888,6 @@ async def teamily_chat(request: Request):
                 "agent": target_slug,
                 "error": f"Destinatario inválido: {recipient_user_id}. No es un agente registrado del Comité Volturi.",
                 "code": 400,
-                "sender_user_id": sender_user_id,
-                "recipient_user_id": recipient_user_id,
                 "reply": f"⚠️ Error HTTP 400: Destinatario inválido ({recipient_user_id})."
             }
         )
@@ -8595,11 +8596,11 @@ def healthz(request: Request):
                 import subprocess
                 c = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
             except Exception:
-                c = "4d8b965"
+                c = "e83517c"
         return c
 
     commit_sha = _dyn_git_commit()
-    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or "dep-dc4b5ed6e07s73en71r0"
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or None
     build_id = os.environ.get("RENDER_BUILD_ID") or commit_sha[:7]
     return {
         "ok": True,
@@ -8626,11 +8627,11 @@ def get_service_version_info():
                 import subprocess
                 c = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
             except Exception:
-                c = "4d8b965"
+                c = "e83517c"
         return c
 
     commit_sha = _dyn_git_commit()
-    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or "dep-dc4b5ed6e07s73en71r0"
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or None
     build_id = os.environ.get("RENDER_BUILD_ID") or commit_sha[:7]
     return {
         "service": "mrspets-portal",
