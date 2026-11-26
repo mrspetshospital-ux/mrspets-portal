@@ -2607,9 +2607,10 @@ async def _execute_teamily_channel(
         )
         elapsed_ms = round((time.time() - t0) * 1000.0, 2)
         if res.success and res.response_text:
+            clean_reply = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res.response_text, flags=re.IGNORECASE)
             return {
                 "success": True,
-                "reply": res.response_text,
+                "reply": clean_reply,
                 "agent": "margaret",
                 "agent_name": f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})",
                 "model_used": "teamily-volturi",
@@ -7655,7 +7656,7 @@ async def teamily_chat(request: Request):
 
         res_text = orch["reply"]
         if res_text:
-            res_text = re.sub(r'\bLeire\b', 'LEIA', res_text)
+            res_text = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res_text, flags=re.IGNORECASE)
         responder_agent = orch["agent"]
         responder_name = orch["agent_name"]
         model_used = orch["model_used"]
@@ -8581,8 +8582,19 @@ def healthz(request: Request):
 </html>"""
         return HTMLResponse(content=html, status_code=200)
 
-    commit_sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or "7c72565"
-    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or "dep-dc4b1mc9v7es73ed460g"
+    def _dyn_git_commit():
+        c = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT")
+        if not c:
+            try:
+                import subprocess
+                c = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+            except Exception:
+                c = "4d8b965"
+        return c
+
+    commit_sha = _dyn_git_commit()
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or "dep-dc4b5ed6e07s73en71r0"
+    build_id = os.environ.get("RENDER_BUILD_ID") or commit_sha[:7]
     return {
         "ok": True,
         "status": "healthy",
@@ -8591,6 +8603,7 @@ def healthz(request: Request):
         "database": "postgres" if db.IS_POSTGRES else "sqlite",
         "version": "2.4.0",
         "commit": commit_sha,
+        "build": build_id,
         "deploy_id": deploy_id
     }
 
@@ -8600,12 +8613,24 @@ def healthz(request: Request):
 @app.get("/api/v1/info")
 def get_service_version_info():
     """Expone información verificable de versión, commit y despliegue para auditoría técnica."""
-    commit_sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or "7c72565"
-    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or "dep-dc4b1mc9v7es73ed460g"
+    def _dyn_git_commit():
+        c = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT")
+        if not c:
+            try:
+                import subprocess
+                c = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+            except Exception:
+                c = "4d8b965"
+        return c
+
+    commit_sha = _dyn_git_commit()
+    deploy_id = os.environ.get("RENDER_DEPLOY_ID") or os.environ.get("RENDER_DEPLOYMENT_ID") or os.environ.get("DEPLOY_ID") or "dep-dc4b5ed6e07s73en71r0"
+    build_id = os.environ.get("RENDER_BUILD_ID") or commit_sha[:7]
     return {
         "service": "mrspets-portal",
         "version": "2.4.0",
         "commit": commit_sha,
+        "build": build_id,
         "deploy_id": deploy_id,
         "database": "postgres" if db.IS_POSTGRES else "sqlite",
         "timestamp": datetime.now(timezone.utc).isoformat()
