@@ -7567,6 +7567,18 @@ async def teamily_chat(request: Request):
     )
     body_agent = body.get("agent_id") or body.get("agent_slug") or body.get("agent") or body.get("slug")
     qp_agent = request.query_params.get("agent_id") or request.query_params.get("agent_slug")
+
+    # Exigir agent_id obligatorio en /api/v1/avatar/chat (rechaza llamadas malformadas sin agente con 400)
+    if request.url.path.rstrip("/") == "/api/v1/avatar/chat" and not (body_agent or qp_agent):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "code": 400,
+                "error": "PARAMETRO_REQUERIDO",
+                "message": "El campo 'agent_id' es obligatorio en /api/v1/avatar/chat."
+            }
+        )
     recipient_user_id_raw = str(body.get("recipient_user_id") or "").strip()
     channel_type_raw = str(body.get("channel_type") or "").strip()
     is_direct_1a1 = bool(recipient_user_id_raw or channel_type_raw == "direct_1a1")
