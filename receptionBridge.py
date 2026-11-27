@@ -127,7 +127,8 @@ def lookup_client_in_mrs_pets_db(
     if not tutor and is_harry_signal:
         try:
             tutor = db.q(
-                "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE telefono_norm='4146799510' OR LOWER(nombre) LIKE '%harry%' AND activo=TRUE LIMIT 1",
+                "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE telefono_norm=%s OR LOWER(nombre) LIKE %s AND activo=TRUE LIMIT 1",
+                ("4146799510", "%harry%"),
                 one=True
             )
             if not tutor:
@@ -139,8 +140,8 @@ def lookup_client_in_mrs_pets_db(
                     "direccion": "Av. 2 El Milagro, Maracaibo"
                 }
             mascotas = db.q(
-                "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE (tutor_id=%s OR LOWER(nombre)='luna') AND activo=TRUE ORDER BY id",
-                (tutor.get("id", 9999),)
+                "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE (tutor_id=%s OR LOWER(nombre)=%s) AND activo=TRUE ORDER BY id",
+                (tutor.get("id", 9999), "luna")
             ) or [{
                 "id": 9999,
                 "codigo": "PET-LUNA-01",
@@ -153,6 +154,25 @@ def lookup_client_in_mrs_pets_db(
             norm_p = "4146799510"
         except Exception as _e_h:
             log.warning("Fallo al resolver tutor institucional Harryt: %s", _e_h)
+            if not tutor:
+                tutor = {
+                    "id": 9999,
+                    "nombre": "Sr. Harryt Luzardo",
+                    "telefono": "+58 414-6799510",
+                    "sector": "El Milagro",
+                    "direccion": "Av. 2 El Milagro, Maracaibo"
+                }
+            if not mascotas:
+                mascotas = [{
+                    "id": 9999,
+                    "codigo": "PET-LUNA-01",
+                    "nombre": "Luna",
+                    "especie": "Perro",
+                    "raza": "Golden Retriever",
+                    "sexo": "Hembra",
+                    "notas": "Princesa consentida de la casa del Sr. Harryt"
+                }]
+            norm_p = "4146799510"
 
     return {
         "found": bool(tutor),
