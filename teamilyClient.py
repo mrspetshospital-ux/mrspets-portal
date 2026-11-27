@@ -272,6 +272,8 @@ class TeamilyGeoARequest:
     session_id: Optional[str] = None
     is_customer: bool = False
     timeout: Optional[float] = None
+    context: Optional[Dict[str, Any]] = None
+    identity_directive: Optional[Dict[str, Any]] = None
 
     def to_payload(self) -> Dict[str, Any]:
         thread_payload: Dict[str, Any] = {"mode": "new"}
@@ -301,6 +303,17 @@ class TeamilyGeoARequest:
             "thread": thread_payload,
             "wait": self.wait
         }
+        if self.context:
+            payload["context"] = self.context
+        if self.identity_directive:
+            payload["identity_directive"] = self.identity_directive
+            if isinstance(self.identity_directive, dict):
+                dir_data = self.identity_directive.get("identity_directive", self.identity_directive)
+                payload["role"] = dir_data.get("role")
+                payload["auth_level"] = dir_data.get("auth_level")
+                payload["verified"] = dir_data.get("verified")
+                payload["staff_id"] = dir_data.get("staff_id", "@9000408632300095")
+                payload["staff_display_name"] = dir_data.get("staff_display_name")
         # ENRUTAMIENTO VOLTURI (Charly & AntiGravity):
         # El enrutamiento nativo en Teamily se realiza mediante group_id + @mención.
         # En /responses con group_id, se descarta board_id para evitar conflictos de enrutamiento.

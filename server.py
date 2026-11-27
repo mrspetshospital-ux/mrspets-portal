@@ -3088,7 +3088,9 @@ async def _execute_teamily_channel(
     is_customer: bool = True,
     timeout_sec: float = DEFAULT_AGENT_TIMEOUT_SEC,
     board_id: Optional[str] = None,
-    allow_retry: bool = True
+    allow_retry: bool = True,
+    context: Optional[Dict[str, Any]] = None,
+    identity_directive: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Canal 1 Independiente: Teamily Live API (Margarette Gerente de Planta @9000408632300095).
@@ -3117,7 +3119,9 @@ async def _execute_teamily_channel(
             input=teamily_input,
             session_id=session_id,
             is_customer=is_customer,
-            timeout=timeout_sec
+            timeout=timeout_sec,
+            context=context,
+            identity_directive=identity_directive
         )
         res = await asyncio.wait_for(
             asyncio.to_thread(
@@ -3154,7 +3158,9 @@ async def _execute_teamily_channel(
                     is_customer=is_customer,
                     timeout_sec=max(timeout_sec, 50.0),
                     board_id=board_id,
-                    allow_retry=False
+                    allow_retry=False,
+                    context=context,
+                    identity_directive=identity_directive
                 )
             return {
                 "success": False,
@@ -3178,7 +3184,9 @@ async def _execute_teamily_channel(
                 is_customer=is_customer,
                 timeout_sec=timeout_sec,
                 board_id=board_id,
-                allow_retry=False
+                allow_retry=False,
+                context=context,
+                identity_directive=identity_directive
             )
         return {
             "success": False,
@@ -3204,7 +3212,9 @@ async def _execute_teamily_channel(
                 is_customer=is_customer,
                 timeout_sec=timeout_sec,
                 board_id=board_id,
-                allow_retry=False
+                allow_retry=False,
+                context=context,
+                identity_directive=identity_directive
             )
         return {
             "success": False,
@@ -3331,7 +3341,9 @@ async def orchestrate_dual_ai_chat(
     timeout_sec: float = 45.0,
     history: Optional[List[dict]] = None,
     requested_agent: str = "margaret",
-    board_id: Optional[str] = None
+    board_id: Optional[str] = None,
+    context: Optional[Dict[str, Any]] = None,
+    identity_directive: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Orquesta los dos canales independientes de IA (Teamily y Gemini)
@@ -3359,7 +3371,9 @@ async def orchestrate_dual_ai_chat(
             session_id=session_id,
             is_customer=is_customer,
             timeout_sec=timeout_sec,
-            board_id=board_id
+            board_id=board_id,
+            context=context,
+            identity_directive=identity_directive
         )
         should_failover = False
         if not res.get("success") or not res.get("reply"):
@@ -3398,7 +3412,9 @@ async def orchestrate_dual_ai_chat(
                 session_id=session_id,
                 is_customer=is_customer,
                 timeout_sec=max(timeout_sec, 6.0),
-                board_id=board_id
+                board_id=board_id,
+                context=context,
+                identity_directive=identity_directive
             )
 
     reply_text = res.get("reply") if res else ""
@@ -8230,10 +8246,13 @@ async def teamily_chat(request: Request):
         identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
 
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
-        # Nota arquitectónica (Caso T-14): NO serializar JSON simulado dentro del texto del chat;
-        # Margarette recibe el contexto institucional del sistema y el mensaje bajo el encabezado correspondiente.
-        msg_header = "[INSTRUCCIÓN DIRECTIVA EJECUTIVA]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
-        teamily_msg = f"{db_directive}\n{msg_header} {msg}" if msg else db_directive
+        # Arquitectura Segundo Cinturón (Pieza 1 & Margarette):
+        # La firma y rol 'staff_admin' viajan como afirmación en el payload REST server-side (context e identity_directive),
+        # NUNCA mezclados en el texto del chat (para evitar que se interprete como inyección conversacional).
+        if is_staff_auth:
+            teamily_msg = msg
+        else:
+            teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
 
         if is_staff_auth:
             staff_s_id = v_sess.get("session_id") or session_id
@@ -8251,7 +8270,16 @@ async def teamily_chat(request: Request):
             timeout_sec=timeout_sec,
             history=body.get("history") or [],
             requested_agent="margaret",
-            board_id=body.get("board_id") or os.environ.get("TEAMILY_BOARD_ID", "5803df5a-7127-4d28-b97c-5c840d47cdc7")
+            board_id=body.get("board_id") or os.environ.get("TEAMILY_BOARD_ID", "5803df5a-7127-4d28-b97c-5c840d47cdc7"),
+            context={
+                "role": "staff_admin" if is_staff_auth else "client",
+                "auth_level": v_sess.get("auth_level", "anonymous"),
+                "verified": is_staff_auth,
+                "staff_id": "@9000408632300095" if is_staff_auth else None,
+                "staff_display_name": u_name if is_staff_auth else None,
+                "pet_name": "Luna (Golden Retriever)" if is_staff_auth else p_name
+            },
+            identity_directive=identity_directive_obj
         )
 
         res_text = orch["reply"]
