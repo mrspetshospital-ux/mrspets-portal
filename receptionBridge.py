@@ -236,16 +236,120 @@ def get_contextual_services_directive(msg_text: str = "", bcv_cfg: Optional[Dict
     return "\n".join(lines) + "\n"
 
 
+def get_contextual_products_directive(msg_text: str = "", bcv_cfg: Optional[Dict[str, Any]] = None) -> str:
+    """
+    FASE 3 & FASE 4:
+    - Consulta dinámica de la tabla 'productos' en BD verificando stock > 0.
+    - Cláusula de salvaguarda: 'Disponible al momento de la consulta, sujeto a confirmación de stock en piso' (evita promesas falsas de stock).
+    - Regla de Farmacia con Receta: Medicamentos, antiparasitarios (Bravecto, pipetas) y champú medicado requieren indicación o récipe veterinario; prohibida su venta cruzada libre.
+    """
+    if not msg_text:
+        return ""
+
+    msg_lower = msg_text.lower()
+
+    # Detección de intenciones sobre productos, tienda, boutique, farmacia y medicamentos
+    product_keywords = [
+        "producto", "productos", "tienda", "boutique", "alimento", "comida",
+        "pienso", "perrarina", "gatarina", "champú", "champu", "shampoo",
+        "jabón", "jabon", "bravecto", "simparica", "nexgard", "pipeta",
+        "pulga", "pulgas", "garrapata", "garrapatas", "desparasit",
+        "medicamento", "medicina", "farmacia", "receta", "récipe", "recipe",
+        "snack", "snacks", "premio", "premios", "juguete", "juguetes",
+        "accesorio", "accesorios", "correa", "arnés", "arnes", "collar",
+        "comprar", "venden", "disponible", "stock", "precio de", "cuánto vale el",
+        "cuanto vale el", "royal canin"
+    ]
+
+    is_product_inquiry = any(k in msg_lower for k in product_keywords)
+    if not is_product_inquiry:
+        return ""
+
+    cfg = bcv_cfg or get_bcv_cached_data()
+    eff_rate = float(cfg.get("effective_rate") or cfg.get("manual_rate") or 924.35)
+    raw_date = str(cfg.get("last_updated") or "")
+    if len(raw_date) >= 10:
+        try:
+            parts = raw_date[:10].split("-")
+            date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+        except Exception:
+            date_str = raw_date[:10]
+    else:
+        date_str = datetime.now(timezone(timedelta(hours=-4))).strftime("%d/%m/%Y")
+
+    try:
+        # Consultar productos activos
+        all_prods = db.q(
+            "SELECT id, codigo, nombre, categoria, precio_usd, stock FROM productos WHERE activo=TRUE ORDER BY categoria, nombre ASC"
+        )
+    except Exception as _e_prod_db:
+        log.warning("Error al consultar productos en BD: %s", _e_prod_db)
+        all_prods = None
+
+    if all_prods is None:
+        return (
+            "\n[INVENTARIO DE PRODUCTOS TEMPORALMENTE NO DISPONIBLE]:\n"
+            "• La base de datos de inventario no respondió. No inventes existencias ni precios.\n"
+            "• Indica con amabilidad: 'En este momento no puedo verificar el stock exacto en sistema; con gusto te lo confirmamos directamente en tienda en Av. 2 El Milagro.'\n"
+        )
+
+    if not all_prods:
+        return ""
+
+    # Palabras clave que identifican productos de farmacia / receta obligatoria
+    rx_keywords = ["bravecto", "simparica", "nexgard", "pipeta", "medicad", "antibiot", "antibiót", "antiinflamat", "receta", "farmacia", "ozono medicado"]
+
+    lines = [
+        f"\n[INVENTARIO OFICIAL Y POLÍTICA DE FARMACIA — CONSULTA EN BD]:",
+        f"• Tasa oficial BCV del día ({date_str}): {eff_rate:,.2f} Bs/USD (Fuente: Banco Central de Venezuela).",
+        f"• Estado de Productos en Catálogo:"
+    ]
+
+    for p in all_prods:
+        p_name = p.get("nombre", "")
+        p_cat = (p.get("categoria") or "").capitalize()
+        p_stock = int(p.get("stock") or 0)
+        p_usd = float(p.get("precio_usd") or 0.0)
+        p_bs = round(p_usd * eff_rate, 2)
+        is_rx = (p_cat.lower() == "farmacia") or any(rx_k in p_name.lower() for rx_k in rx_keywords)
+
+        if p_stock <= 0:
+            lines.append(f"  - [{p_cat}] {p_name}: AGOTADO (Stock: 0). No prometer disponibilidad inmediata.")
+        else:
+            rx_tag = " [REQUIERE RÉCIPE MÉDICO]" if is_rx else " [VENTA LIBRE BOUTIQUE]"
+            lines.append(f"  - [{p_cat}] {p_name}: ${p_usd:.2f} USD (~{p_bs:,.2f} Bs) | En inventario: {p_stock} unid.{rx_tag}")
+
+    lines.append(
+        "• FASE 3 (REGLA ESTRICTA DE STOCK): NUNCA prometas la última unidad a ciegas. "
+        "Para todo producto con stock disponible, indica siempre la cláusula de seguridad: "
+        "'Disponible al momento de la consulta, sujeto a confirmación de stock en piso'."
+    )
+    lines.append(
+        "• FASE 4 (REGLA DE FARMACIA Y RÉCIPE): Los productos marcados [REQUIERE RÉCIPE MÉDICO] "
+        "(como Bravecto, pipetas, antiparasitarios o tratamientos medicados) NO se ofrecen en venta cruzada libre ni se despachan sin indicación veterinaria. "
+        "Si el tutor los solicita, indícale con calidez y responsabilidad médica que requieren evaluación clínica previa o récipe vigente de nuestro equipo veterinario para cuidar la salud de su mascota."
+    )
+
+    return "\n".join(lines) + "\n"
+
+
 def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str = "", bcv_cfg: Optional[Dict[str, Any]] = None) -> str:
     """Genera la directiva de apoyo para Margarette manteniendo su autonomía conversacional y garantizando la privacidad."""
     margaret_id = os.environ.get("MARGARETTE_USER_ID", "9000408632300095")
     services_directive = get_contextual_services_directive(msg_text, bcv_cfg)
+    products_directive = get_contextual_products_directive(msg_text, bcv_cfg)
     msg_lower = (msg_text or "").lower()
     is_asking_citas = any(k in msg_lower for k in [
         "cita", "citas", "turno", "turnos", "agend", "horario",
         "a qué hora", "a que hora", "cuándo me toca", "cuando me toca",
         "mi reserva", "agendada", "tengo cita", "mi cita", "mi turno"
     ])
+
+    cross_selling_rule = (
+        "• REGLA ÉTICA DE VENTA CRUZADA (CROSS-SELLING): Si el cliente consulta o agenda grooming/consulta, "
+        "puedes sugerir complementos libres de boutique (snacks, accesorios). "
+        "PROHIBIDO sugerir medicamentos, antiparasitarios, pipetas, Bravecto ni champú medicado como venta cruzada casual; la medicación requiere siempre indicación médica veterinaria.\n"
+    )
 
     if client_info.get("verified_by_phone") and client_info.get("tutor"):
         tutor = client_info["tutor"]
@@ -275,6 +379,7 @@ def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str 
             f"• Mascota(s) en expediente: {pets_summary}\n"
             f"• REGLA ESTRICTA DE PRIVACIDAD: Identidad validada por teléfono. Confirma siempre la titularidad antes de compartir datos médicos o turnos.\n"
             f"• INSTRUCCIÓN GENERAL: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y asístelo en su consulta.\n"
+            f"{cross_selling_rule}"
             f"{citas_dir}"
         )
     else:
@@ -305,9 +410,10 @@ def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str 
             f"  3. Nombre del consentido(a), especie, raza y sexo.\n"
             f"  4. Alergias o condiciones especiales.\n"
             f"  5. Invítalo a subir la foto de su consentido usando el botón 📷 Foto del chat para su expediente.\n"
+            f"{cross_selling_rule}"
             f"{citas_privacy_warning}"
         )
-    return base_dir + services_directive
+    return base_dir + services_directive + products_directive
 
 
 def process_and_persist_booking(
