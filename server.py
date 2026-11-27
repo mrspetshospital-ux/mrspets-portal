@@ -7657,7 +7657,7 @@ async def teamily_chat(request: Request):
         is_customer = (user_type not in ["staff", "staff_admin", "admin", "war_room"])
 
         client_info = lookup_client_in_mrs_pets_db(text=msg, user_name=u_name, phone=ph_num, pet_name=p_name)
-        db_directive = format_margaret_system_directive(client_info)
+        db_directive = format_margaret_system_directive(client_info, msg_text=msg, bcv_cfg=bcv_cfg)
 
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
         teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive

@@ -11,9 +11,11 @@ Google Calendar (mrspetshospital@gmail.com).
 
 import os
 import re
+import json
 import random
 import logging
 import urllib.parse
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 
@@ -116,21 +118,131 @@ def lookup_client_in_mrs_pets_db(
     }
 
 
-def format_margaret_system_directive(client_info: Dict[str, Any]) -> str:
+def get_bcv_cached_data() -> Dict[str, Any]:
+    """Lee el caché local de bcv_config.json si existe para sellar la tasa con fecha."""
+    try:
+        bcv_file = Path(__file__).resolve().parent / "data" / "bcv_config.json"
+        if bcv_file.exists():
+            with open(bcv_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+    except Exception as _e_bcv:
+        log.warning("No se pudo leer bcv_config.json en receptionBridge: %s", _e_bcv)
+    return {
+        "effective_rate": float(os.environ.get("BCV_OFFICIAL_RATE", "924.35")),
+        "last_updated": datetime.now(timezone(timedelta(hours=-4))).strftime("%Y-%m-%d"),
+        "source": "Banco Central de Venezuela (BCV Oficial)"
+    }
+
+
+def get_contextual_services_directive(msg_text: str = "", bcv_cfg: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Inyecta quirúrgicamente el tarifario oficial de la tabla 'servicios' en la base de datos
+    solo cuando el cliente consulta por servicios o precios. Mantiene la latencia ágil y ahorra tokens.
+    """
+    if not msg_text:
+        return ""
+
+    msg_lower = msg_text.lower()
+    
+    # Detección de intenciones por área
+    grooming_kw = ["grooming", "baño", "corte", "spa", "peluquer", "estacion", "estación", "deslan", "uñas", "cepill"]
+    clinica_kw = ["clinic", "clínic", "veterinari", "consulta", "vacun", "desparasit", "medico", "médico", "doctor", "emergenc"]
+    hotel_kw = ["hotel", "hosped", "noche", "suite", "quedarse", "guarder", "estadia", "estadía"]
+    price_kw = ["precio", "tarifa", "cuanto", "cuánto", "costo", "vale", "cobran", "presupuesto", "servicios", "planes"]
+
+    is_grooming = any(k in msg_lower for k in grooming_kw)
+    is_clinica = any(k in msg_lower for k in clinica_kw)
+    is_hotel = any(k in msg_lower for k in hotel_kw)
+    is_price_inquiry = any(k in msg_lower for k in price_kw)
+
+    # Si no hay ninguna palabra clave relevante, no inyectamos nada para ahorrar tokens y latencia
+    if not (is_grooming or is_clinica or is_hotel or is_price_inquiry):
+        return ""
+
+    # Determinar el área prioritaria a filtrar en BD
+    area_filter = None
+    if is_grooming and not (is_clinica or is_hotel):
+        area_filter = "grooming"
+    elif is_clinica and not (is_grooming or is_hotel):
+        area_filter = "clinica"
+    elif is_hotel and not (is_grooming or is_clinica):
+        area_filter = "hotel"
+
+    # Obtener configuración de tasa BCV con fecha
+    cfg = bcv_cfg or get_bcv_cached_data()
+    eff_rate = float(cfg.get("effective_rate") or cfg.get("manual_rate") or 924.35)
+    raw_date = str(cfg.get("last_updated") or "")
+    if len(raw_date) >= 10:
+        try:
+            parts = raw_date[:10].split("-")
+            date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+        except Exception:
+            date_str = raw_date[:10]
+    else:
+        date_str = datetime.now(timezone(timedelta(hours=-4))).strftime("%d/%m/%Y")
+
+    # Consulta dinámica a la base de datos (tabla servicios)
+    try:
+        if area_filter:
+            servicios = db.q(
+                "SELECT codigo, nombre, area, descripcion, precio_usd, duracion_min FROM servicios WHERE area=%s AND activo=TRUE ORDER BY precio_usd ASC LIMIT 5",
+                (area_filter,)
+            )
+        else:
+            servicios = db.q(
+                "SELECT codigo, nombre, area, descripcion, precio_usd, duracion_min FROM servicios WHERE activo=TRUE ORDER BY area, precio_usd ASC LIMIT 6"
+            )
+    except Exception as _e_db:
+        log.warning("Error al consultar servicios en BD: %s", _e_db)
+        servicios = None
+
+    if servicios is None:
+        return (
+            "\n[SISTEMA DE TARIFAS TEMPORALMENTE NO DISPONIBLE]:\n"
+            "• La base de datos de tarifas no respondió. No inventes precios ni tarifas.\n"
+            "• Indica con amabilidad: 'En este momento no puedo consultar la lista oficial de tarifas en el sistema; con gusto te confirmaremos el presupuesto exacto al momento de agendar tu cita.'\n"
+        )
+
+    if not servicios:
+        return ""
+
+    lines = [
+        f"\n[TARIFARIO OFICIAL VIGENTE — CONSULTA EN BD]:",
+        f"• Tasa oficial BCV del día ({date_str}): {eff_rate:,.2f} Bs/USD (Fuente: Banco Central de Venezuela).",
+        f"• Servicios oficiales disponibles en catálogo:"
+    ]
+    for s in servicios:
+        p_usd = float(s.get("precio_usd") or 0.0)
+        p_bs = round(p_usd * eff_rate, 2)
+        dur = f" | Duración: {s['duracion_min']} min" if s.get("duracion_min") else ""
+        lines.append(f"  - {s.get('nombre')}: ${p_usd:.2f} USD (~{p_bs:,.2f} Bs){dur}")
+
+    lines.append(
+        "• REGLA ESTRICTA DE PRECIOS: Cita únicamente los montos oficiales listados arriba. "
+        "Si el cliente pregunta en bolívares, menciona siempre la tasa oficial BCV del día. "
+        "Si consultan por un procedimiento quirúrgico o servicio no listado, indica que requiere valoración previa en clínica para emitir presupuesto formal."
+    )
+    return "\n".join(lines) + "\n"
+
+
+def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str = "", bcv_cfg: Optional[Dict[str, Any]] = None) -> str:
     """Genera la directiva de apoyo para Margarette manteniendo su autonomía conversacional."""
     margaret_id = os.environ.get("MARGARETTE_USER_ID", "9000408632300095")
+    services_directive = get_contextual_services_directive(msg_text, bcv_cfg)
     if client_info.get("found") and client_info.get("tutor"):
         tutor = client_info["tutor"]
         mascotas = client_info.get("mascotas", [])
         pets_summary = ", ".join([f"{m['nombre']} ({m.get('raza') or m.get('especie') or 'Mascota'})" for m in mascotas]) if mascotas else "Sin mascotas registradas"
-        return (
+        base_dir = (
             f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
             f"• Tutor: {tutor.get('nombre')} | Teléfono: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
             f"• Mascota(s) en expediente: {pets_summary}\n"
             f"• INSTRUCCIÓN PARA MARGARETTE: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y pregúntale directamente qué servicio desea agendar (✂️ Grooming Spa 7 Estaciones, 🩺 Consulta Médica Veterinaria o 🏨 Suites Hotel VIP 5★) y para qué fecha y hora.\n"
         )
     else:
-        return (
+        base_dir = (
             f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE NUEVO)]:\n"
             f"• Estado: Cliente nuevo (no registrado en la base de datos).\n"
             f"• INSTRUCCIÓN PARA MARGARETTE: Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:\n"
@@ -140,6 +252,7 @@ def format_margaret_system_directive(client_info: Dict[str, Any]) -> str:
             f"  4. Alergias o condiciones especiales.\n"
             f"  5. Invítalo a subir la foto de su consentido usando el botón 📷 Foto del chat para su expediente.\n"
         )
+    return base_dir + services_directive
 
 
 def process_and_persist_booking(
