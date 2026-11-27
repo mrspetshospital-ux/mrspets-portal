@@ -2916,10 +2916,23 @@ async def orchestrate_dual_ai_chat(
             if page_text:
                 reply_text = page_text
                 responder_agent = requested_agent
-                responder_name = "LEIA (Margarette • Planta & Atención)"
+                responder_name = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else "LEIA (Margarette • Planta & Atención)"
                 model_used = "centralita-in-house"
                 if res:
-                    res["channel"] = "page"
+                    res["channel"] = "centralita"
+
+    # Si ninguno de los dos canales de nube (Teamily / Gemini) produjo respuesta útil (o faltan credenciales),
+    # activar el motor cognitivo in-house de Centralita para que Margarette / LEIA responda con su identidad y catálogo
+    if not reply_text and centralita_router:
+        try:
+            page_text = centralita_router.synthesize_agent_response(requested_agent, requested_agent, msg, {})
+            if page_text:
+                reply_text = page_text
+                responder_agent = requested_agent
+                responder_name = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else (globals().get("AGENT_REGISTRY") or {}).get(requested_agent, {}).get("name", requested_agent)
+                model_used = "centralita-in-house"
+        except Exception as _ce:
+            log.warning("Fallo en fallback in-house de Centralita: %s", _ce)
 
     if not reply_text:
         # Debilidad 1 y 3: Respaldo honesto del SISTEMA, sin firma de persona ni promesas falsas
@@ -2927,11 +2940,15 @@ async def orchestrate_dual_ai_chat(
         responder_agent = "system"
         responder_name = "Canal de Atención (Sistema Mrs. Pets)"
         model_used = "fallback-sistema"
+        active_channel = "fallback"
+    elif model_used == "centralita-in-house":
+        active_channel = "centralita"
     else:
-        responder_agent = res.get("agent", requested_agent)
-        agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if responder_agent in ("margaret", "margarette", "leia") else res.get("agent_name", "Leia Concierge VIP")
+        responder_agent = res.get("agent", requested_agent) if res else requested_agent
+        agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if responder_agent in ("margaret", "margarette", "leia") else ((res.get("agent_name") if res else "") or "Leia Concierge VIP")
         responder_name = agent_disp
-        model_used = res.get("model_used", "dual-engine")
+        model_used = res.get("model_used", "dual-engine") if res else "dual-engine"
+        active_channel = res.get("channel", "fallback") if res else "fallback"
 
     return {
         "reply": reply_text,
@@ -2941,7 +2958,7 @@ async def orchestrate_dual_ai_chat(
         "latency_ms": res.get("latency_ms", 0.0) if res else 0.0,
         "primary_engine": primary,
         "backup_engine": backup,
-        "active_channel": res.get("channel", "fallback") if res else "fallback",
+        "active_channel": active_channel,
         "failover_triggered": failover_triggered,
         "failover_reason": failover_reason
     }

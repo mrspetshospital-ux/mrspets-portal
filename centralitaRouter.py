@@ -261,7 +261,10 @@ class CentralitaRouter:
         """
         slug = (agent_slug or "leia").lower()
         inp = (user_input or "").strip()
-        inp_lower = inp.lower()
+        client_query = inp
+        if "[MENSAJE DEL CLIENTE]:" in inp:
+            client_query = inp.split("[MENSAJE DEL CLIENTE]:", 1)[-1].strip()
+        inp_lower = client_query.lower()
         ctx = context or {}
         user_display = ctx.get("userName") or ctx.get("tutor_name") or ""
 
@@ -363,8 +366,15 @@ class CentralitaRouter:
                     f"¿Para qué fecha planificas la estadía de tu consentido(a)?"
                 )
 
-            if any(w in inp_lower for w in ["tasa", "dolar", "dólar", "bcv", "precio", "bolivar", "bolívar", "costo"]):
-                return (
+            if any(w in inp_lower for w in ["tasa", "dolar", "dólar", "bcv", "precio", "bolivar", "bolívar", "costo", "tarifa", "servicios"]):
+                serv_directive = ""
+                try:
+                    from receptionBridge import get_contextual_services_directive
+                    serv_directive = get_contextual_services_directive(inp)
+                except Exception:
+                    serv_directive = ""
+
+                base_pricing_reply = (
                     f"{pfx}\n\n"
                     f"💵 **Transparencia en Precios & Tasa Oficial BCV:**\n\n"
                     f"En Mrs. Pets todas nuestras tarifas en Bolívares se calculan estrictamente con la **Tasa Oficial del Banco Central de Venezuela (BCV)**:\n"
@@ -372,6 +382,9 @@ class CentralitaRouter:
                     f"• Sin recargos no oficiales. IVA 16% SENIAT debidamente respaldado.\n"
                     f"• Métodos: Pago Móvil, Zelle, Stripe Terminal y Efectivo USD en bóveda."
                 )
+                if serv_directive:
+                    return f"{base_pricing_reply}\n\n{serv_directive.strip()}"
+                return base_pricing_reply
 
             return (
                 f"{pfx}\n\n"
