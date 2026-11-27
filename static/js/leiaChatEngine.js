@@ -843,6 +843,8 @@
             this.showTypingIndicator(true);
 
             let replyObtained = null;
+            let engineUsed = 'teamily';
+            let modelUsed = null;
 
             // 1. CANAL PRINCIPAL: AVATAR / TEAMILEY LIVE API (Aislamiento por sesión)
             try {
@@ -885,9 +887,6 @@
                     signal: abortCtrl.signal
                 });
                 clearTimeout(timeoutId);
-
-                let engineUsed = 'teamily';
-                let modelUsed = null;
 
                 if (res.ok) {
                     const data = await res.json();

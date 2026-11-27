@@ -57,6 +57,7 @@ class MrsPetsArchitectureEngine {
     this.tinkerbellAudio = null;
     this.lastMagicEffectTime = 0;
     this.lastTouchStart = 0;
+    this.qcSessionPhotos = [null, null, null, null];
   }
 
   init() {
@@ -2706,8 +2707,9 @@ Te garantizo los estándares de Lujo Silencioso para tu amado <strong>príncipe<
     ];
 
     let filledCount = 0;
+    const currentPhotos = Array.isArray(this.qcSessionPhotos) ? this.qcSessionPhotos : [null, null, null, null];
     container.innerHTML = slotNames.map((name, idx) => {
-      const photo = this.qcSessionPhotos[idx];
+      const photo = currentPhotos[idx];
       if (photo) filledCount++;
       return `
         <div style="background:#090D18; border:1.5px solid ${photo ? '#10B981' : 'rgba(212,175,55,0.3)'}; border-radius:14px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; min-height:180px;">
