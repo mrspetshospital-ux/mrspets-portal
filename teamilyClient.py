@@ -274,6 +274,7 @@ class TeamilyGeoARequest:
     timeout: Optional[float] = None
     context: Optional[Dict[str, Any]] = None
     identity_directive: Optional[Dict[str, Any]] = None
+    avatar_jwt: Optional[str] = None
 
     def to_payload(self) -> Dict[str, Any]:
         thread_payload: Dict[str, Any] = {"mode": "new"}
@@ -462,6 +463,8 @@ class TeamilyGeoAClient:
             "Accept": "application/json",
             "User-Agent": "MrsPets-Teamily-GEO-A-Client/2.4 (Maracaibo, Venezuela)"
         }
+        if getattr(request, "avatar_jwt", None):
+            headers["X-MP-Session"] = request.avatar_jwt
 
         req = urllib.request.Request(
             url=target_endpoint,
@@ -600,6 +603,19 @@ class TeamilyGeoAClient:
                     endpoint=target_endpoint,
                     board_id=request.board_id or (self.board_id if not request.is_customer else "")
                 )
+
+                if res_obj.success and res_obj.response_text and request.session_id:
+                    try:
+                        import sessionSecurity
+                        target_th = resp_thread or request.session_id
+                        sessionSecurity.record_conversation_memory(
+                            subject_id=request.session_id,
+                            thread_id=target_th,
+                            speaker="teamily_margaret",
+                            content=str(response_text)
+                        )
+                    except Exception:
+                        pass
 
                 self._log_audit("GEO_A_SUCCESS", {
                     "input_snippet": request.input[:80],

@@ -243,25 +243,40 @@
             const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
             const chatSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
 
+            let avatarToken = null;
+            try {
+              const tokRes = await fetch('/api/session/avatar-token', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (tokRes.ok) {
+                const tokData = await tokRes.json();
+                avatarToken = tokData.token;
+              }
+            } catch (_eTok) {}
+
+            const reqHeaders = { 
+              'Content-Type': 'application/json',
+              'x-message-id': msgId
+            };
+            if (avatarToken) {
+              reqHeaders['Authorization'] = 'Bearer ' + avatarToken;
+              reqHeaders['X-MP-Session'] = avatarToken;
+            }
+
             const res = await fetch('/api/v1/avatar/chat', {
               method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'x-message-id': msgId
-              },
+              credentials: 'same-origin',
+              headers: reqHeaders,
               body: JSON.stringify({
-                message_id: msgId,
-                agente_origen: 'user',
-                input: userText,
                 message: userText,
-                sessionId: chatSessionId,
-                primaryEngine: isTeamly ? 'teamily' : 'gemini',
-                timeoutSeconds: timeoutSec,
+                input: userText,
+                agent_id: 'margaret',
                 agent_slug: 'margaret',
-                context: {
-                  userName: 'Cliente VIP',
-                  channel: 'Modal Concierge Card (Leia Concierge)'
-                }
+                sessionId: chatSessionId,
+                thread_id: chatSessionId,
+                language: 'es'
               }),
               signal: abortCtrl.signal
             });

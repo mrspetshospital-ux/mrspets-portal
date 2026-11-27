@@ -1657,29 +1657,38 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
     const agentPayload = {
       message_id: messageId,
       agente_origen: isStaff ? 'staff' : 'user',
-      input: cleanText,
+    // BLOQUE 2.2: Obtener credencial firmada desde el servidor a partir de la sesión autenticada
+    let avatarToken = null;
+    try {
+      const tokRes = await fetch('/api/session/avatar-token', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (tokRes.ok) {
+        const tokData = await tokRes.json();
+        avatarToken = tokData.token;
+      }
+    } catch (_eTok) {}
+
+    // BLOQUE 2.1: El body contiene ÚNICAMENTE el mensaje y metadatos conversacionales
+    const agentPayload = {
       message: cleanText,
+      input: cleanText,
       prompt: cleanText,
       agent_id: agentSlug,
       agent_slug: agentSlug,
       sessionId: chatSessionId,
-      primaryEngine: primaryEngine,
-      timeoutSeconds: timeoutSec,
-      model: activeModel.id,
-      approval_mode: activeApprovalMode,
-      phone: (session && session.phone) || '',
-      context: {
-        userName: (session && session.userName) || this.tutorName || 'Cliente VIP',
-        petName: this.lastActivePetName || (session && session.activePetName) || '',
-        phone: (session && session.phone) || '',
-        approval_mode: activeApprovalMode,
-        userType: isStaff ? 'staff' : ((session && session.userType) || 'client'),
-        channel: `Widget Circular (${agentDisplayName})`,
-        activeModel: activeModel.id
-      }
+      thread_id: chatSessionId,
+      language: 'es'
     };
-    if (isStaff) {
-      agentPayload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
+
+    const reqHeaders = {
+      'Content-Type': 'application/json'
+    };
+    if (avatarToken) {
+      reqHeaders['Authorization'] = 'Bearer ' + avatarToken;
+      reqHeaders['X-MP-Session'] = avatarToken;
     }
 
     if (isMargaret) {
@@ -1695,7 +1704,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
         const fetchTimer = setTimeout(() => abortCtrl.abort(), (timeoutSec + 15) * 1000);
         const res = await fetch('/api/v1/avatar/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          headers: reqHeaders,
           body: JSON.stringify(agentPayload),
           signal: abortCtrl.signal
         });
@@ -1770,7 +1780,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
           const fetchTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
           const res = await fetch('/api/v1/avatar/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            headers: reqHeaders,
             body: JSON.stringify(agentPayload),
             signal: abortCtrl.signal
           });

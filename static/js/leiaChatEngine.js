@@ -902,46 +902,46 @@
                 const abortCtrl = new AbortController();
                 const timeoutId = setTimeout(() => abortCtrl.abort(), (timeoutSec + 15) * 1000);
                 const chatSessionId = this.currentSessionId || ('sess_' + Math.random().toString(36).substring(2, 9));
-                const activeUserName = isStaff ? (user ? user.name : 'Sr. Harryt Luzardo') : (this.tutorName || (user ? user.name : 'Cliente VIP'));
-                const activePetName = isStaff ? 'Luna' : (this.lastActivePetName || (user ? user.petName : ''));
-                const activePhone = isStaff ? '04146799510' : (user && user.phone ? user.phone : '');
 
+                // BLOQUE 2.2: Obtener credencial firmada desde el servidor a partir de la sesión autenticada
+                let avatarToken = null;
+                try {
+                    const tokRes = await fetch('/api/session/avatar-token', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (tokRes.ok) {
+                        const tokData = await tokRes.json();
+                        avatarToken = tokData.token;
+                    }
+                } catch (_eTok) {}
+
+                // BLOQUE 2.1: El body contiene ÚNICAMENTE el mensaje y metadatos conversacionales
                 const payload = {
-                    message_id: messageId,
-                    agente_origen: isStaff ? 'staff' : 'user',
-                    input: userText,
                     message: userText,
+                    input: userText,
                     prompt: userText,
                     agent_id: 'margaret',
                     agent_slug: 'margaret',
                     sessionId: chatSessionId,
-                    primaryEngine: primaryEngine,
-                    timeoutSeconds: timeoutSec,
-                    userName: activeUserName,
-                    petName: activePetName,
-                    phone: activePhone,
-                    userType: isStaff ? 'staff_admin' : 'client',
-                    staff_authenticated: isStaff,
-                    approval_mode: activeApprovalMode,
-                    context: {
-                        userName: activeUserName,
-                        petName: activePetName,
-                        phone: activePhone,
-                        userType: isStaff ? 'staff_admin' : 'client',
-                        staff_authenticated: isStaff,
-                        channel: isStaff ? 'Consola Operativa Staff (Dirección General)' : 'Widget Search (Leia Concierge VIP)',
-                        as_leia: !isStaff,
-                        approval_mode: activeApprovalMode
-                    }
+                    thread_id: chatSessionId,
+                    language: 'es'
                 };
-                payload.board_id = '5803df5a-7127-4d28-b97c-5c840d47cdc7';
+
+                const reqHeaders = {
+                    'Content-Type': 'application/json',
+                    'x-message-id': messageId
+                };
+                if (avatarToken) {
+                    reqHeaders['Authorization'] = 'Bearer ' + avatarToken;
+                    reqHeaders['X-MP-Session'] = avatarToken;
+                }
 
                 const res = await fetch('/api/v1/avatar/chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-message-id': messageId
-                    },
+                    credentials: 'same-origin',
+                    headers: reqHeaders,
                     body: JSON.stringify(payload),
                     signal: abortCtrl.signal
                 });

@@ -147,9 +147,20 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
 
 app = FastAPI(title="Mrs Pets API", version="1.0.0-staging", docs_url="/api/docs")
 
+explicit_cors_origins = [
+    "https://mrspets-portal.onrender.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000"
+]
+custom_allowed_origin = os.getenv("ALLOWED_ORIGIN", "").strip()
+if custom_allowed_origin and custom_allowed_origin != "*":
+    if custom_allowed_origin not in explicit_cors_origins:
+        explicit_cors_origins.append(custom_allowed_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("ALLOWED_ORIGIN", "*")],
+    allow_origins=explicit_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -997,6 +1008,101 @@ def api_session_context(request: Request):
             "can_view_access": session.get("can_view_access", False)
         }
     )
+
+
+@app.post("/api/session/avatar-token")
+@app.get("/api/session/avatar-token")
+def api_session_avatar_token(request: Request):
+    """
+    BLOQUE 2.2 — Emite un token firmado en el servidor del portal a partir de la sesión autenticada.
+    No se emite en cliente, no se deriva de datos del cliente. Vida corta (300s).
+    """
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    if not session.get("verified") or session.get("auth_level") == "anonymous":
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "code": 401, "error": "UNAUTHORIZED", "message": "Sesión autenticada requerida para emitir token de avatar"}
+        )
+
+    sub = session.get("subject_id") or session.get("staff_id")
+    raw_role = str(session.get("role") or "tutor").strip().lower()
+    role = "staff" if raw_role in ("staff", "staff_admin") else "tutor"
+
+    token = sessionSecurity.create_avatar_jwt(subject_id=str(sub), role=role, ttl_seconds=300)
+    return {
+        "status": "success",
+        "token": token,
+        "token_type": "Bearer",
+        "expires_in": 300,
+        "role": role,
+        "subject_id": str(sub)
+    }
+
+
+@app.post("/api/session/link-code")
+def api_session_link_code(request: Request):
+    """
+    BLOQUE 6.2(b) & 6.3 — Emisión de código de un solo uso para vincular hilos en canales sin cookie (Teamily).
+    Solo puede emitirse dentro de una sesión ya autenticada en el portal.
+    """
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    if not session.get("verified") or session.get("auth_level") == "anonymous":
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "code": 401, "error": "UNAUTHORIZED", "message": "Autenticación requerida para generar código de enlace"}
+        )
+
+    sub = session.get("subject_id") or session.get("staff_id")
+    raw_role = str(session.get("role") or "tutor").strip().lower()
+    role = "staff" if raw_role in ("staff", "staff_admin") else "tutor"
+    th_id = sessionSecurity.get_or_create_thread(str(sub))
+
+    code = sessionSecurity.generate_avatar_link_code(subject_id=str(sub), thread_id=th_id, role=role, ttl_seconds=300)
+    return {
+        "status": "success",
+        "code": code,
+        "expires_in": 300,
+        "thread_id": th_id
+    }
+
+
+@app.post("/api/session/redeem-link-code")
+async def api_session_redeem_link_code(request: Request):
+    """
+    BLOQUE 6.2(b) & 6.4 — Canje del código de un solo uso.
+    Un segundo intento con el mismo código falla con reason = "replay".
+    Un código vencido falla con reason = "expired".
+    """
+    import sessionSecurity
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    code = body.get("code", "")
+    th_id = body.get("thread_id")
+
+    ok, rec, reason = sessionSecurity.redeem_avatar_link_code(code, thread_id=th_id)
+    if not ok:
+        sessionSecurity.log_avatar_degradation(
+            reason=reason if reason in ("expired", "replay") else "invalid_signature",
+            host_iss="mrspets-portal",
+            host_aud="avatar",
+            thread_id=th_id
+        )
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "reason": reason, "message": f"Fallo al canjear código de enlace ({reason})"}
+        )
+
+    return {
+        "status": "success",
+        "subject_id": rec["subject_id"],
+        "role": rec["role"],
+        "thread_id": rec["thread_id"]
+    }
 
 
 @app.post("/api/session/logout")
@@ -3140,7 +3246,8 @@ async def _execute_teamily_channel(
             is_customer=is_customer,
             timeout=timeout_sec,
             context=context,
-            identity_directive=identity_directive
+            identity_directive=identity_directive,
+            avatar_jwt=context.get("avatar_jwt") if isinstance(context, dict) else None
         )
         res = await asyncio.wait_for(
             asyncio.to_thread(
@@ -3467,7 +3574,12 @@ async def orchestrate_dual_ai_chat(
 
     if not reply_text:
         # Respaldo honesto del SISTEMA sin enmascaramiento, sin firma falsa ni promesas simuladas
-        reply_text = build_honest_fallback_message()
+        c_user = ""
+        c_pet = ""
+        if context:
+            c_user = context.get("staff_display_name") or context.get("user_name") or ""
+            c_pet = context.get("pet_name") or ""
+        reply_text = build_honest_fallback_message(user_name=c_user, pet_name=c_pet)
         responder_agent = "system"
         responder_name = "Canal de Atención (Sistema Mrs. Pets)"
         model_used = "fallback-sistema"
@@ -8207,29 +8319,88 @@ async def teamily_chat(request: Request):
         decl_rejected, body, clean_msg = sessionSecurity.check_and_reject_identity_declaration(request, body)
         msg = clean_msg
 
-        # Bloque 1.2 & 2.3: La identidad es un hecho del servidor validado contra cookie firmada y BD
-        v_sess = sessionSecurity.get_verified_session(request)
-
-        role = v_sess.get("role") or "visitor"
-        permissions = v_sess.get("permissions") or ["view_public_catalog"]
-        subject_id = v_sess.get("subject_id")
-
-        # Personal oficial autenticado en el portal (Fundador / Staff)
-        is_staff_portal = bool(
-            role in ("staff", "staff_admin")
-            and subject_id
-            and (v_sess.get("auth_level") in ("staff_authenticated", "staff_verified") or bool(v_sess.get("verified")))
-        )
-        is_staff_elevated = bool(
-            v_sess.get("verified")
-            and v_sess.get("auth_level") == "staff_verified"
-            and v_sess.get("passphrase_ok")
+        # BLOQUE 2.3 & 3.1: Verificar credencial firmada fuera del cuerpo del mensaje (en headers)
+        auth_header = (
+            request.headers.get("authorization") or
+            request.headers.get("Authorization") or
+            request.headers.get("x-mp-session") or
+            request.headers.get("X-MP-Session")
         )
 
-        is_staff_auth = is_staff_portal
-        is_customer = not is_staff_auth
+        is_jwt_valid, trusted_session, jwt_reason, jti = sessionSecurity.verify_avatar_jwt(auth_header, request=request)
 
-        u_name = v_sess.get("staff_display_name") or ("Sr. Harryt Luzardo" if "harryt" in str(subject_id).lower() else "")
+        # Si el header falló o no vino, evaluar respaldo de sesión por cookie (Segundo Cinturón)
+        # o si el mensaje incluye un código de un solo uso (BLOQUE 6)
+        if not is_jwt_valid:
+            if not auth_header:
+                # Comprobar si existe una cookie de sesión del servidor activa (ej. sesión previa en portal)
+                v_cookie_sess = sessionSecurity.get_verified_session(request)
+                if (
+                    v_cookie_sess
+                    and (
+                        v_cookie_sess.get("verified")
+                        or v_cookie_sess.get("auth_level") in ("staff_authenticated", "staff_verified", "client_verified")
+                    )
+                    and v_cookie_sess.get("subject_id")
+                ):
+                    s_id = str(v_cookie_sess["subject_id"])
+                    s_role = str(v_cookie_sess.get("role", "visitor"))
+                    temp_cookie_tok = sessionSecurity.create_avatar_jwt(subject_id=s_id, role=s_role)
+                    is_jwt_valid, trusted_session, jwt_reason, jti = sessionSecurity.verify_avatar_jwt(temp_cookie_tok, request=request)
+                    if is_jwt_valid and trusted_session and v_cookie_sess.get("auth_level"):
+                        trusted_session["auth_level"] = v_cookie_sess.get("auth_level")
+
+            if not is_jwt_valid:
+                code_redeemed, link_rec, code_reason = sessionSecurity.redeem_avatar_link_code(msg)
+                if code_redeemed and link_rec:
+                    sub_redeemed = link_rec["subject_id"]
+                    role_redeemed = link_rec["role"]
+                    temp_tok = sessionSecurity.create_avatar_jwt(subject_id=sub_redeemed, role=role_redeemed)
+                    is_jwt_valid, trusted_session, jwt_reason, jti = sessionSecurity.verify_avatar_jwt(temp_tok, request=request)
+                else:
+                    sessionSecurity.log_avatar_degradation(
+                        reason=jwt_reason,
+                        jti=jti,
+                        host_iss="mrspets-portal",
+                        host_aud=request.headers.get("host", "avatar"),
+                        thread_id=body.get("thread_id") or body.get("sessionId")
+                    )
+
+        if is_jwt_valid and trusted_session:
+            subject_id = trusted_session["subject_id"]
+            role = str(trusted_session["role"]).strip().lower()
+            u_name = trusted_session["display_name"]
+            is_staff_auth = role in ("staff", "staff_admin")
+            is_staff_portal = is_staff_auth
+            is_customer = not is_staff_auth
+            auth_level = trusted_session.get("auth_level") or ("staff_authenticated" if is_staff_auth else "client_verified")
+            permissions = (
+                ["view_public_catalog", "view_own_pets", "book_appointment", "view_assigned_tasks"]
+                if is_staff_auth else
+                ["view_public_catalog", "view_own_pets", "book_appointment"]
+            )
+            v_sess = {
+                "verified": True,
+                "subject_id": subject_id,
+                "role": role,
+                "auth_level": auth_level,
+                "staff_display_name": u_name
+            }
+        else:
+            subject_id = None
+            role = "visitor"
+            u_name = ""
+            is_staff_auth = False
+            is_staff_portal = False
+            is_customer = True
+            auth_level = "anonymous"
+            permissions = ["view_public_catalog"]
+            v_sess = {
+                "verified": False,
+                "subject_id": None,
+                "role": "visitor",
+                "auth_level": "anonymous"
+            }
 
         # Bloque 5.1 & 5.2: Búsqueda en cascada solo después de identificar la sesión
         client_info = lookup_client_in_mrs_pets_db(
@@ -8243,10 +8414,13 @@ async def teamily_chat(request: Request):
         )
 
         # Bloque 1.4 & 1.5: La memoria de conversación se indexa por (subject_id, thread_id)
-        subj_key = subject_id or f"anon_{v_sess.get('session_id') or session_id}"
-        th_id = sessionSecurity.get_or_create_thread(subj_key)
+        subj_key = subject_id or f"anon_{session_id}"
+        th_id = sessionSecurity.get_or_create_thread(subj_key, requested_thread_id=body.get("thread_id") or body.get("sessionId"))
 
-        # Bloque 1.3 & 2.4: Ensamblado del prompt con delimitación estricta <USER_INPUT>
+        # BLOQUE 7.5: Memoria indexada estrictamente por (subject_id, thread_id)
+        conv_memory = sessionSecurity.get_conversation_memory(subj_key, th_id)
+
+        # Bloque 1.3, 4.1 & 5.4: Ensamblado del prompt con delimitación estricta y sesión de confianza
         teamily_msg = assemble_avatar_prompt(
             role=role,
             permissions=permissions,
@@ -8254,7 +8428,9 @@ async def teamily_chat(request: Request):
             user_message=msg,
             client_info=client_info,
             bcv_cfg=bcv_cfg,
-            staff_display_name=v_sess.get("staff_display_name")
+            staff_display_name=u_name,
+            trusted_session=trusted_session,
+            conversation_memory=conv_memory
         )
 
         # Directiva tipada según la Sección 1.5 de la especificación
@@ -8276,12 +8452,19 @@ async def teamily_chat(request: Request):
                 "verified": is_staff_auth,
                 "staff_id": "@9000408632300095" if is_staff_auth else None,
                 "staff_display_name": u_name if is_staff_auth else None,
-                "pet_name": "Luna (Golden Retriever)" if is_staff_auth else p_name
+                "user_name": u_name,
+                "pet_name": p_name or ("Luna (Golden Retriever)" if is_staff_auth else None),
+                "avatar_jwt": auth_header if is_jwt_valid else None
             },
             identity_directive=identity_directive_obj
         )
 
         res_text = orch["reply"]
+        responder_agent = orch["agent"]
+        responder_name = orch["agent_name"]
+        model_used = orch["model_used"]
+        call_latency_ms = orch["latency_ms"]
+
         if res_text:
             # Normalización y sanitización estricta de salida visible (Bloque 3.1)
             res_text = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res_text, flags=re.IGNORECASE)
@@ -8314,11 +8497,9 @@ async def teamily_chat(request: Request):
                     )
                     responder_agent = "margaret"
                     responder_name = "Margarette (Gerente de Planta • @9000408632300095)"
-
-        responder_agent = orch["agent"]
-        responder_name = orch["agent_name"]
-        model_used = orch["model_used"]
-        call_latency_ms = orch["latency_ms"]
+            elif trusted_session and u_name and (orch.get("active_channel") == "fallback" or responder_agent == "system"):
+                # Si fallaron los motores de IA pero la sesión está verificada, el respaldo nombra a la persona desde la ficha
+                res_text = build_honest_fallback_message(user_name=u_name, pet_name=p_name)
 
         # 4. Procesar y persistir reserva si los datos están completos
         booking_data = None
@@ -8363,6 +8544,10 @@ async def teamily_chat(request: Request):
                 agent_health_tracker.reset_session_failures(session_id)
                 agent_health_tracker.record_check_result(ok=True, latency_ms=call_latency_ms)
 
+        # BLOQUE 7: Registrar el turno en la memoria compartida (eco bidireccional)
+        sessionSecurity.record_conversation_memory(subj_key, th_id, "user", msg)
+        sessionSecurity.record_conversation_memory(subj_key, th_id, "avatar", res_text)
+
         # Bloque 3.2: Descartar metadatos técnicos en el payload del frontend.
         # Metadatos van a logs del servidor, no a la respuesta HTTP al cliente.
         log.info(
@@ -8377,10 +8562,14 @@ async def teamily_chat(request: Request):
             "reply": res_text,
             "response_text": res_text,
             "bcv_rate": eff_rate,
-            "verified": is_staff_portal or bool(v_sess.get("verified", False)),
-            "auth_level": v_sess.get("auth_level", "anonymous"),
+            "verified": bool(trusted_session is not None),
+            "auth_level": auth_level,
+            "role": role if trusted_session else None,
+            "display_name": u_name if trusted_session else None,
+            "degradation_reason": jwt_reason if not trusted_session else None,
             "identity_directive": identity_directive_obj.get("identity_directive"),
             "session_id": session_id,
+            "thread_id": th_id,
             "primary_engine": orch.get("primary_engine"),
             "backup_engine": orch.get("backup_engine"),
             "active_channel": orch.get("active_channel"),
