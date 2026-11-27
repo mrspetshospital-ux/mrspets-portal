@@ -1403,17 +1403,8 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       aiModel: activeModel.id,
       aiModelName: activeModel.name,
       modelEngine: (activeModel.id && activeModel.id.includes('teamly')) ? "Teamly Orchestrator" : "Google Gemini",
-      userType: session.userType,
-      userRole: session.userRole,
-      userId: session.userId,
-      userName: session.userName,
-      sessionMode: session.sessionMode,
-      activeTab: session.activeTab,
       requiresAction: false
     };
-
-    if (session.petName) fullPayload.petName = session.petName;
-    if (session.phone) fullPayload.phone = session.phone;
 
     console.log(`[LEIA CHAT BIDIRECCIONAL] Despacho a Make Leia (Modelo: ${activeModel.id}) -> ${webhookUrl}:`, fullPayload);
 
@@ -1654,9 +1645,6 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
 
     const chatSessionId = (typeof this.getChatSessionId === 'function') ? this.getChatSessionId() : ((session && session.sessionId) || ('sess_' + Math.random().toString(36).substring(2, 9)));
 
-    const agentPayload = {
-      message_id: messageId,
-      agente_origen: isStaff ? 'staff' : 'user',
     // BLOQUE 2.2: Obtener credencial firmada desde el servidor a partir de la sesión autenticada
     let avatarToken = null;
     try {
@@ -1744,17 +1732,17 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
           const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
           const res = await fetch('/api/v1/leia/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            headers: reqHeaders,
             body: JSON.stringify({
               message: cleanText,
+              input: cleanText,
               agent_id: 'margaret',
               agent_slug: 'margaret',
               requested_slug: 'margaret',
               model: 'gemini-3.8-flash',
-              userType: session.userType,
-              userName: session.userName,
-              petName: session.petName,
-              sessionId: this.getChatSessionId()
+              sessionId: this.getChatSessionId(),
+              thread_id: this.getChatSessionId()
             }),
             signal: geminiCtrl.signal
           });
@@ -1828,17 +1816,17 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
           const geminiTimeout = setTimeout(() => geminiCtrl.abort(), 12000);
           const res = await fetch('/api/v1/leia/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            headers: reqHeaders,
             body: JSON.stringify({
               message: cleanText,
+              input: cleanText,
               agent_id: agentSlug,
               agent_slug: agentSlug,
               requested_slug: agentSlug,
               model: activeModel.id,
-              userType: session.userType,
-              userName: session.userName,
-              petName: session.petName,
-              sessionId: this.getChatSessionId()
+              sessionId: this.getChatSessionId(),
+              thread_id: this.getChatSessionId()
             }),
             signal: geminiCtrl.signal
           });

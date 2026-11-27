@@ -983,29 +983,18 @@
                     const gemMsgId = 'MSG-GEMINI-' + Date.now();
                     const gemRes = await fetch('/api/v1/leia/chat', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-message-id': gemMsgId
-                        },
+                        credentials: 'same-origin',
+                        headers: reqHeaders,
                         body: JSON.stringify({
                             message_id: gemMsgId,
-                            agente_origen: 'user',
                             input: userText,
                             message: userText,
                             model: 'gemini-3.8-flash',
                             agent_id: 'margaret',
                             agent_slug: 'margaret',
                             requested_slug: 'margaret',
-                            agent_name: 'Margaret (actuando como Leia Concierge VIP)',
-                            userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                            petName: this.lastActivePetName || '',
-                            userType: isStaff ? 'staff_admin' : 'client',
-                            context: {
-                                userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                                petName: this.lastActivePetName || '',
-                                userType: isStaff ? 'staff_admin' : 'client',
-                                channel: 'Widget Search (Failover Gemini • Leia)'
-                            }
+                            sessionId: chatSessionId,
+                            thread_id: chatSessionId
                         }),
                         signal: gemAbort.signal
                     });

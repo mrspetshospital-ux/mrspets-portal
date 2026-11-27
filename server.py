@@ -3618,10 +3618,46 @@ async def leia_chat_v1(request: Request):
     except Exception:
         body = {}
 
-    user_message = str(body.get("message") or body.get("input") or body.get("prompt") or "").strip()
-    user_type = body.get("userType") or body.get("user_type") or "client"
-    user_name = body.get("userName") or body.get("user_name") or "Cliente VIP"
-    pet_name = body.get("petName") or body.get("pet_name") or ""
+    import sessionSecurity
+    decl_rejected, body, clean_msg = sessionSecurity.check_and_reject_identity_declaration(request, body)
+    user_message = (clean_msg or str(body.get("message") or body.get("input") or body.get("prompt") or "")).strip()
+
+    # BLOQUE 2.3 & 3.1: Resolver identidad EXCLUSIVAMENTE mediante credencial firmada
+    auth_header = (
+        request.headers.get("authorization") or
+        request.headers.get("Authorization") or
+        request.headers.get("x-mp-session") or
+        request.headers.get("X-MP-Session")
+    )
+    is_jwt_valid, trusted_session, jwt_reason, jti = sessionSecurity.verify_avatar_jwt(auth_header, request=request)
+    if not is_jwt_valid:
+        if not auth_header:
+            v_cookie_sess = sessionSecurity.get_verified_session(request)
+            if (
+                v_cookie_sess
+                and (
+                    v_cookie_sess.get("verified")
+                    or v_cookie_sess.get("auth_level") in ("staff_authenticated", "staff_verified", "client_verified")
+                )
+                and v_cookie_sess.get("subject_id")
+            ):
+                s_id = str(v_cookie_sess["subject_id"])
+                s_role = str(v_cookie_sess.get("role", "visitor"))
+                temp_cookie_tok = sessionSecurity.create_avatar_jwt(subject_id=s_id, role=s_role)
+                is_jwt_valid, trusted_session, jwt_reason, jti = sessionSecurity.verify_avatar_jwt(temp_cookie_tok, request=request)
+                if is_jwt_valid and trusted_session and v_cookie_sess.get("auth_level"):
+                    trusted_session["auth_level"] = v_cookie_sess.get("auth_level")
+
+    if is_jwt_valid and trusted_session:
+        user_type = str(trusted_session.get("role", "client")).strip().lower()
+        user_name = trusted_session.get("display_name", "")
+        is_customer = not (user_type in ("staff", "staff_admin", "admin", "war_room"))
+    else:
+        user_type = "visitor"
+        user_name = ""
+        is_customer = True
+
+    pet_name = ""
     history = body.get("history") or []
     session_id = body.get("sessionId") or f"SESS-{uuid.uuid4().hex[:8]}"
     target_agent = (body.get("agent_id") or body.get("agent_slug") or body.get("requested_slug") or "margaret").lower()
@@ -3659,7 +3695,6 @@ async def leia_chat_v1(request: Request):
         primary_engine = (body.get("primaryEngine") or body.get("primary_engine") or cfg_primary).lower()
 
     timeout_sec = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout)
-    is_customer = (str(user_type).lower() not in ["staff", "staff_admin", "admin", "war_room"])
 
     # 2. Orquestación Dual con Canales Independientes
     orch = await orchestrate_dual_ai_chat(
@@ -3670,7 +3705,13 @@ async def leia_chat_v1(request: Request):
         timeout_sec=timeout_sec,
         history=history,
         requested_agent=target_agent,
-        board_id=body.get("board_id")
+        board_id=body.get("board_id"),
+        context={
+            "user_name": user_name,
+            "staff_display_name": user_name if not is_customer else "",
+            "user_type": user_type,
+            "is_customer": is_customer
+        }
     )
 
     if centralita_router:

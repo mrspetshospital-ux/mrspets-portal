@@ -233,6 +233,21 @@
 
         let responseReceived = false;
 
+        let avatarToken = null;
+        try {
+          const tokRes = await fetch('/api/session/avatar-token', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (tokRes.ok) {
+            const tokData = await tokRes.json();
+            avatarToken = tokData.token;
+          }
+        } catch (_eTok) {}
+
+        const chatSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
+
         if (isTeamly) {
           // =========================================================================
           // 1. CANAL PRINCIPAL: TEAMIY CON ABORT TIMEOUT DE 20S
@@ -241,20 +256,6 @@
             const abortCtrl = new AbortController();
             const timeoutTimer = setTimeout(() => abortCtrl.abort(), timeoutSec * 1000);
             const msgId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-            const chatSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
-
-            let avatarToken = null;
-            try {
-              const tokRes = await fetch('/api/session/avatar-token', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' }
-              });
-              if (tokRes.ok) {
-                const tokData = await tokRes.json();
-                avatarToken = tokData.token;
-              }
-            } catch (_eTok) {}
 
             const reqHeaders = { 
               'Content-Type': 'application/json',
@@ -316,24 +317,27 @@
           const gemTimeoutTimer = setTimeout(() => gemAbortCtrl.abort(), 15000);
           const gemMsgId = 'MSG-GEMINI-' + Date.now();
 
+          const reqHeaders = {
+            'Content-Type': 'application/json',
+            'x-message-id': gemMsgId
+          };
+          if (avatarToken) {
+            reqHeaders['Authorization'] = 'Bearer ' + avatarToken;
+            reqHeaders['X-MP-Session'] = avatarToken;
+          }
+
           const gemRes = await fetch('/api/v1/leia/chat', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-message-id': gemMsgId
-            },
+            credentials: 'same-origin',
+            headers: reqHeaders,
             body: JSON.stringify({
               message_id: gemMsgId,
-              agente_origen: 'user',
               input: userText,
               message: userText,
               model: 'gemini-3.8-flash',
               agent_slug: 'leia',
-              agent_name: 'Leia Concierge VIP & Asistencia CEO',
-              context: {
-                userName: 'Cliente VIP',
-                channel: 'Modal Concierge Card (Failover Gemini)'
-              }
+              sessionId: chatSessionId,
+              thread_id: chatSessionId
             }),
             signal: gemAbortCtrl.signal
           });
