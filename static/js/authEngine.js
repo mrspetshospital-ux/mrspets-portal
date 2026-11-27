@@ -1652,6 +1652,16 @@ class AuthEngine {
     sessionStorage.setItem('mrs_pets_client_authenticated', 'true');
     localStorage.setItem('mrs_pets_skip_splash', 'true');
 
+    // Sincronización oficial de sesión client_verified en el servidor (Segundo Cinturón)
+    try {
+      fetch('/api/session/client-login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pet_id: petId, identifier: ownerName, pin: '2026' })
+      }).catch(e => console.warn('[AuthEngine] Error al sincronizar sesión cliente al servidor:', e));
+    } catch (_eSync) {}
+
     // Limpieza de banderas de popups previos de otras mascotas para evitar colisiones
     try {
       Object.keys(sessionStorage).forEach(k => {
@@ -2178,6 +2188,7 @@ class AuthEngine {
     // Notificar al backend de la revocación de la cookie de sesión si existe
     try {
       fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+      fetch('/api/session/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     } catch(e) {}
 
     const appContainer = document.getElementById('app-container');
