@@ -399,13 +399,17 @@ class TeamilyGeoAClient:
         - Authorization: Bearer <server_key>
         - Content-Type: application/json
         """
+        target_endpoint = normalize_teamily_endpoint(endpoint_override or getattr(request, "endpoint", None) or self.endpoint, default_endpoint=self.endpoint)
         payload = request.to_payload()
         if not payload.get("group_id") and not payload.get("board_id") and self.board_id and not request.is_customer:
             payload["board_id"] = self.board_id
         if payload.get("group_id"):
             payload.pop("board_id", None)
-
-        target_endpoint = normalize_teamily_endpoint(endpoint_override or getattr(request, "endpoint", None) or self.endpoint, default_endpoint=self.endpoint)
+        # Margarette Gerente de Planta: Endpoint de atención 1 a 1 directo.
+        # NUNCA inyectar group_id ni board_id para no desviar la conversación del agente hacia canales grupales.
+        if "margarette" in str(target_endpoint).lower():
+            payload.pop("group_id", None)
+            payload.pop("board_id", None)
         if server_key_override is not None:
             target_server_key = (server_key_override or "").strip()
         elif "margarette" in str(target_endpoint).lower():

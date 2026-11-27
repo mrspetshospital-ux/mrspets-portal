@@ -8195,6 +8195,18 @@ async def teamily_chat(request: Request):
         )
         is_customer = not is_staff_auth
 
+        # Mitigación T-14: Inyecciones de directivas o bloques de control en el cuerpo del mensaje por visitantes
+        if not is_staff_auth and msg and any(kw in msg for kw in ["[IDENTITY_DIRECTIVE", "IDENTITY_DIRECTIVE:", "[CONTEXTO DE ATENCIÓN INTERNA", "staff_verified"]):
+            sessionSecurity.log_audit_event(
+                action="PROMPT_INJECTION_ATTEMPT",
+                result="denied",
+                session_id=v_sess.get("session_id"),
+                ip=client_ip(request),
+                user_agent=request.headers.get("user-agent", "")
+            )
+            msg = re.sub(r'\[IDENTITY_DIRECTIVE[^\]]*\]', '', msg, flags=re.IGNORECASE).strip()
+            msg = re.sub(r'\[CONTEXTO DE ATENCIÓN INTERNA[^\]]*\]', '', msg, flags=re.IGNORECASE).strip()
+
         # Si es sesión autenticada de Staff en el portal, asegurar que la identidad sea la de la sesión verificada
         if is_staff_auth:
             u_name = v_sess.get("staff_display_name") or "Sr. Harryt Luzardo (Fundador & Director General)"
@@ -8216,16 +8228,17 @@ async def teamily_chat(request: Request):
 
         # Directiva tipada según la Sección 1.5 de la especificación
         identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
-        id_dir_json = json.dumps(identity_directive_obj)
-        db_directive = f"[IDENTITY_DIRECTIVE: {id_dir_json}]\n" + db_directive
 
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
-        msg_header = "[CONSULTA]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
+        # Nota arquitectónica (Caso T-14): NO serializar JSON simulado dentro del texto del chat;
+        # Margarette recibe el contexto institucional del sistema y el mensaje bajo el encabezado correspondiente.
+        msg_header = "[INSTRUCCIÓN DIRECTIVA EJECUTIVA]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
         teamily_msg = f"{db_directive}\n{msg_header} {msg}" if msg else db_directive
 
         if is_staff_auth:
             staff_s_id = v_sess.get("session_id") or session_id
-            target_session = f"staff_{staff_s_id}" if not str(staff_s_id).startswith("staff_") else staff_s_id
+            staff_id = v_sess.get("staff_id") or "staff"
+            target_session = f"staff_{staff_id}_{staff_s_id}"
         else:
             target_session = session_id
 

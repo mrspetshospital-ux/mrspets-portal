@@ -219,7 +219,7 @@ def lookup_client_in_mrs_pets_db(
 
         # Protección Anti-Homónimos: Búsqueda por nombre requiere nombre completo (>=2 palabras) o acompañamiento de mascota
         has_full_name = len(s_name.split()) >= 2 if s_name else False
-        is_generic_name = s_name.lower() in ("cliente vip", "visitante", "invitado", "cliente", "usuario")
+        is_generic_name = s_name.lower() in ("cliente vip", "visitante", "invitado", "cliente", "usuario") if s_name else True
 
         try:
             if s_name and has_full_name and not is_generic_name:
@@ -229,17 +229,31 @@ def lookup_client_in_mrs_pets_db(
                     one=True
                 )
             if not tutor and s_pet and len(s_pet) >= 3:
-                pet_row = db.q(
-                    "SELECT tutor_id FROM mascotas WHERE LOWER(nombre) LIKE %s AND activo=TRUE LIMIT 1",
-                    (f"%{s_pet.lower()}%",),
-                    one=True
-                )
-                if pet_row and pet_row.get("tutor_id"):
-                    tutor = db.q(
-                        "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE id=%s AND activo=TRUE LIMIT 1",
-                        (pet_row["tutor_id"],),
+                # Si viene acompañada de mascota, verificar correlación con el tutor si se mencionó en texto o parámetro
+                s_name_cand = s_name if (s_name and not is_generic_name) else None
+                if not s_name_cand and text_lower:
+                    if "sofia" in text_lower or "sofía" in text_lower:
+                        s_name_cand = "sofia"
+
+                if s_name_cand:
+                    t_cand = db.q("SELECT id FROM tutores WHERE LOWER(nombre) LIKE %s AND activo=TRUE LIMIT 1", (f"%{s_name_cand.lower()}%",), one=True)
+                    if t_cand:
+                        p_cand = db.q("SELECT tutor_id FROM mascotas WHERE tutor_id=%s AND LOWER(nombre) LIKE %s AND activo=TRUE LIMIT 1", (t_cand["id"], f"%{s_pet.lower()}%"), one=True)
+                        if p_cand:
+                            tutor = db.q("SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE id=%s AND activo=TRUE LIMIT 1", (p_cand["tutor_id"],), one=True)
+
+                if not tutor:
+                    pet_row = db.q(
+                        "SELECT tutor_id FROM mascotas WHERE LOWER(nombre) LIKE %s AND activo=TRUE LIMIT 1",
+                        (f"%{s_pet.lower()}%",),
                         one=True
                     )
+                    if pet_row and pet_row.get("tutor_id"):
+                        tutor = db.q(
+                            "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE id=%s AND activo=TRUE LIMIT 1",
+                            (pet_row["tutor_id"],),
+                            one=True
+                        )
             if tutor:
                 mascotas = db.q(
                     "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE tutor_id=%s AND activo=TRUE ORDER BY id",
