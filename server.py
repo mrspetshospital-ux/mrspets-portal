@@ -2838,6 +2838,10 @@ async def orchestrate_dual_ai_chat(
     failover_triggered = False
     failover_reason = None
     res = None
+    model_used = None
+    responder_agent = requested_agent
+    responder_name = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else requested_agent
+    active_channel = "teamily" if primary == "teamily" else "gemini"
 
     if primary == "teamily":
         # Canal 1 Primario: Teamily
