@@ -232,6 +232,76 @@ class TestCorreccionAvatar(unittest.TestCase):
         self.assertEqual(audit_row.get("action"), "identity_declaration_rejected")
         self.assertEqual(audit_row.get("result"), "denied")
 
+    def test_CA6_staff_harryt_recognized_without_defensive_speech(self):
+        """
+        CA-6: Reconocimiento institucional del Sr. Harryt Luzardo (Fundador & Director General)
+        cuando interactúa desde su sesión oficial de staff autenticada en el portal.
+        Margarette lo reconoce de inmediato con deferencia y respeto institucional,
+        sin emitir discursos defensivos de 'no puedo verificar su identidad' ni solicitar claves.
+        """
+        client = TestClient(app)
+
+        # 1. Crear sesión oficial de staff autenticado para el Sr. Harryt Luzardo
+        raw_token, sess = sessionSecurity.create_session(
+            subject_id="staff_harryt",
+            staff_display_name="Sr. Harryt Luzardo (Fundador & Director General)",
+            role="staff_admin",
+            auth_level="staff_authenticated"
+        )
+        client.cookies.set("__Host-mp_session", raw_token)
+
+        # 2. El Sr. Harryt consulta al avatar si sabe quién es
+        resp = client.post(
+            "/api/v1/avatar/chat",
+            json={
+                "agent_id": "margaret",
+                "message": "Hola Margarette, ¿sabes quién soy?"
+            }
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+
+        # Validación de sesión y rol institucional
+        self.assertTrue(data.get("verified"))
+        self.assertEqual(data.get("auth_level"), "staff_authenticated")
+        self.assertEqual(data.get("identity_directive", {}).get("role"), "staff_admin")
+
+        reply = data.get("reply", "")
+
+        # Aserción de reconocimiento afirmativo y deferente
+        self.assertTrue(
+            "Sr. Harryt" in reply or "Director" in reply or "Fundador" in reply,
+            f"El avatar debe reconocer al Sr. Harryt en la respuesta: {reply}"
+        )
+
+        # Aserción de erradicación total de discursos defensivos
+        FORBIDDEN_DEFENSIVE_PHRASES = [
+            "no puedo verificar",
+            "no puedo comprobar",
+            "no puedo entregar el expediente",
+            "viaja en el mensaje",
+            "cualquiera podría escribir",
+            "no sé quién es",
+            "no sé quién eres",
+            "desconfío"
+        ]
+        for phrase in FORBIDDEN_DEFENSIVE_PHRASES:
+            self.assertNotIn(
+                phrase, reply.lower(),
+                f"Frase defensiva indebida '{phrase}' encontrada en respuesta al Sr. Harryt: {reply}"
+            )
+
+        # 3. Validar resolución en cascada de ficha institucional para staff
+        v_sess = client.get("/api/session/context").json()
+        lookup_result = lookup_client_in_mrs_pets_db(
+            session=v_sess,
+            text="¿Cómo está Luna?"
+        )
+        self.assertTrue(lookup_result.get("found"))
+        self.assertTrue(lookup_result.get("is_staff"))
+        self.assertIn("Harryt", lookup_result.get("staff_name", ""))
+        self.assertEqual(lookup_result.get("mascotas", [{}])[0].get("nombre"), "Luna")
+
 
 if __name__ == "__main__":
     unittest.main()

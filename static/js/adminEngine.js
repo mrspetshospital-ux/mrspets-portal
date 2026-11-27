@@ -1387,6 +1387,9 @@ class AdminEngine {
     if (window.mrsPetsArch && typeof window.mrsPetsArch.updateLeiaRoleControls === 'function') {
       window.mrsPetsArch.updateLeiaRoleControls();
     }
+    if (window.LeiaChatEngine && typeof window.LeiaChatEngine.updateRoleView === 'function') {
+      window.LeiaChatEngine.updateRoleView();
+    }
     return true;
   }
 

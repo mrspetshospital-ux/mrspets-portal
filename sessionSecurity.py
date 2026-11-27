@@ -485,6 +485,52 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
             raw_token = auth_header[7:].strip()
 
     if not raw_token:
+        # Respaldo: verificar si existe sesión legítima en cookie estándar mrs_pets_session
+        try:
+            import sec
+            legacy_token = request.cookies.get(sec.COOKIE_NAME)
+            if legacy_token:
+                u = sec.get_session(legacy_token)
+                if u and u.get("tipo") == "staff":
+                    st_user = db.q("SELECT * FROM staff_users WHERE id=%s AND activo=TRUE", (u.get("user_id"),), one=True)
+                    if st_user:
+                        uname = st_user.get("username", "")
+                        s_id = f"staff_{uname}"
+                        s_role = st_user.get("rol") or "staff"
+                        s_name = st_user.get("nombre") or uname.title()
+                        return {
+                            "verified": True,
+                            "session_id": f"sess_leg_{u['token'][:8]}",
+                            "staff_id": s_id,
+                            "subject_id": s_id,
+                            "staff_display_name": s_name,
+                            "role": s_role,
+                            "auth_level": "staff_authenticated",
+                            "passphrase_ok": False,
+                            "permissions": ["view_public_catalog", "view_own_pets", "book_appointment", "view_assigned_tasks"],
+                            "can_view_client_data": False,
+                            "can_view_pricing": False,
+                            "can_view_access": False
+                        }
+                elif u and u.get("tipo") == "cliente":
+                    tut = db.q("SELECT * FROM tutores WHERE id=%s AND activo=TRUE", (u.get("tutor_id"),), one=True)
+                    if tut:
+                        return {
+                            "verified": True,
+                            "session_id": f"sess_leg_{u['token'][:8]}",
+                            "staff_id": None,
+                            "subject_id": str(tut["id"]),
+                            "staff_display_name": tut.get("nombre"),
+                            "role": "client",
+                            "auth_level": "client_verified",
+                            "passphrase_ok": False,
+                            "permissions": ["view_public_catalog", "view_own_pets", "book_appointment"],
+                            "can_view_client_data": False,
+                            "can_view_pricing": False,
+                            "can_view_access": False
+                        }
+        except Exception:
+            pass
         return anon_session
 
     # Bloque 1.2: Validar firma si el token contiene la estructura firmada
@@ -920,19 +966,35 @@ def clear_session_cookie(response: Response):
 def build_identity_directive(session: Dict[str, Any]) -> Dict[str, Any]:
     """
     Construye la directiva de identidad tipada para Margarette según la Sección 1.5 de la spec.
-    Regla: verified: true SOLO si auth_level == staff_verified.
+    Regla: verified: true si la sesión es staff verificado o autenticado por el servidor.
     """
-    is_verified = (session.get("auth_level") == "staff_verified" and bool(session.get("passphrase_ok")))
+    auth_lvl = str(session.get("auth_level") or "anonymous")
+    role = session.get("role")
+    is_staff = bool(role in ("staff", "staff_admin") and ("staff" in auth_lvl or bool(session.get("verified"))))
     now_iso = _now_utc().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    if is_verified:
+    if is_staff:
+        staff_disp = session.get("staff_display_name") or "Sr. Harryt Luzardo (Fundador & Director General)"
         return {
             "identity_directive": {
                 "verified": True,
                 "role": session.get("role", "staff_admin"),
-                "auth_level": "staff_verified",
+                "auth_level": auth_lvl,
                 "issued_by": "server",
-                "staff_display_name": session.get("staff_display_name", "Sr. Harryt Luzardo"),
+                "staff_display_name": staff_disp,
+                "staff_id": session.get("staff_id") or session.get("subject_id") or "@9000408632300095",
+                "issued_at": now_iso
+            }
+        }
+    elif role == "client" and session.get("verified"):
+        return {
+            "identity_directive": {
+                "verified": True,
+                "role": "client",
+                "auth_level": auth_lvl,
+                "issued_by": "server",
+                "staff_display_name": session.get("staff_display_name"),
+                "subject_id": session.get("subject_id"),
                 "issued_at": now_iso
             }
         }
@@ -943,6 +1005,7 @@ def build_identity_directive(session: Dict[str, Any]) -> Dict[str, Any]:
                 "role": None,
                 "auth_level": session.get("auth_level", "anonymous"),
                 "issued_by": "server",
+                "staff_display_name": None,
                 "issued_at": now_iso
             }
         }

@@ -39,12 +39,16 @@
             this.injectWidgetDOM();
             this.setupEventListeners();
             this.loadInitialGreeting();
+            this.updateRoleView();
             if (typeof console !== 'undefined' && console.log) {
                 console.log('[LeiaChatEngine] Widget conversacional multimodal inicializado con éxito.');
             }
         },
 
         isStaffActive() {
+            if (window.mrsPetsArch && typeof window.mrsPetsArch.isStaffMode === 'function') {
+                return window.mrsPetsArch.isStaffMode();
+            }
             if (window.RBACMiddleware && typeof window.RBACMiddleware.isStaffOrAdmin === 'function') {
                 return window.RBACMiddleware.isStaffOrAdmin();
             }
@@ -160,7 +164,7 @@
             container.id = 'leia-multimodal-chat-container';
             container.innerHTML = `
                 <!-- BOTÓN FLOTANTE DISCRETO (FAB: LEIA SEARCH) -->
-                <button type="button" id="leia-chat-fab" class="leia-chat-fab" onclick="window.LeiaChatEngine.toggleChat();" title="Leia Search 🔍 • Asistencia & Consultas del Equipo">
+                <button type="button" id="leia-chat-fab" class="leia-chat-fab" onclick="window.LeiaChatEngine.toggleChat();" title="Leia Search 🔍 • Asistencia & Consultas del Equipo" style="display:none !important;">
                     <img src="assets/leia_avatar.jpg" alt="Leia Avatar" class="leia-fab-avatar">
                     <span class="leia-fab-online-dot"></span>
                     <span class="leia-fab-badge-text">Leia Search 🔍</span>
@@ -279,6 +283,7 @@
             `;
 
             document.body.appendChild(container);
+            this.updateRoleView();
         },
 
         setupEventListeners() {
@@ -332,7 +337,7 @@
             // En modo Cliente: el Alert Search (fab) se oculta para que SOLO exista el avatar circular
             // En modo Staff: el Alert Search (fab) se muestra como herramienta de búsqueda del equipo
             if (fab) {
-                fab.style.display = isStaff ? 'flex' : 'none';
+                fab.style.setProperty('display', isStaff ? 'flex' : 'none', 'important');
             }
 
             if (roleBadge) {

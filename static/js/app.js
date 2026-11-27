@@ -310,6 +310,9 @@ class App {
       if (window.mrsPetsArch && typeof window.mrsPetsArch.updateLeiaRoleControls === 'function') {
         window.mrsPetsArch.updateLeiaRoleControls();
       }
+      if (window.LeiaChatEngine && typeof window.LeiaChatEngine.updateRoleView === 'function') {
+        window.LeiaChatEngine.updateRoleView();
+      }
     }
 
     // Update Nav UI: Highlight exact clicked element cleanly!

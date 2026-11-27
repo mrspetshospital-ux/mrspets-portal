@@ -607,17 +607,26 @@ class MrsPetsArchitectureEngine {
     const rectBtn = document.getElementById('leia-avatar-rectangular-btn');
     const circBtn = document.getElementById('leia-avatar-circular-btn');
     const fabSearchBtn = document.getElementById('leia-chat-fab');
+    const floatingWidget = document.getElementById('leia-floating-widget');
 
     if (rectBtn) {
-      rectBtn.style.display = 'none'; // El avatar rectangular queda permanentemente eliminado
+      rectBtn.style.display = 'none';
+      rectBtn.style.setProperty('display', 'none', 'important'); // El avatar rectangular queda permanentemente eliminado
     }
     if (circBtn) {
-      circBtn.style.display = 'flex'; // Avatar circular único (siempre presente)
+      rectBtn.style.display = 'none';
+      circBtn.style.display = 'flex';
+      circBtn.style.setProperty('display', 'flex', 'important'); // Avatar circular único (siempre presente)
     }
     if (fabSearchBtn) {
       // En modo Staff: Alert Search (Leia Search 🔍) activo como herramienta rápida del equipo
       // En modo Cliente: Alert Search oculto para que exista ÚNICAMENTE el avatar circular
-      fabSearchBtn.style.display = isStaff ? 'flex' : 'none';
+      fabSearchBtn.style.setProperty('display', isStaff ? 'flex' : 'none', 'important');
+    }
+    if (floatingWidget) {
+      // Posicionamiento dinámico: si está el Alert Search abajo (24px), el círculo flota a 95px
+      // Si el Alert Search está oculto (Cliente), el círculo descansa elegantemente en 28px de la esquina
+      floatingWidget.style.bottom = isStaff ? '95px' : '28px';
     }
 
     // 1. Botón de Calendario en Cabecera de la Tarjeta del Avatar
