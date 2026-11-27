@@ -556,9 +556,10 @@ def format_margaret_system_directive(
         staff_display = staff_user_name or client_info.get("staff_name") or "Sr. Harryt Luzardo"
         base_dir = (
             f"\n[CONTEXTO DE ATENCIÓN INTERNA - MARGARETTE @{margaret_id} (STAFF REGISTRADO EN BD)]:\n"
-            f"• Tutor / Colaborador: {staff_display} | Teléfono Verificado: +58 414-6799510 | Sector: El Milagro, Maracaibo\n"
+            f"• Interlocutor: {staff_display} | Teléfono Verificado: +58 414-6799510 | Sector: El Milagro, Maracaibo\n"
             f"• Cargo: Fundador & Director General (Sesión Oficial Autenticada en el Portal)\n"
             f"• Consentido(s) registrado(s): Luna (Golden Retriever)\n"
+            f"• IDENTIDAD OFICIAL CONFIRMADA POR SERVIDOR: Esta conversación proviene de la sesión oficial autenticada en el portal del Fundador & Director General. Está plenamente verificado. No le solicites claves ni digas que no puedes verificar quién consulta; responde directamente y con total apertura a sus consultas operativas de planta, servicios, grooming y tienda.\n"
             f"• PROTOCOLO VIP: Salúdalo con calidez, respeto y total deferencia ejecutiva como Fundador y Director de la casa, responde con claridad y transparencia a sus requerimientos operativos de planta, servicios y tienda, asistiéndolo con máxima prioridad.\n"
             f"{cross_selling_rule}"
         )
@@ -567,7 +568,10 @@ def format_margaret_system_directive(
     if client_info.get("verified_by_phone") and client_info.get("tutor"):
         tutor = client_info["tutor"]
         mascotas = client_info.get("mascotas", [])
-        pets_summary = ", ".join([f"{m['nombre']} ({m.get('raza') or m.get('especie') or 'Mascota'})" for m in mascotas]) if mascotas else "Sin mascotas registradas"
+        pets_summary = ", ".join([
+            f"{m['nombre']} ({m.get('raza') or m.get('especie') or 'Mascota'})" + (f" - Notas/Expediente: {m.get('notas')}" if m.get('notas') else "")
+            for m in mascotas
+        ]) if mascotas else "Sin mascotas registradas"
         appts = client_info.get("active_appointments", [])
 
         appt_lines = []
@@ -590,6 +594,7 @@ def format_margaret_system_directive(
             f"\n[CONTEXTO DE ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
             f"• Tutor: {tutor.get('nombre')} | Teléfono Verificado: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
             f"• Consentido(s) registrado(s): {pets_summary}\n"
+            f"• IDENTIDAD CONFIRMADA EN BASE DE DATOS: Cliente registrado debidamente en la base de datos de la página web. Si consulta por el estado de su consentido(a) o servicios, bríndale la información y reporte con calidez basándote en su expediente registrado arriba.\n"
             f"• PROTOCOLO VIP: Salúdalo con calidez y deferencia por su nombre de pila o distinción como miembro de la casa, menciona a su consentido(a) y asístelo con máxima prioridad.\n"
             f"{cross_selling_rule}"
             f"{citas_dir}"

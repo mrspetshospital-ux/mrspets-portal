@@ -8245,12 +8245,10 @@ async def teamily_chat(request: Request):
         # Directiva tipada según la Sección 1.5 de la especificación
         identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
 
-        # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
-        # Arquitectura Segundo Cinturón (Pieza 1 & Margarette):
-        # La firma y rol 'staff_admin' viajan como afirmación en el payload REST server-side (context e identity_directive),
-        # NUNCA mezclados en el texto del chat (para evitar que se interprete como inyección conversacional).
+        # 2. Componer prompt enriquecido para que Margaret conozca el contexto y formule las respuestas
+        # El servidor garantiza que solo las sesiones autenticadas por el backend reciban directivas de staff.
         if is_staff_auth:
-            teamily_msg = msg
+            teamily_msg = f"{db_directive}\n[MENSAJE DE DIRECCIÓN GENERAL / SR. HARRYT LUZARDO]: {msg}" if msg else db_directive
         else:
             teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
 
