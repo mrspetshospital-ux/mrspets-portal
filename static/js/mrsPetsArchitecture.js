@@ -710,6 +710,19 @@ class MrsPetsArchitectureEngine {
           </div>
         `;
       }
+    } else if (session.userType === 'visitor') {
+      if (container.children.length <= 1 || container.innerHTML.includes('leia-client-bot-bubble') || container.innerHTML.includes('Dalibel') || container.innerHTML.includes('Dalybell') || container.innerHTML.includes('Princesa')) {
+        container.innerHTML = `
+          <div class="leia-visitor-bot-bubble" style="background:#1e293b !important; color:#ffffff !important; padding:12px 14px; border-radius:14px 14px 14px 2px; border:1px solid rgba(251,191,36,0.35); line-height:1.5;">
+            <span style="color:#ffffff !important;">¡Hola! Soy <strong style="color:#fef08a !important;">Leia 🎀</strong> ✨🐾<br><br>
+            Te doy la más cordial bienvenida a <strong>Mrs. Pets</strong> en Avenida 2 El Milagro.<br><br>
+            ¿En qué podemos orientarte hoy con nuestros servicios, reservas o atención?</span>
+            <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" onclick="mrsPetsArch.sendLeiaQuickPrompt('Deseo hacer una reserva')" style="background:linear-gradient(135deg, #10b981, #059669); color:#ffffff !important; font-weight:800; font-size:0.8rem; padding:8px 14px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(16,185,129,0.35);">📅 Deseo hacer una reserva</button>
+            </div>
+          </div>
+        `;
+      }
     }
   }
 
@@ -734,11 +747,11 @@ class MrsPetsArchitectureEngine {
         badge.style.cursor = 'pointer';
         badge.onclick = () => this.handleChatBadgeStaffUnlock();
       } else {
-        badge.innerHTML = `🎀 Asistente Ejecutiva & VIP`;
-        badge.style.background = '#d97706';
-        badge.title = 'Canal de Bienvenida VIP';
-        badge.style.cursor = 'pointer';
-        badge.onclick = () => this.handleChatBadgeStaffUnlock();
+        badge.innerHTML = `🐾 Atención a Visitantes • Mrs. Pets`;
+        badge.style.background = '#475569';
+        badge.title = 'Canal de Bienvenida Visitantes';
+        badge.style.cursor = 'default';
+        badge.onclick = null;
       }
     }
 
@@ -1117,73 +1130,12 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
   }
 
   getActiveSessionContext() {
-    // 0. Detect Client VIP / Tutor profile (Prioridad absoluta cuando está en vista/perfil de cliente)
-    const isCustomerViewMode = document.body && document.body.classList.contains('customer-view-mode');
     const authRole = window.authEngine && window.authEngine.userRole;
-    const isClientRole = (authRole === 'client') || isCustomerViewMode;
-    const savedPetId = localStorage.getItem('mrs_pets_active_vip_patient_id') || (window.authEngine && window.authEngine.currentVipPetId);
     const currentTab = (window.app && window.app.currentTab) || 'home';
+    const isStaffSession = (authRole === 'staff' || (window.adminEngine && window.adminEngine.isEnterpriseAuthenticated) || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_enterprise_authenticated') === 'true'));
 
-    if (isClientRole || (savedPetId && authRole !== 'staff' && !window.adminEngine?.isEnterpriseAuthenticated)) {
-      let rawName = (window.authEngine && window.authEngine.userName) || 'Tutor VIP';
-      let clientName = rawName.split('(')[0].trim();
-      let activePetName = null;
-      let activePetSpecies = null;
-
-      if (savedPetId) {
-        let p = null;
-        if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {
-          p = window.authEngine.getPatientById(savedPetId);
-        }
-        if (!p && window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
-          p = window.adminEngine.patientsStatus.find(pet => pet.id === savedPetId);
-        }
-        if (!p && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
-          p = window.petStatusEngine.pets.find(pet => pet.id === savedPetId);
-        }
-        if (p) {
-          activePetName = p.name || p.petName;
-          activePetSpecies = p.species;
-          if (!clientName || clientName === 'Tutor VIP') {
-            clientName = p.owner || p.ownerName;
-          }
-        }
-      }
-      if (!activePetName && (clientName.toLowerCase().includes('dalybell') || clientName.toLowerCase().includes('dalibel'))) {
-        activePetName = 'Sofía';
-      }
-
-      return {
-        userType: 'client',
-        userRole: 'vip_tutor',
-        userId: savedPetId || 'CLI-VIP',
-        userName: clientName,
-        petName: activePetName ? `${activePetName}${activePetSpecies ? ` (${activePetSpecies})` : ''}` : null,
-        phone: (window.authEngine && window.authEngine.currentUserPhone) || null,
-        sessionMode: 'client_portal',
-        activeTab: currentTab
-      };
-    }
-
-    // 1. Detect Visitor Mode (Explícito)
-    const isVisitorRole = (authRole === 'visitor' || authRole === 'guest');
-    if (isVisitorRole && currentTab !== 'admin') {
-      return {
-        userType: 'visitor',
-        userRole: 'guest',
-        userId: 'GUEST-' + Math.floor(1000 + Math.random() * 9000),
-        userName: 'Invitado VIP',
-        sessionMode: 'public_portal',
-        activeTab: currentTab
-      };
-    }
-
-    // 2. Detect HAR Admin / Staff profile
-    const isAdminAuthenticated = window.adminEngine && window.adminEngine.isEnterpriseAuthenticated;
-    const isStaffRole = authRole === 'staff';
-    const isTabAdmin = currentTab === 'admin';
-
-    if ((isAdminAuthenticated || isStaffRole || isTabAdmin) && !isClientRole && !isVisitorRole) {
+    // 1. Staff Modo Oficial
+    if (isStaffSession && authRole !== 'visitor' && authRole !== 'guest') {
       const staffUser = (window.adminEngine && window.adminEngine.currentStaffUser) || {
         id: 'USR-03',
         name: 'Administrador General (HAR)',
@@ -1203,12 +1155,60 @@ Puedes indicarnos tu fecha u horario preferido aquí o seleccionar tu servicio p
       };
     }
 
-    // 3. Fallback: Public / Guest Visitor
+    // 2. Cliente VIP Autenticado Genuino (Requiere rol client + sesión confirmada)
+    const isClientAuth = !isStaffSession &&
+                         (authRole === 'client' && window.authEngine?.isAuthenticated) &&
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true') &&
+                         authRole !== 'visitor' && authRole !== 'guest';
+
+    const savedPetId = isClientAuth ? (localStorage.getItem('mrs_pets_active_vip_patient_id') || (window.authEngine && window.authEngine.currentVipPetId)) : null;
+
+    if (isClientAuth && savedPetId) {
+      let rawName = (window.authEngine && window.authEngine.userName) || '';
+      let clientName = rawName.split('(')[0].trim();
+      let activePetName = null;
+      let activePetSpecies = null;
+
+      if (savedPetId) {
+        let p = null;
+        if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {
+          p = window.authEngine.getPatientById(savedPetId);
+        }
+        if (!p && window.adminEngine && Array.isArray(window.adminEngine.patientsStatus)) {
+          p = window.adminEngine.patientsStatus.find(pet => pet.id === savedPetId);
+        }
+        if (!p && window.petStatusEngine && Array.isArray(window.petStatusEngine.pets)) {
+          p = window.petStatusEngine.pets.find(pet => pet.id === savedPetId);
+        }
+        if (p) {
+          activePetName = p.name || p.petName;
+          activePetSpecies = p.species;
+          if (!clientName) {
+            clientName = p.owner || p.ownerName;
+          }
+        }
+      }
+
+      return {
+        userType: 'client',
+        userRole: 'vip_tutor',
+        userId: savedPetId || 'CLI-VIP',
+        userName: clientName,
+        petName: activePetName ? `${activePetName}${activePetSpecies ? ` (${activePetSpecies})` : ''}` : null,
+        phone: (window.authEngine && window.authEngine.currentUserPhone) || null,
+        sessionMode: 'client_portal',
+        activeTab: currentTab
+      };
+    }
+
+    // 3. Modo Visitante (para todo usuario no autenticado: CERO tutor preasignado, CERO mascota)
     return {
       userType: 'visitor',
       userRole: 'guest',
       userId: 'GUEST-' + Math.floor(1000 + Math.random() * 9000),
-      userName: 'Invitado VIP',
+      userName: 'Visitante',
+      petName: null,
+      phone: null,
       sessionMode: 'public_portal',
       activeTab: currentTab
     };

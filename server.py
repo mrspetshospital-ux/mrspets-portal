@@ -3127,12 +3127,13 @@ def _call_gemini_for_leia_engine(
         or os.environ.get("GOOGLE_API_KEY", "").strip()
         or _get_default_gemini_key()
     )
-    primary = requested_model or os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
-    if "2.5" in str(primary):
-        primary = "gemini-3.8-flash"
-    candidate_models = [primary]
-    for m in ["gemini-3.8-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.1-pro-preview"]:
-        if m not in candidate_models:
+    primary = requested_model or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+    real_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+    candidate_models = []
+    if primary in real_models:
+        candidate_models.append(primary)
+    for m in real_models + [primary, "gemini-3.8-flash", "gemini-3-flash-preview"]:
+        if m and m not in candidate_models:
             candidate_models.append(m)
 
     contents: List[dict] = []

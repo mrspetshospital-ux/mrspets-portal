@@ -2385,8 +2385,10 @@ class PetStatusEngine {
           activePetId = 'PET-106';
         } else if (lowerName.includes('carlos') || lowerName.includes('mendoza') || lowerName.includes('fifi')) {
           activePetId = 'PET-102';
-        } else if (lowerName.includes('dalybell') || lowerName.includes('montilla') || lowerName.includes('princesa') || lowerName.includes('sofia')) {
+        } else if (lowerName.includes('dalybell') || lowerName.includes('montilla') || lowerName.includes('princesa')) {
           activePetId = 'PET-101';
+        } else if (lowerName.includes('sofia') || lowerName.includes('luna')) {
+          activePetId = 'PET-104';
         } else if (lowerName.includes('andres') || lowerName.includes('buddy')) {
           activePetId = 'PET-103';
         } else if (lowerName.includes('mariana') || lowerName.includes('colina') || lowerName.includes('buga') || lowerName.includes('cuga')) {

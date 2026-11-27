@@ -60,17 +60,20 @@
         },
 
         getCurrentClientContext() {
-            // En modo Staff / Administración NUNCA se utiliza contexto de cliente demo
+            // En modo Staff o Visitante NUNCA se utiliza contexto de cliente
             if (this.isStaffActive()) return null;
+            if (window.authEngine && (window.authEngine.userRole === 'visitor' || window.authEngine.userRole === 'guest')) {
+                return null;
+            }
 
-            const isClient = (window.authEngine && window.authEngine.userRole === 'client') ||
-                             localStorage.getItem('mrs_pets_auth_role') === 'client' ||
-                             sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
+            const isClient = (window.authEngine && window.authEngine.userRole === 'client' && window.authEngine.isAuthenticated) &&
+                             ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true') ||
+                              (typeof localStorage !== 'undefined' && localStorage.getItem('mrs_pets_auth_role') === 'client'));
 
             if (!isClient) return null;
 
             const petId = (window.authEngine && window.authEngine.currentVipPetId) ||
-                          localStorage.getItem('mrs_pets_active_vip_patient_id');
+                          (typeof localStorage !== 'undefined' && localStorage.getItem('mrs_pets_active_vip_patient_id'));
             if (!petId) return null;
 
             let patient = null;
@@ -86,8 +89,10 @@
 
             let rawOwner = (patient && (patient.owner || patient.ownerName)) ||
                            (window.authEngine && window.authEngine.userName) ||
-                           localStorage.getItem('mrs_pets_active_customer_name') ||
-                           'Sofía Rodríguez';
+                           (typeof localStorage !== 'undefined' && localStorage.getItem('mrs_pets_active_customer_name')) ||
+                           '';
+
+            if (!rawOwner) return null;
 
             let cleanOwner = rawOwner.split('(')[0].replace(/Tutor de .*/i, '').trim();
 
@@ -103,7 +108,7 @@
                 tutorHonorific = `Sra. ${cleanOwner.split(' ')[0]}`;
             }
 
-            let petName = (patient && (patient.name || patient.petName)) || 'Luna';
+            let petName = (patient && (patient.name || patient.petName)) || 'Consentido';
             let petHonorific = 'princesa';
             const normPet = petName.toLowerCase();
             if (normPet.includes('thor') || normPet.includes('buddy') || normPet.includes('max') || normPet.includes('rudy') || normPet.includes('carlos')) {
@@ -346,7 +351,7 @@
                 } else if (client) {
                     roleBadge.innerHTML = `<span class="badge-role-client" style="color:#fef08a !important; font-weight:800;">👑 Tutor VIP: ${client.tutorHonorific} (${client.petName})</span>`;
                 } else {
-                    roleBadge.innerHTML = `<span>Atención a Clientes & Search Concierge • Av. 2 El Milagro</span>`;
+                    roleBadge.innerHTML = `<span class="badge-role-visitor" style="color:#cbd5e1 !important; font-weight:700;">🐾 Visitante • Concierge VIP Mrs. Pets</span>`;
                 }
             }
         },

@@ -935,16 +935,25 @@ class AuthEngine {
         window.adminEngine.isEnterpriseAuthenticated = true;
         window.adminEngine.viewEnvironment = 'enterprise';
       }
-    } else if (!this.isAuthenticated) {
-      this.isAuthenticated = true;
+    } else if (!this.isAuthenticated || this.userRole === 'visitor' || this.userRole === 'guest') {
+      this.isAuthenticated = false;
       this.userRole = 'visitor';
-      this.userName = 'Visitante VIP';
-      sessionStorage.setItem('mrs_pets_visitor_session', 'true');
-      localStorage.setItem('mrs_pets_auth_role', 'visitor');
-      localStorage.setItem('mrs_pets_auth_name', 'Visitante VIP');
+      this.userName = 'Visitante';
+      this.currentVipPetId = null;
+      try {
+        localStorage.removeItem('mrs_pets_active_vip_patient_id');
+        localStorage.removeItem('mrs_pets_active_customer_name');
+        localStorage.setItem('mrs_pets_auth_role', 'visitor');
+        localStorage.setItem('mrs_pets_auth_name', 'Visitante');
+        sessionStorage.removeItem('mrs_pets_client_authenticated');
+        sessionStorage.setItem('mrs_pets_visitor_session', 'true');
+      } catch(e) {}
       if (typeof this.updateNavbarRole === 'function') {
         this.updateNavbarRole();
       }
+      try {
+        window.dispatchEvent(new CustomEvent('auth_state_changed', { detail: { role: 'visitor', userName: 'Visitante' } }));
+      } catch(e) {}
     }
     this.hidePortalAndShowApp();
   }
@@ -1625,8 +1634,8 @@ class AuthEngine {
       }
     }
 
-    this.requestProfilePin(petId, () => {
-      this.selectVipProfileVerified(petId);
+    this.requestProfilePin(petId, (verifiedPin) => {
+      this.selectVipProfileVerified(petId, verifiedPin);
     }, {
       forcePrompt: true, // NADIE puede ingresar como Chico Mrs. Pets sin su clave personal
       title: '🔒 Clave Personal Requerida para Ingresar',
@@ -1634,10 +1643,11 @@ class AuthEngine {
     });
   }
 
-  selectVipProfileVerified(petId) {
+  selectVipProfileVerified(petId, verifiedPin = '') {
     const patient = this.getPatientById(petId);
-    const ownerName = patient ? (patient.owner || patient.ownerName) : 'Dalybell Ramírez Montilla';
-    const petName = patient ? (patient.name || patient.petName) : 'Sofía';
+    const ownerName = patient ? (patient.owner || patient.ownerName) : 'Sofía Rodríguez';
+    const petName = patient ? (patient.name || patient.petName) : 'Luna';
+    const pinToSubmit = verifiedPin || (patient && patient.pin ? String(patient.pin) : '1234');
 
     this.currentVipPetId = petId;
     localStorage.setItem('mrs_pets_active_vip_patient_id', petId);
@@ -1658,7 +1668,7 @@ class AuthEngine {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pet_id: petId, identifier: ownerName, pin: '2026' })
+        body: JSON.stringify({ pet_id: petId, identifier: ownerName, pin: pinToSubmit })
       }).catch(e => console.warn('[AuthEngine] Error al sincronizar sesión cliente al servidor:', e));
     } catch (_eSync) {}
 

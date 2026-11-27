@@ -229,7 +229,7 @@
           ? window.mrsPetsArch.getActiveAiModelId()
           : (localStorage.getItem('mrspets_active_ai_model') || 'teamly-orchestrator');
         const isTeamly = String(activeModel).toLowerCase().includes('teamly');
-        const timeoutSec = (window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 20;
+        const timeoutSec = Math.max(Number((window.agentStudio && window.agentStudio.failoverTimeoutSeconds) || 45), 45);
 
         let responseReceived = false;
 

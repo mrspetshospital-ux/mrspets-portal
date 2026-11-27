@@ -1299,47 +1299,73 @@ class AdminEngine {
       }
 
       // 🐾 RESTAURACIÓN DE IDENTIDAD TUTOR VIP AL RETORNAR A VISTA CLIENTE
-      const storedCustomer = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_customer_name') : null;
-      let activeCustomer = (storedCustomer && !storedCustomer.toLowerCase().includes('staff') && storedCustomer !== 'Visitante VIP')
-        ? storedCustomer.split('(')[0].trim()
-        : (window.authEngine && window.authEngine.userName && window.authEngine.userName !== 'Visitante VIP' && !window.authEngine.userName.toLowerCase().includes('staff')
-            ? window.authEngine.userName.split('(')[0].trim()
-            : 'Dalybell Ramírez Montilla');
-      try { localStorage.setItem('mrs_pets_active_customer_name', activeCustomer); } catch(e) {}
+      const isClientAuth = (window.authEngine && window.authEngine.userRole === 'client' && window.authEngine.isAuthenticated) ||
+                           ((typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true') &&
+                            (typeof localStorage !== 'undefined' && localStorage.getItem('mrs_pets_auth_role') === 'client'));
 
-      let activePetId = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_vip_patient_id') : null;
-      // Validar si activePetId existe en patientsStatus y pertenece a activeCustomer
-      if (Array.isArray(this.patientsStatus)) {
-        const ownerMatches = (p) => {
-          if (!p) return false;
-          const o = (p.owner || p.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          const a = (activeCustomer || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          return o && a && (o.includes(a) || a.includes(o) || (a.includes('bellita') && o.includes('bellita')) || (a.includes('dalybell') && o.includes('dalybell')) || (a.includes('carlos') && o.includes('carlos')));
-        };
-        const foundP = activePetId ? this.patientsStatus.find(p => p.id === activePetId) : null;
-        if (!foundP || !ownerMatches(foundP)) {
-          const ownerMatch = this.patientsStatus.find(p => ownerMatches(p));
-          if (ownerMatch) {
-            activePetId = ownerMatch.id;
-          } else {
-            const cleanA = (activeCustomer || '').toLowerCase();
-            if (cleanA.includes('bellita') || cleanA.includes('bella')) activePetId = 'PET-106';
-            else if (cleanA.includes('carlos') || cleanA.includes('fifi')) activePetId = 'PET-102';
-            else activePetId = 'PET-101';
+      if (isClientAuth) {
+        const storedCustomer = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_customer_name') : null;
+        let activeCustomer = (storedCustomer && !storedCustomer.toLowerCase().includes('staff') && storedCustomer !== 'Visitante VIP' && storedCustomer !== 'Visitante')
+          ? storedCustomer.split('(')[0].trim()
+          : (window.authEngine && window.authEngine.userName && window.authEngine.userName !== 'Visitante VIP' && window.authEngine.userName !== 'Visitante' && !window.authEngine.userName.toLowerCase().includes('staff')
+              ? window.authEngine.userName.split('(')[0].trim()
+              : '');
+        if (activeCustomer) {
+          try { localStorage.setItem('mrs_pets_active_customer_name', activeCustomer); } catch(e) {}
+        }
+
+        let activePetId = (typeof localStorage !== 'undefined') ? localStorage.getItem('mrs_pets_active_vip_patient_id') : null;
+        if (Array.isArray(this.patientsStatus) && activeCustomer) {
+          const ownerMatches = (p) => {
+            if (!p) return false;
+            const o = (p.owner || p.ownerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const a = (activeCustomer || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return o && a && (o.includes(a) || a.includes(o));
+          };
+          const foundP = activePetId ? this.patientsStatus.find(p => p.id === activePetId) : null;
+          if (!foundP || !ownerMatches(foundP)) {
+            const ownerMatch = this.patientsStatus.find(p => ownerMatches(p));
+            if (ownerMatch) {
+              activePetId = ownerMatch.id;
+            }
           }
         }
-      }
-      try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId || 'PET-101'); } catch(e) {}
+        if (activePetId) {
+          try { localStorage.setItem('mrs_pets_active_vip_patient_id', activePetId); } catch(e) {}
+        }
 
-      if (window.authEngine && window.authEngine.userRole !== 'visitor' && window.authEngine.userRole !== 'guest') {
-        window.authEngine.userRole = 'client';
-        window.authEngine.isAuthenticated = true;
-        window.authEngine.userName = activeCustomer;
-        window.authEngine.currentVipPetId = activePetId || 'PET-101';
-      }
+        if (window.authEngine) {
+          window.authEngine.userRole = 'client';
+          window.authEngine.isAuthenticated = true;
+          if (activeCustomer) window.authEngine.userName = activeCustomer;
+          if (activePetId) window.authEngine.currentVipPetId = activePetId;
+        }
 
-      if (window.storeEngine && typeof window.storeEngine.switchCustomer === 'function') {
-        window.storeEngine.switchCustomer({ name: activeCustomer, petId: activePetId || 'PET-101' });
+        if (window.storeEngine && typeof window.storeEngine.switchCustomer === 'function' && activeCustomer) {
+          window.storeEngine.switchCustomer({ name: activeCustomer, petId: activePetId });
+        }
+      } else {
+        // Modo Visitante / Sin sesión de cliente autenticada: NO inventar Dalybell ni Princesa
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('mrs_pets_active_customer_name');
+            localStorage.removeItem('mrs_pets_active_vip_patient_id');
+            if (localStorage.getItem('mrs_pets_auth_role') !== 'staff') {
+              localStorage.setItem('mrs_pets_auth_role', 'visitor');
+              localStorage.setItem('mrs_pets_auth_name', 'Visitante');
+            }
+          }
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem('mrs_pets_client_authenticated');
+          }
+        } catch(e) {}
+
+        if (window.authEngine && window.authEngine.userRole !== 'staff') {
+          window.authEngine.userRole = 'visitor';
+          window.authEngine.isAuthenticated = false;
+          window.authEngine.userName = 'Visitante';
+          window.authEngine.currentVipPetId = null;
+        }
       }
 
       if (window.teamilyExecutiveEngine && typeof window.teamilyExecutiveEngine.closeCommitteeConsole === 'function') {
