@@ -280,6 +280,35 @@
       });
     };
 
+    window.quickClientLoginSafe = function(targetClientUser) {
+      try {
+        if (window.authEngine && typeof window.authEngine.openClientLoginModal === 'function') {
+          return window.authEngine.openClientLoginModal(targetClientUser);
+        }
+      } catch(e) {
+        console.warn("authEngine.openClientLoginModal fallback triggered:", e);
+      }
+      var modal = document.getElementById('client-login-modal');
+      if (modal) {
+        if (modal.parentElement !== document.body) {
+          document.body.appendChild(modal);
+        }
+        modal.classList.add('active');
+        modal.style.removeProperty('display');
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('opacity', '1', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.style.setProperty('pointer-events', 'auto', 'important');
+        modal.style.setProperty('z-index', '2000000', 'important');
+        var passInput = document.getElementById('login-client-pass');
+        if (passInput) {
+          passInput.value = '';
+          passInput.style.borderColor = '#475569';
+          setTimeout(function() { try { passInput.focus(); } catch(e){} }, 100);
+        }
+      }
+    };
+
     window.quickStaffLoginSafe = function(bypassPrompt, targetStaffUser) {
       try {
         if (window.authEngine && typeof window.authEngine.quickStaffLogin === 'function') {
@@ -390,8 +419,8 @@
         <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:16px;">
           
           <!-- 1. SOY UN CHICO MRS PETS -->
-          <button class="btn" id="btn-portal-soy-chico" onclick="window.authEngine ? window.authEngine.openVipLookupModal('') : authEngine.openVipLookupModal('')" style="padding:14px; font-size:0.95rem; font-weight:900; border-radius:14px; background:linear-gradient(135deg, #4A6B5D, #2C2C2E); color:#FFFFFF; border:2px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 6px 18px rgba(74,107,93,0.35);">
-            👑 <span>Soy un Chico Mrs Pets (Búsqueda VIP)</span> ➔
+          <button class="btn" id="btn-portal-soy-chico" onclick="window.quickClientLoginSafe ? window.quickClientLoginSafe() : (window.authEngine ? window.authEngine.openClientLoginModal() : null)" style="padding:14px; font-size:0.95rem; font-weight:900; border-radius:14px; background:linear-gradient(135deg, #4A6B5D, #2C2C2E); color:#FFFFFF; border:2px solid #D4AF37; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 6px 18px rgba(74,107,93,0.35);">
+            👑 <span>Soy un Chico Mrs Pets (Identificación VIP)</span> ➔
           </button>
 
           <!-- 2. DESEO SER UN CHICO MRS. PETS / CREAR USUARIO -->
@@ -729,6 +758,79 @@
 
     </div>
 
+  </div>
+
+  <!-- MODAL: LOGIN DE AUTENTICACIÓN PARA CHICO MRS PETS (CLIENTE / TUTOR VIP) -->
+  <div class="modal-overlay" id="client-login-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; z-index:2000000;">
+    <div class="modal-card modal-dark" style="max-width:480px; width:92%; max-height:92vh; overflow-y:auto; padding:32px; border-radius:24px; border:1.5px solid #D4AF37; background:linear-gradient(145deg, #070a11, #1e293b) !important; color:#FFFFFF !important; box-shadow:0 20px 50px rgba(0,0,0,0.85);">
+      
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(212,175,55,0.3);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="background:#4A6B5D; padding:10px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+            👑
+          </div>
+          <div>
+            <h3 style="font-size:1.25rem; font-weight:900; color:#FFFFFF !important; margin:0;">¿Quién es usted?</h3>
+            <p style="font-size:0.78rem; color:#E2E8F0 !important; margin:2px 0 0 0;">Identificación de Chico Mrs. Pets (Tutor VIP)</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('client-login-modal')" style="background:rgba(255,255,255,0.18) !important; color:#FFFFFF !important; border:1px solid rgba(255,255,255,0.3) !important; border-radius:8px; font-weight:900; font-size:1rem; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Cerrar modal">✕</button>
+      </div>
+
+      <div id="client-login-notice" style="background:rgba(74,107,93,0.25); padding:13px 18px; border-radius:12px; border:1.5px solid #4A6B5D; margin-bottom:20px; font-size:0.84rem; color:#F4F1EA !important; line-height:1.45;">
+        🐾 <strong style="color:#D4AF37 !important; font-weight:900;">Acceso Tutor VIP:</strong> <span style="color:#E2E8F0 !important; font-weight:700;">Seleccione su perfil registrado o ingrese su nombre y clave para ingresar a su cuenta y comunicarse con Margarette.</span>
+      </div>
+
+      <div id="client-login-error" role="alert" style="display:none; background:rgba(239,68,68,0.2); border:1.5px solid #EF4444; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#FCA5A5; font-size:0.85rem; font-weight:700; line-height:1.45; text-align:left;"></div>
+
+      <form onsubmit="authEngine.submitClientLoginModal(event)">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Seleccione o escriba su Nombre / Tutor *</label>
+          <select id="login-client-select" class="form-select" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; margin-bottom:8px; font-weight:700; font-size:0.85rem; padding:10px;" onchange="if(this.value){ document.getElementById('login-client-user').value = this.value; const p = document.getElementById('login-client-pass'); if(p){ p.value = ''; p.focus(); } }">
+            <option value="">-- ¿Quién es usted? Seleccione su perfil --</option>
+            <option value="Sofía Rodríguez">🐾 Sofía Rodríguez (Tutor de Luna)</option>
+            <option value="Dalybell Ramírez">👑 Dalybell Ramírez (Tutor de Princesa)</option>
+            <option value="Carlos Mendoza">🐾 Carlos Mendoza (Tutor de Fifi)</option>
+            <option value="Andrés Morales">🐾 Andrés Morales (Tutor de Buddy)</option>
+            <option value="Bellita Ramírez">🐾 Bellita Ramírez (Tutor de Bella)</option>
+            <option value="Ana María Morales">🐾 Ana María Morales (Tutor de Buga)</option>
+            <option value="Ricardo Salazar">🐾 Ricardo Salazar (Tutor de Rudy)</option>
+            <option value="Ivonne Montilla">🐾 Ivonne Montilla (Tutor de Ivi)</option>
+            <option value="Valentina Silva">🐾 Valentina Silva (Tutor de Cuga)</option>
+            <option value="Gabriel Silva">🐾 Gabriel Silva (Tutor de Thor)</option>
+          </select>
+
+          <input type="text" class="form-input" id="login-client-user" placeholder="O ingrese su nombre (Ej: Sofía, Sofía Rodríguez, Dalybell)" required style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Clave Personal o Contraseña * (Obligatoria)</label>
+          <input type="password" class="form-input" id="login-client-pass" placeholder="Ingrese su clave personal (Ej: 1234 o 2026) *" required autocomplete="current-password" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; padding:10px;">
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <div style="font-size:0.78rem; color:#E2E8F0 !important; font-weight:700; margin-bottom:8px;">⚡ Selección rápida de tutor (Elegir y luego ingresar clave):</div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" onclick="document.getElementById('login-client-user').value='Sofía Rodríguez'; const p = document.getElementById('login-client-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(212,175,55,0.3); border:1.5px solid #D4AF37; color:#FEF08A !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:900;">
+              🐾 Sofía Rodríguez (Luna)
+            </button>
+            <button type="button" onclick="document.getElementById('login-client-user').value='Dalybell Ramírez'; const p = document.getElementById('login-client-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(212,175,55,0.3); border:1.5px solid #D4AF37; color:#FEF08A !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:900;">
+              👑 Dalybell Ramírez (Princesa)
+            </button>
+            <button type="button" onclick="document.getElementById('login-client-user').value='Carlos Mendoza'; const p = document.getElementById('login-client-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(56,189,248,0.25); border:1.5px solid #38bdf8; color:#7dd3fc !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              🐾 Carlos Mendoza (Fifi)
+            </button>
+            <button type="button" onclick="document.getElementById('login-client-user').value='Andrés Morales'; const p = document.getElementById('login-client-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(251,191,36,0.25); border:1.5px solid #fbbf24; color:#fde68a !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:800;">
+              🐾 Andrés Morales (Buddy)
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-client-auth-submit" class="btn" style="width:100%; padding:14px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #4A6B5D, #2C4A3E) !important; color:#FFFFFF !important; border:1.5px solid #D4AF37; font-size:0.98rem; box-shadow:0 6px 18px rgba(74,107,93,0.5); cursor:pointer;">
+          <span style="color:#FFFFFF !important; font-weight:900 !important;">🔓 Autenticar & Entrar como Chico Mrs. Pets ➔</span>
+        </button>
+      </form>
+    </div>
   </div>
 
   <!-- MODAL: LOGIN DE AUTENTICACIÓN PARA VISTA EMPRESA (STAFF) -->
