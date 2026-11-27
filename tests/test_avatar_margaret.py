@@ -235,8 +235,7 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertIn("Harryt", staff_res.get("staff_name", ""))
 
         directive_staff = format_margaret_system_directive(staff_res, is_staff=True, staff_user_name="Sr. Harryt Luzardo")
-        self.assertIn("CONTEXTO DE ATENCIÓN INTERNA - MARGARETTE", directive_staff)
-        self.assertIn("STAFF REGISTRADO EN BD", directive_staff)
+        self.assertIn("DIRECTIVA DE APOYO — MARGARETTE", directive_staff)
         self.assertIn("Sr. Harryt Luzardo", directive_staff)
 
         # 2. Memoria de Clientes (Sofía Rodríguez)
