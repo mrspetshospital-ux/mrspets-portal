@@ -35,6 +35,29 @@ def norm_phone(v: Optional[str]) -> Optional[str]:
     return d[-10:] if len(d) >= 10 else d
 
 
+def get_client_active_appointments(tutor_id: int) -> List[Dict[str, Any]]:
+    """
+    Recupera las citas activas o recientes (hoy y futuras, o en curso) para el tutor autenticado.
+    Evita exponer citas pasadas irrelevantes y protege la privacidad.
+    """
+    if not tutor_id:
+        return []
+    try:
+        sql = """
+            SELECT c.id, c.codigo, c.area, c.fecha_hora, c.estado, c.notas,
+                   m.nombre AS mascota_nombre
+            FROM citas c
+            JOIN mascotas m ON m.id = c.mascota_id
+            WHERE m.tutor_id = %s AND c.activo = TRUE
+            ORDER BY c.fecha_hora DESC
+            LIMIT 3
+        """
+        return db.q(sql, (tutor_id,)) or []
+    except Exception as _e_citas:
+        log.warning("Error al consultar citas activas de tutor %s: %s", tutor_id, _e_citas)
+        return []
+
+
 def lookup_client_in_mrs_pets_db(
     text: str = "",
     user_name: str = "",
@@ -42,11 +65,15 @@ def lookup_client_in_mrs_pets_db(
     pet_name: str = ""
 ) -> Dict[str, Any]:
     """
-    Busca al cliente en las tablas 'tutores' y 'mascotas' usando teléfono normalizado,
-    cédula/RIF o coincidencia de nombre de tutor/mascota.
+    FASE 2 — PRIVACIDAD ESTRICTA ANTI-HOMÓNIMOS:
+    La búsqueda e identificación en BD se realiza ÚNICA Y EXCLUSIVAMENTE mediante
+    el número telefónico normalizado exacto (10 dígitos).
+    Está estrictamente prohibido buscar por nombre de tutor o nombre de mascota
+    a ciegas, previniendo la fuga de datos personales o citas entre clientes homónimos.
     """
     tutor = None
     mascotas = []
+    active_appointments = []
 
     # 1. Extracción de teléfono de texto o parámetro
     extracted_phone = phone or ""
@@ -57,9 +84,19 @@ def lookup_client_in_mrs_pets_db(
 
     norm_p = norm_phone(extracted_phone) if extracted_phone else None
 
-    try:
-        # Búsqueda prioritaria por teléfono
-        if norm_p and len(norm_p) >= 7:
+    # Detectar nombre candidato no verificado para saludo de cortesía (sin autenticación)
+    candidate_name = (user_name or "").strip()
+    if not candidate_name and text:
+        name_match = re.search(r'(?:me llamo|soy|mi nombre es)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑa-záéíóúñ]+)?)', text, re.I)
+        if name_match:
+            candidate_name = name_match.group(1).strip()
+
+    if candidate_name and candidate_name.lower() in ("cliente vip", "cliente", "visitante", "invitado"):
+        candidate_name = ""
+
+    # REGLA ESTRICTA DE PRIVACIDAD: Solo buscar en BD si se cuenta con teléfono de >= 10 dígitos
+    if norm_p and len(norm_p) >= 10:
+        try:
             tutor = db.q(
                 "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE telefono_norm=%s AND activo=TRUE LIMIT 1",
                 (norm_p,), one=True
@@ -70,51 +107,23 @@ def lookup_client_in_mrs_pets_db(
                     (f"%{norm_p}%",), one=True
                 )
 
-        # Búsqueda por nombre de tutor si no se halló por teléfono
-        candidate_name = (user_name or "").strip()
-        if not candidate_name and text:
-            name_match = re.search(r'(?:me llamo|soy|mi nombre es)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑa-záéíóúñ]+)?)', text, re.I)
-            if name_match:
-                candidate_name = name_match.group(1).strip()
-
-        if not tutor and candidate_name and len(candidate_name) > 2 and candidate_name.lower() not in ("cliente vip", "cliente", "visitante", "invitado"):
-            tutor = db.q(
-                "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE nombre ILIKE %s AND activo=TRUE LIMIT 1",
-                (f"%{candidate_name}%",), one=True
-            )
-
-        # Si se encontró el tutor, buscar sus mascotas asociadas
-        if tutor:
-            mascotas = db.q(
-                "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE tutor_id=%s AND activo=TRUE ORDER BY id",
-                (tutor["id"],)
-            ) or []
-
-        # Si no se encontró por tutor pero viene el nombre de la mascota
-        candidate_pet = (pet_name or "").strip()
-        if not candidate_pet and text:
-            pet_match = re.search(r'(?:mi perrito se llama|mi perrita se llama|mi perro se llama|mi gato se llama|mi gatito se llama|mi mascota se llama|para mi consentid[oa]|llamado|llamada)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]+)', text, re.I)
-            if pet_match:
-                candidate_pet = pet_match.group(1).strip()
-
-        if not tutor and candidate_pet and len(candidate_pet) > 1:
-            found_pet = db.q(
-                "SELECT id, codigo, tutor_id, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE nombre ILIKE %s AND activo=TRUE LIMIT 1",
-                (f"%{candidate_pet}%",), one=True
-            )
-            if found_pet:
-                mascotas = [found_pet]
-                tutor = db.q(
-                    "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE id=%s AND activo=TRUE",
-                    (found_pet["tutor_id"],), one=True
-                )
-    except Exception as _e_lookup:
-        log.warning("Error al consultar cliente en base de datos: %s", _e_lookup)
+            if tutor:
+                mascotas = db.q(
+                    "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE tutor_id=%s AND activo=TRUE ORDER BY id",
+                    (tutor["id"],)
+                ) or []
+                active_appointments = get_client_active_appointments(tutor["id"])
+        except Exception as _e_lookup:
+            log.warning("Error al consultar cliente en base de datos por teléfono (%s): %s", norm_p, _e_lookup)
 
     return {
         "found": bool(tutor),
+        "verified_by_phone": bool(tutor),
         "tutor": tutor,
-        "mascotas": mascotas
+        "mascotas": mascotas,
+        "active_appointments": active_appointments,
+        "unverified_name": candidate_name if not tutor else None,
+        "phone_searched": norm_p
     }
 
 
@@ -228,29 +237,75 @@ def get_contextual_services_directive(msg_text: str = "", bcv_cfg: Optional[Dict
 
 
 def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str = "", bcv_cfg: Optional[Dict[str, Any]] = None) -> str:
-    """Genera la directiva de apoyo para Margarette manteniendo su autonomía conversacional."""
+    """Genera la directiva de apoyo para Margarette manteniendo su autonomía conversacional y garantizando la privacidad."""
     margaret_id = os.environ.get("MARGARETTE_USER_ID", "9000408632300095")
     services_directive = get_contextual_services_directive(msg_text, bcv_cfg)
-    if client_info.get("found") and client_info.get("tutor"):
+    msg_lower = (msg_text or "").lower()
+    is_asking_citas = any(k in msg_lower for k in [
+        "cita", "citas", "turno", "turnos", "agend", "horario",
+        "a qué hora", "a que hora", "cuándo me toca", "cuando me toca",
+        "mi reserva", "agendada", "tengo cita", "mi cita", "mi turno"
+    ])
+
+    if client_info.get("verified_by_phone") and client_info.get("tutor"):
         tutor = client_info["tutor"]
         mascotas = client_info.get("mascotas", [])
         pets_summary = ", ".join([f"{m['nombre']} ({m.get('raza') or m.get('especie') or 'Mascota'})" for m in mascotas]) if mascotas else "Sin mascotas registradas"
+        appts = client_info.get("active_appointments", [])
+
+        appt_lines = []
+        if is_asking_citas:
+            if appts:
+                appt_lines.append("\n[ESTATUS DE CITAS DEL CLIENTE — IDENTIDAD VERIFICADA POR TELÉFONO]:")
+                appt_lines.append(f"• El cliente {tutor.get('nombre')} está plenamente autenticado por su teléfono ({tutor.get('telefono')}).")
+                appt_lines.append("• Cita(s) activa(s) registradas:")
+                for ap in appts:
+                    appt_lines.append(f"  - Turno: {ap.get('codigo')} | Área: {ap.get('area')} | Consentido(a): {ap.get('mascota_nombre')} | Fecha y Hora: {ap.get('fecha_hora')} | Estado: {ap.get('estado')}")
+                appt_lines.append("• INSTRUCCIÓN PARA MARGARETTE: Confírmale al tutor con calidez y exactitud su turno y cita activa para su consentido(a).")
+            else:
+                appt_lines.append("\n[ESTATUS DE CITAS DEL CLIENTE — IDENTIDAD VERIFICADA POR TELÉFONO]:")
+                appt_lines.append(f"• El cliente {tutor.get('nombre')} está verificado, pero NO registra citas activas actualmente.")
+                appt_lines.append("• INSTRUCCIÓN PARA MARGARETTE: Indícale con amabilidad que no tiene citas pendientes en este momento y pregúntale para qué fecha y servicio desea agendar a su consentido(a).")
+
+        citas_dir = "\n".join(appt_lines) + "\n" if appt_lines else ""
+
         base_dir = (
-            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
-            f"• Tutor: {tutor.get('nombre')} | Teléfono: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
+            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD / VERIFICADO POR TELÉFONO)]:\n"
+            f"• Tutor: {tutor.get('nombre')} | Teléfono Verificado: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
             f"• Mascota(s) en expediente: {pets_summary}\n"
-            f"• INSTRUCCIÓN PARA MARGARETTE: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y pregúntale directamente qué servicio desea agendar (✂️ Grooming Spa 7 Estaciones, 🩺 Consulta Médica Veterinaria o 🏨 Suites Hotel VIP 5★) y para qué fecha y hora.\n"
+            f"• REGLA ESTRICTA DE PRIVACIDAD: Identidad validada por teléfono. Confirma siempre la titularidad antes de compartir datos médicos o turnos.\n"
+            f"• INSTRUCCIÓN GENERAL: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y asístelo en su consulta.\n"
+            f"{citas_dir}"
         )
     else:
+        # Cliente sin verificar por teléfono
+        unverified_name = client_info.get("unverified_name")
+        saludo_inst = (
+            f"Saluda amablemente mencionando el nombre que indicó ('{unverified_name}'), pero recuerda que es un nombre no validado (riesgo de homónimo). NO reveles expedientes de terceros ni asumas mascotas de otra persona."
+            if unverified_name else
+            "Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:"
+        )
+
+        citas_privacy_warning = ""
+        if is_asking_citas:
+            citas_privacy_warning = (
+                "\n[ALERTA DE PRIVACIDAD — CONSULTA DE CITAS SIN IDENTIDAD VERIFICADA]:\n"
+                "• El usuario está preguntando por citas o turnos, pero NO ha suministrado su número de teléfono registrado.\n"
+                "• PROHIBICIÓN ESTRICTA: NUNCA reveles turnos, fechas de citas, datos médicos ni expedientes basándote únicamente en un nombre o sin teléfono verificado (previene filtración entre personas con el mismo nombre).\n"
+                "• INSTRUCCIÓN OBLIGATORIA PARA MARGARETTE: Responde amablemente solicitando su teléfono registrado:\n"
+                "  'Para consultar tu turno y expediente de forma segura y proteger la privacidad de tu información, por favor confírmame tu número de teléfono registrado.'\n"
+            )
+
         base_dir = (
-            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE NUEVO)]:\n"
-            f"• Estado: Cliente nuevo (no registrado en la base de datos).\n"
-            f"• INSTRUCCIÓN PARA MARGARETTE: Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:\n"
+            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE NUEVO / SIN VERIFICAR)]:\n"
+            f"• Estado: Cliente nuevo (no registrado o identidad no verificada por teléfono).\n"
+            f"• INSTRUCCIÓN PARA MARGARETTE: {saludo_inst}\n"
             f"  1. Nombre completo del tutor y teléfono de contacto.\n"
             f"  2. Sector o dirección en Maracaibo.\n"
             f"  3. Nombre del consentido(a), especie, raza y sexo.\n"
             f"  4. Alergias o condiciones especiales.\n"
             f"  5. Invítalo a subir la foto de su consentido usando el botón 📷 Foto del chat para su expediente.\n"
+            f"{citas_privacy_warning}"
         )
     return base_dir + services_directive
 
@@ -264,6 +319,7 @@ def process_and_persist_booking(
     """
     Analiza si se dispone de la información necesaria para registrar la ficha y crear
     la cita en el cronograma, agenda de Mrs. Pets y Google Calendar (mrspetshospital@gmail.com).
+    Aplica verificación estricta de datos obligatorios y control de idempotencia anti-duplicados.
     """
     lower = msg.lower()
     booking_triggers = ["reserva", "reservar", "cita", "agendar", "turno", "mañana", "hoy", "baño", "grooming", "consulta", "hotel"]
@@ -275,7 +331,7 @@ def process_and_persist_booking(
 
     # Extraer campos si es cliente nuevo o si vienen en el payload
     tutor_name = (tutor.get("nombre") if tutor else None) or body.get("userName") or body.get("context", {}).get("userName") or ""
-    phone = (tutor.get("telefono") if tutor else None) or body.get("phone") or body.get("context", {}).get("phone") or ""
+    phone = (tutor.get("telefono") if tutor else None) or body.get("phone") or body.get("context", {}).get("phone") or client_info.get("phone_searched") or ""
     if not phone:
         phone_match = re.search(r'(?:\+?58\s*|0)?(414|424|412|416|426|261)[\s\-\.]*(\d{3})[\s\-\.]*(\d{4})', msg)
         if phone_match:
@@ -291,6 +347,19 @@ def process_and_persist_booking(
         pet_match = re.search(r'(?:mi perrito se llama|mi perrita se llama|mi perro se llama|mi gato se llama|mi gatito se llama|mi mascota se llama|para mi consentid[oa]|llamado|llamada)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]+)', msg, re.I)
         if pet_match:
             pet_name = pet_match.group(1).strip()
+
+    # FASE 2: Validar obligatoriedad de datos para evitar citas fantasma
+    norm_p = norm_phone(phone)
+    if not norm_p or len(norm_p) < 10:
+        return None
+
+    clean_tutor = tutor_name.strip() if tutor_name else ""
+    if not clean_tutor or clean_tutor.lower() in ("visitante", "invitado"):
+        clean_tutor = "Cliente VIP"
+
+    clean_pet = pet_name.strip() if pet_name else ""
+    if not clean_pet or clean_pet.lower() in ("mascota", "perro", "gato"):
+        clean_pet = "Consentido VIP"
 
     # Determinar área
     area = "grooming"
@@ -322,20 +391,14 @@ def process_and_persist_booking(
             h = 0
         target_time = f"{h:02d}:{m_str}"
 
-    # Requerir al menos nombre de mascota o de tutor para poder formalizar la reserva
-    if not pet_name and not tutor_name:
-        return None
-
-    pet_name = pet_name or "Consentido VIP"
-    tutor_name = tutor_name or "Cliente VIP"
-    phone = phone or "+58 414-6799510"
+    pet_name = clean_pet
+    tutor_name = clean_tutor
 
     # 1. Persistencia en Base de Datos: Tutores y Mascotas
     tutor_id = tutor.get("id") if tutor else None
     try:
         if not tutor_id:
             # Crear tutor en BD
-            norm_p = norm_phone(phone)
             tutor_id = db.execute(
                 """INSERT INTO tutores (nombre, telefono, telefono_norm, sector, activo)
                    VALUES (%s, %s, %s, %s, TRUE) RETURNING id""",
@@ -377,16 +440,27 @@ def process_and_persist_booking(
     estado_db = "confirmada" if is_auto else "pendiente"
     fecha_hora_str = f"{target_date} {target_time}:00-04:00"
 
-    # 3. Persistencia en Tabla Citas (PostgreSQL)
+    # 3. Persistencia en Tabla Citas (PostgreSQL) con Control de Idempotencia
     cita_id = None
     if pet_id:
         try:
-            cita_id = db.execute(
-                """INSERT INTO citas (codigo, mascota_id, area, fecha_hora, estado, notas, activo)
-                   VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
-                (appt_code, pet_id, area, fecha_hora_str, estado_db, f"{service_name} • Tutor: {tutor_name} ({phone})"),
-                returning=True
+            # Idempotencia: Verificar si ya existe una cita activa para la misma mascota, área y fecha
+            existing_cita = db.q(
+                "SELECT id, codigo, estado FROM citas WHERE mascota_id=%s AND area=%s AND fecha_hora=%s AND activo=TRUE LIMIT 1",
+                (pet_id, area, fecha_hora_str), one=True
             )
+            if existing_cita:
+                cita_id = existing_cita["id"]
+                appt_code = existing_cita["codigo"]
+                if existing_cita.get("estado"):
+                    estado_db = existing_cita["estado"]
+            else:
+                cita_id = db.execute(
+                    """INSERT INTO citas (codigo, mascota_id, area, fecha_hora, estado, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                    (appt_code, pet_id, area, fecha_hora_str, estado_db, f"{service_name} • Tutor: {tutor_name} ({phone})"),
+                    returning=True
+                )
         except Exception as _e_ins:
             log.warning("Intento primario de inserción en citas (%s): %s", appt_code, _e_ins)
             try:

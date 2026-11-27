@@ -130,7 +130,21 @@ class TestAvatarMargaret(unittest.TestCase):
 
     def test_09_db_lookup_and_booking_pipeline(self):
         """Verifica la búsqueda en BD (cliente existente vs nuevo) y la persistencia de reservas."""
+        import db
         from receptionBridge import lookup_client_in_mrs_pets_db, format_margaret_system_directive, process_and_persist_booking
+
+        def _cleanup_test_phone():
+            try:
+                for t in db.q("SELECT id FROM tutores WHERE telefono_norm=%s", ("4149999999",)) or []:
+                    for m in db.q("SELECT id FROM mascotas WHERE tutor_id=%s", (t["id"],)) or []:
+                        db.execute("DELETE FROM citas WHERE mascota_id=%s", (m["id"],))
+                    db.execute("DELETE FROM mascotas WHERE tutor_id=%s", (t["id"],))
+                    db.execute("DELETE FROM tutores WHERE id=%s", (t["id"],))
+            except Exception:
+                pass
+
+        _cleanup_test_phone()
+        self.addCleanup(_cleanup_test_phone)
 
         # 1. Búsqueda de cliente no existente (cliente nuevo)
         new_client = lookup_client_in_mrs_pets_db(text="Hola buenas noches, no tengo ficha previa", phone="04149999999")
