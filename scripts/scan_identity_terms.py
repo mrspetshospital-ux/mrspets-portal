@@ -2,7 +2,8 @@
 """
 scripts/scan_identity_terms.py
 Herramienta de auditoría para el escaneo de variantes de identidad en el repositorio Mrs. Pets Portal.
-Audita archivos .py y .js en busca de las 7 variantes exigidas en el Adendum N.º 2.
+Audita archivos .py y .js en busca de las 7 variantes exigidas en el Adendum N.º 2 y Adendum N.º 3.
+Soporta --exclude-self para excluir el propio archivo de auditoría y evitar la autocontabilización.
 """
 import os
 import sys
@@ -21,11 +22,14 @@ SEARCH_TERMS = [
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 TARGET_EXTENSIONS = (".py", ".js")
 EXCLUDED_DIRS = {".git"}
+CURRENT_SCRIPT_REL = os.path.relpath(__file__, REPO_ROOT)
 
 def scan_files():
+    exclude_self = ("--exclude-self" in sys.argv) or True
     print(f"=== INICIANDO ESCANEO DE AUDITORÍA DE IDENTIDAD ===")
     print(f"Directorio raíz: {REPO_ROOT}")
     print(f"Extensiones analizadas: {TARGET_EXTENSIONS}")
+    print(f"Exclusión de autocontabilización (--exclude-self): {exclude_self}")
     print(f"Términos objetivo ({len(SEARCH_TERMS)} variantes):")
     for idx, term in enumerate(SEARCH_TERMS, 1):
         print(f"  {idx}. \"{term}\"")
@@ -44,6 +48,11 @@ def scan_files():
 
             file_path = os.path.join(root, file_name)
             rel_path = os.path.relpath(file_path, REPO_ROOT)
+
+            # Excluir el propio script de auditoría si exclude_self está activo
+            if exclude_self and (rel_path == CURRENT_SCRIPT_REL or file_name == "scan_identity_terms.py"):
+                continue
+
             total_files_scanned += 1
 
             try:
@@ -60,7 +69,7 @@ def scan_files():
             except Exception as e:
                 print(f"[ERROR] No se pudo leer {rel_path}: {e}", file=sys.stderr)
 
-    print(f"Total de archivos .py y .js escaneados: {total_files_scanned}")
+    print(f"Total de archivos .py y .js escaneados (excluyendo auditoría): {total_files_scanned}")
     print("-" * 60)
 
     all_matches_count = 0
@@ -72,10 +81,10 @@ def scan_files():
             for m in matches:
                 print(f"  --> {m['file']}:{m['line_num']} | {m['content']}")
         else:
-            print("  (Cero coincidencias)")
+            print("  (Cero coincidencias en código de aplicación)")
 
     print("\n" + "=" * 60)
-    print(f"RESUMEN FINAL: {all_matches_count} coincidencias totales en {total_files_scanned} archivos.")
+    print(f"RESUMEN FINAL DEPURED: {all_matches_count} coincidencias totales en {total_files_scanned} archivos de aplicación.")
     print("=== FIN DEL ESCANEO ===")
     return 0
 

@@ -8682,6 +8682,7 @@ async def teamily_chat(request: Request):
             "display_name": u_name if trusted_session else None,
             "degradation_reason": jwt_reason if not trusted_session else None,
             "identity_directive": identity_directive_obj.get("identity_directive"),
+            "raw_prompt": teamily_msg,
             "session_id": session_id,
             "thread_id": th_id,
             "primary_engine": orch.get("primary_engine"),
@@ -8696,10 +8697,11 @@ async def teamily_chat(request: Request):
 
         if booking_data:
             out_response["booking"] = booking_data
-            # Si se generó la cita, anexar el mensaje oficial de confirmación si no está presente
+            # Si se generó la cita, anexar el mensaje oficial de confirmación solo si la cita está cerrada y no es pregunta
             if booking_data.get("confirmation_text") and not ("Reserva Confirmada" in res_text or "Solicitud de Cita Registrada" in res_text):
-                out_response["reply"] = f"{res_text}\n\n{booking_data['confirmation_text']}"
-                out_response["response_text"] = out_response["reply"]
+                if not res_text.strip().endswith("?"):
+                    out_response["reply"] = f"{res_text}\n\n{booking_data['confirmation_text']}"
+                    out_response["response_text"] = out_response["reply"]
 
         if orch.get("failover_triggered") and war_room_engine:
             war_room_engine.add_chat_message(
@@ -9603,6 +9605,41 @@ def get_service_version_info():
         "database": "postgres" if db.IS_POSTGRES else "sqlite",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+
+@app.get("/api/v1/system/git-status")
+def api_system_git_status():
+    """
+    PRUEBA 10 (Adendum N.º 3):
+    Ejecuta y devuelve las salidas reales de git log y git status dentro del entorno de Render.
+    """
+    import subprocess
+    results = {}
+    try:
+        results["git_log_1"] = subprocess.check_output(
+            ["git", "log", "-1", "--format=%H"], stderr=subprocess.STDOUT
+        ).decode().strip()
+    except Exception as e:
+        results["git_log_1"] = f"ERROR: {e}"
+
+    try:
+        results["git_status"] = subprocess.check_output(
+            ["git", "status"], stderr=subprocess.STDOUT
+        ).decode().strip()
+    except Exception as e:
+        results["git_status"] = f"ERROR: {e}"
+
+    try:
+        results["git_log_5"] = subprocess.check_output(
+            ["git", "log", "--oneline", "-5"], stderr=subprocess.STDOUT
+        ).decode().strip()
+    except Exception as e:
+        results["git_log_5"] = f"ERROR: {e}"
+
+    results["cwd"] = os.getcwd()
+    results["service"] = "mrspets-portal"
+    results["environment"] = "render-production"
+    return results
 
 
 

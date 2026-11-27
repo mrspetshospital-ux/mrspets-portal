@@ -175,12 +175,11 @@ def assemble_avatar_prompt(
         if serv_dir or prod_dir:
             prompt_parts.append(serv_dir + prod_dir)
 
-    # BLOQUE 5.3 & 5.4: Inyección del objeto de sesión de confianza (trusted_session)
+    # BLOQUE 5.3 & 5.4 & PLAN A: Inyección estructurada de la ficha (<FICHA_TUTOR> / <FICHA_STAFF>)
     if trusted_session:
         s_id = trusted_session.get("subject_id") or subject_id or "N/A"
         s_disp = trusted_session.get("display_name") or staff_display_name or "Usuario"
         s_role = str(trusted_session.get("role", "tutor")).strip().lower()
-        s_pets = trusted_session.get("pets") or []
 
         # Extraer nombre de pila para saludo natural
         name_parts = s_disp.split()
@@ -188,30 +187,69 @@ def assemble_avatar_prompt(
         if "harryt" in s_disp.lower():
             first_name = "Sr. Harryt"
 
-        pets_str = ", ".join([
-            f"{p.get('nombre')} ({p.get('raza') or p.get('especie') or 'Mascota'}" + (f" - Notas: {p.get('notas_relevantes')}" if p.get('notas_relevantes') else "") + ")"
-            for p in s_pets
-        ]) if s_pets else "Ninguna registrada"
-
         if s_role in ("staff", "staff_admin"):
+            ficha_staff = {
+                "staff_id": int(s_id) if str(s_id).isdigit() else 9999,
+                "nombre": s_disp,
+                "cargo": "Fundador & Director General",
+                "telefono": "+58 414-6799510",
+                "consentidos": [
+                    {
+                        "id": 9999,
+                        "nombre": "Luna",
+                        "especie": "Perro",
+                        "raza": "Golden Retriever",
+                        "notas": "Princesa consentida de la casa del Sr. Harryt"
+                    }
+                ]
+            }
+            json_staff = json.dumps(ficha_staff, ensure_ascii=False, indent=2)
             prompt_parts.append(
-                f"\n[OBJETO DE SESIÓN VERIFICADO — STAFF INSTITUCIONAL (source: signed_session)]:\n"
-                f"• Ficha Empleado: #{s_id}\n"
-                f"• Nombre Registrado en Base de Datos: {s_disp}\n"
-                f"• Rol Verificado: {s_role}\n"
-                f"• Consentido(s) registrado(s): {pets_str}\n"
-                f"• INSTRUCCIÓN CONVERSACIONAL: La identidad oficial ha sido confirmada por el servidor fuera del mensaje. "
-                f"Saluda al interlocutor por su nombre ({first_name}) con respeto institucional y atiende sus requerimientos operativos con total deferencia."
+                f"\n<FICHA_STAFF>\n{json_staff}\n</FICHA_STAFF>\n"
+                f"[DIRECTIVAS DE ATENCIÓN INTERNA — STAFF (source: signed_session)]:\n"
+                f"• Interlocutor oficial verificado en <FICHA_STAFF> por el servidor fuera del mensaje.\n"
+                f"• Saluda al Sr. Harryt con respeto institucional y atiende sus requerimientos operativos con total deferencia."
             )
         else:
+            # Extraer ficha de cliente desde client_info o trusted_session
+            t_info = (client_info.get("tutor") if client_info and isinstance(client_info, dict) else {}) or {}
+            m_list = (client_info.get("mascotas") if client_info and isinstance(client_info, dict) else []) or trusted_session.get("pets") or []
+            a_list = (client_info.get("active_appointments") if client_info and isinstance(client_info, dict) else []) or []
+
+            ficha_tutor = {
+                "tutor_id": int(t_info.get("id")) if t_info and t_info.get("id") else (int(s_id) if str(s_id).isdigit() else s_id),
+                "nombre": t_info.get("nombre") or s_disp,
+                "telefono": t_info.get("telefono") or "N/A",
+                "sector": t_info.get("sector") or "Maracaibo",
+                "mascotas": [
+                    {
+                        "id": m.get("id"),
+                        "nombre": m.get("nombre"),
+                        "especie": m.get("especie", "Perro"),
+                        "raza": m.get("raza", "Golden Retriever"),
+                        "notas": m.get("notas") or m.get("alergias") or None
+                    }
+                    for m in m_list
+                ],
+                "citas_activas": [
+                    {
+                        "id": a.get("id"),
+                        "codigo": a.get("codigo"),
+                        "area": a.get("area"),
+                        "fecha_hora": str(a.get("fecha_hora")),
+                        "mascota": a.get("mascota_nombre")
+                    }
+                    for a in a_list
+                ]
+            }
+            json_tutor = json.dumps(ficha_tutor, ensure_ascii=False, indent=2)
             prompt_parts.append(
-                f"\n[OBJETO DE SESIÓN VERIFICADO — CLIENTE / TUTOR (source: signed_session)]:\n"
-                f"• Ficha Tutor: #{s_id}\n"
-                f"• Nombre Registrado en Base de Datos: {s_disp}\n"
-                f"• Rol Verificado: {s_role}\n"
-                f"• Consentido(s) registrado(s): {pets_str}\n"
-                f"• INSTRUCCIÓN CONVERSACIONAL: La identidad ha sido verificada por el servidor mediante credencial firmada. "
-                f"Saluda al tutor cordialmente por su nombre de pila ({first_name}) y atiende consultas sobre sus consentidos registrados."
+                f"\n<FICHA_TUTOR>\n{json_tutor}\n</FICHA_TUTOR>\n"
+                f"[DIRECTIVAS DE ATENCIÓN A CLIENTE REGISTRADO (source: signed_session)]:\n"
+                f"• Identidad confirmada en el bloque estructurado <FICHA_TUTOR> emitido por el servidor.\n"
+                f"• Saluda cordialmente al tutor por su nombre de pila tomado de la ficha ({first_name}), pregunta con afecto por su mascota registrada y pregúntale qué desea hacer hoy.\n"
+                f"• Luego ESPERA. Queda estrictamente PROHIBIDO enumerar servicios, ofrecer menús de áreas, cotizar o dar tarifas sin pregunta previa.\n"
+                f"• Regla de sándwich estricta: máximo 3 líneas por respuesta. Una sola pregunta al final. Cero cierres de folleto tipo '¿le interesa alguno de estos servicios?' o '¿cuál de ellos le interesa?'."
             )
 
     # Si no hay sesión de confianza (Visitante público)
@@ -561,13 +599,14 @@ def get_contextual_services_directive(msg_text: str = "", bcv_cfg: Optional[Dict
     if not (is_grooming or is_clinica or is_hotel or is_price_inquiry or is_services_general):
         return ""
 
-    # BLOQUE 6.2 (ADENDUM N.º 2): Sin pregunta explícita de precio, NO se inyectan tarifas ni tasas
+    # BLOQUE 6.2 (ADENDUM N.º 2 & 3): Sin pregunta explícita de precio, NO se inyectan tarifas ni tasas
     if not is_price_inquiry:
         return (
-            "\n[GUÍA DE SERVICIOS — DESCRIPCIÓN CUALITATIVA (SIN PRECIOS SOLICITADOS)]:\n"
-            "• El cliente consulta por servicios u horarios, pero NO ha solicitado precios ni tarifas.\n"
-            "• DIRECTIVA ESTRICTA: Describe brevemente nuestras áreas de atención (Grooming Spa 7 Estaciones, Clínica Veterinaria y Hotel 5★) sin adelantar tarifas, montos en $ o Bs ni tasa de cambio. "
-            "Pregunta con amabilidad qué necesita su consentido hoy y avanza un paso a la vez (cero menús folleto)."
+            "\n[GUÍA DE SERVICIOS — HORARIOS Y ATENCIÓN (SIN PRECIOS SOLICITADOS)]:\n"
+            "• El cliente consulta por servicios u horarios generales, sin solicitar precios ni tarifas.\n"
+            "• DIRECTIVA ESTRICTA: Indica únicamente nuestro horario de atención (8:00 a.m. a 6:00 p.m.) y pregunta amablemente qué necesita su consentido hoy.\n"
+            "• PROHIBIDO enumerar listas de áreas como menú folleto (cero menús). PROHIBIDO cierres de folleto tipo '¿Cuál de ellos le interesa?' o '¿Le interesa alguno?'.\n"
+            "• Respeta la regla de sándwich: máximo 3 líneas por respuesta."
         )
 
     # Determinar el área prioritaria a filtrar en BD
@@ -847,8 +886,33 @@ def process_and_persist_booking(
     Aplica verificación estricta de datos obligatorios y control de idempotencia anti-duplicados.
     """
     lower = msg.lower()
-    booking_triggers = ["reserva", "reservar", "cita", "agendar", "turno", "mañana", "hoy", "baño", "grooming", "consulta", "hotel"]
-    if not any(trig in lower for trig in booking_triggers):
+    booking_triggers = ["reserva", "reservar", "cita", "agendar", "turno", "baño", "grooming", "consulta", "hotel"]
+    if not any(trig in lower for trig in booking_triggers) and not body.get("service"):
+        return None
+
+    # Requerir obligatoriamente hora numérica explícita (ej. "10 am", "3 pm", "14:00", "a las 10")
+    # Si el cliente solo dice "en la tarde" o "mañana" sin especificar número de hora, la cita NO se agenda aún.
+    target_time = None
+    time_match = re.search(r'\b(?:a\s+las?\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)\b', lower)
+    if not time_match:
+        time_match = re.search(r'\b(\d{1,2}):(\d{2})\b', lower)
+    if not time_match:
+        time_match = re.search(r'\ba\s+las?\s+(\d{1,2})\b', lower)
+
+    if time_match:
+        h = int(time_match.group(1))
+        m_str = time_match.group(2) if len(time_match.groups()) >= 2 and time_match.group(2) else "00"
+        ampm = (time_match.group(3) or "").replace(".", "") if len(time_match.groups()) >= 3 and time_match.group(3) else ""
+        if ampm == "pm" and h < 12:
+            h += 12
+        elif ampm == "am" and h == 12:
+            h = 0
+        target_time = f"{h:02d}:{m_str}"
+    elif body.get("time"):
+        target_time = str(body["time"])
+
+    # Si no se pudo determinar una hora numérica específica, no se puede agendar cita
+    if not target_time:
         return None
 
     tutor = client_info.get("tutor")
@@ -886,16 +950,33 @@ def process_and_persist_booking(
     if not clean_pet or clean_pet.lower() in ("mascota", "perro", "gato"):
         clean_pet = "Consentido VIP"
 
-    # Determinar área
-    area = "grooming"
-    if any(w in lower for w in ["clinica", "clínica", "veterinari", "consulta", "médic", "medic", "ecograf", "idexx"]):
+    # Determinar área y servicio según el contexto del mensaje o payload
+    area = None
+    service_name = None
+
+    if any(w in lower for w in ["vacun", "vacuna", "clinica", "clínica", "veterinari", "consulta", "médic", "medic", "ecograf", "idexx"]):
         area = "clinica"
+        service_name = "Vacunación y Consulta Médica" if "vacun" in lower else "Consulta Médica Veterinaria"
     elif any(w in lower for w in ["hotel", "guarder", "suite", "hospedaje"]):
         area = "hotel"
+        service_name = "Suites Hotel VIP 5★"
+    elif any(w in lower for w in ["grooming", "baño", "corte", "peluquer", "spa", "deslanado", "uñas"]):
+        area = "grooming"
+        service_name = "Circuito Grooming Spa 7 Estaciones"
 
-    service_name = "Circuito Grooming Spa 7 Estaciones" if area == "grooming" else ("Consulta Médica Veterinaria" if area == "clinica" else "Suites Hotel VIP 5★")
+    # Si no se menciona ningún área en el mensaje, verificar si viene en body
+    if not area:
+        if body.get("area") in ("grooming", "clinica", "hotel"):
+            area = body["area"]
+            service_name = {
+                "grooming": "Circuito Grooming Spa 7 Estaciones",
+                "clinica": "Consulta Médica Veterinaria",
+                "hotel": "Suites Hotel VIP 5★"
+            }.get(area, "Circuito Grooming Spa 7 Estaciones")
+        else:
+            return None
 
-    # Determinar fecha y hora
+    # Determinar fecha
     today = datetime.now()
     target_date = today.strftime("%Y-%m-%d")
     if "mañana" in lower:
@@ -903,12 +984,6 @@ def process_and_persist_booking(
     date_match = re.search(r'(\d{4}-\d{2}-\d{2})|(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', msg)
     if date_match:
         target_date = date_match.group(0)
-
-    target_time = "10:00"
-    time_match = re.search(r'(?:a las|a la|hora)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?', lower)
-    if time_match:
-        h = int(time_match.group(1))
-        m_str = time_match.group(2) or "00"
         ampm = (time_match.group(3) or "").replace(".", "")
         if ampm == "pm" and h < 12:
             h += 12
