@@ -46,7 +46,7 @@ class CallLogs {
       {
         id: 3,
         type: 'whatsapp',
-        contact: 'Mariana Colina',
+        contact: 'Carlos Mendoza',
         phone: '+58 412-887-3410',
         petName: 'Lata (Poodle Toy)',
         duration: '6 msgs',

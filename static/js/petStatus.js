@@ -138,8 +138,8 @@ class PetStatusEngine {
         id: 'PET-109',
         petName: 'Buga',
         species: 'Poodle Toy / Caniche',
-        ownerName: 'Mariana Colina',
-        ownerPhone: '+58 (414) 679-9510',
+        ownerName: 'Ana María Morales',
+        ownerPhone: '+58 (414) 223-3445',
         rif: 'V-24.891.204',
         area: 'grooming',
         stepIndex: 3, // 'Baño Spa'
@@ -211,9 +211,9 @@ class PetStatusEngine {
         id: 'PET-110',
         petName: 'Cuga',
         species: 'Poodle Royal / Caniche VIP',
-        ownerName: 'Mariana Colina',
-        ownerPhone: '+58 (414) 679-9510',
-        rif: 'V-24.891.204',
+        ownerName: 'Valentina Silva',
+        ownerPhone: '+58 (414) 556-6778',
+        rif: 'V-23.551.440',
         area: 'grooming',
         stepIndex: 6, // '6. Listo ✨'
         turnNumber: 9,
@@ -997,15 +997,15 @@ class PetStatusEngine {
       }
       const bugaPet = this.pets.find(p => p.id === 'PET-109');
       if (bugaPet) {
-        bugaPet.owner = 'Mariana Colina';
-        bugaPet.ownerName = 'Mariana Colina';
+        bugaPet.owner = 'Ana María Morales';
+        bugaPet.ownerName = 'Ana María Morales';
         bugaPet.rif = 'V-24.891.204';
       }
       const cugaPet = this.pets.find(p => p.id === 'PET-110');
       if (cugaPet) {
-        cugaPet.owner = 'Mariana Colina';
-        cugaPet.ownerName = 'Mariana Colina';
-        cugaPet.rif = 'V-24.891.204';
+        cugaPet.owner = 'Valentina Silva';
+        cugaPet.ownerName = 'Valentina Silva';
+        cugaPet.rif = 'V-23.551.440';
         if (cugaPet.stepIndex >= 7) {
           cugaPet.stepIndex = 6;
           cugaPet.turnNumber = 9;

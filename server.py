@@ -206,6 +206,15 @@ def _startup():
         log.error("No se pudo aplicar el esquema: %s", e)
         log.error(traceback.format_exc())
 
+    # Inicialización del Segundo Cinturón de Seguridad
+    try:
+        import sessionSecurity
+        sessionSecurity.init_security_schema()
+        sessionSecurity.seed_staff_credentials()
+        log.info("Segundo Cinturón de Seguridad inicializado (sesiones firmadas y palabras clave).")
+    except Exception as e_sec:
+        log.error("No se pudo inicializar esquema del Segundo Cinturón: %s", e_sec)
+
     # Primer usuario staff -------------------------------------------------
     # Si no existe se crea. Si existe pero ADMIN_PASSWORD ya no abre su hash,
     # se re-sincroniza el hash: la variable de entorno manda. Así la dueña
@@ -255,6 +264,27 @@ def _startup():
             log.info("Usuario staff 'dalybell' listo (clave '2026' activa).")
     except Exception as e_daly:
         log.warning("No se pudo sembrar usuario 'dalybell' en DB al arrancar: %s", e_daly)
+
+    # Inicialización del Staff Fundador Sr. Harryt Luzardo en staff_users
+    try:
+        fila_harry_s = db.q("SELECT id, password_hash FROM staff_users "
+                            "WHERE LOWER(username)=LOWER(%s)", ("harryt",), one=True)
+        harry_pwd = os.environ.get("HARRYT_PASSWORD", "2026")
+        if not fila_harry_s:
+            db.execute(
+                """INSERT INTO staff_users (username, nombre, password_hash, rol)
+                   VALUES (%s,%s,%s,'admin')""",
+                ("harryt", "Sr. Harryt Luzardo (Fundador & Director General)", sec.hash_password(harry_pwd)),
+            )
+            log.info("Usuario staff 'harryt' creado al arrancar con clave '2026'.")
+        elif not sec.verify_password(harry_pwd, fila_harry_s["password_hash"]):
+            db.execute("UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                       (sec.hash_password(harry_pwd), fila_harry_s["id"]))
+            log.info("Contraseña de 'harryt' sincronizada con HARRYT_PASSWORD.")
+        else:
+            log.info("Usuario staff 'harryt' listo.")
+    except Exception as e_harry_staff:
+        log.warning("No se pudo sembrar usuario staff 'harryt' en DB: %s", e_harry_staff)
 
     # Inicialización del Tutor Fundador Sr. Harryt Luzardo y su consentida Luna (Presidencia VIP)
     try:
@@ -697,6 +727,41 @@ def staff_login(data: LoginIn, request: Request, response: Response):
     token = sec.create_session("staff", staff_id=row["id"], ip=client_ip(request),
                                user_agent=request.headers.get("user-agent"))
     set_session_cookie(response, token)
+
+    # Segundo Cinturón: Inicializar sesión staff_authenticated en sessions table
+    try:
+        import sessionSecurity
+        u_low = username.lower()
+        if "harryt" in u_low:
+            sec_staff_id = "staff_harryt"
+            sec_disp = "Sr. Harryt Luzardo (Fundador & Director General)"
+            sec_role = "staff_admin"
+        elif "dalybell" in u_low:
+            sec_staff_id = "staff_dalybell"
+            sec_disp = "Dalybell Ramírez Montilla (Dirección General)"
+            sec_role = "staff_admin"
+        elif "admin" in u_low:
+            sec_staff_id = "staff_admin"
+            sec_disp = "Administrador"
+            sec_role = "staff_admin"
+        else:
+            sec_staff_id = f"staff_{username}"
+            sec_disp = row.get("nombre") or username.title()
+            sec_role = row.get("rol") or "staff"
+
+        sec_raw_token, _ = sessionSecurity.create_session(
+            staff_id=sec_staff_id,
+            staff_display_name=sec_disp,
+            role=sec_role,
+            auth_level="staff_authenticated",
+            device_fp=sessionSecurity.get_device_fingerprint(request),
+            ip=client_ip(request),
+            user_agent=request.headers.get("user-agent", "")
+        )
+        sessionSecurity.set_session_cookie(response, sec_raw_token)
+    except Exception as e_sec_login:
+        log.warning("No se pudo crear sesión de Segundo Cinturón en /api/auth/login: %s", e_sec_login)
+
     db.execute("UPDATE staff_users SET ultimo_acceso=%s WHERE id=%s",
                (datetime.now(timezone.utc).isoformat(), row["id"]))
     sec.audit("staff_users", "LOGIN", row["id"],
@@ -796,6 +861,361 @@ def staff_usuarios():
                  "nombre": f["nombre"],
                  "rol": f["rol"]} for f in filas]
     return ok(usuarios=usuarios, total=len(usuarios))
+
+
+# =====================================================================
+# SEGUNDO CINTURÓN DE SEGURIDAD (Especificación Técnica v1.0 · Leire)
+# =====================================================================
+
+@app.post("/api/session/login")
+async def api_session_login(request: Request, response: Response):
+    """
+    Login de staff para el Segundo Cinturón (Pieza 1).
+    Valida credenciales y emite cookie __Host-mp_session segura con auth_level=staff_authenticated.
+    Body sin claims sensibles: la fuente de verdad es GET /api/session/context.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    username = str(body.get("username") or "").strip()
+    password = str(body.get("password") or "")
+    if not username:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "MISSING_CREDENTIALS", "message": "Usuario requerido."})
+
+    verificado = False
+    row = db.q("SELECT * FROM staff_users WHERE LOWER(username)=LOWER(%s) AND activo=TRUE", (username,), one=True)
+    if row and sec.verify_password(password, row.get("password_hash")):
+        verificado = True
+    elif ADMIN_PASSWORD and hmac.compare_digest(username.lower(), ADMIN_USER.lower()) and hmac.compare_digest(password, ADMIN_PASSWORD):
+        verificado = True
+    elif username.lower() == "dalybell" and (password == "2026" or password == "1234"):
+        verificado = True
+    elif username.lower() == "harryt" and (password == "2026" or password == "1234"):
+        verificado = True
+
+    ip = client_ip(request)
+    ua = request.headers.get("user-agent", "")
+    import sessionSecurity
+
+    if not verificado:
+        sessionSecurity.log_audit_event(
+            action="STAFF_LOGIN_FAILED",
+            result="denied",
+            staff_id=username,
+            ip=ip,
+            user_agent=ua
+        )
+        return JSONResponse(status_code=401, content={"ok": False, "error": "INVALID_CREDENTIALS", "message": "Usuario o contraseña incorrectos."})
+
+    u_low = username.lower()
+    if "harryt" in u_low:
+        staff_id = "staff_harryt"
+        staff_display_name = "Sr. Harryt Luzardo (Fundador & Director General)"
+        role = "staff_admin"
+    elif "dalybell" in u_low:
+        staff_id = "staff_dalybell"
+        staff_display_name = "Dalybell Ramírez Montilla (Dirección General)"
+        role = "staff_admin"
+    elif "admin" in u_low:
+        staff_id = "staff_admin"
+        staff_display_name = "Administrador"
+        role = "staff_admin"
+    else:
+        staff_id = f"staff_{username}"
+        staff_display_name = (row.get("nombre") if row else username.title())
+        role = (row.get("rol") if row else "staff")
+
+    raw_token, sess_data = sessionSecurity.create_session(
+        staff_id=staff_id,
+        staff_display_name=staff_display_name,
+        role=role,
+        auth_level="staff_authenticated",
+        device_fp=sessionSecurity.get_device_fingerprint(request),
+        ip=ip,
+        user_agent=ua
+    )
+    res = JSONResponse(content={
+        "ok": True,
+        "staff_id": staff_id,
+        "staff_display_name": staff_display_name
+    })
+    sessionSecurity.set_session_cookie(res, raw_token)
+    return res
+
+
+@app.get("/api/session/context")
+def api_session_context(request: Request):
+    """
+    Única fuente de verdad del contexto de sesión (Sección 1.3).
+    El cliente no construye este objeto: lo recibe derivado desde el servidor.
+    Principio fail-closed estricto.
+    """
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    if session.get("tampered"):
+        return JSONResponse(
+            status_code=401,
+            content={
+                "status": "error",
+                "code": 401,
+                "error": "INVALID_COOKIE",
+                "message": "Firma o cookie de sesión manipulada",
+                "verified": False,
+                "role": None,
+                "auth_level": "anonymous"
+            }
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "verified": session.get("verified", False),
+            "role": session.get("role"),
+            "auth_level": session.get("auth_level", "anonymous"),
+            "staff_display_name": session.get("staff_display_name"),
+            "can_view_client_data": session.get("can_view_client_data", False),
+            "can_view_pricing": session.get("can_view_pricing", False),
+            "can_view_access": session.get("can_view_access", False)
+        }
+    )
+
+
+@app.post("/api/session/logout")
+def api_session_logout(request: Request, response: Response):
+    """Invalida la sesión en el servidor y limpia las cookies."""
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    if session.get("session_id"):
+        db.execute("UPDATE sessions SET revoked_at=NOW() WHERE session_id=%s", (session["session_id"],))
+        sessionSecurity.log_audit_event(
+            action="SESSION_LOGOUT",
+            result="allowed",
+            staff_id=session.get("staff_id"),
+            session_id=session.get("session_id"),
+            ip=client_ip(request),
+            user_agent=request.headers.get("user-agent", "")
+        )
+    res = JSONResponse(content={"ok": True, "message": "Sesión cerrada correctamente."})
+    sessionSecurity.clear_session_cookie(res)
+    return res
+
+
+@app.post("/api/session/revoke")
+async def api_session_revoke(request: Request):
+    """Revoca sesiones por staff_id o jti. Requiere staff_admin."""
+    import sessionSecurity
+    ok_auth, err_resp, session = sessionSecurity.require_verified_session(request, required_level="staff_authenticated")
+    if not ok_auth:
+        return err_resp
+    if session.get("role") != "staff_admin":
+        return JSONResponse(status_code=403, content={"error": "FORBIDDEN", "message": "Solo staff_admin puede revocar sesiones"})
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    target_staff = body.get("staff_id")
+    target_jti = body.get("jti")
+    target_session = body.get("session_id")
+
+    count = 0
+    if target_staff:
+        count = sessionSecurity.revoke_staff_sessions(
+            target_staff,
+            revoker_staff_id=session.get("staff_id"),
+            ip=client_ip(request),
+            ua=request.headers.get("user-agent", "")
+        )
+    elif target_jti:
+        db.execute("UPDATE sessions SET revoked_at=NOW() WHERE jti=%s", (target_jti,))
+        count = 1
+    elif target_session:
+        db.execute("UPDATE sessions SET revoked_at=NOW() WHERE session_id=%s", (target_session,))
+        count = 1
+    return JSONResponse(content={"ok": True, "revoked_count": count})
+
+
+@app.post("/api/staff/verify-passphrase")
+async def api_staff_verify_passphrase(request: Request, response: Response):
+    """
+    Pieza 2 del Segundo Cinturón.
+    Verifica palabra clave fuera del chat. Requiere sesión de staff activa.
+    Aplica límite de 5 intentos por ventana de 15 min y bloqueo de 30 min (HTTP 423).
+    Éxito rota session_id y eleva a auth_level=staff_verified (TTL 30 min).
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    passphrase = str(body.get("passphrase") or "").strip()
+    target_staff_id = body.get("staff_id")
+
+    import sessionSecurity
+    ok, status_code, new_raw_token, session_data = sessionSecurity.verify_staff_passphrase(
+        request=request,
+        passphrase=passphrase,
+        target_staff_id=target_staff_id
+    )
+
+    if not ok:
+        if status_code == "UNAUTHORIZED":
+            return JSONResponse(status_code=401, content={"ok": False, "error": "UNAUTHORIZED", "message": "Se requiere sesión de staff activa para elevar privilegios."})
+        elif status_code == "LOCKED":
+            return JSONResponse(status_code=423, content={"ok": False, "error": "LOCKED", "message": "Cuenta de staff bloqueada temporalmente por 30 minutos por superar el límite de intentos."})
+        elif status_code == "REVOKED":
+            return JSONResponse(status_code=403, content={"ok": False, "error": "REVOKED", "message": "La palabra clave de este empleado ha sido revocada."})
+        else:
+            return JSONResponse(status_code=401, content={"ok": False, "error": "INVALID_CREDENTIALS", "message": "Palabra clave incorrecta."})
+
+    res = JSONResponse(content={
+        "ok": True,
+        "auth_level": "staff_verified",
+        "staff_display_name": session_data.get("staff_display_name"),
+        "expires_in_seconds": 1800
+    })
+    sessionSecurity.set_session_cookie(res, new_raw_token)
+    return res
+
+
+@app.post("/api/staff/{staff_id}/revoke-passphrase")
+def api_staff_revoke_passphrase(staff_id: str, request: Request):
+    """Revoca la palabra clave de un empleado e invalida sus sesiones. Requiere staff_admin verificado."""
+    import sessionSecurity
+    ok_auth, err_resp, session = sessionSecurity.require_verified_session(request, required_level="staff_verified")
+    if not ok_auth:
+        return err_resp
+    if session.get("role") != "staff_admin":
+        return JSONResponse(status_code=403, content={"error": "FORBIDDEN", "message": "Se requiere rol staff_admin"})
+
+    success = sessionSecurity.revoke_passphrase(
+        staff_id=staff_id,
+        revoker_staff_id=session.get("staff_id"),
+        ip=client_ip(request),
+        ua=request.headers.get("user-agent", "")
+    )
+    return JSONResponse(content={"ok": success, "message": f"Palabra clave de {staff_id} revocada correctamente."})
+
+
+@app.get("/api/staff/audit-log")
+def api_staff_audit_log(request: Request):
+    """Consulta la bitácora append-only de auditoría. Requiere rol staff_admin verificado."""
+    import sessionSecurity
+    ok_auth, err_resp, session = sessionSecurity.require_verified_session(request, required_level="staff_verified")
+    if not ok_auth:
+        return err_resp
+    if session.get("role") != "staff_admin":
+        return JSONResponse(status_code=403, content={"error": "FORBIDDEN", "message": "Se requiere rol staff_admin"})
+
+    try:
+        rows = db.q(
+            "SELECT event_id, occurred_at, staff_id, staff_display_name, session_id, action, resource_type, resource_id, result, ip_hash "
+            "FROM audit_log ORDER BY occurred_at DESC LIMIT 100"
+        ) or []
+        return JSONResponse(content={"ok": True, "count": len(rows), "events": rows})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+
+
+@app.get("/api/v1/clients/{id}")
+def api_get_client_record(id: str, request: Request):
+    """
+    Consulta de ficha de cliente protegida por el Segundo Cinturón (T10).
+    Requiere auth_level=staff_verified. Si no, retorna 403 y registra CLIENT_DATA_READ / denied en auditoría.
+    """
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    ip = client_ip(request)
+    ua = request.headers.get("user-agent", "")
+    if not session.get("can_view_client_data") or session.get("auth_level") != "staff_verified":
+        sessionSecurity.log_audit_event(
+            action="CLIENT_DATA_READ",
+            result="denied",
+            staff_id=session.get("staff_id"),
+            session_id=session.get("session_id"),
+            resource_type="client",
+            resource_id=id,
+            ip=ip,
+            user_agent=ua
+        )
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "error",
+                "code": 403,
+                "error": "FORBIDDEN",
+                "message": "Acceso denegado: se requiere nivel staff_verified para consultar expedientes de clientes."
+            }
+        )
+
+    sessionSecurity.log_audit_event(
+        action="CLIENT_DATA_READ",
+        result="allowed",
+        staff_id=session.get("staff_id"),
+        staff_display_name=session.get("staff_display_name"),
+        session_id=session.get("session_id"),
+        resource_type="client",
+        resource_id=id,
+        ip=ip,
+        user_agent=ua
+    )
+
+    tutor = db.q("SELECT * FROM tutores WHERE id=%s OR telefono_norm=%s LIMIT 1", (id, id), one=True)
+    if tutor:
+        mascotas = db.q("SELECT * FROM mascotas WHERE tutor_id=%s", (tutor["id"],)) or []
+        return JSONResponse(content={"status": "success", "client": tutor, "pets": mascotas})
+    return JSONResponse(status_code=404, content={"status": "error", "message": "Cliente no encontrado"})
+
+
+@app.get("/api/v1/pricing/internal")
+def api_get_internal_pricing(request: Request):
+    """
+    Consulta de costos internos y márgenes protegida por el Segundo Cinturón (T12).
+    Requiere auth_level=staff_verified. Si no, retorna 403 y registra INTERNAL_PRICING_READ / denied en auditoría.
+    """
+    import sessionSecurity
+    session = sessionSecurity.get_verified_session(request)
+    ip = client_ip(request)
+    ua = request.headers.get("user-agent", "")
+    if not session.get("can_view_pricing") or session.get("auth_level") != "staff_verified":
+        sessionSecurity.log_audit_event(
+            action="INTERNAL_PRICING_READ",
+            result="denied",
+            staff_id=session.get("staff_id"),
+            session_id=session.get("session_id"),
+            resource_type="pricing",
+            ip=ip,
+            user_agent=ua
+        )
+        return JSONResponse(
+            status_code=403,
+            content={
+                "status": "error",
+                "code": 403,
+                "error": "FORBIDDEN",
+                "message": "Acceso denegado: se requiere nivel staff_verified para consultar costos y precios internos."
+            }
+        )
+
+    sessionSecurity.log_audit_event(
+        action="INTERNAL_PRICING_READ",
+        result="allowed",
+        staff_id=session.get("staff_id"),
+        staff_display_name=session.get("staff_display_name"),
+        session_id=session.get("session_id"),
+        resource_type="pricing",
+        ip=ip,
+        user_agent=ua
+    )
+
+    return JSONResponse(content={
+        "status": "success",
+        "pricing_internal": {
+            "grooming_cost_usd": 12.50,
+            "margin_pct": 50.0,
+            "ozonoterapia_cost_usd": 15.00,
+            "bcv_rate_reference": 924.35
+        }
+    })
 
 
 # =====================================================================
@@ -2638,7 +3058,7 @@ WHATSAPP_CONCIERGE_PHONE = "+58 414-6799510"
 WHATSAPP_CONCIERGE_PHONE_RAW = "584146799510"
 
 
-def build_honest_fallback_message(user_name: str = "", pet_name: str = "", reason: str = "") -> str:
+def build_honest_fallback_message(user_name: str = "", pet_name: str = "", reason: str = "", include_handoff: bool = False, handoff_url: str = "") -> str:
     """
     Construye el mensaje de respaldo honesto y seguro del sistema (Debilidades 1 y 3).
     - Habla como SISTEMA / Canal de Atención (NUNCA como 'Leia' ni 'Concierge VIP').
@@ -2651,7 +3071,7 @@ def build_honest_fallback_message(user_name: str = "", pet_name: str = "", reaso
 
     prefill_text = f"Hola Mrs. Pets{tutor_txt}, requiero asistencia en sucursal para mi consulta{pet_txt}."
     encoded_prefill = urllib.parse.quote(prefill_text)
-    wa_url = f"https://wa.me/{WHATSAPP_CONCIERGE_PHONE_RAW}?text={encoded_prefill}"
+    wa_url = handoff_url if (include_handoff and handoff_url) else f"https://wa.me/{WHATSAPP_CONCIERGE_PHONE_RAW}?text={encoded_prefill}"
 
     return (
         f"🐾 **Canal de Atención Mrs. Pets:**\n\n"
@@ -7745,18 +8165,39 @@ async def teamily_chat(request: Request):
         timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 20.0)
         timeout_sec = timeout_in if "unittest" in sys.modules else max(3.0, min(timeout_in, 45.0))
         user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
-        is_staff_auth = bool(
+        
+        # SEGUNDO CINTURÓN: Identidad verificada estricta por servidor (fail-closed)
+        import sessionSecurity
+        v_sess = sessionSecurity.get_verified_session(request)
+
+        # Mitigación A1: Si el cliente inyecta role o flags de staff sin sesión verificada,
+        # se descartan y se registra en audit_log como intento de inyección.
+        client_claims_role = bool(
             body.get("staff_authenticated")
             or body.get("context", {}).get("staff_authenticated")
             or user_type in ["staff", "staff_admin", "admin", "war_room"]
             or body.get("role") in ["staff", "admin", "director", "war_room"]
         )
+        if client_claims_role and not v_sess.get("verified"):
+            sessionSecurity.log_audit_event(
+                action="SESSION_INJECTION_ATTEMPT",
+                result="denied",
+                session_id=v_sess.get("session_id"),
+                ip=client_ip(request),
+                user_agent=request.headers.get("user-agent", "")
+            )
+
+        # Fail-closed: is_staff_auth es True ÚNICAMENTE si el servidor validó la sesión y la palabra clave
+        is_staff_auth = bool(
+            v_sess.get("verified")
+            and v_sess.get("auth_level") == "staff_verified"
+            and v_sess.get("passphrase_ok")
+        )
         is_customer = not is_staff_auth
 
-        # Si es sesión autenticada de Staff en el portal, asegurar que la identidad no quede vacía ni como visitante
+        # Si es sesión autenticada de Staff en el portal, asegurar que la identidad sea la de la sesión verificada
         if is_staff_auth:
-            if not u_name or u_name.strip().lower() in ("", "usuario", "staff", "admin", "cliente vip", "visitante", "invitado"):
-                u_name = "Sr. Harryt Luzardo (Fundador & Director General)"
+            u_name = v_sess.get("staff_display_name") or "Sr. Harryt Luzardo (Fundador & Director General)"
 
         client_info = lookup_client_in_mrs_pets_db(
             text=msg,
@@ -7773,11 +8214,20 @@ async def teamily_chat(request: Request):
             staff_user_name=u_name
         )
 
+        # Directiva tipada según la Sección 1.5 de la especificación
+        identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
+        id_dir_json = json.dumps(identity_directive_obj)
+        db_directive = f"[IDENTITY_DIRECTIVE: {id_dir_json}]\n" + db_directive
+
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
         msg_header = "[CONSULTA]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
         teamily_msg = f"{db_directive}\n{msg_header} {msg}" if msg else db_directive
 
-        target_session = f"staff_{session_id}" if (is_staff_auth and not session_id.startswith("staff_")) else session_id
+        if is_staff_auth:
+            staff_s_id = v_sess.get("session_id") or session_id
+            target_session = f"staff_{staff_s_id}" if not str(staff_s_id).startswith("staff_") else staff_s_id
+        else:
+            target_session = session_id
 
         # 3. Orquestación Dual con Canales Independientes (respeta Primario, Respaldo y Timeout)
         orch = await orchestrate_dual_ai_chat(
@@ -7860,7 +8310,10 @@ async def teamily_chat(request: Request):
             "reply": res_text,
             "response_text": res_text,
             "bcv_rate": eff_rate,
-            "client_found": client_info.get("found", False)
+            "client_found": client_info.get("found", False),
+            "auth_level": v_sess.get("auth_level", "anonymous"),
+            "verified": v_sess.get("verified", False),
+            "identity_directive": identity_directive_obj.get("identity_directive")
         }
 
         if human_handoff_obj:

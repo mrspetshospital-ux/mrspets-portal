@@ -66,8 +66,8 @@
             if (!isClient) return null;
 
             const petId = (window.authEngine && window.authEngine.currentVipPetId) ||
-                          localStorage.getItem('mrs_pets_active_vip_patient_id') ||
-                          'PET-100';
+                          localStorage.getItem('mrs_pets_active_vip_patient_id');
+            if (!petId) return null;
 
             let patient = null;
             if (window.authEngine && typeof window.authEngine.getPatientById === 'function') {

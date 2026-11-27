@@ -759,6 +759,7 @@
           <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Seleccione o escriba su Usuario *</label>
           <select id="login-staff-select" class="form-select" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #475569 !important; margin-bottom:8px; font-weight:700; font-size:0.85rem; padding:10px;" onchange="if(this.value){ document.getElementById('login-staff-user').value = this.value; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); } }">
             <option value="">-- ¿Quién es usted? Seleccione su perfil --</option>
+            <option value="harryt">🎩 Sr. Harryt Luzardo (Fundador & Director General)</option>
             <option value="dalybell">👑 Dalybell Ramírez Montilla (Dirección General & Propietaria)</option>
             <option value="dr.morales">🩺 Dr. Alejandro Morales (Médico Veterinario Jefe)</option>
             <option value="grooming.staff">✂️ Mariana Colina (Grooming Lead)</option>
@@ -779,6 +780,9 @@
         <div style="margin-bottom:20px;">
           <div style="font-size:0.78rem; color:#E2E8F0 !important; font-weight:700; margin-bottom:8px;">⚡ Selección rápida de perfil (Elegir usuario y luego ingresar clave):</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <button type="button" onclick="document.getElementById('login-staff-user').value='harryt'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(212,175,55,0.3); border:1.5px solid #D4AF37; color:#FEF08A !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:900;">
+              🎩 Sr. Harryt Luzardo
+            </button>
             <button type="button" onclick="document.getElementById('login-staff-user').value='dalybell'; const p = document.getElementById('login-staff-pass'); if(p){ p.value = ''; p.focus(); }" style="background:rgba(212,175,55,0.3); border:1.5px solid #D4AF37; color:#FEF08A !important; font-size:0.75rem; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:900;">
               👑 Dalybell Ramírez
             </button>
@@ -799,6 +803,42 @@
 
         <button type="submit" id="btn-enterprise-auth-submit" class="btn" style="width:100%; padding:14px; font-weight:900; border-radius:12px; background:linear-gradient(135deg, #FBBF24, #F59E0B) !important; color:#0F172A !important; border:1px solid #D97706; font-size:0.98rem; box-shadow:0 6px 18px rgba(245,158,11,0.45); cursor:pointer;">
           <span style="color:#0F172A !important; font-weight:900 !important;">🔓 Autenticar & Entrar a Vista Empresa ➔</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SEGUNDO CINTURÓN DE SEGURIDAD (PALABRA CLAVE DE STAFF) -->
+  <div class="modal-overlay" id="staff-passphrase-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; z-index:2000000;">
+    <div class="modal-card modal-dark" style="max-width:480px; width:92%; max-height:92vh; overflow-y:auto; padding:32px; border-radius:24px; border:1.5px solid #10b981; background:linear-gradient(145deg, #070a11, #064e3b) !important; color:#FFFFFF !important; box-shadow:0 20px 50px rgba(0,0,0,0.85);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(16,185,129,0.3);">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="background:#059669; padding:10px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="shield-check" style="width:24px; height:24px; color:white;"></i>
+          </div>
+          <div>
+            <h3 style="font-size:1.25rem; font-weight:900; color:#FFFFFF !important; margin:0;">Segundo Cinturón de Seguridad</h3>
+            <p style="font-size:0.78rem; color:#A7F3D0 !important; margin:2px 0 0 0;">Elevación de Privilegios por Palabra Clave</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="app.closeModal('staff-passphrase-modal')" style="background:rgba(255,255,255,0.18) !important; color:#FFFFFF !important; border:1px solid rgba(255,255,255,0.3) !important; border-radius:8px; font-weight:900; font-size:1rem; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Cerrar modal">✕</button>
+      </div>
+
+      <div style="background:#064E3B; padding:13px 18px; border-radius:12px; border:1.5px solid #10B981; margin-bottom:20px; font-size:0.84rem; color:#ECFDF5 !important; line-height:1.45;">
+        🛡️ <strong style="color:#FFFFFF !important; font-weight:900;">Verificación Institucional:</strong> Ingrese su palabra clave personal para activar la directiva de identidad verificada con Margarette y acceder a expedientes y costos. <em>(La palabra clave nunca transita por el chat)</em>.
+      </div>
+
+      <div id="staff-passphrase-error" role="alert" style="display:none; background:rgba(239,68,68,0.25); border:1.5px solid #EF4444; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#FCA5A5; font-size:0.85rem; font-weight:700;"></div>
+      <div id="staff-passphrase-success" role="status" style="display:none; background:rgba(16,185,129,0.25); border:1.5px solid #10B981; border-radius:12px; padding:12px 16px; margin-bottom:16px; color:#6EE7B7; font-size:0.85rem; font-weight:700;"></div>
+
+      <form onsubmit="adminEngine.submitPassphraseVerification(event)">
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label" style="color:#F8FAFC !important; font-weight:700; font-size:0.85rem;">Palabra Clave Personal *</label>
+          <input type="password" class="form-input" id="staff-passphrase-input" placeholder="Ingrese su palabra clave de confirmación *" required autocomplete="off" style="border-radius:10px; background:#0f172a !important; color:#FFFFFF !important; border:1px solid #10B981 !important; padding:10px;">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="background:#10B981 !important; color:#064E3B !important; font-weight:900; padding:12px; border-radius:12px; font-size:0.95rem; border:none; cursor:pointer;">
+          🛡️ Confirmar & Elevar Privilegios
         </button>
       </form>
     </div>
@@ -5366,7 +5406,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Nombre y Apellido *</label>
-            <input type="text" class="form-input" id="gf-tutor-name" placeholder="Ej: Mariana Colina" style="border-radius:8px;">
+            <input type="text" class="form-input" id="gf-tutor-name" placeholder="Ej: Carlos Mendoza" style="border-radius:8px;">
           </div>
           <div class="form-group">
             <label class="form-label">Cédula de Identidad / RIF *</label>
@@ -7973,7 +8013,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
 
       <!-- DATOS GENERALES DEL SERVICIO -->
       <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; background:#F8FAFC; padding:12px 16px; border-radius:14px; margin-bottom:20px; border:1px solid #E2E8F0; font-size:0.82rem;">
-        <div><span style="color:#64748B; font-weight:600;">Tutor:</span> <strong id="trace-pet-owner" style="color:#2C2C2E; font-weight:800;">Mariana Colina</strong></div>
+        <div><span style="color:#64748B; font-weight:600;">Tutor:</span> <strong id="trace-pet-owner" style="color:#2C2C2E; font-weight:800;">Tutor Registrado</strong></div>
         <div><span style="color:#64748B; font-weight:600;">Área:</span> <strong id="trace-pet-area" style="color:#4A6B5D; font-weight:800;">Grooming (Estética)</strong></div>
         <div><span id="trace-pet-time-label" style="color:#64748B; font-weight:600;">Tiempo Total:</span> <strong id="trace-pet-total-time" style="color:#D4AF37; font-weight:900;">42 min</strong></div>
       </div>
@@ -7998,7 +8038,7 @@ Para evitar que los clientes humanos se aburran o sientan invasión a su privaci
           <img id="adv-pet-photo" src="assets/hero_border_collie.jpg" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #D4AF37;">
           <div>
             <h3 style="font-size:1.2rem; font-weight:900; color:var(--obsidian-black); margin:0;">✍️ Avanzar Estación & Registrar Firma</h3>
-            <div id="adv-pet-subtitle" style="font-size:0.8rem; color:var(--text-muted);">Mascota: Lata • Tutor: Mariana Colina</div>
+            <div id="adv-pet-subtitle" style="font-size:0.8rem; color:var(--text-muted);">Mascota: Lata • Tutor: Tutor Registrado</div>
           </div>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="app.closeModal('advance-stage-modal')" style="border-radius:50%; width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;">✕</button>

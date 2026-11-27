@@ -85,11 +85,11 @@ class AdminEngine {
       { id: 'PET-102', name: 'Fifi', petName: 'Fifi', species: 'Teckel / Dachshund VIP', owner: 'Carlos Mendoza', ownerName: 'Carlos Mendoza', rif: 'V-14.882.109', email: 'carlos.mendoza@example.com', ownerPhone: '+58 412-5551234', pin: '1234', area: 'grooming', stepIndex: 1, turnNumber: 2, turno: 2, turnTicket: 'G-002', service: 'Circuito Grooming Spa (7 Estaciones)', price: 25.00, notes: 'Circuito Grooming Spa (7 Estaciones) para Fifi.', photo: 'assets/media__1787695254613.jpg', image: 'assets/media__1787695254613.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Sector Tierra Negra, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
       { id: 'PET-103', name: 'Buddy', petName: 'Buddy', species: 'Golden Retriever', owner: 'Andrés Morales', ownerName: 'Andrés Morales', rif: 'V-16.294.103', email: 'andres.morales@example.com', ownerPhone: '+58 414-3322110', pin: '1234', area: 'grooming', stepIndex: 1, turnNumber: 3, turno: 3, turnTicket: 'G-003', notes: 'Piel sensible. Usar champú hipoalergénico Mrs. Pets.', photo: 'assets/mrs_pets_golden_welcome_1787694735845.jpg', image: 'assets/mrs_pets_golden_welcome_1787694735845.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Sector Tierra Negra, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
       { id: 'PET-106', name: 'Bella', petName: 'Bella', species: 'Poodle Toy Royal', owner: 'Bellita Ramírez', ownerName: 'Bellita Ramírez', rif: 'V-19.823.411', email: 'bellita.ramirez@example.com', ownerPhone: '+58 412-3344556', pin: '1234', area: 'grooming', stepIndex: 5, turnNumber: 4, turno: 4, turnTicket: 'G-004', hasReservation: true, notes: 'Corte de exhibición con moño dorado Mrs. Pets.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Sector Virginia, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
-      { id: 'PET-109', name: 'Buga', petName: 'Buga', species: 'Poodle Toy / Caniche', owner: 'Mariana Colina', ownerName: 'Mariana Colina', rif: 'V-24.891.204', email: 'mariana.colina@example.com', ownerPhone: '+58 414-6799510', pin: '1234', area: 'grooming', stepIndex: 3, turnNumber: 5, turno: 5, turnTicket: 'G-005', hasReservation: true, notes: 'Circuito Grooming Spa con hidratación de pulpejos obligatoria.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 4 Bella Vista, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
+      { id: 'PET-109', name: 'Buga', petName: 'Buga', species: 'Poodle Toy / Caniche', owner: 'Ana María Morales', ownerName: 'Ana María Morales', rif: 'V-24.891.204', email: 'anamaria.morales@example.com', ownerPhone: '+58 414-2233445', pin: '1234', area: 'grooming', stepIndex: 3, turnNumber: 5, turno: 5, turnTicket: 'G-005', hasReservation: true, notes: 'Circuito Grooming Spa con hidratación de pulpejos obligatoria.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 4 Bella Vista, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
       { id: 'PET-111', name: 'Lata', petName: 'Lata', species: 'Canino (Mestizo VIP)', owner: 'Titter', ownerName: 'Titter', rif: 'V-21.984.102', email: 'titter@example.com', ownerPhone: '+58 414-8892233', pin: '1234', area: 'grooming', stepIndex: 1, turnNumber: 6, turno: 6, turnTicket: 'G-006', hasReservation: true, notes: 'Ingresado en recepción para circuito de Grooming Spa.', photo: 'assets/hero_border_collie.jpg', image: 'assets/hero_border_collie.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Sector La Concha, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true, isVipRegistered: true },
       { id: 'PET-112', name: 'Rudy', petName: 'Rudy', species: 'Schnauzer VIP / Canino', owner: 'Ricardo Salazar', ownerName: 'Ricardo Salazar', rif: 'V-19.340.551', email: 'ricardo.salazar@example.com', ownerPhone: '+58 414-7766554', pin: '1234', area: 'grooming', stepIndex: 1, turnNumber: 7, turno: 7, turnTicket: 'G-007', hasReservation: true, notes: 'Cita de Grooming & Baño Spa confirmada para Rudy.', photo: 'assets/hero_border_collie.jpg', image: 'assets/hero_border_collie.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Sector Tierra Negra, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true, isVipRegistered: true },
       { id: 'PET-105', name: 'Ivi', petName: 'Ivi', species: 'Gato Persa VIP', owner: 'Ivonne Montilla', ownerName: 'Ivonne Montilla', rif: 'V-14.238.991', email: 'ivonne.montilla@example.com', ownerPhone: '+58 414-7788990', pin: '1234', area: 'grooming', stepIndex: 1, turnNumber: 8, turno: 8, turnTicket: 'G-008', hasReservation: true, notes: 'Recibido en módulo spa. Baño deslanado para Gato Persa VIP.', photo: 'assets/media__1787694901704.jpg', image: 'assets/media__1787694901704.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 5 de Julio, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
-      { id: 'PET-110', name: 'Cuga', petName: 'Cuga', species: 'Poodle Royal / Caniche VIP', owner: 'Mariana Colina', ownerName: 'Mariana Colina', rif: 'V-24.891.204', email: 'mariana.colina@example.com', ownerPhone: '+58 414-6799510', pin: '1234', area: 'grooming', stepIndex: 6, turnNumber: 9, turno: 9, turnTicket: 'G-009', hasReservation: true, notes: 'Circuito Grooming Spa completado. En control de calidad final listo para entrega.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 4 Bella Vista, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium Ozono', termsAccepted: true, isVipRegistered: true },
+      { id: 'PET-110', name: 'Cuga', petName: 'Cuga', species: 'Poodle Royal / Caniche VIP', owner: 'Valentina Silva', ownerName: 'Valentina Silva', rif: 'V-23.551.440', email: 'valentina.silva@example.com', ownerPhone: '+58 414-5566778', pin: '1234', area: 'grooming', stepIndex: 6, turnNumber: 9, turno: 9, turnTicket: 'G-009', hasReservation: true, notes: 'Circuito Grooming Spa completado. En control de calidad final listo para entrega.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 4 Bella Vista, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium Ozono', termsAccepted: true, isVipRegistered: true },
       { id: 'PET-107', name: 'Max', petName: 'Max', species: 'Schnauzer Miniatura', owner: 'Dra. Patricia Silva', ownerName: 'Dra. Patricia Silva', rif: 'V-16.543.210', email: 'patricia.silva@example.com', ownerPhone: '+58 414-1122334', pin: '1234', area: 'grooming', stepIndex: 5, turnNumber: 10, turno: 10, turnTicket: 'G-010', hasReservation: true, notes: 'Corte de raza Schnauzer en estación de corte y acabado fino.', photo: 'assets/media__1787695246337.jpg', image: 'assets/media__1787695246337.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'Av. 8 Santa Rita, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true },
       { id: 'PET-108', name: 'Thor', petName: 'Thor', species: 'Bulldog Francés', owner: 'Gabriel Silva', ownerName: 'Gabriel Silva', rif: 'V-22.345.678', email: 'gabriel.silva@example.com', ownerPhone: '+58 412-5566778', pin: '1234', area: 'clinica', stepIndex: 6, turnNumber: 1, turno: 1, turnTicket: 'C-001', hasReservation: true, notes: 'Alta médica tras profilaxis y revisión dermatológica.', photo: 'assets/media__1787695254613.jpg', image: 'assets/media__1787695254613.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'La Victoria, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Medicado', termsAccepted: true, deliveredAt: '03:30 PM', deliveredBy: 'Dr. Alejandro Morales' },
       { id: 'PET-104', name: 'Luna', petName: 'Luna', species: 'Gato Persa VIP', owner: 'Sofía Rodríguez', ownerName: 'Sofía Rodríguez', rif: 'V-20.119.443', email: 'sofia.rodriguez@example.com', ownerPhone: '+58 414-9988776', pin: '1234', area: 'hotel', stepIndex: 0, turnNumber: 1, turno: 1, turnTicket: 'H-001', notes: 'Estadía en Suite Bioclimática de Hotel 5★. Dieta especial BARF.', photo: 'assets/media__1787694901704.jpg', image: 'assets/media__1787694901704.jpg', ownerPhoto: 'assets/leia_avatar.jpg', address: 'La Lago, Maracaibo', parasites: 'No', diseaseDetails: 'Sin condiciones', bathType: 'Baño Estándar Premium', termsAccepted: true }
@@ -111,7 +111,7 @@ class AdminEngine {
     // Pending Online Reservations Queue
     const todayISO = new Date().toISOString().split('T')[0];
     this.pendingAppointments = [
-      { id: 'PEND-301', area: 'grooming', date: todayISO, time: '11:00', pet: 'Sasha', tutor: 'Mariana Colina', service: 'Corte & Baño Spa (Incluye Hidratación de Pulpejos)', phone: '+58 414-6799510', status: 'Pendiente de Aprobación' },
+      { id: 'PEND-301', area: 'grooming', date: todayISO, time: '11:00', pet: 'Sasha', tutor: 'Valentina Silva', service: 'Corte & Baño Spa (Incluye Hidratación de Pulpejos)', phone: '+58 414-5566778', status: 'Pendiente de Aprobación' },
       { id: 'PEND-302', area: 'clinica', date: todayISO, time: '15:00', pet: 'Mafi', tutor: 'Carlos Mendoza', service: 'Consulta Médica Especializada', phone: '+58 412-5551234', status: 'Pendiente de Aprobación' },
       { id: 'PEND-303', area: 'tienda', date: todayISO, time: '09:00', pet: 'Pipo', tutor: 'Gabriel Silva', service: 'Asesoramiento Nutricional VIP & Selección Boutique', phone: '+58 412-5566778', status: 'Pendiente de Aprobación' },
       { id: 'PEND-304', area: 'hotel', date: todayISO, time: '10:30', pet: 'Toby', tutor: 'Sofía Rodríguez', service: 'Reserva Suite Bioclimática Hotel 5★', phone: '+58 414-9988776', status: 'Pendiente de Aprobación' }
@@ -322,15 +322,15 @@ class AdminEngine {
       }
       const bugaPet = this.patientsStatus.find(p => p.id === 'PET-109');
       if (bugaPet) {
-        bugaPet.owner = 'Mariana Colina';
-        bugaPet.ownerName = 'Mariana Colina';
+        bugaPet.owner = 'Ana María Morales';
+        bugaPet.ownerName = 'Ana María Morales';
         bugaPet.rif = 'V-24.891.204';
       }
       const cugaPet = this.patientsStatus.find(p => p.id === 'PET-110');
       if (cugaPet) {
-        cugaPet.owner = 'Mariana Colina';
-        cugaPet.ownerName = 'Mariana Colina';
-        cugaPet.rif = 'V-24.891.204';
+        cugaPet.owner = 'Valentina Silva';
+        cugaPet.ownerName = 'Valentina Silva';
+        cugaPet.rif = 'V-23.551.440';
         if (cugaPet.stepIndex >= 7) {
           cugaPet.stepIndex = 6;
           cugaPet.turnNumber = 9;
@@ -1508,13 +1508,25 @@ class AdminEngine {
     }
 
     nameTextEl.innerText = accountName;
+    if (this.viewEnvironment === 'enterprise') {
+      const isVerified = (sessionStorage.getItem('mrs_pets_staff_verified') === 'true');
+      badgeLabel = isVerified ? '🛡️ Verificado (30m):' : '🔒 Staff (Sin elevar):';
+      if (badgeContainer) {
+        badgeContainer.title = isVerified
+          ? '🛡️ Privilegios elevados con Segundo Cinturón (Activo 30 min)'
+          : '🔒 Haz clic para ingresar la Palabra Clave del Segundo Cinturón';
+        badgeContainer.style.cursor = 'pointer';
+        badgeContainer.onclick = () => this.openPassphraseModal();
+      }
+    } else {
+      if (badgeContainer) {
+        badgeContainer.title = `✏️ ${badgeLabel} ${accountName} (Haz clic para ver o editar la Ficha del Cliente)`;
+        badgeContainer.style.cursor = 'pointer';
+        badgeContainer.onclick = () => this.openActiveCustomerProfileModal();
+      }
+    }
     if (badgeLabelEl) {
       badgeLabelEl.innerText = badgeLabel;
-    }
-    if (badgeContainer) {
-      badgeContainer.title = `✏️ ${badgeLabel} ${accountName} (Haz clic para ver o editar la Ficha del Cliente)`;
-      badgeContainer.style.cursor = 'pointer';
-      badgeContainer.onclick = () => this.openActiveCustomerProfileModal();
     }
     if (avatarImgEl) {
       avatarImgEl.src = accountPhoto;
@@ -1790,13 +1802,89 @@ class AdminEngine {
 
   logoutEnterprise() {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    fetch('/api/session/logout', { method: 'POST' }).catch(() => {});
     this.isEnterpriseAuthenticated = false;
     this.currentStaffUser = null;
     sessionStorage.removeItem('mrs_pets_enterprise_authenticated');
     sessionStorage.removeItem('mrs_pets_staff_role');
+    sessionStorage.removeItem('mrs_pets_staff_verified');
     this.setEnvironment('customer');
     if (window.app && typeof window.app.showToast === 'function') {
       window.app.showToast('🔒 Sesión de personal cerrada. Retornando a Vista Cliente.', 'info');
+    }
+  }
+
+  openPassphraseModal() {
+    const input = document.getElementById('staff-passphrase-input');
+    const errEl = document.getElementById('staff-passphrase-error');
+    const successEl = document.getElementById('staff-passphrase-success');
+    if (input) input.value = '';
+    if (errEl) errEl.style.display = 'none';
+    if (successEl) successEl.style.display = 'none';
+    if (window.app && typeof window.app.openModal === 'function') {
+      window.app.openModal('staff-passphrase-modal');
+    } else {
+      const m = document.getElementById('staff-passphrase-modal');
+      if (m) m.style.display = 'flex';
+    }
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+
+  async submitPassphraseVerification(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const input = document.getElementById('staff-passphrase-input');
+    const errEl = document.getElementById('staff-passphrase-error');
+    const successEl = document.getElementById('staff-passphrase-success');
+    const phrase = input ? input.value.trim() : '';
+    if (!phrase) return;
+
+    if (errEl) errEl.style.display = 'none';
+    if (successEl) successEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/staff/verify-passphrase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passphrase: phrase })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        if (successEl) {
+          successEl.textContent = '✅ Identidad verificada con el Segundo Cinturón. Privilegios elevados activos por 30 minutos.';
+          successEl.style.display = 'block';
+        }
+        sessionStorage.setItem('mrs_pets_staff_verified', 'true');
+        if (window.app && typeof window.app.showToast === 'function') {
+          window.app.showToast('🛡️ Segundo Cinturón: Identidad verificada (30 min)', 'success');
+        }
+        setTimeout(() => {
+          if (window.app && typeof window.app.closeModal === 'function') {
+            window.app.closeModal('staff-passphrase-modal');
+          } else {
+            const m = document.getElementById('staff-passphrase-modal');
+            if (m) m.style.display = 'none';
+          }
+          if (typeof this.updateHeaderAccountDisplay === 'function') {
+            this.updateHeaderAccountDisplay();
+          }
+        }, 1000);
+      } else {
+        const msg = data.message || (res.status === 423 ? '🔒 Cuenta bloqueada por 30 minutos.' : '❌ Palabra clave incorrecta.');
+        if (errEl) {
+          errEl.textContent = msg;
+          errEl.style.display = 'block';
+        }
+        if (input) {
+          input.classList.add('shake-anim');
+          setTimeout(() => input.classList.remove('shake-anim'), 400);
+          input.select();
+        }
+      }
+    } catch (e) {
+      if (errEl) {
+        errEl.textContent = '⚠️ Error conectando con el servidor de seguridad.';
+        errEl.style.display = 'block';
+      }
     }
   }
 

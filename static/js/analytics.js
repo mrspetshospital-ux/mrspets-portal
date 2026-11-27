@@ -408,7 +408,7 @@ class AnalyticsEngine {
             </div>
           </div>
         </td>
-        <td style="padding:14px 16px; font-weight:700; color:#1E293B;">${pet.ownerName || 'Mariana Colina'}</td>
+        <td style="padding:14px 16px; font-weight:700; color:#1E293B;">${pet.ownerName || 'Tutor Registrado'}</td>
         <td style="padding:14px 16px;">
           <span class="badge" style="background:${familyName === 'GROOMING' ? '#FFFBE6' : '#ECFDF5'}; color:${familyName === 'GROOMING' ? '#B45309' : '#047857'}; font-weight:800; border:1px solid ${familyName === 'GROOMING' ? '#FDE68A' : '#A7F3D0'}; font-size:0.72rem;">
             ${familyName}
