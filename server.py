@@ -348,7 +348,7 @@ def _startup():
                 db.execute(
                     """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo, notas, activo)
                        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)""",
-                    ("PET-100", tutor_id_daly, "Sofía", "Perro", "Yorkshire Terrier VIP (Princesa)", "Hembra",
+                    ("PET-DALY-01", tutor_id_daly, "Sofía", "Perro", "Yorkshire Terrier VIP (Princesa)", "Hembra",
                      "Princesa consentida de la casa. Circuito Spa con hidratación de pulpejos obligatoria.")
                 )
                 db.execute(
@@ -971,7 +971,9 @@ def api_session_context(request: Request):
         content={
             "verified": session.get("verified", False),
             "role": session.get("role"),
+            "subject_id": session.get("subject_id"),
             "auth_level": session.get("auth_level", "anonymous"),
+            "permissions": session.get("permissions", ["view_public_catalog"]),
             "staff_display_name": session.get("staff_display_name"),
             "can_view_client_data": session.get("can_view_client_data", False),
             "can_view_pricing": session.get("can_view_pricing", False),
@@ -8180,89 +8182,63 @@ async def teamily_chat(request: Request):
 
         timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 20.0)
         timeout_sec = timeout_in if "unittest" in sys.modules else max(3.0, min(timeout_in, 45.0))
-        user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
-        
-        # SEGUNDO CINTURÓN: Identidad verificada estricta por servidor (fail-closed)
+
+        # Bloque 2.2: Prohibición de identidad declarada.
+        # Descartar cualquier rol, subject_id o indicador de sesión autenticada que provenga del cliente
         import sessionSecurity
+        from receptionBridge import sanitize_visible_response, assemble_avatar_prompt
+        decl_rejected, body, clean_msg = sessionSecurity.check_and_reject_identity_declaration(request, body)
+        msg = clean_msg
+
+        # Bloque 1.2 & 2.3: La identidad es un hecho del servidor validado contra cookie firmada y BD
         v_sess = sessionSecurity.get_verified_session(request)
 
-        # Mitigación A1: Si el cliente inyecta role o flags de staff sin sesión verificada,
-        # se descartan y se registra en audit_log como intento de inyección.
-        client_claims_role = bool(
-            body.get("staff_authenticated")
-            or body.get("context", {}).get("staff_authenticated")
-            or user_type in ["staff", "staff_admin", "admin", "war_room"]
-            or body.get("role") in ["staff", "admin", "director", "war_room"]
-        )
-        if client_claims_role and not v_sess.get("verified"):
-            sessionSecurity.log_audit_event(
-                action="SESSION_INJECTION_ATTEMPT",
-                result="denied",
-                session_id=v_sess.get("session_id"),
-                ip=client_ip(request),
-                user_agent=request.headers.get("user-agent", "")
-            )
-
-        # Fail-closed: is_staff_auth es True ÚNICAMENTE si el servidor validó la sesión y la palabra clave
+        # Fail-closed: is_staff_auth es True ÚNICAMENTE si el servidor validó la sesión y la elevación
         is_staff_auth = bool(
             v_sess.get("verified")
             and v_sess.get("auth_level") == "staff_verified"
             and v_sess.get("passphrase_ok")
         )
         is_customer = not is_staff_auth
+        role = v_sess.get("role") or "visitor"
+        permissions = v_sess.get("permissions") or ["view_public_catalog"]
+        subject_id = v_sess.get("subject_id")
 
-        # Mitigación T-14: Inyecciones de directivas o bloques de control en el cuerpo del mensaje por visitantes
-        if not is_staff_auth and msg and any(kw in msg for kw in ["[IDENTITY_DIRECTIVE", "IDENTITY_DIRECTIVE:", "[CONTEXTO DE ATENCIÓN INTERNA", "staff_verified"]):
-            sessionSecurity.log_audit_event(
-                action="PROMPT_INJECTION_ATTEMPT",
-                result="denied",
-                session_id=v_sess.get("session_id"),
-                ip=client_ip(request),
-                user_agent=request.headers.get("user-agent", "")
-            )
-            msg = re.sub(r'\[IDENTITY_DIRECTIVE[^\]]*\]', '', msg, flags=re.IGNORECASE).strip()
-            msg = re.sub(r'\[CONTEXTO DE ATENCIÓN INTERNA[^\]]*\]', '', msg, flags=re.IGNORECASE).strip()
+        u_name = v_sess.get("staff_display_name") if is_staff_auth else ""
 
-        # Si es sesión autenticada de Staff en el portal, asegurar que la identidad sea la de la sesión verificada
-        if is_staff_auth:
-            u_name = v_sess.get("staff_display_name") or "Sr. Harryt Luzardo (Fundador & Director General)"
-
+        # Bloque 5.1 & 5.2: Búsqueda en cascada solo después de identificar la sesión
         client_info = lookup_client_in_mrs_pets_db(
+            session=v_sess,
+            subject_id=subject_id,
             text=msg,
             user_name=u_name,
             phone=ph_num,
             pet_name=p_name,
             is_staff=is_staff_auth
         )
-        db_directive = format_margaret_system_directive(
-            client_info,
-            msg_text=msg,
+
+        # Bloque 1.4 & 1.5: La memoria de conversación se indexa por (subject_id, thread_id)
+        subj_key = subject_id or f"anon_{v_sess.get('session_id') or session_id}"
+        th_id = sessionSecurity.get_or_create_thread(subj_key)
+
+        # Bloque 1.3 & 2.4: Ensamblado del prompt con delimitación estricta <USER_INPUT>
+        teamily_msg = assemble_avatar_prompt(
+            role=role,
+            permissions=permissions,
+            subject_id=subject_id,
+            user_message=msg,
+            client_info=client_info,
             bcv_cfg=bcv_cfg,
-            is_staff=is_staff_auth,
-            staff_user_name=u_name
+            staff_display_name=v_sess.get("staff_display_name")
         )
 
         # Directiva tipada según la Sección 1.5 de la especificación
         identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
 
-        # 2. Componer prompt enriquecido para que Margaret conozca el contexto y formule las respuestas
-        # El servidor garantiza que solo las sesiones autenticadas por el backend reciban directivas de staff.
-        if is_staff_auth:
-            teamily_msg = f"{db_directive}\n[MENSAJE DE DIRECCIÓN GENERAL / SR. HARRYT LUZARDO]: {msg}" if msg else db_directive
-        else:
-            teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
-
-        if is_staff_auth:
-            staff_s_id = v_sess.get("session_id") or session_id
-            staff_id = v_sess.get("staff_id") or "staff"
-            target_session = f"staff_{staff_id}_{staff_s_id}"
-        else:
-            target_session = session_id
-
         # 3. Orquestación Dual con Canales Independientes (respeta Primario, Respaldo y Timeout)
         orch = await orchestrate_dual_ai_chat(
             msg=teamily_msg,
-            session_id=target_session,
+            session_id=th_id,
             is_customer=is_customer,
             primary_engine=primary_engine,
             timeout_sec=timeout_sec,
@@ -8270,7 +8246,7 @@ async def teamily_chat(request: Request):
             requested_agent="margaret",
             board_id=body.get("board_id") or os.environ.get("TEAMILY_BOARD_ID", "5803df5a-7127-4d28-b97c-5c840d47cdc7"),
             context={
-                "role": "staff_admin" if is_staff_auth else "client",
+                "role": role,
                 "auth_level": v_sess.get("auth_level", "anonymous"),
                 "verified": is_staff_auth,
                 "staff_id": "@9000408632300095" if is_staff_auth else None,
@@ -8282,9 +8258,10 @@ async def teamily_chat(request: Request):
 
         res_text = orch["reply"]
         if res_text:
-            # RED DE SEGURIDAD DE SALIDA: Normaliza respuestas del agente externo (Teamily).
-            # Es exclusivamente una red de seguridad contra erratas de Teamily (Leire/Leira) y NO un mecanismo de enrutamiento.
+            # Normalización y sanitización estricta de salida visible (Bloque 3.1)
             res_text = re.sub(r'\b(Leire|Leira)\b', 'LEIA', res_text, flags=re.IGNORECASE)
+            res_text = sanitize_visible_response(res_text)
+
         responder_agent = orch["agent"]
         responder_name = orch["agent_name"]
         model_used = orch["model_used"]
@@ -8333,26 +8310,29 @@ async def teamily_chat(request: Request):
                 agent_health_tracker.reset_session_failures(session_id)
                 agent_health_tracker.record_check_result(ok=True, latency_ms=call_latency_ms)
 
+        # Bloque 3.2: Descartar metadatos técnicos en el payload del frontend.
+        # Metadatos van a logs del servidor, no a la respuesta HTTP al cliente.
+        log.info(
+            "Avatar Chat Turno Completado | session_id=%s, thread_id=%s, agent=%s, latency=%.2fms, active_channel=%s",
+            session_id, th_id, responder_agent, call_latency_ms, orch.get("active_channel")
+        )
+
         out_response = {
             "status": "success",
             "agent": responder_agent,
             "agent_name": responder_name,
-            "model_used": model_used,
-            "latency_ms": call_latency_ms,
-            "session_id": session_id,
-            "primary_engine": orch["primary_engine"],
-            "backup_engine": orch["backup_engine"],
-            "active_channel": orch["active_channel"],
-            "failover_triggered": orch["failover_triggered"],
-            "failover_reason": orch.get("failover_reason"),
-            "timeout_seconds": timeout_sec,
             "reply": res_text,
             "response_text": res_text,
             "bcv_rate": eff_rate,
-            "client_found": client_info.get("found", False),
-            "auth_level": v_sess.get("auth_level", "anonymous"),
             "verified": v_sess.get("verified", False),
-            "identity_directive": identity_directive_obj.get("identity_directive")
+            "auth_level": v_sess.get("auth_level", "anonymous"),
+            "identity_directive": identity_directive_obj.get("identity_directive"),
+            "session_id": session_id,
+            "primary_engine": orch.get("primary_engine"),
+            "backup_engine": orch.get("backup_engine"),
+            "active_channel": orch.get("active_channel"),
+            "failover_triggered": orch.get("failover_triggered"),
+            "failover_reason": orch.get("failover_reason")
         }
 
         if human_handoff_obj:

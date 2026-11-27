@@ -444,8 +444,17 @@
                     ? (isGemini ? '1.5px solid rgba(250, 204, 21, 0.65)' : '1.5px solid rgba(212, 175, 55, 0.45)') 
                     : '1.5px solid rgba(16, 185, 129, 0.5)';
 
+                // Bloque 3: Sanitización de respuesta visible en frontend
+                let cleanText = (m.text || '')
+                    .replace(/\[(?:CONTEXTO|HILO|DIRECTIVA|TASK|IDENTITY_DIRECTIVE|SEGURIDAD|SESIÓN|EXPEDIENTE)[^\]]*\]/gi, '')
+                    .replace(/(?:Thread\s*ID|Hilo|thread_id|thread)\s*:\s*[^\n\r]+/gi, '')
+                    .replace(/(?:Agent\s*Run\s*ID|Run\s*ID|run_id|runId|Run)\s*:\s*[`\w\-_]+/gi, '')
+                    .replace(/\(Run:\s*[`\w\-_]+\)/gi, '')
+                    .replace(/(?:Task\s*card|Card|task_id)\s*:\s*[^\n\r]+/gi, '')
+                    .trim();
+
                 // Formateo de markdown respetando el color del motor correspondiente
-                let formattedText = m.text
+                let formattedText = cleanText
                     .replace(/\*\*(.*?)\*\*/g, `<strong style="color:${strongColor} !important;">$1</strong>`)
                     .replace(/\*(.*?)\*/g, `<em style="color:${emColor} !important;">$1</em>`)
                     .replace(/\n/g, '<br>');

@@ -583,8 +583,7 @@ class TeamilyGeoAClient:
                     elif data.get("text"):
                         response_text = data["text"]
                     elif data.get("status") == "running" or status_code == 202:
-                        run_id = data.get("run_id", "en_proceso")
-                        response_text = f"**Solicitud canalizada a Teamily (en proceso ✅)**\n\nCharly registró la instrucción en el workspace de Teamily (Run: `{run_id}`). Se encuentra procesando la respuesta con el equipo."
+                        response_text = "**Solicitud canalizada a Teamily (en proceso ✅)**\n\nEl equipo se encuentra procesando la respuesta."
                     else:
                         response_text = json.dumps(data, ensure_ascii=False)
                 else:

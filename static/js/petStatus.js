@@ -685,7 +685,7 @@ class PetStatusEngine {
     const totalVes = (priceUsd * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const isPaid = Boolean(pet.paymentStatus === 'paid' || pet.hasPaid === true || pet.isPaid === true);
-    const petId = pet.id || 'PET-100';
+    const petId = pet.id || '';
     const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
       ? window.location.origin 
       : 'https://mrspets-portal.onrender.com';
@@ -2020,7 +2020,7 @@ class PetStatusEngine {
       ];
     }
     return [
-      { id: 'USR-02', name: 'Mariana Colina (Grooming Lead)', rol_principal: 'groomer', role: 'groomer' },
+      { id: 'USR-02', name: 'Andrea Colina (Grooming Lead)', rol_principal: 'groomer', role: 'groomer' },
       { id: 'USR-05', name: 'Andrea Colina (Grooming Specialist)', rol_principal: 'groomer', role: 'groomer' }
     ];
   }
@@ -3188,7 +3188,7 @@ class PetStatusEngine {
     const authorizedStaff = this.getAuthorizedStaffForStation(stationKey);
     const allStaff = (window.adminEngine?.staffProfiles || [
       { id: 'USR-01', name: 'Dr. Alejandro Morales', rol_principal: 'doctor' },
-      { id: 'USR-02', name: 'Mariana Colina (Grooming Lead)', rol_principal: 'groomer' },
+      { id: 'USR-02', name: 'Andrea Colina (Grooming Lead)', rol_principal: 'groomer' },
       { id: 'USR-05', name: 'Andrea Colina (Grooming Specialist)', rol_principal: 'groomer' },
       { id: 'USR-04', name: 'Asistente de Recepción', rol_principal: 'hotel' },
       { id: 'USR-06', name: 'Dra. Patricia Silva', rol_principal: 'doctor' }

@@ -103,10 +103,10 @@ class AnalyticsEngine {
         if (idx === 0) staffName = 'Asistente de Recepción';
         if (idx === 1) staffName = 'Dra. Patricia Silva';
         if (idx === 2) staffName = 'Groomer Andrea Colina';
-        if (idx === 3) staffName = 'Groomer Lead Mariana Colina';
-        if (idx === 4) staffName = 'Groomer Lead Mariana Colina';
+        if (idx === 3) staffName = 'Groomer Lead Andrea Colina';
+        if (idx === 4) staffName = 'Groomer Lead Andrea Colina';
         if (idx === 5) staffName = 'Concierge Leia VIP';
-        if (idx === 6) staffName = `Groomer Lead Mariana Colina (Entregado ${pet.deliveredAt || '04:30 PM'})`;
+        if (idx === 6) staffName = `Groomer Lead Andrea Colina (Entregado ${pet.deliveredAt || '04:30 PM'})`;
       }
 
       history.push({

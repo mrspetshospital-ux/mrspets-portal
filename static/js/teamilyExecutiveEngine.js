@@ -1949,8 +1949,7 @@ class TeamilyExecutiveEngine {
       if (res.ok && data?.status === 'success' && rawText && rawText.length > 0) {
         replyText = rawText;
       } else if (res.ok && data?.status === 'running') {
-        const runId = data.run_id || 'en_proceso';
-        replyText = `**Solicitud en proceso en Teamily (Run: \`${runId}\`)**`;
+        replyText = `**Solicitud en proceso en Teamily.**`;
       } else if (data?.status === 'error' || !res.ok) {
         const statusCode = (data && data.code) || res.status;
         const errDetail = (data && (data.error || data.detail || data.message)) || `HTTP ${statusCode}`;
@@ -1961,18 +1960,14 @@ class TeamilyExecutiveEngine {
         replyText = `⚠️ Sin respuesta de Teamily para ${agent.name}.`;
       }
 
-      // Trazabilidad: hilo de la conversación y resultado del registro en el histórico
-      const hiloTxt = (data && data.hilo) ? data.hilo : (hilo || '—');
-      const reg = data && data.historico;
-      let regTxt;
-      if (reg && reg.success) {
-        regTxt = `✅ Registrado en el histórico — fila ${reg.fila ?? '?'}`;
-      } else if (reg) {
-        regTxt = `⚠️ No se pudo registrar en el histórico: ${reg.error_detail || reg.error || 'error desconocido'}`;
-      } else {
-        regTxt = '⚠️ Sin confirmación de registro en el histórico';
-      }
-      replyText += `\n\n---\n\`Hilo: ${hiloTxt}\`\n${regTxt}`;
+      // Bloque 3: Sanitización visible en cliente
+      replyText = replyText
+        .replace(/\[(?:CONTEXTO|HILO|DIRECTIVA|TASK|IDENTITY_DIRECTIVE)[^\]]*\]/gi, '')
+        .replace(/(?:Thread\s*ID|Hilo|thread_id|thread)\s*:\s*[^\n\r]+/gi, '')
+        .replace(/(?:Agent\s*Run\s*ID|Run\s*ID|run_id|runId|Run)\s*:\s*[`\w\-_]+/gi, '')
+        .replace(/\(Run:\s*[`\w\-_]+\)/gi, '')
+        .replace(/(?:Task\s*card|Card|task_id)\s*:\s*[^\n\r]+/gi, '')
+        .trim();
 
       history.push({
         sender: 'agent',

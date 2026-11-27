@@ -1257,50 +1257,6 @@ class AuthEngine {
     } else if (window.petStatusEngine && Array.isArray(window.petStatusEngine.pets) && window.petStatusEngine.pets.length > 0) {
       patients = [...window.petStatusEngine.pets];
     }
-    const hasSofia = patients.some(p => this.normalizeSearchStr(p.name || p.petName).includes('sofia'));
-    if (!hasSofia) {
-      patients.unshift({
-        id: 'PET-100',
-        name: 'Sofía',
-        petName: 'Sofía',
-        species: 'Yorkshire Terrier VIP (Princesa)',
-        owner: 'Dalybell Ramírez Montilla',
-        ownerName: 'Dalybell Ramírez Montilla',
-        rif: 'V-18.452.910',
-        email: 'dalybell.montilla@example.com',
-        ownerPhone: '+58 414-3891102',
-        pin: '2026',
-        area: 'grooming',
-        stepIndex: 1,
-        turno: 1,
-        turnTicket: 'G-001',
-        notes: 'Princesa Sofía consentida VIP. Circuito Spa con hidratación de pulpejos obligatoria.',
-        photo: 'assets/media__1787695246337.jpg',
-        image: 'assets/media__1787695246337.jpg',
-        ownerPhoto: 'assets/leia_avatar.jpg'
-      });
-    }
-    const hasDalybell = patients.some(p => this.normalizeSearchStr(p.owner || p.ownerName).includes('dalybel'));
-    if (!hasDalybell) {
-      patients.unshift({
-        id: 'PET-101',
-        name: 'Princesa',
-        petName: 'Princesa',
-        species: 'Yorkshire Terrier VIP',
-        owner: 'Dalybell Ramírez Montilla',
-        ownerName: 'Dalybell Ramírez Montilla',
-        rif: 'V-18.452.910',
-        email: 'dalybell.montilla@example.com',
-        ownerPhone: '+58 414-3891102',
-        pin: '2026',
-        area: 'grooming',
-        stepIndex: 1,
-        turno: 1,
-        photo: 'assets/media__1787695246337.jpg',
-        image: 'assets/media__1787695246337.jpg',
-        ownerPhoto: 'assets/leia_avatar.jpg'
-      });
-    }
     return patients;
   }
 
@@ -1587,7 +1543,7 @@ class AuthEngine {
     const patient = this.getPatientById(this.pendingPinPetId);
     const expectedPin = (patient && patient.pin) ? String(patient.pin).trim() : '2026';
     const ownerNameNorm = patient ? this.normalizeSearchStr(patient.owner || patient.ownerName) : '';
-    const isDalybellPatient = ownerNameNorm.includes('dalybel') || this.pendingPinPetId === 'PET-100' || this.pendingPinPetId === 'PET-101';
+    const isDalybellPatient = ownerNameNorm.includes('dalybel') || this.pendingPinPetId === 'PET-DALY-01' || this.pendingPinPetId === 'PET-101';
     const isPinMatch = (inputVal === expectedPin) || (patient && patient.password && patient.password === inputVal) || (isDalybellPatient && (inputVal === '2026' || inputVal === '1234')) || (inputVal === '2026');
 
     if (!inputVal || !isPinMatch) {

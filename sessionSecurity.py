@@ -14,8 +14,10 @@ import secrets
 import hashlib
 import hmac
 import logging
+import json
+import base64
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -58,13 +60,190 @@ def get_device_fingerprint(request: Request) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
+def sign_session_token(session_id: str, subject_id: str, role: str, exp_dt: datetime) -> str:
+    """
+    Bloque 1.1: Emite un identificador de sesión firmado con la clave del servidor.
+    Incluye: session_id, subject_id, role, issued_at, exp.
+    """
+    payload = {
+        "session_id": str(session_id),
+        "subject_id": str(subject_id),
+        "role": str(role),
+        "issued_at": _now_utc().isoformat(),
+        "exp": exp_dt.isoformat()
+    }
+    payload_json = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+    payload_b64 = base64.urlsafe_b64encode(payload_json).decode('ascii').rstrip('=')
+    sig = hmac.new(PEPPER.encode('utf-8'), payload_b64.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{payload_b64}.{sig}"
+
+
+def verify_and_decode_session_token(token_str: str) -> Optional[Dict[str, Any]]:
+    """
+    Bloque 1.2 & 2.3: Valida la firma en cada turno.
+    Si la clave es ausente, token inválido o expirado, retorna None (fail-closed).
+    """
+    if not token_str or "." not in token_str:
+        return None
+    try:
+        parts = token_str.split(".")
+        if len(parts) != 2:
+            return None
+        payload_b64, sig = parts
+        expected_sig = hmac.new(PEPPER.encode('utf-8'), payload_b64.encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected_sig):
+            return None
+        rem = len(payload_b64) % 4
+        padded = payload_b64 + ('=' * (4 - rem) if rem else '')
+        payload_json = base64.urlsafe_b64decode(padded.encode('ascii')).decode('utf-8')
+        data = json.loads(payload_json)
+        exp_str = data.get("exp")
+        if exp_str:
+            exp_dt = datetime.fromisoformat(exp_str.replace("Z", "+00:00"))
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if exp_dt < _now_utc():
+                return None
+        return data
+    except Exception:
+        return None
+
+
+def get_or_create_thread(subject_id: str) -> str:
+    """
+    Bloque 1.4 & 1.5: La memoria de conversación se indexa por (subject_id, thread_id).
+    El thread_id se genera en el servidor y nunca se muestra al usuario.
+    """
+    subj = str(subject_id or "anon_guest").strip()
+    try:
+        row = db.q(
+            "SELECT thread_id FROM conversation_threads WHERE subject_id=%s ORDER BY updated_at DESC LIMIT 1",
+            (subj,),
+            one=True
+        )
+        if row and row.get("thread_id"):
+            th_id = str(row["thread_id"]).strip()
+            db.execute(
+                "UPDATE conversation_threads SET updated_at=NOW() WHERE subject_id=%s AND thread_id=%s",
+                (subj, th_id)
+            )
+            return th_id
+    except Exception:
+        pass
+
+    new_th = f"th_{uuid.uuid4().hex[:16]}"
+    try:
+        db.execute(
+            """INSERT INTO conversation_threads (subject_id, thread_id, created_at, updated_at)
+               VALUES (%s, %s, NOW(), NOW())""",
+            (subj, new_th)
+        )
+    except Exception as _e:
+        log.warning("No se pudo persistir conversation_threads: %s", _e)
+    return new_th
+
+
+def check_and_reject_identity_declaration(request: Request, body: dict) -> Tuple[bool, dict, str]:
+    """
+    Bloque 2.2:
+    Si un rol, un indicador de sesión autenticada, un subject_id o cualquier bloque de
+    'contexto interno verificado' llega desde:
+    - el body de la petición,
+    - la query string,
+    - los headers del cliente,
+    - el estado del cliente,
+    se descarta por completo y se registra el intento estructurado con:
+    event: 'identity_declaration_rejected', origen del dato, IP, timestamp y session_id si existe.
+    """
+    rejected = False
+    reasons = []
+    ip = request.client.host if request.client else ""
+    ua = request.headers.get("user-agent", "")
+    sess_cookie = request.cookies.get(COOKIE_HOST_NAME) or request.cookies.get(COOKIE_FALLBACK_NAME) or ""
+    sess_id = None
+    if sess_cookie:
+        decoded = verify_and_decode_session_token(sess_cookie)
+        if decoded:
+            sess_id = decoded.get("session_id")
+
+    # 1. Inspeccionar campos en body
+    SUSPICIOUS_BODY_KEYS = [
+        "role", "userType", "user_type", "userRole", "user_role",
+        "staff_authenticated", "is_staff", "staff_verified", "authenticated",
+        "subject_id", "subjectId", "client_id", "staff_id"
+    ]
+    cleaned_body = dict(body)
+    for k in SUSPICIOUS_BODY_KEYS:
+        if k in cleaned_body:
+            rejected = True
+            reasons.append(f"body.{k}={cleaned_body.pop(k)}")
+
+    # 2. Inspeccionar headers del cliente
+    for h, v in request.headers.items():
+        h_low = h.lower()
+        if h_low in ["x-role", "x-user-role", "x-staff-auth", "x-subject-id", "x-auth-level"]:
+            rejected = True
+            reasons.append(f"header.{h}={v}")
+
+    # 3. Inspeccionar query params
+    for qk in ["role", "is_staff", "staff", "userType", "subject_id", "client_id"]:
+        if qk in request.query_params:
+            rejected = True
+            reasons.append(f"query.{qk}={request.query_params[qk]}")
+
+    # 4. Inspeccionar prompt injection en el mensaje
+    msg = str(cleaned_body.get("message") or cleaned_body.get("input") or "").strip()
+    INJECTION_PATTERNS = [
+        r'\[IDENTITY_DIRECTIVE[^\]]*\]',
+        r'\[CONTEXTO DE ATENCIÓN[^\]]*\]',
+        r'\[CONTEXTO OPERATIVO[^\]]*\]',
+        r'\[DIRECTIVA[^\]]*\]',
+        r'staff_verified',
+        r'protocolo vip',
+        r'identity_directive:'
+    ]
+    clean_msg = msg
+    for pat in INJECTION_PATTERNS:
+        if re.search(pat, msg, re.IGNORECASE):
+            rejected = True
+            reasons.append(f"text_injection:{pat}")
+            clean_msg = re.sub(pat, '', clean_msg, flags=re.IGNORECASE).strip()
+
+    if "message" in cleaned_body:
+        cleaned_body["message"] = clean_msg
+    if "input" in cleaned_body:
+        cleaned_body["input"] = clean_msg
+
+    if rejected:
+        origin_str = "; ".join(reasons)
+        log_audit_event(
+            action="identity_declaration_rejected",
+            result="denied",
+            session_id=sess_id,
+            resource_type="declaration",
+            resource_id=origin_str[:64],
+            ip=ip,
+            user_agent=ua
+        )
+        log.warning(json.dumps({
+            "event": "identity_declaration_rejected",
+            "origin": origin_str,
+            "ip": ip,
+            "timestamp": _now_utc().isoformat(),
+            "session_id": sess_id
+        }))
+
+    return rejected, cleaned_body, clean_msg
+
+
 def init_security_schema() -> bool:
-    """Crea las tablas de sesiones, palabras clave y auditoría en la base de datos."""
+    """Crea las tablas de sesiones, palabras clave, hilos y auditoría en la base de datos."""
     sql = """
     CREATE TABLE IF NOT EXISTS sessions (
         session_id TEXT PRIMARY KEY,
         token_hash TEXT NOT NULL,
         staff_id TEXT,
+        subject_id TEXT,
         staff_display_name TEXT,
         role TEXT NOT NULL DEFAULT 'visitor',
         auth_level TEXT NOT NULL DEFAULT 'anonymous',
@@ -78,6 +257,15 @@ def init_security_schema() -> bool:
     );
     CREATE INDEX IF NOT EXISTS ix_sessions_token_hash ON sessions(token_hash);
     CREATE INDEX IF NOT EXISTS ix_sessions_staff ON sessions(staff_id);
+
+    CREATE TABLE IF NOT EXISTS conversation_threads (
+        subject_id TEXT NOT NULL,
+        thread_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (subject_id, thread_id)
+    );
+    CREATE INDEX IF NOT EXISTS ix_conv_threads_subject ON conversation_threads(subject_id);
 
     CREATE TABLE IF NOT EXISTS staff_passphrases (
         staff_id TEXT PRIMARY KEY,
@@ -106,11 +294,15 @@ def init_security_schema() -> bool:
     CREATE INDEX IF NOT EXISTS ix_audit_log_action ON audit_log(action, occurred_at DESC);
     """
     try:
-        # Ejecutar por declaraciones si es SQLite
         for stmt in sql.strip().split(";"):
             stmt_clean = stmt.strip()
             if stmt_clean:
                 db.execute(stmt_clean)
+        # Compatibilidad de migración si sessions ya existía sin subject_id
+        try:
+            db.execute("ALTER TABLE sessions ADD COLUMN subject_id TEXT")
+        except Exception:
+            pass
         log.info("Tablas de seguridad del Segundo Cinturón inicializadas correctamente.")
         return True
     except Exception as e:
@@ -202,6 +394,7 @@ def log_audit_event(
 
 def create_session(
     staff_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
     staff_display_name: Optional[str] = None,
     role: str = "visitor",
     auth_level: str = "anonymous",
@@ -209,28 +402,34 @@ def create_session(
     ip: str = "",
     user_agent: str = ""
 ) -> Tuple[str, Dict[str, Any]]:
-    """Crea una sesión firmada server-side y devuelve el token opaco junto a la sesión."""
-    raw_token = secrets.token_urlsafe(32)
-    token_h = _hash_str(raw_token)
+    """
+    Crea una sesión firmada server-side (Bloque 1.1) y devuelve el token firmado junto a la sesión.
+    """
     session_id = f"sess_{uuid.uuid4().hex}"
     jti = str(uuid.uuid4())
     now = _now_utc()
     expires_at = now + timedelta(hours=SESSION_TTL_HOURS)
+    subj = str(subject_id or staff_id or f"anon_{session_id}").strip()
+
+    # Bloque 1.1: Token firmado con la clave del servidor
+    signed_token = sign_session_token(session_id, subj, role, expires_at)
+    token_h = _hash_str(signed_token)
 
     sql = """
     INSERT INTO sessions (
-        session_id, token_hash, staff_id, staff_display_name, role, auth_level,
+        session_id, token_hash, staff_id, subject_id, staff_display_name, role, auth_level,
         passphrase_ok, device_fp, jti, issued_at, expires_at, elevation_expires_at, revoked_at
-    ) VALUES (%s, %s, %s, %s, %s, %s, FALSE, %s, %s, NOW(), %s, NULL, NULL)
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, FALSE, %s, %s, NOW(), %s, NULL, NULL)
     """
     db.execute(sql, (
-        session_id, token_h, staff_id, staff_display_name, role, auth_level,
+        session_id, token_h, staff_id, subj, staff_display_name, role, auth_level,
         device_fp, jti, expires_at
     ))
 
     session_data = {
         "session_id": session_id,
         "staff_id": staff_id,
+        "subject_id": subj,
         "staff_display_name": staff_display_name,
         "role": role,
         "auth_level": auth_level,
@@ -252,23 +451,27 @@ def create_session(
         user_agent=user_agent
     )
 
-    return raw_token, session_data
+    return signed_token, session_data
 
 
 def get_verified_session(request: Request) -> Dict[str, Any]:
     """
     Recupera y valida la sesión desde la cookie segura contra el store server-side.
-    Principio fail-closed: Si la cookie no existe, expiró, fue revocada o falló el store,
-    devuelve auth_level='anonymous', verified=False.
+    Principio fail-closed (Bloque 1.2 & 2.3):
+    - Si el servidor no firmó la sesión con clave válida -> visitante.
+    - Si la firma expiró -> visitante.
+    - Si la sesión no resuelve a una ficha única en BD -> visitante.
     """
     anon_session = {
         "verified": False,
         "session_id": None,
         "staff_id": None,
+        "subject_id": None,
         "staff_display_name": None,
         "role": None,
         "auth_level": "anonymous",
         "passphrase_ok": False,
+        "permissions": ["view_public_catalog"],
         "can_view_client_data": False,
         "can_view_pricing": False,
         "can_view_access": False
@@ -277,7 +480,6 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
     # 1. Leer cookie __Host-mp_session (o mp_session de respaldo)
     raw_token = request.cookies.get(COOKIE_HOST_NAME) or request.cookies.get(COOKIE_FALLBACK_NAME)
     if not raw_token:
-        # También permitir token en Header Authorization Bearer para llamadas de test o CLI
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer "):
             raw_token = auth_header[7:].strip()
@@ -285,11 +487,27 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
     if not raw_token:
         return anon_session
 
+    # Bloque 1.2: Validar firma si el token contiene la estructura firmada
+    if "." in raw_token:
+        decoded = verify_and_decode_session_token(raw_token)
+        if not decoded:
+            log_audit_event(
+                action="COOKIE_TAMPERING_SUSPECTED",
+                result="denied",
+                resource_type="cookie",
+                resource_id="invalid_signature",
+                ip=request.client.host if request.client else "",
+                user_agent=request.headers.get("user-agent", "")
+            )
+            tampered = dict(anon_session)
+            tampered["tampered"] = True
+            return tampered
+
     token_h = _hash_str(raw_token)
 
     try:
         row = db.q(
-            """SELECT session_id, staff_id, staff_display_name, role, auth_level, passphrase_ok,
+            """SELECT session_id, staff_id, subject_id, staff_display_name, role, auth_level, passphrase_ok,
                       device_fp, jti, expires_at, elevation_expires_at, revoked_at
                FROM sessions WHERE token_hash=%s LIMIT 1""",
             (token_h,),
@@ -326,7 +544,6 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
         return anon_session
 
     expires_at = row.get("expires_at")
-    # Convertir a datetime si viene como string en SQLite
     if isinstance(expires_at, str):
         try:
             expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
@@ -355,7 +572,6 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
         if elev_exp.tzinfo is None:
             elev_exp = elev_exp.replace(tzinfo=timezone.utc)
         if elev_exp < now:
-            # Degradar automáticamente elevación vencida
             auth_lvl = "staff_authenticated"
             passphrase_ok = False
             try:
@@ -370,7 +586,6 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
     current_fp = get_device_fingerprint(request)
     session_fp = str(row.get("device_fp") or "")
     if session_fp and session_fp != current_fp:
-        # Posible secuestro de sesión
         log_audit_event(
             action="SESSION_HIJACK_SUSPECTED",
             result="denied",
@@ -382,16 +597,84 @@ def get_verified_session(request: Request) -> Dict[str, Any]:
         return anon_session
 
     role = str(row.get("role") or "visitor")
-    is_verified_staff = (auth_lvl == "staff_verified")
+    staff_id = row.get("staff_id")
+    subject_id = row.get("subject_id") or staff_id
+
+    # Bloque 1.2 & 2.3: Resolver la sesión contra una ficha concreta y única en BD
+    # Si la sesión no resuelve a exactamente una ficha, se trata como no autenticada (visitante)
+    resolved_subject_id = None
+    if role in ("staff", "staff_admin") or "staff" in auth_lvl:
+        target_s = staff_id or subject_id
+        staff_rec = None
+        if target_s:
+            try:
+                staff_rec = db.q("SELECT staff_id FROM staff_passphrases WHERE staff_id=%s AND revoked_at IS NULL", (target_s,), one=True)
+                if not staff_rec:
+                    uname = str(target_s).replace("staff_", "")
+                    staff_rec = db.q("SELECT id, username FROM staff_users WHERE (username=%s OR CONCAT('staff_', username)=%s) AND activo=TRUE", (uname, str(target_s)), one=True)
+            except Exception as _e_staff_res:
+                log.warning("Error resolviendo ficha staff: %s", _e_staff_res)
+        if not staff_rec:
+            # No resuelve a una ficha de staff en BD -> fail-closed: visitante
+            log.warning("Sesión de staff %s no resuelve a una ficha válida en BD. Degrada a visitante.", target_s)
+            return anon_session
+        resolved_subject_id = target_s
+
+    elif role == "client" or auth_lvl == "client_verified":
+        client_rec = None
+        if subject_id:
+            try:
+                if str(subject_id).isdigit():
+                    client_rec = db.q("SELECT id, nombre, telefono FROM tutores WHERE id=%s AND activo=TRUE", (int(subject_id),), one=True)
+                if not client_rec:
+                    norm_p = norm_phone(str(subject_id))
+                    if norm_p:
+                        client_rec = db.q("SELECT id, nombre, telefono FROM tutores WHERE telefono_norm=%s AND activo=TRUE", (norm_p,), one=True)
+            except Exception as _e_client_res:
+                log.warning("Error resolviendo ficha cliente: %s", _e_client_res)
+        if not client_rec:
+            # No resuelve a una ficha de cliente en BD -> fail-closed: visitante
+            log.warning("Sesión de cliente %s no resuelve a una ficha válida en BD. Degrada a visitante.", subject_id)
+            return anon_session
+        resolved_subject_id = str(client_rec["id"])
+    else:
+        # Rol visitante
+        resolved_subject_id = None
+
+    # Bloque 1.3: Permisos tipados de capacidades permitidas
+    is_verified_staff = (auth_lvl == "staff_verified" and bool(passphrase_ok))
+    is_staff_auth = (auth_lvl in ("staff_authenticated", "staff_verified"))
+
+    if is_verified_staff:
+        permissions = [
+            "view_public_catalog", "view_own_pets", "book_appointment",
+            "view_assigned_tasks", "view_client_data", "view_pricing", "view_access", "manage_schedule"
+        ]
+        is_verified = True
+    elif is_staff_auth:
+        permissions = [
+            "view_public_catalog", "view_own_pets", "book_appointment", "view_assigned_tasks"
+        ]
+        is_verified = False  # Sin palabra clave, no está elevado/verificado para datos internos
+    elif role == "client" and resolved_subject_id:
+        permissions = [
+            "view_public_catalog", "view_own_pets", "book_appointment"
+        ]
+        is_verified = True
+    else:
+        permissions = ["view_public_catalog"]
+        is_verified = False
 
     return {
-        "verified": is_verified_staff,
+        "verified": is_verified,
         "session_id": row["session_id"],
         "staff_id": row.get("staff_id"),
+        "subject_id": resolved_subject_id,
         "staff_display_name": row.get("staff_display_name"),
         "role": role,
         "auth_level": auth_lvl,
         "passphrase_ok": passphrase_ok,
+        "permissions": permissions,
         "can_view_client_data": is_verified_staff,
         "can_view_pricing": is_verified_staff,
         "can_view_access": bool(is_verified_staff and role == "staff_admin")
@@ -504,13 +787,16 @@ def verify_staff_passphrase(
         (staff_id,)
     )
 
-    # Rotar token de sesión
-    new_raw_token = secrets.token_urlsafe(32)
-    new_token_h = _hash_str(new_raw_token)
+    # Rotar token de sesión firmado (Bloque 1.1)
     new_session_id = f"sess_{uuid.uuid4().hex}"
     new_jti = str(uuid.uuid4())
     elev_exp = now + timedelta(minutes=ELEVATION_TTL_MINUTES)
     exp = now + timedelta(hours=SESSION_TTL_HOURS)
+    staff_disp = current_session.get("staff_display_name") or ("Sr. Harryt Luzardo" if "harryt" in staff_id else "Dalybell Ramírez")
+    s_role = current_session.get("role", "staff_admin")
+
+    new_raw_token = sign_session_token(new_session_id, staff_id, s_role, exp)
+    new_token_h = _hash_str(new_raw_token)
 
     # Invalidar sesión vieja
     if current_session.get("session_id"):
@@ -519,15 +805,14 @@ def verify_staff_passphrase(
             (current_session["session_id"],)
         )
 
-    # Insertar nueva sesión elevada
+    # Insertar nueva sesión elevada con subject_id
     device_fp = get_device_fingerprint(request)
-    staff_disp = current_session.get("staff_display_name") or ("Sr. Harryt Luzardo" if "harryt" in staff_id else "Dalybell Ramírez")
     db.execute(
         """INSERT INTO sessions (
-            session_id, token_hash, staff_id, staff_display_name, role, auth_level,
+            session_id, token_hash, staff_id, subject_id, staff_display_name, role, auth_level,
             passphrase_ok, device_fp, jti, issued_at, expires_at, elevation_expires_at, revoked_at
-        ) VALUES (%s, %s, %s, %s, %s, 'staff_verified', TRUE, %s, %s, NOW(), %s, %s, NULL)""",
-        (new_session_id, new_token_h, staff_id, staff_disp, current_session.get("role", "staff_admin"), device_fp, new_jti, exp, elev_exp)
+        ) VALUES (%s, %s, %s, %s, %s, %s, 'staff_verified', TRUE, %s, %s, NOW(), %s, %s, NULL)""",
+        (new_session_id, new_token_h, staff_id, staff_id, staff_disp, s_role, device_fp, new_jti, exp, elev_exp)
     )
 
     log_audit_event(
@@ -546,10 +831,15 @@ def verify_staff_passphrase(
         "verified": True,
         "session_id": new_session_id,
         "staff_id": staff_id,
+        "subject_id": staff_id,
         "staff_display_name": staff_disp,
-        "role": current_session.get("role", "staff_admin"),
+        "role": s_role,
         "auth_level": "staff_verified",
         "passphrase_ok": True,
+        "permissions": [
+            "view_public_catalog", "view_own_pets", "book_appointment",
+            "view_assigned_tasks", "view_client_data", "view_pricing", "view_access", "manage_schedule"
+        ],
         "can_view_client_data": True,
         "can_view_pricing": True,
         "can_view_access": True

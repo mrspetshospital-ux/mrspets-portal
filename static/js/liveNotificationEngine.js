@@ -274,7 +274,7 @@
       const pet = petData.petName || petData.name || petData.pet || 'Consentido VIP';
       const area = (petData.area || 'Grooming').toUpperCase();
       const turn = petData.turnNumber || petData.turno || '01';
-      const petId = petData.id || petData.petId || 'PET-100';
+      const petId = petData.id || petData.petId || '';
 
       const isPaid = Boolean(petData.paymentStatus === 'paid' || petData.hasPaid === true || petData.isPaid === true);
       const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') 
@@ -869,7 +869,7 @@
 
       const tutor = data.ownerName || data.owner || data.tutor || 'Tutor VIP';
       const pet = data.petName || data.name || data.pet || 'Consentido VIP';
-      const petId = data.id || data.petId || 'PET-100';
+      const petId = data.id || data.petId || '';
       const area = (data.area || 'Grooming').toUpperCase();
       const waUrl = data.waUrl || `https://wa.me/584146799510`;
       const waPhone = data.waPhone || '+58 412-5551234';
