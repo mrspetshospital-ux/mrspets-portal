@@ -923,6 +923,11 @@ class AuthEngine {
       (this.userRole === 'staff' && this.isAuthenticated)
     );
 
+    const isClientSession = (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mrs_pets_client_authenticated') === 'true') ||
+      (this.userRole === 'client' && this.isAuthenticated)
+    );
+
     if (isStaffSession) {
       this.isAuthenticated = true;
       this.userRole = 'staff';
@@ -934,6 +939,14 @@ class AuthEngine {
       if (window.adminEngine) {
         window.adminEngine.isEnterpriseAuthenticated = true;
         window.adminEngine.viewEnvironment = 'enterprise';
+      }
+    } else if (isClientSession) {
+      this.isAuthenticated = true;
+      this.userRole = 'client';
+      this.userName = sessionStorage.getItem('mrs_pets_auth_name') || localStorage.getItem('mrs_pets_auth_name') || this.userName || 'Cliente VIP';
+      if (document.body) {
+        document.body.classList.remove('enterprise-view-mode');
+        document.body.classList.add('customer-view-mode');
       }
     } else if (!this.isAuthenticated || this.userRole === 'visitor' || this.userRole === 'guest') {
       this.isAuthenticated = false;
@@ -1157,8 +1170,9 @@ class AuthEngine {
   }
 
   openVipLookupModal(initialQuery = '') {
-    this.closeConciergePortal();
-    this.hidePortalAndShowApp();
+    if (this.isAuthenticated) {
+      this.hidePortalAndShowApp();
+    }
     const isStaff = (typeof this.isEnterpriseStaffActive === 'function' && this.isEnterpriseStaffActive()) ||
                     (window.RBACMiddleware && typeof window.RBACMiddleware.isStaffOrAdmin === 'function' && window.RBACMiddleware.isStaffOrAdmin());
 
@@ -1177,6 +1191,20 @@ class AuthEngine {
       searchInput.value = initialQuery;
     }
     this.searchVipClients(initialQuery);
+
+    const lookupModal = document.getElementById('vip-client-lookup-modal');
+    if (lookupModal) {
+      if (lookupModal.parentElement !== document.body) {
+        document.body.appendChild(lookupModal);
+      }
+      lookupModal.classList.add('active');
+      lookupModal.style.removeProperty('display');
+      lookupModal.style.setProperty('display', 'flex', 'important');
+      lookupModal.style.setProperty('opacity', '1', 'important');
+      lookupModal.style.setProperty('visibility', 'visible', 'important');
+      lookupModal.style.setProperty('pointer-events', 'auto', 'important');
+      lookupModal.style.setProperty('z-index', '2000000', 'important');
+    }
     if (window.app && typeof window.app.openModal === 'function') {
       window.app.openModal('vip-client-lookup-modal');
     }
@@ -1203,9 +1231,10 @@ class AuthEngine {
       lookupModal.style.setProperty('display', 'none', 'important');
     }
 
-    // 2. Revelar app y ocultar portal splash para mostrar formulario de registro
-    this.closeConciergePortal();
-    this.hidePortalAndShowApp();
+    // 2. Si ya está autenticado, revelar app
+    if (this.isAuthenticated) {
+      this.hidePortalAndShowApp();
+    }
 
     // 3. Prellenar formulario de registro de splash si existe
     const regTutor = document.getElementById('reg-tutor-name');
@@ -2709,13 +2738,29 @@ class AuthEngine {
   }
 
   openRegistrationPortalModal(prefillData) {
-    this.closeConciergePortal();
-    this.hidePortalAndShowApp();
+    if (this.isAuthenticated) {
+      this.hidePortalAndShowApp();
+    }
     if (window.registrationEngine && typeof window.registrationEngine.openRegistrationModal === 'function') {
       window.registrationEngine.openRegistrationModal(prefillData);
     } else {
       const regModal = document.getElementById('registration-modal');
-      if (regModal) regModal.classList.add('active');
+      if (regModal) {
+        if (regModal.parentElement !== document.body) {
+          document.body.appendChild(regModal);
+        }
+        regModal.classList.add('active');
+        regModal.style.removeProperty('display');
+        regModal.style.setProperty('display', 'flex', 'important');
+        regModal.style.setProperty('opacity', '1', 'important');
+        regModal.style.setProperty('visibility', 'visible', 'important');
+        regModal.style.setProperty('pointer-events', 'auto', 'important');
+        regModal.style.setProperty('z-index', '2147483647', 'important');
+      }
+    }
+    const regModalEl = document.getElementById('registration-modal');
+    if (regModalEl) {
+      regModalEl.style.setProperty('z-index', '2147483647', 'important');
     }
     if (window.app && typeof window.app.showToast === 'function') {
       window.app.showToast('✨ Formulario de Registro VIP Abierto', 'info');
