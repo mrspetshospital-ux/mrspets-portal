@@ -1019,7 +1019,12 @@ def api_session_avatar_token(request: Request):
     """
     import sessionSecurity
     session = sessionSecurity.get_verified_session(request)
-    if not session.get("verified") or session.get("auth_level") == "anonymous":
+    is_authenticated = (
+        bool(session.get("verified"))
+        or session.get("auth_level") in ("staff_authenticated", "staff_verified", "client_verified")
+    ) and session.get("auth_level") != "anonymous"
+
+    if not is_authenticated:
         return JSONResponse(
             status_code=401,
             content={"status": "error", "code": 401, "error": "UNAUTHORIZED", "message": "Sesión autenticada requerida para emitir token de avatar"}
@@ -1027,7 +1032,7 @@ def api_session_avatar_token(request: Request):
 
     sub = session.get("subject_id") or session.get("staff_id")
     raw_role = str(session.get("role") or "tutor").strip().lower()
-    role = "staff" if raw_role in ("staff", "staff_admin") else "tutor"
+    role = "staff_admin" if raw_role == "staff_admin" else ("staff" if raw_role in ("staff", "empleado") else "tutor")
 
     token = sessionSecurity.create_avatar_jwt(subject_id=str(sub), role=role, ttl_seconds=300)
     return {
