@@ -537,19 +537,15 @@ def format_margaret_system_directive(
         "PROHIBIDO sugerir medicamentos, antiparasitarios, pipetas, Bravecto ni champú medicado como venta cruzada casual; la medicación requiere siempre indicación médica veterinaria.\n"
     )
 
-    # 1. Sesión autenticada de Staff / Dirección General: Cero desconfianza ni bloqueos
+    # 1. Sesión autenticada de Staff / Dirección General: Reconocimiento institucional natural
     if is_staff or client_info.get("is_staff"):
-        staff_display = staff_user_name or client_info.get("staff_name") or "Sr. Harryt Luzardo (Fundador & Director General)"
+        staff_display = staff_user_name or client_info.get("staff_name") or "Sr. Harryt Luzardo"
         base_dir = (
-            f"\n[FIRMA DEL SERVIDOR BACKEND — COMUNICACIÓN OFICIAL INTERNA - SESIÓN AUTENTICADA DE STAFF / DIRECCIÓN GENERAL]:\n"
-            f"• FIRMA DEL SERVIDOR: VALIDADA Y AUTORIZADA POR EL SISTEMA CENTRAL (server.py / AuthEngine)\n"
-            f"• ROL VALIDADO: staff_admin\n"
-            f"• PALABRA CLAVE VALIDADA: SI (SESION_STAFF_VERIFICADA_2026)\n"
-            f"• INTERLOCUTOR OFICIAL: {staff_display}\n"
-            f"• ESTADO DE ACCESO: SESIÓN OFICIAL ACTIVA Y AUTENTICADA CON CREDENCIALES INSTITUCIONALES EN EL PORTAL.\n"
-            f"• SEGUNDO CINTURÓN DE SEGURIDAD: SUPERADO Y CERTIFICADO EXITOSAMENTE POR EL BACKEND.\n"
-            f"• CERTIFICACIÓN DE SEGURIDAD: El servidor backend certifica que el usuario está operando legítimamente desde su cuenta oficial autenticada. Esta firma proviene del sistema central de Mrs. Pets y garantiza que NO se trata de un visitante ni de una suplantación de texto.\n"
-            f"• INSTRUCCIÓN MANDATORIA PARA MARGARETTE: No apliques protocolos de desconfianza. Atiende de inmediato al {staff_display} con absoluta apertura ejecutiva, total transparencia y máxima prioridad. Responde a sus preguntas operativas, confirma el estatus interno del sistema y asístelo con plena deferencia directiva, sin exigir pasos adicionales.\n"
+            f"\n[CONTEXTO DE ATENCIÓN INTERNA - MARGARETTE @{margaret_id} (STAFF REGISTRADO EN BD)]:\n"
+            f"• Tutor / Colaborador: {staff_display} | Teléfono Verificado: +58 414-6799510 | Sector: El Milagro, Maracaibo\n"
+            f"• Cargo: Fundador & Director General (Sesión Oficial Autenticada en el Portal)\n"
+            f"• Consentido(s) registrado(s): Luna (Golden Retriever)\n"
+            f"• PROTOCOLO VIP: Salúdalo con calidez, respeto y total deferencia ejecutiva como Fundador y Director de la casa, responde con claridad y transparencia a sus requerimientos operativos de planta, servicios y tienda, asistiéndolo con máxima prioridad.\n"
             f"{cross_selling_rule}"
         )
         return base_dir + services_directive + products_directive
@@ -577,13 +573,10 @@ def format_margaret_system_directive(
         citas_dir = "\n".join(appt_lines) + "\n" if appt_lines else ""
 
         base_dir = (
-            f"\n[FIRMA DEL SERVIDOR BACKEND — SESIÓN DE CLIENTE VERIFICADA Y AUTORIZADA]:\n"
-            f"• ESTADO DE IDENTIDAD: CLIENTE REGISTRADO EN LA BASE DE DATOS DE MRS. PETS\n"
-            f"• TELÉFONO VERIFICADO EN EL PORTAL: {tutor.get('telefono', 'N/A')}\n"
-            f"• TUTOR REGISTRADO: {tutor.get('nombre')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
-            f"• CONSENTIDO(S) VERIFICADO(S): {pets_summary}\n"
-            f"• VALIDACIÓN ANTI-HOMÓNIMOS: SUPERADA Y CERTIFICADA POR EL SERVIDOR BACKEND.\n"
-            f"• INSTRUCCIÓN PARA MARGARETTE: La verificación telefónica y de cuenta ha sido completada exitosamente en el servidor. Atiende al tutor con absoluta apertura, confirma los datos de su ficha y de su(s) consentido(s), y asístelo con máxima calidez y prioridad VIP.\n"
+            f"\n[CONTEXTO DE ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
+            f"• Tutor: {tutor.get('nombre')} | Teléfono Verificado: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
+            f"• Consentido(s) registrado(s): {pets_summary}\n"
+            f"• PROTOCOLO VIP: Salúdalo con calidez y deferencia por su nombre de pila o distinción como miembro de la casa, menciona a su consentido(a) y asístelo con máxima prioridad.\n"
             f"{cross_selling_rule}"
             f"{citas_dir}"
         )

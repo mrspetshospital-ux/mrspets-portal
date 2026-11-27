@@ -7774,7 +7774,7 @@ async def teamily_chat(request: Request):
         )
 
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
-        msg_header = "[INSTRUCCIÓN OFICIAL DE DIRECCIÓN / STAFF]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
+        msg_header = "[CONSULTA]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
         teamily_msg = f"{db_directive}\n{msg_header} {msg}" if msg else db_directive
 
         target_session = f"staff_{session_id}" if (is_staff_auth and not session_id.startswith("staff_")) else session_id
