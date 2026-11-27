@@ -189,14 +189,19 @@ def validate_startup_critical_env():
             log.warning("  ✗ %-35s : [NO CONFIGURADA EN RENDER] — %s", var_name, desc)
     log.info("==================================================================")
 
-    # REGLA VOLTURI / AUDITORÍA FASE 0: Fallo Duro para TEAMILY_MARGARETTE_SERVER_KEY
+    # REGLA VOLTURI / AUDITORÍA FASE 0: Fallo Duro para TEAMILY_MARGARETTE_SERVER_KEY / TEAMILY_SERVER_KEY
     # Un portal sin canal oficial de Margarette no debe arrancar en falso verde en producción.
     is_prod_or_render = bool(os.environ.get("RENDER") or os.environ.get("PORT") or os.environ.get("PRODUCTION"))
     is_unit_test = "unittest" in sys.modules or os.environ.get("TESTING") == "1" or "pytest" in sys.modules
-    teamily_key = os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY", "").strip()
+    teamily_key = (
+        os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY")
+        or os.environ.get("TEAMILY_SERVER_KEY")
+        or os.environ.get("TEAMILEY_SERVER_KEY")
+        or ""
+    ).strip()
     if is_prod_or_render and not is_unit_test and not teamily_key:
         err_msg = (
-            "FATAL: TEAMILY_MARGARETTE_SERVER_KEY no está configurada en Render. "
+            "FATAL: Credencial de Teamily (TEAMILY_MARGARETTE_SERVER_KEY o TEAMILY_SERVER_KEY) no está configurada en Render. "
             "El portal no puede arrancar en verde sin el canal oficial hacia Margarette (Teamily). "
             "Arranque abortado para evitar fallos silenciosos y enmascaramiento."
         )
@@ -3316,7 +3321,8 @@ async def _execute_teamily_channel(
 
     t0 = time.time()
     try:
-        from teamilyClient import MARGARETTE_AGENT_ENDPOINT, MARGARETTE_SERVER_KEY
+        from teamilyClient import MARGARETTE_AGENT_ENDPOINT, MARGARETTE_SERVER_KEY, get_margarette_server_key
+        teamily_key = (get_margarette_server_key() or MARGARETTE_SERVER_KEY or getattr(teamily_geo_a_client, "server_key", "")).strip()
         teamily_input = msg
         req = TeamilyGeoARequest(
             input=teamily_input,
@@ -3332,7 +3338,7 @@ async def _execute_teamily_channel(
                 teamily_geo_a_client.send_message,
                 req,
                 endpoint_override=MARGARETTE_AGENT_ENDPOINT,
-                server_key_override=MARGARETTE_SERVER_KEY
+                server_key_override=teamily_key
             ),
             timeout=timeout_sec + 5.0
         )
@@ -8963,8 +8969,11 @@ async def teamily_chat(request: Request):
                         or ""
                     )
                     try:
-                        from teamilyClient import teamily_geo_a_client as _tc
-                        _key = getattr(_tc, "server_key", "") if _tc else ""
+                        from teamilyClient import teamily_geo_a_client as _tc, get_margarette_server_key
+                        if target_slug in ("margaret", "margarette"):
+                            _key = (get_margarette_server_key() or getattr(_tc, "server_key", "")).strip()
+                        else:
+                            _key = (getattr(_tc, "server_key", "") or "").strip()
                     except Exception:
                         _key = ""
                     run_token_out = _teamily_run_create(

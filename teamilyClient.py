@@ -81,21 +81,6 @@ DEFAULT_CABAL_GROUP_ID = (
 # Timeout base canónico: 90s según directriz Volturi
 DEFAULT_TIMEOUT = int(os.environ.get("TEAMILY_TIMEOUT_SEC", 90))
 
-# Margarette Gerente de Planta (Atención al Cliente / Recepción VIP / Avatar)
-MARGARETTE_AGENT_ENDPOINT = (
-    os.environ.get("TEAMILY_MARGARETTE_ENDPOINT")
-    or "https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses"
-)
-MARGARETTE_SERVER_KEY = (
-    os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY") or ""
-).strip()
-
-# Clave dedicada para el agente LEIA / Margarette en Teamily (leia-ceo-assistant)
-DEFAULT_LEIA_SERVER_KEY = (
-    os.environ.get("TEAMILY_LEIA_SERVER_KEY")
-    or MARGARETTE_SERVER_KEY
-)
-
 # C1: Credencial del servidor cargada desde variable de entorno o fallback certificado
 def get_default_server_key() -> str:
     return (
@@ -110,6 +95,27 @@ def get_default_server_key() -> str:
     ).strip()
 
 DEFAULT_SERVER_KEY = get_default_server_key()
+
+# Margarette Gerente de Planta (Atención al Cliente / Recepción VIP / Avatar)
+MARGARETTE_AGENT_ENDPOINT = (
+    os.environ.get("TEAMILY_MARGARETTE_ENDPOINT")
+    or "https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses"
+)
+
+def get_margarette_server_key() -> str:
+    return (
+        os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY")
+        or os.environ.get("TEAMILY_LEIA_SERVER_KEY")
+        or get_default_server_key()
+    ).strip()
+
+MARGARETTE_SERVER_KEY = get_margarette_server_key()
+
+# Clave dedicada para el agente LEIA / Margarette en Teamily (leia-ceo-assistant)
+DEFAULT_LEIA_SERVER_KEY = (
+    os.environ.get("TEAMILY_LEIA_SERVER_KEY")
+    or MARGARETTE_SERVER_KEY
+)
 
 def normalize_teamily_endpoint(endpoint: Optional[str], default_endpoint: str = DEFAULT_ENDPOINT, allow_chat: bool = False) -> str:
     """
@@ -419,17 +425,25 @@ class TeamilyGeoAClient:
             payload["board_id"] = self.board_id
         if payload.get("group_id"):
             payload.pop("board_id", None)
-        # Margarette Gerente de Planta: Endpoint de atención 1 a 1 directo.
-        # NUNCA inyectar group_id ni board_id para no desviar la conversación del agente hacia canales grupales.
-        if "margarette" in str(target_endpoint).lower():
+        # Margarette Gerente de Planta / endpoints de tipo /responses:
+        # NUNCA inyectar group_id, board_id, ni campos no soportados por el esquema estricto de Teamily.
+        if "responses" in str(target_endpoint).lower() or "margarette" in str(target_endpoint).lower():
             payload.pop("group_id", None)
             payload.pop("board_id", None)
-        if server_key_override is not None:
-            target_server_key = (server_key_override or "").strip()
+            payload.pop("context", None)
+            payload.pop("identity_directive", None)
+            payload.pop("role", None)
+            payload.pop("auth_level", None)
+            payload.pop("verified", None)
+            payload.pop("staff_id", None)
+            payload.pop("staff_display_name", None)
+
+        if server_key_override and str(server_key_override).strip():
+            target_server_key = str(server_key_override).strip()
         elif "margarette" in str(target_endpoint).lower():
-            target_server_key = (MARGARETTE_SERVER_KEY or "").strip()
+            target_server_key = (get_margarette_server_key() or self.server_key or get_default_server_key() or "").strip()
         else:
-            target_server_key = (self.server_key or "").strip()
+            target_server_key = (self.server_key or get_default_server_key() or "").strip()
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 
         # C1: Si no hay credencial configurada en entorno, fallar de inmediato con error claro y tipado
@@ -750,13 +764,16 @@ class TeamilyGeoAClient:
             or os.environ.get("TEAMILY_DIRECT_ENDPOINT")
             or "https://teamily.ai/v1/chat"
         ).strip()
-        target_server_key = server_key_override or self.server_key
+        target_server_key = server_key_override if server_key_override is not None else self.server_key
 
         # Enrutamiento dedicado hacia agente LEIA / Margarette en Teamily
         if str(request.recipient_user_id).strip() == "9000408632300095":
             if not endpoint_override or "/chat" in str(endpoint_override) or "leia-ceo-assistant" in str(endpoint_override) or "margarette" in str(endpoint_override):
                 target_endpoint = MARGARETTE_AGENT_ENDPOINT
-            target_server_key = server_key_override or MARGARETTE_SERVER_KEY or target_server_key
+            if server_key_override is not None:
+                target_server_key = server_key_override
+            else:
+                target_server_key = get_margarette_server_key() or self.server_key
 
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 
