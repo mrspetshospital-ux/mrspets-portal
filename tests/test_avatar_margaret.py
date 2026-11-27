@@ -202,25 +202,48 @@ class TestAvatarMargaret(unittest.TestCase):
         self.assertEqual(payload.get("account_email"), "mrspetshospital@gmail.com")
 
     def test_11_dual_avatar_architecture(self):
-        """Verifica la arquitectura dual de avatares: rectangular grande para clientes y circular para administración."""
+        """Verifica la arquitectura unificada de avatares: exactamente 1 avatar circular para clientes, y circular + alert search para staff."""
         arch_js_path = os.path.join(os.path.dirname(__file__), "..", "static", "js", "mrsPetsArchitecture.js")
         with open(arch_js_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # 1. Avatar Rectangular Grande para Clientes
-        self.assertIn("leia-avatar-rectangular-btn", content)
-        self.assertIn("avatar-rectangular-img", content)
-        self.assertIn("Concierge VIP 24/7", content)
-
-        # 2. Avatar Circular para Staff / Administración
+        # 1. Avatar Circular Único para Clientes
         self.assertIn("leia-avatar-circular-btn", content)
         self.assertIn("avatar-circular-img", content)
 
-        # 3. Conmutador de Roles en updateLeiaRoleControls
+        # 2. Rectangular obsoleto ocultado permanentemente
+        self.assertIn("leia-avatar-rectangular-btn", content)
+        self.assertIn("display:none !important", content)
+
+        # 3. Conmutador de Roles en updateLeiaRoleControls: circular activo, Alert Search en Staff
         self.assertIn("updateLeiaRoleControls()", content)
         self.assertIn("rectBtn.style.display", content)
         self.assertIn("circBtn.style.display", content)
+        self.assertIn("fabSearchBtn", content)
         self.assertIn("isStaffMode()", content)
+
+    def test_15_staff_session_recognition_and_customer_memory(self):
+        """Verifica el reconocimiento oficial de Staff sin bloqueos y la memoria de clientes (DB + Sheets)."""
+        from server import _startup
+        _startup()
+        from receptionBridge import lookup_client_in_mrs_pets_db, format_margaret_system_directive
+
+        # 1. Reconocimiento de Staff Oficial
+        staff_res = lookup_client_in_mrs_pets_db(is_staff=True, user_name="Sr. Harryt Luzardo (Fundador & Director General)")
+        self.assertTrue(staff_res.get("found"))
+        self.assertTrue(staff_res.get("is_staff"))
+        self.assertIn("Harryt", staff_res.get("staff_name", ""))
+
+        directive_staff = format_margaret_system_directive(staff_res, is_staff=True, staff_user_name="Sr. Harryt Luzardo")
+        self.assertIn("COMUNICACIÓN OFICIAL INTERNA - SESIÓN AUTENTICADA DE STAFF", directive_staff)
+        self.assertIn("No apliques protocolos de desconfianza", directive_staff)
+        self.assertIn("Sr. Harryt Luzardo", directive_staff)
+
+        # 2. Memoria de Clientes (Sofía Rodríguez)
+        sofia_res = lookup_client_in_mrs_pets_db(text="Hola soy Sofía Rodríguez y vengo a consultar por Luna")
+        self.assertTrue(sofia_res.get("found"))
+        self.assertIn("Sofía", sofia_res["tutor"]["nombre"])
+        self.assertTrue(any(m["nombre"] == "Luna" for m in sofia_res.get("mascotas", [])))
 
     def test_12_avatar_chat_endpoint_and_session_isolation(self):
         """Verifica que POST /api/v1/avatar/chat esté registrado en la app y no devuelva latencia fija de 350ms."""

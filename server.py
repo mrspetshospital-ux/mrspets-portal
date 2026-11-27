@@ -279,6 +279,58 @@ def _startup():
     except Exception as e_harry:
         log.warning("No se pudo sembrar tutor 'Harryt Luzardo' en DB: %s", e_harry)
 
+    # Inicialización de la Tutora VIP Sofía Rodríguez y su consentida Luna (Gato Persa VIP)
+    try:
+        tutor_sofia = db.q("SELECT id FROM tutores WHERE telefono_norm=%s OR LOWER(nombre) LIKE %s LIMIT 1",
+                           ("4149988776", "%sofia%"), one=True)
+        if not tutor_sofia:
+            tutor_id_sofia = db.execute(
+                """INSERT INTO tutores (nombre, rif, rif_norm, telefono, telefono_norm, email, direccion, sector, activo)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                ("Sofía Rodríguez", "V-20119443", "20119443", "+58 414-9988776", "4149988776",
+                 "sofia.rodriguez@example.com", "La Lago, Maracaibo", "La Lago"),
+                returning=True
+            )
+            if tutor_id_sofia:
+                db.execute(
+                    """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)""",
+                    ("PET-104", tutor_id_sofia, "Luna", "Gato", "Persa VIP", "Hembra",
+                     "Estadía en Suite Bioclimática de Hotel 5★. Dieta especial BARF.")
+                )
+                log.info("Tutora VIP 'Sofía Rodríguez' y mascota 'Luna' (Persa) sembrados en BD.")
+    except Exception as e_sofia:
+        log.warning("No se pudo sembrar tutora 'Sofía Rodríguez' en DB: %s", e_sofia)
+
+    # Inicialización de la Tutora Propietaria Dalybell Ramírez y Princesa / Sofía (Yorkshire)
+    try:
+        tutor_daly = db.q("SELECT id FROM tutores WHERE telefono_norm=%s OR LOWER(nombre) LIKE %s LIMIT 1",
+                          ("4143891102", "%dalybell%"), one=True)
+        if not tutor_daly:
+            tutor_id_daly = db.execute(
+                """INSERT INTO tutores (nombre, rif, rif_norm, telefono, telefono_norm, email, direccion, sector, activo)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                ("Dalybell Ramírez Montilla", "V-18452910", "18452910", "+58 414-3891102", "4143891102",
+                 "dalybell.montilla@example.com", "Av. 4 Bella Vista, Maracaibo", "Bella Vista"),
+                returning=True
+            )
+            if tutor_id_daly:
+                db.execute(
+                    """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)""",
+                    ("PET-100", tutor_id_daly, "Sofía", "Perro", "Yorkshire Terrier VIP (Princesa)", "Hembra",
+                     "Princesa consentida de la casa. Circuito Spa con hidratación de pulpejos obligatoria.")
+                )
+                db.execute(
+                    """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)""",
+                    ("PET-101", tutor_id_daly, "Princesa", "Perro", "Yorkshire Terrier VIP", "Hembra",
+                     "Corte de exhibición con lazo rojo Mrs. Pets Spa.")
+                )
+                log.info("Tutora VIP 'Dalybell Ramírez' sembrada en BD.")
+    except Exception as e_daly_tutor:
+        log.warning("No se pudo sembrar tutora 'Dalybell Ramírez' en DB: %s", e_daly_tutor)
+
     if not PORTAL_PASSWORD:
         log.warning("PORTAL_PASSWORD vacío: el portal queda SIN barrera de acceso. "
                     "Definir en Render antes de compartir la URL.")
@@ -7693,13 +7745,37 @@ async def teamily_chat(request: Request):
         timeout_in = float(body.get("timeoutSeconds") or body.get("timeout") or cfg_timeout or 20.0)
         timeout_sec = timeout_in if "unittest" in sys.modules else max(3.0, min(timeout_in, 45.0))
         user_type = str(body.get("userType") or body.get("user_type") or body.get("context", {}).get("userType") or "client").lower()
-        is_customer = (user_type not in ["staff", "staff_admin", "admin", "war_room"])
+        is_staff_auth = bool(
+            body.get("staff_authenticated")
+            or body.get("context", {}).get("staff_authenticated")
+            or user_type in ["staff", "staff_admin", "admin", "war_room"]
+            or body.get("role") in ["staff", "admin", "director", "war_room"]
+        )
+        is_customer = not is_staff_auth
 
-        client_info = lookup_client_in_mrs_pets_db(text=msg, user_name=u_name, phone=ph_num, pet_name=p_name)
-        db_directive = format_margaret_system_directive(client_info, msg_text=msg, bcv_cfg=bcv_cfg)
+        # Si es sesión autenticada de Staff en el portal, asegurar que la identidad no quede vacía ni como visitante
+        if is_staff_auth:
+            if not u_name or u_name.strip().lower() in ("", "usuario", "staff", "admin", "cliente vip", "visitante", "invitado"):
+                u_name = "Sr. Harryt Luzardo (Fundador & Director General)"
+
+        client_info = lookup_client_in_mrs_pets_db(
+            text=msg,
+            user_name=u_name,
+            phone=ph_num,
+            pet_name=p_name,
+            is_staff=is_staff_auth
+        )
+        db_directive = format_margaret_system_directive(
+            client_info,
+            msg_text=msg,
+            bcv_cfg=bcv_cfg,
+            is_staff=is_staff_auth,
+            staff_user_name=u_name
+        )
 
         # 2. Componer prompt enriquecido para que Margaret formule las preguntas con su estilo
-        teamily_msg = f"{db_directive}\n[MENSAJE DEL CLIENTE]: {msg}" if msg else db_directive
+        msg_header = "[INSTRUCCIÓN DE DIRECCIÓN / STAFF]:" if is_staff_auth else "[MENSAJE DEL CLIENTE]:"
+        teamily_msg = f"{db_directive}\n{msg_header} {msg}" if msg else db_directive
 
         # 3. Orquestación Dual con Canales Independientes (respeta Primario, Respaldo y Timeout)
         orch = await orchestrate_dual_ai_chat(

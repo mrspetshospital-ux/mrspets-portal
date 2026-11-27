@@ -344,9 +344,13 @@ class MrsPetsArchitectureEngine {
         return;
       }
     }
-    const target = anchorEl || (event && event.currentTarget) || (this.isStaffMode() ? document.getElementById('leia-avatar-circular-btn') : document.getElementById('leia-avatar-rectangular-btn')) || document.getElementById('leia-avatar-btn');
+    const target = anchorEl || (event && event.currentTarget) || document.getElementById('leia-avatar-circular-btn') || document.getElementById('leia-avatar-btn');
     this.triggerTinkerbellEffect(target);
-    this.toggleLeiaChat(target);
+    if (window.LeiaChatEngine && typeof window.LeiaChatEngine.toggleChat === 'function') {
+      window.LeiaChatEngine.toggleChat();
+    } else {
+      this.toggleLeiaChat(target);
+    }
   }
 
   toggleSidebar() {
@@ -420,25 +424,12 @@ class MrsPetsArchitectureEngine {
     const inputPlaceholder = 'Escribe a Leia (Concierge VIP)...';
 
     widget.innerHTML = `
-      <!-- CONTENEDOR DUAL DE AVATAR (CIRCULAR PERMANENTE + RECTANGULAR CLIENTES) -->
+      <!-- CONTENEDOR DE AVATAR ÚNICO CIRCULAR -->
       <div id="leia-avatar-wrapper" style="position:relative; display:flex; align-items:center; gap:12px; justify-content:flex-end;">
-        <!-- 1. AVATAR RECTANGULAR GRANDE PARA CLIENTES Y VISITANTES (LLAMATIVO, FOTO COMPLETA VISIBLE) -->
-        <div id="leia-avatar-rectangular-btn" class="leia-avatar-interactive-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)" title="${avatarTitle}" style="display:flex; align-items:center; gap:10px; background:linear-gradient(135deg, #070a11, #131b2a); border:2.5px solid #fbbf24; border-radius:20px; padding:8px 12px 8px 8px; box-shadow:0 14px 40px rgba(0,0,0,0.7), 0 0 25px rgba(251, 191, 36, 0.45); cursor:pointer; transition:all 0.25s ease; max-width:260px;">
-          <div style="position:relative; width:64px; height:76px; flex-shrink:0; border-radius:12px; overflow:hidden; border:2px solid #fbbf24; box-shadow:0 4px 14px rgba(0,0,0,0.5); background:#0c111d;">
-            <img id="avatar-rectangular-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:100%; height:100%; object-fit:cover; object-position:center 15%; pointer-events:none;">
-            <span style="position:absolute; top:3px; right:3px; width:11px; height:11px; background:#10b981; border:2px solid #070a11; border-radius:50%; box-shadow:0 0 8px #10b981;"></span>
-          </div>
-          <div style="display:flex; flex-direction:column; justify-content:center; gap:2px; pointer-events:none;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="color:#ffffff; font-weight:900; font-size:0.92rem; letter-spacing:-0.01em;">Leia 🎀</span>
-              <span style="font-size:0.6rem; background:#10b981; color:white; padding:1px 6px; border-radius:8px; font-weight:700;">En línea</span>
-            </div>
-            <span style="color:#fbbf24; font-size:0.74rem; font-weight:800; letter-spacing:0.02em;">Concierge VIP 24/7</span>
-            <span style="color:#cbd5e1; font-size:0.68rem; line-height:1.2; margin-top:2px;">¿Deseas agendar o consultar? Toca aquí ✨🐾</span>
-          </div>
-        </div>
+        <!-- 1. AVATAR RECTANGULAR OBSOLETO (ELIMINADO: EN CLIENTES SOLO EXISTE EL AVATAR CIRCULAR) -->
+        <div id="leia-avatar-rectangular-btn" class="leia-avatar-interactive-btn" style="display:none !important;"></div>
 
-        <!-- 2. AVATAR CIRCULAR PERMANENTE CON FOTO DE LEIA (SIEMPRE ACTIVO Y VISIBLE) -->
+        <!-- 2. AVATAR CIRCULAR ÚNICO CON FOTO DE LEIA (SIEMPRE ACTIVO Y VISIBLE EN CLIENTE Y STAFF) -->
         <div id="leia-avatar-circular-btn" class="leia-avatar-interactive-btn" onclick="mrsPetsArch.handleLeiaAvatarClick(event, this)" title="${avatarTitle}" style="display:flex; position:relative; width:92px; height:92px; border-radius:50%; background:linear-gradient(135deg, #070a11, #1e293b); border:3px solid #fbbf24; box-shadow:0 12px 36px rgba(0,0,0,0.6), 0 0 25px rgba(251, 191, 36, 0.5); align-items:center; justify-content:center; transition:transform 0.3s ease; cursor:pointer; flex-shrink:0;">
           <img id="avatar-circular-img" src="${avatarImg}" onerror="this.onerror=null; this.src='assets/margaret_avatar.svg';" style="width:78px; height:78px; border-radius:50%; object-fit:cover; object-position:center 15%; pointer-events:none;">
           <span style="position:absolute; top:4px; right:4px; width:18px; height:18px; background:#10b981; border:2.5px solid #070a11; border-radius:50%; box-shadow:0 0 8px #10b981;"></span>
@@ -612,16 +603,21 @@ class MrsPetsArchitectureEngine {
   updateLeiaRoleControls() {
     const isStaff = this.isStaffMode();
 
-    // 0. Dual Avatar: El avatar circular SIEMPRE está activo y visible (¡NUNCA desactivar el circular!)
+    // 0. Un solo avatar en Cliente (círculo); Círculo + Alert Search en Staff
     const rectBtn = document.getElementById('leia-avatar-rectangular-btn');
     const circBtn = document.getElementById('leia-avatar-circular-btn');
-    if (circBtn) {
-      circBtn.style.display = 'flex'; // ¡El avatar circular SIEMPRE permanece activo y visible!
-    }
+    const fabSearchBtn = document.getElementById('leia-chat-fab');
+
     if (rectBtn) {
-      // En modo Staff / Administración se oculta el globo de texto de clientes para una pantalla limpia
-      // En modo Cliente / Visitante se mantiene visible acompañando al avatar circular
-      rectBtn.style.display = isStaff ? 'none' : 'flex';
+      rectBtn.style.display = 'none'; // El avatar rectangular queda permanentemente eliminado
+    }
+    if (circBtn) {
+      circBtn.style.display = 'flex'; // Avatar circular único (siempre presente)
+    }
+    if (fabSearchBtn) {
+      // En modo Staff: Alert Search (Leia Search 🔍) activo como herramienta rápida del equipo
+      // En modo Cliente: Alert Search oculto para que exista ÚNICAMENTE el avatar circular
+      fabSearchBtn.style.display = isStaff ? 'flex' : 'none';
     }
 
     // 1. Botón de Calendario en Cabecera de la Tarjeta del Avatar

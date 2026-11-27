@@ -56,6 +56,9 @@
         },
 
         getCurrentClientContext() {
+            // En modo Staff / Administración NUNCA se utiliza contexto de cliente demo
+            if (this.isStaffActive()) return null;
+
             const isClient = (window.authEngine && window.authEngine.userRole === 'client') ||
                              localStorage.getItem('mrs_pets_auth_role') === 'client' ||
                              sessionStorage.getItem('mrs_pets_client_authenticated') === 'true';
@@ -80,21 +83,23 @@
             let rawOwner = (patient && (patient.owner || patient.ownerName)) ||
                            (window.authEngine && window.authEngine.userName) ||
                            localStorage.getItem('mrs_pets_active_customer_name') ||
-                           'Dalybell Ramírez Montilla';
+                           'Sofía Rodríguez';
 
             let cleanOwner = rawOwner.split('(')[0].replace(/Tutor de .*/i, '').trim();
 
-            let tutorHonorific = 'Sra. Dalibel';
+            let tutorHonorific = cleanOwner;
             const normOwner = cleanOwner.toLowerCase();
             if (normOwner.includes('dalybel') || normOwner.includes('dalibel') || normOwner.includes('talibel')) {
                 tutorHonorific = 'Sra. Dalibel';
+            } else if (normOwner.includes('sofia') || normOwner.includes('sofía')) {
+                tutorHonorific = 'Sofía Rodríguez';
             } else if (normOwner.includes('dra.') || normOwner.includes('dr.')) {
                 tutorHonorific = cleanOwner;
             } else if (cleanOwner) {
                 tutorHonorific = `Sra. ${cleanOwner.split(' ')[0]}`;
             }
 
-            let petName = (patient && (patient.name || patient.petName)) || 'Sofía';
+            let petName = (patient && (patient.name || patient.petName)) || 'Luna';
             let petHonorific = 'princesa';
             const normPet = petName.toLowerCase();
             if (normPet.includes('thor') || normPet.includes('buddy') || normPet.includes('max') || normPet.includes('rudy') || normPet.includes('carlos')) {
@@ -113,9 +118,34 @@
         },
 
         getCurrentUser() {
+            if (this.isStaffActive()) {
+                let staffName = 'Sr. Harryt Luzardo';
+                let staffRole = 'admin';
+                if (window.authEngine && window.authEngine.userName) {
+                    staffName = window.authEngine.userName;
+                    staffRole = window.authEngine.userRole || 'admin';
+                } else if (window.AuthEngine && window.AuthEngine.currentUser) {
+                    staffName = window.AuthEngine.currentUser.name || window.AuthEngine.currentUser.username || 'Sr. Harryt Luzardo';
+                    staffRole = window.AuthEngine.currentUser.role || 'admin';
+                } else {
+                    const savedStaff = (localStorage.getItem('mrs_pets_admin_user') || '').toLowerCase();
+                    if (savedStaff.includes('dalybell')) {
+                        staffName = 'Dalybell Ramírez Montilla';
+                    } else {
+                        staffName = 'Sr. Harryt Luzardo';
+                    }
+                }
+                return { name: staffName, role: staffRole, isStaff: true };
+            }
+
             const client = this.getCurrentClientContext();
             if (client) {
-                return { name: client.tutorHonorific, role: 'client', petName: client.petName };
+                return {
+                    name: client.tutorHonorific,
+                    role: 'client',
+                    petName: client.petName,
+                    phone: client.patient ? (client.patient.ownerPhone || client.patient.phone || '') : ''
+                };
             }
             if (window.AuthEngine && window.AuthEngine.currentUser) {
                 return window.AuthEngine.currentUser;
@@ -297,12 +327,19 @@
             const isStaff = this.isStaffActive();
             const client = this.getCurrentClientContext();
             const user = this.getCurrentUser();
+            const fab = document.getElementById('leia-chat-fab');
+
+            // En modo Cliente: el Alert Search (fab) se oculta para que SOLO exista el avatar circular
+            // En modo Staff: el Alert Search (fab) se muestra como herramienta de búsqueda del equipo
+            if (fab) {
+                fab.style.display = isStaff ? 'flex' : 'none';
+            }
 
             if (roleBadge) {
-                if (client) {
+                if (isStaff) {
+                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Oficial (${user.name})</span>`;
+                } else if (client) {
                     roleBadge.innerHTML = `<span class="badge-role-client" style="color:#fef08a !important; font-weight:800;">👑 Tutor VIP: ${client.tutorHonorific} (${client.petName})</span>`;
-                } else if (isStaff) {
-                    roleBadge.innerHTML = `<span class="badge-role-staff">👑 Staff Operativo (${user.name}) • Leia VIP</span>`;
                 } else {
                     roleBadge.innerHTML = `<span>Atención a Clientes & Search Concierge • Av. 2 El Milagro</span>`;
                 }
@@ -851,6 +888,10 @@
                 const abortCtrl = new AbortController();
                 const timeoutId = setTimeout(() => abortCtrl.abort(), (timeoutSec + 15) * 1000);
                 const chatSessionId = this.currentSessionId || ('sess_' + Math.random().toString(36).substring(2, 9));
+                const activeUserName = isStaff ? (user ? user.name : 'Sr. Harryt Luzardo') : (this.tutorName || (user ? user.name : 'Cliente VIP'));
+                const activePetName = isStaff ? 'Luna' : (this.lastActivePetName || (user ? user.petName : ''));
+                const activePhone = isStaff ? '04146799510' : (user && user.phone ? user.phone : '');
+
                 const payload = {
                     message_id: messageId,
                     agente_origen: isStaff ? 'staff' : 'user',
@@ -862,16 +903,20 @@
                     sessionId: chatSessionId,
                     primaryEngine: primaryEngine,
                     timeoutSeconds: timeoutSec,
-                    userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                    petName: this.lastActivePetName || '',
+                    userName: activeUserName,
+                    petName: activePetName,
+                    phone: activePhone,
                     userType: isStaff ? 'staff_admin' : 'client',
+                    staff_authenticated: isStaff,
                     approval_mode: activeApprovalMode,
                     context: {
-                        userName: this.tutorName || (user ? user.name : 'Cliente VIP'),
-                        petName: this.lastActivePetName || '',
+                        userName: activeUserName,
+                        petName: activePetName,
+                        phone: activePhone,
                         userType: isStaff ? 'staff_admin' : 'client',
-                        channel: 'Widget Search (Leia Concierge VIP)',
-                        as_leia: true,
+                        staff_authenticated: isStaff,
+                        channel: isStaff ? 'Consola Operativa Staff (Dirección General)' : 'Widget Search (Leia Concierge VIP)',
+                        as_leia: !isStaff,
                         approval_mode: activeApprovalMode
                     }
                 };
