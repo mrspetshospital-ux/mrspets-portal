@@ -988,7 +988,11 @@ async def api_session_client_login(request: Request, response: Response):
 
     row = None
     if pet_id:
-        p_row = db.q("SELECT tutor_id FROM mascotas WHERE id=%s", (pet_id,), one=True)
+        p_row = None
+        if str(pet_id).isdigit():
+            p_row = db.q("SELECT tutor_id FROM mascotas WHERE id=%s OR codigo=%s", (int(pet_id), str(pet_id)), one=True)
+        else:
+            p_row = db.q("SELECT tutor_id FROM mascotas WHERE codigo=%s", (str(pet_id),), one=True)
         if p_row and p_row.get("tutor_id"):
             row = db.q("SELECT * FROM tutores WHERE id=%s AND activo=TRUE", (p_row["tutor_id"],), one=True)
 
