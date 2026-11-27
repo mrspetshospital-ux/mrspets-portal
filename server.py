@@ -178,6 +178,20 @@ def validate_startup_critical_env():
             log.warning("  ✗ %-35s : [NO CONFIGURADA EN RENDER] — %s", var_name, desc)
     log.info("==================================================================")
 
+    # REGLA VOLTURI / AUDITORÍA FASE 0: Fallo Duro para TEAMILY_MARGARETTE_SERVER_KEY
+    # Un portal sin canal oficial de Margarette no debe arrancar en falso verde en producción.
+    is_prod_or_render = bool(os.environ.get("RENDER") or os.environ.get("PORT") or os.environ.get("PRODUCTION"))
+    is_unit_test = "unittest" in sys.modules or os.environ.get("TESTING") == "1" or "pytest" in sys.modules
+    teamily_key = os.environ.get("TEAMILY_MARGARETTE_SERVER_KEY", "").strip()
+    if is_prod_or_render and not is_unit_test and not teamily_key:
+        err_msg = (
+            "FATAL: TEAMILY_MARGARETTE_SERVER_KEY no está configurada en Render. "
+            "El portal no puede arrancar en verde sin el canal oficial hacia Margarette (Teamily). "
+            "Arranque abortado para evitar fallos silenciosos y enmascaramiento."
+        )
+        log.critical(err_msg)
+        raise RuntimeError(err_msg)
+
 
 # Arranque
 # ---------------------------------------------------------------------
@@ -2595,7 +2609,7 @@ async def _execute_teamily_channel(
             "agent": "system",
             "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
-            "channel": "teamily",
+            "channel": "failed",
             "latency_ms": 0.0,
             "error": "Cliente Teamily no disponible o mensaje vacío"
         }
@@ -2653,7 +2667,7 @@ async def _execute_teamily_channel(
                 "agent": "system",
                 "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
                 "model_used": "teamily-volturi",
-                "channel": "teamily",
+                "channel": "failed",
                 "latency_ms": elapsed_ms,
                 "error": err_received
             }
@@ -2677,7 +2691,7 @@ async def _execute_teamily_channel(
             "agent": "system",
             "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
-            "channel": "teamily",
+            "channel": "failed",
             "latency_ms": elapsed_ms,
             "error": f"Timeout superado ({timeout_sec}s)"
         }
@@ -2703,7 +2717,7 @@ async def _execute_teamily_channel(
             "agent": "system",
             "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
             "model_used": "teamily-volturi",
-            "channel": "teamily",
+            "channel": "failed",
             "latency_ms": elapsed_ms,
             "error": str(e)
         }
@@ -2915,38 +2929,19 @@ async def orchestrate_dual_ai_chat(
             model_used = gem_fallback.get("model_used", "gemini-flash-latest")
             if res:
                 res["channel"] = "gemini"
-        elif centralita_router:
-            page_text = centralita_router.synthesize_agent_response(requested_agent, requested_agent, msg, {})
-            if page_text:
-                reply_text = page_text
-                responder_agent = requested_agent
-                responder_name = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else "LEIA (Margarette • Planta & Atención)"
-                model_used = "centralita-in-house"
-                if res:
-                    res["channel"] = "centralita"
 
-    # Si ninguno de los dos canales de nube (Teamily / Gemini) produjo respuesta útil (o faltan credenciales),
-    # activar el motor cognitivo in-house de Centralita para que Margarette / LEIA responda con su identidad y catálogo
-    if not reply_text and centralita_router:
-        try:
-            page_text = centralita_router.synthesize_agent_response(requested_agent, requested_agent, msg, {})
-            if page_text:
-                reply_text = page_text
-                responder_agent = requested_agent
-                responder_name = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if requested_agent in ("margaret", "margarette", "leia") else (globals().get("AGENT_REGISTRY") or {}).get(requested_agent, {}).get("name", requested_agent)
-                model_used = "centralita-in-house"
-        except Exception as _ce:
-            log.warning("Fallo en fallback in-house de Centralita: %s", _ce)
+    # ESPECIFICACIÓN FASE 0 / AUDITORÍA VOLTURI:
+    # Erradicación total del motor de plantillas in-house de Centralita para el Avatar.
+    # Margarette / LEIA se comunica exclusivamente a través de Teamily (o Gemini en conmutación autorizada).
+    # Ante fallo de ambos, NUNCA se enmascara con plantillas sintéticas: se emite respaldo honesto del sistema.
 
     if not reply_text:
-        # Debilidad 1 y 3: Respaldo honesto del SISTEMA, sin firma de persona ni promesas falsas
+        # Respaldo honesto del SISTEMA sin enmascaramiento, sin firma falsa ni promesas simuladas
         reply_text = build_honest_fallback_message()
         responder_agent = "system"
         responder_name = "Canal de Atención (Sistema Mrs. Pets)"
         model_used = "fallback-sistema"
         active_channel = "fallback"
-    elif model_used == "centralita-in-house":
-        active_channel = "centralita"
     else:
         responder_agent = res.get("agent", requested_agent) if res else requested_agent
         agent_disp = f"Margarette (Gerente de Planta • @{MARGARETTE_TEAMILY_USER_ID})" if responder_agent in ("margaret", "margarette", "leia") else ((res.get("agent_name") if res else "") or "Leia Concierge VIP")

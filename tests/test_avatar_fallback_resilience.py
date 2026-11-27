@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Prueba de Resiliencia del Canal Avatar Margarette / LEIA
-Verifica que ante ausencia total de credenciales de nube (Teamily / Gemini),
-el avatar responda con la identidad oficial de Margarette mediante el motor in-house
-de Centralita en lugar de caer en el mensaje genérico de error de sistema.
+Prueba de Resiliencia del Canal Avatar Margarette / LEIA (Especificación Volturi Fase 0)
+Verifica que ante ausencia total de canales de nube (Teamily / Gemini),
+el sistema NO enmascare el fallo con plantillas locales simuladas pretendiendo ser Margarette,
+sino que devuelva un respaldo honesto del sistema con active_channel='fallback'
+y enlace de traspaso humano a WhatsApp.
 """
 
 import os
@@ -19,8 +20,11 @@ class TestAvatarFallbackResilience(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
 
-    def test_margarette_responds_when_cloud_credentials_missing(self):
-        """Verifica que el endpoint /api/v1/avatar/chat retorne a Margarette y no el error de sistema cuando faltan API keys."""
+    def test_margarette_honest_system_fallback_when_cloud_unavailable(self):
+        """
+        Verifica que ante caída de Teamily y Gemini, el endpoint no enmascare con un motor
+        de reglas local, sino que declare honestamente active_channel='fallback' y agent='system'.
+        """
         resp = self.client.post("/api/v1/avatar/chat", json={
             "agent_id": "margaret",
             "message": "Hola, ¿quién eres?"
@@ -28,24 +32,26 @@ class TestAvatarFallbackResilience(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data.get("status"), "success")
-        self.assertEqual(data.get("agent"), "margaret")
-        self.assertIn("Margarette", data.get("agent_name", ""))
-        self.assertIn("LEIA", data.get("reply", ""))
-        self.assertNotIn("Leire", data.get("reply", ""))
-        self.assertNotIn("Leira", data.get("reply", ""))
-        self.assertNotIn("En este momento no puedo completar tu consulta", data.get("reply", ""))
+        self.assertEqual(data.get("agent"), "system")
+        self.assertEqual(data.get("active_channel"), "fallback")
+        self.assertTrue(data.get("failover_triggered"))
+        reply = data.get("reply", "")
+        self.assertIn("Canal de Atención", reply)
+        self.assertIn("WhatsApp", reply)
 
-    def test_margarette_provides_pricing_when_asked(self):
-        """Verifica que Margarette entregue tarifas oficiales y tasa BCV en el fallback cognitivo."""
+    def test_margarette_human_handoff_triggered_on_repeated_failures(self):
+        """
+        Verifica que ante fallos continuos se active la estructura de traspaso humano (human_handoff).
+        """
         resp = self.client.post("/api/v1/avatar/chat", json={
             "agent_id": "margaret",
-            "message": "Cuáles son los precios de los servicios y la tasa bcv?"
+            "message": "Fiebre de 40 grados, no come desde ayer"
         })
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        self.assertEqual(data.get("active_channel"), "fallback")
         reply = data.get("reply", "")
-        self.assertIn("BCV", reply)
-        self.assertIn("Grooming", reply)
+        self.assertTrue("WhatsApp" in reply or "wa.me" in reply)
 
 if __name__ == "__main__":
     unittest.main()
