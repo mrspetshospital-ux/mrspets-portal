@@ -281,6 +281,16 @@ class TeamilyGeoARequest:
             thread_payload = self.thread
         elif self.session_id:
             cached_thread = _client_threads.get(self.session_id)
+            if not cached_thread:
+                try:
+                    from db import db
+                    row = db.q("SELECT thread_id FROM avatar_threads WHERE session_id=%s LIMIT 1", (self.session_id,), one=True)
+                    if row and row.get("thread_id"):
+                        cached_thread = str(row["thread_id"]).strip()
+                        _client_threads[self.session_id] = cached_thread
+                except Exception:
+                    pass
+
             if cached_thread:
                 thread_payload = {"mode": "continue", "thread_id": cached_thread}
             else:
@@ -509,6 +519,22 @@ class TeamilyGeoAClient:
                     resp_thread = data.get("thread_id") or (data.get("thread", {}).get("thread_id") if isinstance(data.get("thread"), dict) else None) or data.get("thread")
                 if request.session_id and resp_thread and isinstance(resp_thread, str):
                     _client_threads[request.session_id] = resp_thread
+                    try:
+                        from db import db
+                        if db.IS_POSTGRES:
+                            db.execute(
+                                """INSERT INTO avatar_threads (session_id, thread_id, updated_at)
+                                   VALUES (%s, %s, NOW())
+                                   ON CONFLICT (session_id) DO UPDATE SET thread_id=EXCLUDED.thread_id, updated_at=NOW()""",
+                                (request.session_id, resp_thread)
+                            )
+                        else:
+                            db.execute(
+                                "INSERT OR REPLACE INTO avatar_threads (session_id, thread_id, updated_at) VALUES (%s, %s, CURRENT_TIMESTAMP)",
+                                (request.session_id, resp_thread)
+                            )
+                    except Exception as _e_th_db:
+                        pass
 
                 # Extraer texto de respuesta según estructura típica de Teamily / chat
                 response_text = ""
@@ -696,9 +722,9 @@ class TeamilyGeoAClient:
 
         # Enrutamiento dedicado hacia agente LEIA / Margarette en Teamily
         if str(request.recipient_user_id).strip() == "9000408632300095":
-            if not endpoint_override or "/chat" in str(endpoint_override) or "leia-ceo-assistant" in str(endpoint_override):
-                target_endpoint = "https://teamily.ai/v1/agents/leia-ceo-assistant/responses"
-            target_server_key = server_key_override or DEFAULT_LEIA_SERVER_KEY or target_server_key
+            if not endpoint_override or "/chat" in str(endpoint_override) or "leia-ceo-assistant" in str(endpoint_override) or "margarette" in str(endpoint_override):
+                target_endpoint = MARGARETTE_AGENT_ENDPOINT
+            target_server_key = server_key_override or MARGARETTE_SERVER_KEY or target_server_key
 
         req_timeout = request.timeout if request.timeout is not None else self.timeout
 

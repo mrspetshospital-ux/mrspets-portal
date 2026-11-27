@@ -98,7 +98,7 @@ ESTILO
     description: 'Gerente Operativa y de Atención al Cliente — Operaciones, Grooming, Tienda y Hotel de Mrs. Pets (Big & Little Dogs, C.A.). Fachada pública: LEIA.',
     teamlyUserId: '9000408632300095',
     teamlySlug: 'margarette',
-    teamlyEndpoint: 'https://teamily.ai/v1/agents/leia-ceo-assistant/responses',
+    teamlyEndpoint: 'https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses',
     teamlyBoardId: '5803df5a-7127-4d28-b97c-5c840d47cdc7',
     promptGuideline: `Eres MARGARETTE, Gerente de Planta y Atención al Cliente de Mrs. Pets
 (Big & Little Dogs, C.A.), y la agente de voz (vox) del ecosistema Teamily.
@@ -1871,7 +1871,7 @@ class TeamilyExecutiveEngine {
       const recipientUserId = agent.teamlyUserId || '';
       const isMargarette = (agent.id === 'margaret' || agent.id === 'margarette' || recipientUserId === '9000408632300095');
       const endpointToSend = isMargarette
-        ? 'https://teamily.ai/v1/agents/leia-ceo-assistant/responses'
+        ? 'https://teamily.ai/v1/agents/margarette-gerente-de-planta/responses'
         : this.normalizeTeamilyEndpoint(agent.teamlyEndpoint, 'https://teamily.ai/v1/chat');
       const messageId = 'MSG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 

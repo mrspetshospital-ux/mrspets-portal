@@ -256,6 +256,29 @@ def _startup():
     except Exception as e_daly:
         log.warning("No se pudo sembrar usuario 'dalybell' en DB al arrancar: %s", e_daly)
 
+    # Inicialización del Tutor Fundador Sr. Harryt Luzardo y su consentida Luna (Presidencia VIP)
+    try:
+        tutor_harry = db.q("SELECT id FROM tutores WHERE telefono_norm=%s OR LOWER(nombre) LIKE %s LIMIT 1",
+                           ("4146799510", "%harry%"), one=True)
+        if not tutor_harry:
+            tutor_id = db.execute(
+                """INSERT INTO tutores (nombre, rif, rif_norm, telefono, telefono_norm, email, direccion, sector, activo)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE) RETURNING id""",
+                ("Harryt Luzardo", "V-18452910", "18452910", "+58 414-6799510", "4146799510",
+                 "harryt@mrspets.local", "Av. 2 El Milagro, Maracaibo", "El Milagro"),
+                returning=True
+            )
+            if tutor_id:
+                db.execute(
+                    """INSERT INTO mascotas (codigo, tutor_id, nombre, especie, raza, sexo, notas, activo)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)""",
+                    ("PET-LUNA-01", tutor_id, "Luna", "Perro", "Golden Retriever", "Hembra",
+                     "Princesa consentida de la casa del Sr. Harryt")
+                )
+                log.info("Tutor VIP 'Harryt Luzardo' y mascota 'Luna' sembrados en BD.")
+    except Exception as e_harry:
+        log.warning("No se pudo sembrar tutor 'Harryt Luzardo' en DB: %s", e_harry)
+
     if not PORTAL_PASSWORD:
         log.warning("PORTAL_PASSWORD vacío: el portal queda SIN barrera de acceso. "
                     "Definir en Render antes de compartir la URL.")

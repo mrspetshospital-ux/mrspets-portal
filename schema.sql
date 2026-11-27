@@ -468,8 +468,15 @@ CREATE TRIGGER trg_facturas_inmutables BEFORE UPDATE ON facturas
     FOR EACH ROW EXECUTE FUNCTION fn_factura_inmutable();
 
 -- ---------------------------------------------------------------------
--- 11. VISTAS
+-- 11. VISTAS Y PERSISTENCIA DE HILOS
 -- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS avatar_threads (
+    session_id  TEXT PRIMARY KEY,
+    thread_id   TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE OR REPLACE VIEW v_facturas_saldo AS
 SELECT f.id,
        f.numero_completo,

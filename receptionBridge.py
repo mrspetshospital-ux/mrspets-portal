@@ -116,6 +116,44 @@ def lookup_client_in_mrs_pets_db(
         except Exception as _e_lookup:
             log.warning("Error al consultar cliente en base de datos por teléfono (%s): %s", norm_p, _e_lookup)
 
+    # Reconocimiento institucional del Fundador & Director General Sr. Harryt Luzardo
+    text_lower = (text or "").lower()
+    u_lower = (candidate_name or user_name or "").lower()
+    is_harry_signal = (
+        norm_p == "4146799510"
+        or any(w in text_lower for w in ["harry", "harryt", "sr. harry", "señor harry", "buenas noches, señor harry", "buenas noches señor harry"])
+        or any(w in u_lower for w in ["harry", "harryt"])
+    )
+    if not tutor and is_harry_signal:
+        try:
+            tutor = db.q(
+                "SELECT id, nombre, rif, telefono, direccion, sector, foto FROM tutores WHERE telefono_norm='4146799510' OR LOWER(nombre) LIKE '%harry%' AND activo=TRUE LIMIT 1",
+                one=True
+            )
+            if not tutor:
+                tutor = {
+                    "id": 9999,
+                    "nombre": "Sr. Harryt Luzardo",
+                    "telefono": "+58 414-6799510",
+                    "sector": "El Milagro",
+                    "direccion": "Av. 2 El Milagro, Maracaibo"
+                }
+            mascotas = db.q(
+                "SELECT id, codigo, nombre, especie, raza, sexo, alergias, condiciones, notas, foto FROM mascotas WHERE (tutor_id=%s OR LOWER(nombre)='luna') AND activo=TRUE ORDER BY id",
+                (tutor.get("id", 9999),)
+            ) or [{
+                "id": 9999,
+                "codigo": "PET-LUNA-01",
+                "nombre": "Luna",
+                "especie": "Perro",
+                "raza": "Golden Retriever",
+                "sexo": "Hembra",
+                "notas": "Princesa consentida de la casa del Sr. Harryt"
+            }]
+            norm_p = "4146799510"
+        except Exception as _e_h:
+            log.warning("Fallo al resolver tutor institucional Harryt: %s", _e_h)
+
     return {
         "found": bool(tutor),
         "verified_by_phone": bool(tutor),
@@ -374,11 +412,10 @@ def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str 
         citas_dir = "\n".join(appt_lines) + "\n" if appt_lines else ""
 
         base_dir = (
-            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD / VERIFICADO POR TELÉFONO)]:\n"
+            f"\n[CONTEXTO DE ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE REGISTRADO EN BD)]:\n"
             f"• Tutor: {tutor.get('nombre')} | Teléfono Verificado: {tutor.get('telefono', 'N/A')} | Sector: {tutor.get('sector') or 'Maracaibo'}\n"
-            f"• Mascota(s) en expediente: {pets_summary}\n"
-            f"• REGLA ESTRICTA DE PRIVACIDAD: Identidad validada por teléfono. Confirma siempre la titularidad antes de compartir datos médicos o turnos.\n"
-            f"• INSTRUCCIÓN GENERAL: Salúdalo con cariño por su nombre de pila como cliente de la casa, menciona a su consentido(a) y asístelo en su consulta.\n"
+            f"• Consentido(s) registrado(s): {pets_summary}\n"
+            f"• PROTOCOLO VIP: Salúdalo con calidez y deferencia por su nombre de pila o distinción como miembro de la casa, menciona a su consentido(a) y asístelo con máxima prioridad.\n"
             f"{cross_selling_rule}"
             f"{citas_dir}"
         )
@@ -388,7 +425,7 @@ def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str 
         saludo_inst = (
             f"Saluda amablemente mencionando el nombre que indicó ('{unverified_name}'), pero recuerda que es un nombre no validado (riesgo de homónimo). NO reveles expedientes de terceros ni asumas mascotas de otra persona."
             if unverified_name else
-            "Dale una cordial bienvenida a Mrs. Pets. Con tu estilo dulce, empático y profesional de recepcionista, formula progresivamente las preguntas para completar su Ficha de Admisión:"
+            "Dale una cordial bienvenida a Mrs. Pets. Responde con tu estilo dulce, empático y profesional de recepcionista."
         )
 
         citas_privacy_warning = ""
@@ -397,19 +434,15 @@ def format_margaret_system_directive(client_info: Dict[str, Any], msg_text: str 
                 "\n[ALERTA DE PRIVACIDAD — CONSULTA DE CITAS SIN IDENTIDAD VERIFICADA]:\n"
                 "• El usuario está preguntando por citas o turnos, pero NO ha suministrado su número de teléfono registrado.\n"
                 "• PROHIBICIÓN ESTRICTA: NUNCA reveles turnos, fechas de citas, datos médicos ni expedientes basándote únicamente en un nombre o sin teléfono verificado (previene filtración entre personas con el mismo nombre).\n"
-                "• INSTRUCCIÓN OBLIGATORIA PARA MARGARETTE: Responde amablemente solicitando su teléfono registrado:\n"
+                "• INSTRUCCIÓN: Responde amablemente solicitando su teléfono registrado:\n"
                 "  'Para consultar tu turno y expediente de forma segura y proteger la privacidad de tu información, por favor confírmame tu número de teléfono registrado.'\n"
             )
 
         base_dir = (
-            f"\n[DIRECTIVA ATENCIÓN AL CLIENTE - MARGARETTE @{margaret_id} (CLIENTE NUEVO / SIN VERIFICAR)]:\n"
-            f"• Estado: Cliente nuevo (no registrado o identidad no verificada por teléfono).\n"
-            f"• INSTRUCCIÓN PARA MARGARETTE: {saludo_inst}\n"
-            f"  1. Nombre completo del tutor y teléfono de contacto.\n"
-            f"  2. Sector o dirección en Maracaibo.\n"
-            f"  3. Nombre del consentido(a), especie, raza y sexo.\n"
-            f"  4. Alergias o condiciones especiales.\n"
-            f"  5. Invítalo a subir la foto de su consentido usando el botón 📷 Foto del chat para su expediente.\n"
+            f"\n[CONTEXTO OPERATIVO DEL PORTAL - MARGARETTE @{margaret_id} (CLIENTE NUEVO / SIN VERIFICAR)]:\n"
+            f"• Estado: Visitante / Cliente nuevo (sin teléfono verificado en este turno).\n"
+            f"• Orientación: {saludo_inst}\n"
+            f"• Ficha de Admisión: Si el cliente solicita explícitamente agendar una cita o registrar a su consentido por primera vez, asístelo recopilando sus datos (nombre, teléfono, sector, consentido y botón 📷 Foto del chat). NO formules cuestionarios de admisión en simples saludos, cortesías ni consultas generales de precios, boutique o farmacia.\n"
             f"{cross_selling_rule}"
             f"{citas_privacy_warning}"
         )

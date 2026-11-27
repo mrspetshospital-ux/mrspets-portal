@@ -368,6 +368,13 @@ INSERT OR IGNORE INTO configuracion (clave, valor, tipo, descripcion) VALUES
     ('fiscal.igtf_pct','3','numero','IGTF para pagos en divisas'),
     ('factura.serie_default','GEN','texto','Serie por defecto');
 
+CREATE TABLE IF NOT EXISTS avatar_threads (
+    session_id  TEXT PRIMARY KEY,
+    thread_id   TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE VIEW IF NOT EXISTS v_facturas_saldo AS
 SELECT f.id,
        f.numero_completo,
