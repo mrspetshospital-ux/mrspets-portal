@@ -344,6 +344,22 @@ def init_security_schema() -> bool:
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS ix_conv_mem_subj_th ON conversation_memory(subject_id, thread_id);
+
+    CREATE TABLE IF NOT EXISTS avatar_turn_audit (
+        correlation_id TEXT PRIMARY KEY,
+        timestamp_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        session_id TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        user_input TEXT NOT NULL,
+        agent_reply TEXT,
+        endpoint_engine TEXT NOT NULL,
+        delivery_status TEXT NOT NULL,
+        error_code TEXT,
+        latency_ms REAL DEFAULT 0.0,
+        expires_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_corr ON avatar_turn_audit(correlation_id);
+    CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_time ON avatar_turn_audit(timestamp_utc DESC);
     """
     try:
         for stmt in sql.strip().split(";"):
@@ -360,6 +376,116 @@ def init_security_schema() -> bool:
     except Exception as e:
         log.error("Error al inicializar esquema de seguridad: %s", e)
         return False
+
+
+def record_turn_pre_call(
+    correlation_id: str,
+    session_id: str,
+    sender: str,
+    user_input: str,
+    endpoint_engine: str
+) -> bool:
+    """
+    D.1: Registra la fila de entrada en la bitácora con estado 'en_curso'
+    ANTES de que salga la petición hacia el agente. Retención a 90 días calculada al escribir.
+    """
+    try:
+        now_dt = _now_utc()
+        expires_at = (now_dt + timedelta(days=90)).isoformat()
+        now_ts = now_dt.isoformat()
+        if getattr(db, 'IS_POSTGRES', False):
+            db.execute("""
+                INSERT INTO avatar_turn_audit (
+                    correlation_id, timestamp_utc, session_id, sender, user_input,
+                    endpoint_engine, delivery_status, expires_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, 'en_curso', %s)
+                ON CONFLICT (correlation_id) DO UPDATE SET
+                    delivery_status='en_curso', timestamp_utc=EXCLUDED.timestamp_utc
+            """, (correlation_id, now_ts, session_id, sender, user_input, endpoint_engine, expires_at))
+        else:
+            db.execute("""
+                INSERT OR REPLACE INTO avatar_turn_audit (
+                    correlation_id, timestamp_utc, session_id, sender, user_input,
+                    endpoint_engine, delivery_status, expires_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, 'en_curso', %s)
+            """, (correlation_id, now_ts, session_id, sender, user_input, endpoint_engine, expires_at))
+        return True
+    except Exception as e:
+        log.warning("Fallo al registrar entrada en avatar_turn_audit: %s", e)
+        return False
+
+
+def record_turn_post_call(
+    correlation_id: str,
+    agent_reply: Optional[str] = None,
+    delivery_status: str = "completado",
+    error_code: Optional[str] = None,
+    latency_ms: float = 0.0
+) -> bool:
+    """
+    D.2: Actualiza la misma fila de la bitácora al recibir la respuesta,
+    con el texto exacto, latencia, estado final y código de error si lo hubo.
+    """
+    try:
+        db.execute("""
+            UPDATE avatar_turn_audit SET
+                agent_reply = %s,
+                delivery_status = %s,
+                error_code = %s,
+                latency_ms = %s
+            WHERE correlation_id = %s
+        """, (agent_reply, delivery_status, error_code, latency_ms, correlation_id))
+        return True
+    except Exception as e:
+        log.warning("Fallo al actualizar salida en avatar_turn_audit: %s", e)
+        return False
+
+
+def get_audit_bitacora(limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    D.4: Bitácora consultable desde fuera de la consola de Render,
+    con los 9 campos mínimos exigidos, sin secretos ni tokens.
+    """
+    try:
+        rows = db.q("""
+            SELECT correlation_id, timestamp_utc, session_id, sender, user_input,
+                   agent_reply, endpoint_engine, delivery_status, error_code, latency_ms, expires_at
+            FROM avatar_turn_audit
+            ORDER BY timestamp_utc DESC
+            LIMIT %s
+        """, (limit,), one=False) or []
+        res = []
+        for r in rows:
+            res.append({
+                "correlation_id": r.get("correlation_id"),
+                "timestamp_utc": str(r.get("timestamp_utc")),
+                "session_id": r.get("session_id"),
+                "sender": r.get("sender"),
+                "user_input": r.get("user_input"),
+                "agent_reply": r.get("agent_reply"),
+                "endpoint_engine": r.get("endpoint_engine"),
+                "delivery_status": r.get("delivery_status"),
+                "error_code": r.get("error_code"),
+                "latency_ms": r.get("latency_ms"),
+                "expires_at": str(r.get("expires_at"))
+            })
+        return res
+    except Exception as e:
+        log.warning("Fallo al consultar avatar_turn_audit: %s", e)
+        return []
+
+
+def purge_expired_audit_records() -> int:
+    """
+    D.5: Proceso de purga de registros que han superado los 90 días de retención.
+    """
+    try:
+        now_ts = _now_utc().isoformat()
+        db.execute("DELETE FROM avatar_turn_audit WHERE expires_at < %s", (now_ts,))
+        return 1
+    except Exception as e:
+        log.warning("Fallo al purgar avatar_turn_audit: %s", e)
+        return 0
 
 
 def hash_passphrase(passphrase: str, salt: Optional[str] = None) -> Tuple[str, str]:

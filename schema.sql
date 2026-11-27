@@ -531,4 +531,20 @@ INSERT INTO configuracion (clave, valor, tipo, descripcion) VALUES
     ('factura.serie_default','GEN','texto','Serie por defecto')
 ON CONFLICT (clave) DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS avatar_turn_audit (
+    correlation_id TEXT PRIMARY KEY,
+    timestamp_utc TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    session_id TEXT NOT NULL,
+    sender TEXT NOT NULL,
+    user_input TEXT NOT NULL,
+    agent_reply TEXT,
+    endpoint_engine TEXT NOT NULL,
+    delivery_status TEXT NOT NULL,
+    error_code TEXT,
+    latency_ms REAL DEFAULT 0.0,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_corr ON avatar_turn_audit(correlation_id);
+CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_time ON avatar_turn_audit(timestamp_utc DESC);
+
 COMMIT;

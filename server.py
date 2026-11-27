@@ -3598,13 +3598,36 @@ async def orchestrate_dual_ai_chat(
         if should_failover:
             failover_triggered = True
             failover_reason = res.get("error") or f"Error fatal de conexión en Teamily (> {timeout_sec}s)"
-            log.info("Dualidad IA: Conmutando al Canal de Respaldo (Gemini). Razón: %s", failover_reason)
-            res = await _execute_gemini_channel(
-                msg=msg,
-                history=history,
-                requested_agent=requested_agent,
-                timeout_sec=max(timeout_sec, 6.0)
-            )
+            if requested_agent in ("margaret", "margarette", "leia"):
+                # C.1 & C.2 & G.3: Desactivación estricta de fallback generativo para Margarette.
+                # NUNCA simular conversación con Gemini: devolver aviso honesto de indisponibilidad.
+                log.warning("Canal Teamily falló para Margarette: %s. Fallback generativo desactivado por especificación.", failover_reason)
+                c_user = context.get("user_name", "") if context else ""
+                c_pet = context.get("pet_name", "") if context else ""
+                reply_text = build_honest_fallback_message(user_name=c_user, pet_name=c_pet)
+                return {
+                    "success": False,
+                    "reply": reply_text,
+                    "agent": "system",
+                    "agent_name": "Canal de Atención (Sistema Mrs. Pets)",
+                    "model_used": "fallback-sistema",
+                    "channel": "fallback",
+                    "primary_engine": primary,
+                    "backup_engine": backup,
+                    "active_channel": "fallback",
+                    "latency_ms": res.get("latency_ms", 0.0),
+                    "error": failover_reason,
+                    "failover_triggered": True,
+                    "failover_reason": failover_reason
+                }
+            else:
+                log.info("Dualidad IA: Conmutando al Canal de Respaldo (Gemini). Razón: %s", failover_reason)
+                res = await _execute_gemini_channel(
+                    msg=msg,
+                    history=history,
+                    requested_agent=requested_agent,
+                    timeout_sec=max(timeout_sec, 6.0)
+                )
     else:
         # Canal 2 Primario: Gemini
         res = await _execute_gemini_channel(
@@ -3635,7 +3658,7 @@ async def orchestrate_dual_ai_chat(
         or "Charly registró la instrucción" in reply_text
         or "en_proceso" in reply_text
     )
-    if is_teamily_coordination_notice:
+    if is_teamily_coordination_notice and requested_agent not in ("margaret", "margarette", "leia"):
         gem_fallback = await _execute_gemini_channel(
             msg=msg,
             history=history,
@@ -8561,6 +8584,17 @@ async def teamily_chat(request: Request):
         # Directiva tipada según la Sección 1.5 de la especificación
         identity_directive_obj = sessionSecurity.build_identity_directive(v_sess)
 
+        # D.1: Identificador de correlación único y registro previo en la bitácora ('en_curso')
+        correlation_id = str(body.get("correlation_id") or body.get("message_id") or request.headers.get("x-message-id") or f"MSP-{uuid.uuid4().hex[:12].upper()}").strip()
+        from teamilyClient import MARGARETTE_AGENT_ENDPOINT
+        sessionSecurity.record_turn_pre_call(
+            correlation_id=correlation_id,
+            session_id=th_id,
+            sender=u_name or "visitante_anonimo",
+            user_input=msg,
+            endpoint_engine=MARGARETTE_AGENT_ENDPOINT
+        )
+
         # 3. Orquestación Dual con Canales Independientes (respeta Primario, Respaldo y Timeout)
         orch = await orchestrate_dual_ai_chat(
             msg=teamily_msg,
@@ -8589,6 +8623,16 @@ async def teamily_chat(request: Request):
         responder_name = orch["agent_name"]
         model_used = orch["model_used"]
         call_latency_ms = orch["latency_ms"]
+
+        # D.2: Actualización de la bitácora con respuesta final, estado y latencia
+        turn_status = "completado" if (orch.get("channel") == "teamily" and orch.get("success")) else "error"
+        sessionSecurity.record_turn_post_call(
+            correlation_id=correlation_id,
+            agent_reply=res_text,
+            delivery_status=turn_status,
+            error_code=orch.get("error") if turn_status == "error" else None,
+            latency_ms=call_latency_ms
+        )
 
         if res_text:
             # Normalización y sanitización estricta de salida visible (Bloque 3.1)
@@ -8694,6 +8738,8 @@ async def teamily_chat(request: Request):
             "degradation_reason": jwt_reason if not trusted_session else None,
             "identity_directive": identity_directive_obj.get("identity_directive"),
             "raw_prompt": teamily_msg,
+            "correlation_id": correlation_id,
+            "message_id": correlation_id,
             "session_id": session_id,
             "thread_id": th_id,
             "primary_engine": orch.get("primary_engine"),
@@ -9196,6 +9242,39 @@ async def get_historico_consultas(request: Request):
                 "error": "INTERNAL_SERVER_ERROR",
                 "message": str(e)
             }
+        )
+
+
+@app.get("/api/v1/avatar/bitacora")
+async def get_avatar_bitacora(request: Request, limit: int = 50):
+    """
+    D.4: Bitácora de turnos del avatar consultable sin entrar a la consola de Render.
+    Devuelve los registros con los 9 campos mínimos exigidos, sin secretos ni credenciales.
+    """
+    try:
+        import sessionSecurity
+        # D.5: Ejecutar purga de registros que hayan superado los 90 días
+        sessionSecurity.purge_expired_audit_records()
+        rows = sessionSecurity.get_audit_bitacora(limit=min(limit, 100))
+        return JSONResponse(
+            status_code=200,
+            content={
+                "ok": True,
+                "status": "success",
+                "total": len(rows),
+                "bitacora": rows
+            },
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    except Exception as e:
+        log.error("Error en /api/v1/avatar/bitacora: %s", e)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "error": str(e)}
         )
 
 

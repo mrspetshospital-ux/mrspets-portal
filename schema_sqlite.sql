@@ -383,3 +383,20 @@ SELECT f.id,
        COALESCE((SELECT SUM(p.monto_usd) FROM pagos p WHERE p.factura_id = f.id), 0) AS pagado,
        f.total - COALESCE((SELECT SUM(p.monto_usd) FROM pagos p WHERE p.factura_id = f.id), 0) AS saldo
 FROM facturas f;
+
+CREATE TABLE IF NOT EXISTS avatar_turn_audit (
+    correlation_id TEXT PRIMARY KEY,
+    timestamp_utc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    session_id TEXT NOT NULL,
+    sender TEXT NOT NULL,
+    user_input TEXT NOT NULL,
+    agent_reply TEXT,
+    endpoint_engine TEXT NOT NULL,
+    delivery_status TEXT NOT NULL,
+    error_code TEXT,
+    latency_ms REAL DEFAULT 0.0,
+    expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_corr ON avatar_turn_audit(correlation_id);
+CREATE INDEX IF NOT EXISTS ix_avatar_turn_audit_time ON avatar_turn_audit(timestamp_utc DESC);
+

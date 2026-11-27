@@ -498,7 +498,7 @@
                             <div class="bubble-content" style="color:${textColor} !important;">${formattedText}</div>
                             ${attachmentHtml}
                             ${buttonsHtml}
-                            ${isLeia ? `<div style="margin-top:6px;"><button type="button" class="btn-voice-leia" onclick="window.LeiaChatEngine.playVoice(this)" data-text="${encodeURIComponent(m.text)}" style="background: rgba(212,175,55,0.18); border: 1px solid rgba(212,175,55,0.4); color: #fef08a !important; border-radius: 6px; padding: 2px 7px; font-size: 0.68rem; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔊 Escuchar (ElevenLabs)</button></div>` : ''}
+                            ${(isLeia && m.engine === 'teamily' && !m.isFallback) ? `<div style="margin-top:6px;"><button type="button" class="btn-voice-leia" onclick="window.LeiaChatEngine.playVoice(this)" data-text="${encodeURIComponent(m.text)}" style="background: rgba(212,175,55,0.18); border: 1px solid rgba(212,175,55,0.4); color: #fef08a !important; border-radius: 6px; padding: 2px 7px; font-size: 0.68rem; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔊 Escuchar (ElevenLabs)</button></div>` : ''}
                             <div style="display:flex; justify-content:${isLeia ? 'space-between' : 'flex-end'}; align-items:center; margin-top:6px;">
                                 ${isLeia ? `<span class="leia-engine-indicator" style="font-size:0.65rem; font-weight:700; color:${isGemini ? '#FDE047' : '#FFFFFF'}; opacity:0.85;">${isGemini ? '⚡ Gemini' : '🛡️ Teamily'}</span>` : ''}
                                 <span class="bubble-time" style="color:#cbd5e1 !important; margin-top:0;">${timeStr}</span>
@@ -977,48 +977,16 @@
                     }
                 }
             } catch (teamilyErr) {
-                console.warn('[AvatarChatEngine] Teamily superó timeout de ' + timeoutSec + 's o falló. Activando Failover a Gemini...', teamilyErr);
+                console.warn('[AvatarChatEngine] Teamily superó timeout o falló:', teamilyErr);
             }
 
-            // 2. FAILOVER AUTOMÁTICO: GOOGLE GEMINI BACKEND (Solo si Teamily no respondió o superó timeout)
+            // C.1 & C.2 & G.3: Desactivación estricta de fallback generativo en el cliente.
+            // Ante fallo o timeout de Teamily, no producir conversación sintética con Gemini.
+            // Se emite un aviso neutro de indisponibilidad del sistema.
             if (!replyObtained) {
-                try {
-                    const gemAbort = new AbortController();
-                    const gemTimeout = setTimeout(() => gemAbort.abort(), 15000);
-                    const gemMsgId = 'MSG-GEMINI-' + Date.now();
-                    const gemRes = await fetch('/api/v1/leia/chat', {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: reqHeaders,
-                        body: JSON.stringify({
-                            message_id: gemMsgId,
-                            input: userText,
-                            message: userText,
-                            model: 'gemini-3.8-flash',
-                            agent_id: 'margaret',
-                            agent_slug: 'margaret',
-                            requested_slug: 'margaret',
-                            sessionId: chatSessionId,
-                            thread_id: chatSessionId
-                        }),
-                        signal: gemAbort.signal
-                    });
-                    clearTimeout(gemTimeout);
-                    if (gemRes.ok) {
-                        const gemData = await gemRes.json();
-                        const rawReply = (typeof gemData.response_text === 'object' && gemData.response_text.text)
-                            ? gemData.response_text.text
-                            : (gemData.response_text || gemData.reply || (gemData.output && gemData.output.text));
-                        const isPureRawMsgReceipt = String(rawReply).trim().startsWith('{"serverMsgID"') || String(rawReply).trim().startsWith('{"msgID"');
-                    if (rawReply && !isPureRawMsgReceipt && String(rawReply).trim().length > 0) {
-                            replyObtained = rawReply;
-                            engineUsed = 'gemini';
-                            modelUsed = 'gemini-3.8-flash';
-                        }
-                    }
-                } catch (gemErr) {
-                    console.warn('[AvatarChatEngine] Error en Gemini fallback:', gemErr);
-                }
+                replyObtained = '🐾 **Canal de Atención Mrs. Pets:**\n\nEn este momento el servicio de atención automatizada no se encuentra disponible. Para no hacerle esperar, escríbanos directamente por WhatsApp al [+58 414-6799510](https://wa.me/584146799510) o visítenos en sucursal en **Avenida 2 El Milagro**. Nuestro personal le atenderá de inmediato.';
+                engineUsed = 'fallback';
+                modelUsed = 'fallback-sistema';
             }
 
             this.showTypingIndicator(false);
@@ -1041,11 +1009,12 @@
                 }
 
                 this.addMessage({
-                    sender: 'leia',
+                    sender: (engineUsed === 'fallback' ? 'system' : 'leia'),
                     text: replyObtained,
                     buttons: dynamicButtons,
                     engine: engineUsed,
                     model_used: modelUsed,
+                    isFallback: (engineUsed === 'fallback'),
                     timestamp: new Date()
                 });
             } else {
