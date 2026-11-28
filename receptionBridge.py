@@ -163,6 +163,7 @@ def assemble_avatar_prompt(
         "• Una sola pregunta por turno. Avanza un paso a la vez; no enumeres menús de opciones.\n\n"
         "3. ORDEN ESTRICTO DE LA CONVERSACIÓN:\n"
         "• Si el tutor tiene sesión verificada en <FICHA_TUTOR>: Salúdalo cordialmente por su nombre de pila desde la ficha con concordancia de género formal ('saludarle' / 'saludarla', NUNCA 'saludarlo' para clientas como Sofía o Dalybell), pregunta con afecto por su mascota registrada (por su nombre) y pregúntale qué desea hacer hoy. Luego ESPERA. No ofrezcas servicios ni cotices nada hasta que el tutor lo solicite.\n"
+        "• Si el interlocutor es personal o directiva con sesión verificada en <FICHA_STAFF>: Salúdalo con respeto institucional por su nombre y cargo formal (ej. Sr. Harryt Luzardo, Fundador & Director General), reconoce con afecto a sus consentidos registrados si constan en la ficha (como Luna, Golden Retriever), y ponte a su completa disposición para instrucciones operativas de planta o reportes. Queda estrictamente PROHIBIDO atenderlo como contacto externo, derivarlo a atención comercial o declarar que no se puede validar su identidad cuando <FICHA_STAFF> está presente.\n"
         "• Si es visitante no autenticado: Saluda con calidez y cortesía breve, sin asignar tutor ni mascota alguna. Pregunta en qué se le puede orientar, y si desea atención personalizada o agendar, solicita sus datos de admisión paso a paso, un dato por turno.\n"
         "• Solo cuando el cliente indique expresamente qué servicio desea, formula las preguntas específicas de ese servicio (un dato por turno)."
     )
@@ -187,12 +188,12 @@ def assemble_avatar_prompt(
         if "harryt" in s_disp.lower():
             first_name = "Sr. Harryt"
 
-        if s_role in ("staff", "staff_admin"):
+        if s_role in ("staff", "staff_admin", "admin"):
+            cargo_desc = "Fundador & Director General" if "harryt" in s_disp.lower() else "Personal Institucional"
             ficha_staff = {
                 "staff_id": int(s_id) if str(s_id).isdigit() else 9999,
                 "nombre": s_disp,
-                "cargo": "Fundador & Director General",
-                "telefono": "+58 414-6799510",
+                "cargo": cargo_desc,
                 "consentidos": [
                     {
                         "id": 9999,
@@ -201,14 +202,17 @@ def assemble_avatar_prompt(
                         "raza": "Golden Retriever",
                         "notas": "Princesa consentida de la casa del Sr. Harryt"
                     }
-                ]
+                ] if "harryt" in s_disp.lower() else []
             }
             json_staff = json.dumps(ficha_staff, ensure_ascii=False, indent=2)
             prompt_parts.append(
                 f"\n<FICHA_STAFF>\n{json_staff}\n</FICHA_STAFF>\n"
                 f"[DIRECTIVAS DE ATENCIÓN INTERNA — STAFF (source: signed_session)]:\n"
                 f"• Interlocutor oficial verificado en <FICHA_STAFF> por el servidor fuera del mensaje.\n"
-                f"• Saluda al Sr. Harryt con respeto institucional y atiende sus requerimientos operativos con total deferencia."
+                f"• Saluda al Sr. Harryt Luzardo por su nombre y cargo de {cargo_desc} con respeto institucional y total deferencia.\n"
+                f"• Reconoce con afecto y respeto a sus consentidos registrados en la ficha (Luna, Golden Retriever).\n"
+                f"• Queda estrictamente PROHIBIDO atender como contacto externo, derivar a atención comercial de clientes o declarar que no se puede validar la identidad cuando <FICHA_STAFF> está presente.\n"
+                f"• Ponte a su disposición para cualquier requerimiento operativo de planta, estatus o instrucción."
             )
         else:
             # Extraer ficha de cliente desde client_info o trusted_session

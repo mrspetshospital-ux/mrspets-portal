@@ -1446,7 +1446,7 @@ def verify_avatar_jwt(
     if not sub:
         return False, None, "subject_not_found", jti
 
-    if role in ("staff", "staff_admin"):
+    if role in ("staff", "staff_admin", "admin"):
         # Buscar en staff_users
         st_row = None
         if str(sub).isdigit():
