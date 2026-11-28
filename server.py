@@ -3699,6 +3699,8 @@ async def orchestrate_dual_ai_chat(
         active_channel = res.get("channel", "fallback") if res else "fallback"
 
     return {
+        "success": (active_channel == "teamily" and not failover_triggered and bool(reply_text)),
+        "channel": active_channel,
         "reply": reply_text,
         "agent": responder_agent,
         "agent_name": responder_name,
@@ -8625,7 +8627,7 @@ async def teamily_chat(request: Request):
         call_latency_ms = orch["latency_ms"]
 
         # D.2: Actualización de la bitácora con respuesta final, estado y latencia
-        turn_status = "completado" if (orch.get("channel") == "teamily" and orch.get("success")) else "error"
+        turn_status = "completado" if (orch.get("active_channel") == "teamily" and not orch.get("failover_triggered") and bool(res_text)) else "error"
         sessionSecurity.record_turn_post_call(
             correlation_id=correlation_id,
             agent_reply=res_text,
