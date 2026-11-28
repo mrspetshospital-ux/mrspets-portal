@@ -2308,7 +2308,7 @@ async def portal_gate(request: Request, call_next):
     path = request.url.path
     # La API, health checks, archivos estáticos, multimedia y el portal Concierge VIP son accesibles libremente
     if (
-        path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/"))
+        path.startswith(("/api/", "/css/", "/js/", "/assets/", "/static/", "/data/", "/informes/"))
         or path in ("/", "/root.html", "/index.html", "/healthz", "/robots.txt", "/war-room/guest", "/video.mp4", "/concierge_video.mp4", "/flow.mp4", "/ticker_bell_chime.mp3")
         or path.endswith((".mp4", ".mp3", ".webm", ".jpg", ".jpeg", ".png", ".svg", ".ico", ".webp", ".woff", ".woff2"))
     ):
@@ -9283,6 +9283,25 @@ async def get_avatar_bitacora(request: Request, limit: int = 50):
 @app.get("/robots.txt", include_in_schema=False)
 def robots():
     return PlainTextResponse("User-agent: *\nDisallow: /\n")
+
+
+@app.get("/informes/bloque-e", include_in_schema=False)
+def get_informe_bloque_e_html():
+    fpath = os.path.join(STATIC_DIR, "informes", "informe_final_bloque_e_identidad.html")
+    if os.path.exists(fpath):
+        with open(fpath, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return PlainTextResponse("Informe no disponible", status_code=404)
+
+
+@app.get("/informes/bloque-e.md", include_in_schema=False)
+def get_informe_bloque_e_md():
+    fpath = os.path.join(STATIC_DIR, "informes", "informe_final_bloque_e_identidad.md")
+    if os.path.exists(fpath):
+        with open(fpath, "r", encoding="utf-8") as f:
+            return PlainTextResponse(f.read(), media_type="text/markdown; charset=utf-8")
+    return PlainTextResponse("Informe no disponible", status_code=404)
+
 
 
 
